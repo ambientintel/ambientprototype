@@ -226,33 +226,6 @@ function LandingHeatmap() {
   );
 }
 
-function LandingTimeline() {
-  const max = Math.max(...VIZ_TIMELINE);
-  const now = new Date().getHours();
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-      <div style={{ display:'flex', alignItems:'flex-end', gap:3, height:88 }}>
-        {VIZ_TIMELINE.map((v,h)=>(
-          <div key={h} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center' }}>
-            <div style={{ width:'100%', background: h===now ? '#2D72D2' : 'rgba(45,114,210,0.3)', borderRadius:'2px 2px 0 0', height:`${Math.round((v/max)*84)+4}px`, border: h===now ? '1px solid #2D72D2' : 'none', transition:'height 0.3s' }}/>
-          </div>
-        ))}
-      </div>
-      <div style={{ display:'flex', justifyContent:'space-between' }}>
-        {[0,6,12,18,23].map(h=>(
-          <span key={h} style={{ fontFamily:'var(--mono)', fontSize:8.5, color:'#5C5E62' }}>{String(h).padStart(2,'0')}:00</span>
-        ))}
-      </div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-          <span style={{ width:7, height:7, borderRadius:1, background:'#2D72D2', display:'inline-block' }}/>
-          <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#5C5E62' }}>Current hour</span>
-        </div>
-        <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#9A9B9D' }}>{VIZ_TIMELINE.reduce((a,b)=>a+b,0)} alerts today</span>
-      </div>
-    </div>
-  );
-}
 
 function LandingDonut({ pct, color, size=88 }: { pct:number; color:string; size?:number }) {
   const r = (size/2)-9;
@@ -266,13 +239,6 @@ function LandingDonut({ pct, color, size=88 }: { pct:number; color:string; size?
   );
 }
 
-// ── Ella narratives ──
-const ELLA_NARRATIVES = [
-  { room:'201', name:'E. Rodriguez', narrative:'Resident showed reduced ambulation compared to 7-day average. Total movement events down 31%. No falls detected. Overnight restlessness noted between 02:00–03:40. Recommend monitoring hydration and sleep quality.', flag:'Monitor', flagColor:'#FFC940' },
-  { room:'305', name:'H. Nakamura',  narrative:'Two fall alerts recorded this week, both resolved without injury. Gait pattern analysis suggests increased unsteadiness near bathroom entry. Physical therapy consult recommended. Alert frequency up 2× vs. prior week.', flag:'Alert', flagColor:'#FF6B6B' },
-  { room:'118', name:'D. Okafor',    narrative:'Consistent ambulation pattern maintained. Morning activity window 07:15–09:30 stable. No fall events in 14 days. Sleep quality indicators within normal range. Resident activity trending positively.', flag:'Stable', flagColor:'#3DCC91' },
-  { room:'212', name:'M. Kowalski',  narrative:'Notable increase in nighttime movement events. Possible sleep disruption. No fall events but alert threshold crossed twice. Recommend nursing check-in during 01:00–04:00 window over next 48 hours.', flag:'Watch', flagColor:'#FFC940' },
-];
 
 // ── Activity rhythm data (7 days × 24 hours) ──
 const RHYTHM_DATA: number[][] = [
@@ -287,43 +253,6 @@ const RHYTHM_DATA: number[][] = [
 const RHYTHM_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const RHYTHM_MAX = Math.max(...RHYTHM_DATA.flat());
 
-function EllaCarousel() {
-  const [idx, setIdx] = React.useState(0);
-  const [fade, setFade] = React.useState(true);
-  React.useEffect(()=>{
-    const id = setInterval(()=>{
-      setFade(false);
-      setTimeout(()=>{ setIdx(i=>(i+1)%ELLA_NARRATIVES.length); setFade(true); }, 300);
-    }, 4200);
-    return ()=>clearInterval(id);
-  },[]);
-  const n = ELLA_NARRATIVES[idx];
-  return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      {/* dots */}
-      <div style={{ display:'flex', gap:6, marginBottom:24 }}>
-        {ELLA_NARRATIVES.map((_,i)=>(
-          <button key={i} onClick={()=>{setFade(false);setTimeout(()=>{setIdx(i);setFade(true);},200);}}
-            style={{ width: i===idx?20:6, height:6, borderRadius:3, border:'none', cursor:'pointer', background: i===idx ? '#2D72D2' : 'rgba(255,255,255,0.12)', transition:'all 0.25s', padding:0 }}/>
-        ))}
-      </div>
-      <div style={{ opacity: fade?1:0, transition:'opacity 0.28s ease', flex:1, display:'flex', flexDirection:'column', gap:16 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <span style={{ fontFamily:'var(--mono)', fontSize:11, color:'#9A9B9D' }}>Room {n.room}</span>
-          <span style={{ fontFamily:'var(--sans)', fontSize:13, fontWeight:500, color:'#EDEEF0' }}>{n.name}</span>
-          <span style={{ marginLeft:'auto', fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.12em', textTransform:'uppercase', color:n.flagColor, background:`${n.flagColor}18`, padding:'2px 8px', borderRadius:2 }}>{n.flag}</span>
-        </div>
-        <p style={{ margin:0, fontSize:13, lineHeight:1.75, color:'#9A9B9D', fontStyle:'italic', flex:1 }}>
-          &ldquo;{n.narrative}&rdquo;
-        </p>
-        <div style={{ display:'flex', alignItems:'center', gap:8, paddingTop:8, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ display:'inline-block', width:6, height:6, borderRadius:'50%', background:'#2D72D2', boxShadow:'0 0 6px #2D72D2' }}/>
-          <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'#5C5E62', letterSpacing:'0.08em' }}>Ella AI · Generated {new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ActivityRhythm() {
   const [tip, setTip] = React.useState<{day:string;hour:number;val:number}|null>(null);
