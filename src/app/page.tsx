@@ -67,9 +67,9 @@ const C = {
   surface:   '#13151A',
   surface2:  '#1C1F26',
   border:    'rgba(255,255,255,0.07)',
-  borderHov: 'rgba(166,242,204,0.25)',
-  accent:    '#A6F2CC',
-  accentDim: 'rgba(166,242,204,0.10)',
+  borderHov: 'rgba(45,114,210,0.25)',
+  accent:    '#2D72D2',
+  accentDim: 'rgba(45,114,210,0.10)',
   text:      '#EDEEF0',
   text2:     '#9A9B9D',
   text3:     '#5C5E62',
@@ -157,7 +157,7 @@ export default function Landing1() {
           <div style={{
             position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)',
             width: 600, height: 400, pointerEvents: 'none',
-            background: 'radial-gradient(ellipse at center, rgba(166,242,204,0.06) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse at center, rgba(45,114,210,0.06) 0%, transparent 70%)',
           }} />
 
           <div style={{ maxWidth: 900, position: 'relative' }}>
@@ -250,7 +250,7 @@ export default function Landing1() {
             <div style={{
               padding: '48px 48px',
               background: heroHovered ? C.surface2 : C.surface,
-              border: `1px solid ${heroHovered ? 'rgba(166,242,204,0.18)' : C.border}`,
+              border: `1px solid ${heroHovered ? 'rgba(45,114,210,0.18)' : C.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               transition: 'background 0.2s ease, border-color 0.2s ease',
               gap: 48,
