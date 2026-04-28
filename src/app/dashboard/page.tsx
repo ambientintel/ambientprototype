@@ -23,7 +23,6 @@ export default function PatientDashboard() {
   const ampm = h < 12 ? 'AM' : 'PM';
   const crumb = `${DAYS[cst.getDay()]} · ${MONTHS[cst.getMonth()]} ${cst.getDate()} · ${hh}:${mm} ${ampm} CST`;
   const todayLabel = `${MONTHS[cst.getMonth()]} ${cst.getDate()}`;
-  const thirtyDaysAgo = new Date(cst); thirtyDaysAgo.setDate(cst.getDate() - 30);
   const chartSub = `${MONTHS[cst.getMonth()]} ${cst.getDate()} · hourly`;
 
   useEffect(() => {
