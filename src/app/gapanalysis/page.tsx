@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 import { useState, useEffect, useCallback } from 'react';
 import { SUBPARTS, getAllRequirements, type Status, type Subpart } from './data';
@@ -93,9 +94,11 @@ export default function GapAnalysisPage() {
     <div className="app">
       {/* Sidebar */}
       <nav className="sidebar">
-        <div className="brand">
-          <span className="brand-name">Ambient <em>Intelligence</em></span>
-        </div>
+        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+          <div className="brand">
+            <span className="brand-name">Ambient <em>Intelligence</em></span>
+          </div>
+        </Link>
 
         <div className="nav-section">
           <p className="nav-label">Subparts</p>
