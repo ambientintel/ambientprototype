@@ -286,7 +286,10 @@ export default function Landing1() {
           </Link>
 
           {/* ── Supporting modules label ── */}
-          <div style={{ padding: '28px 0 20px', borderTop: `1px solid ${C.border}`, marginTop: 40, marginBottom: 0 }}>
+          <div style={{ padding: '28px 0 20px', borderTop: `1px solid ${C.border}`, marginTop: 40, marginBottom: 0, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <span style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(16px, 1.5vw, 22px)', fontWeight: 300, letterSpacing: '-0.01em', color: C.text }}>
+              Ambient Intelligence Control Center
+            </span>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.text3 }}>
               Supporting modules
             </span>
