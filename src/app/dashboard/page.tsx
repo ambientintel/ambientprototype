@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useState, useEffect } from "react";
 
@@ -34,9 +35,11 @@ export default function PatientDashboard() {
 
       {/* Sidebar */}
       <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-name">Ambient <em>Demo</em></div>
-        </div>
+        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+          <div className="brand">
+            <div className="brand-name">Ambient <em>Demo</em></div>
+          </div>
+        </Link>
 
         <nav className="nav-section">
           <div className="nav-label">Discover</div>
