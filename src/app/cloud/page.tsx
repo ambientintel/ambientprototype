@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 const C = {
@@ -171,8 +171,199 @@ const STATS = [
   { value: '3', label: 'Account types' },
 ];
 
+const MERMAID_CONTENT = `flowchart LR
+    subgraph Factory["Factory &amp; Control Plane (separate AWS account)"]
+        FleetProv["IoT Fleet Provisioning<br/>• bootstrap cert → tenant cert<br/>• tenant registry lookup<br/>• one-time at first boot"]
+        TenantRegistry[("Tenant Registry<br/>device UUID → tenant_id<br/>DDB + CloudTrail")]
+    end
+
+    subgraph Device["Ambient Device (3 per room)"]
+        Radar["mmWave Radar + Actigraphy<br/>IWR6843AOP on AM62x"]
+        Agent["ambientapp agent<br/>• on-device fall detection<br/>• per-minute aggregator<br/>• WAL + spool (500 MB cap)<br/>• 5-min Parquet writer (ZSTD)"]
+        Radar --> Agent
+    end
+
+    subgraph TenantPlane["Tenant Account (one per organization — see tenancy.md)"]
+        subgraph IoTCore["AWS IoT Core (mTLS, X.509)"]
+            CredProvider["Credentials Provider<br/>role alias → temp AWS creds"]
+            RuleAlerts["IoT Rule: fall enricher<br/>$aws/rules/fall-enricher/<br/>ambient/v1/alerts/fall/+<br/>(Basic Ingest — see §7.1)"]
+            RuleTelemetryLegacy["IoT Rule: telemetry (legacy)<br/>ambient/v1/telemetry/+<br/>retired after dual-write"]
+            Shadow[("Device Shadow<br/>desired: facility/subject/<br/>room/zone/telemetry_mode")]
+        end
+
+        subgraph Hot["Hot path — fall alerts &lt;2s"]
+            AlertLambda["Lambda: alert enricher<br/>• DDB lookup<br/>• audit write<br/>• SNS publish"]
+            AlertsDDB[("DynamoDB: alerts<br/>PK: subject_date<br/>GSI: facility-time, eventId")]
+            SNS{{"SNS: fall-alerts<br/>filter by facilityId"}}
+            Staff["Medical Staff<br/>SMS + push + web"]
+        end
+
+        subgraph ColdNew["Cold path (new) — device-side Parquet"]
+            URLMinter["Lambda: url-minter<br/>• SigV4 auth<br/>• Shadow scope check<br/>• 5-min presigned PUT<br/>• sha256 + CMK pinned"]
+            S3New[("S3: ambient-TENANT-parquet<br/>raw-device/date=/facility=/<br/>subject=/device=/*.parquet<br/>SSE-KMS with tenant CMK")]
+        end
+
+        subgraph ColdLegacy["Cold path (legacy) — retiring"]
+            Firehose["Kinesis Firehose<br/>5 min / 128 MB buffer<br/>JSON → Parquet (ZSTD)"]
+            S3Legacy[("S3: same bucket<br/>raw/ prefix<br/>retired post-migration")]
+        end
+
+        subgraph ColdShared["Cold path (shared) — query"]
+            Reconciler["Lambda: reconciler<br/>• every 15 min<br/>• Athena row-count delta<br/>• CloudWatch metric:<br/>TelemetryDivergence"]
+            Glue[("Glue Data Catalog<br/>partition projection<br/>UNION ALL view")]
+            Athena["Amazon Athena<br/>10 GB scan cap per query"]
+        end
+
+        subgraph Narrative["Narrative path — 12h cadence"]
+            Schedule{{"EventBridge<br/>cron: 7am + 7pm"}}
+            SQS[("SQS: ella-fanout<br/>DLQ on 3x failure")]
+            Ella["Lambda: Ella<br/>• Athena aggregates<br/>• DDB fall counts<br/>• Bedrock call<br/>• de-id system prompt"]
+            Bedrock[["AWS Bedrock<br/>Claude Sonnet 4.5<br/>(4.6 upgrade path available)<br/>HIPAA eligible, no egress"]]
+            UpdatesDDB[("DynamoDB: daily-updates<br/>PK: subjectId<br/>90-day TTL")]
+        end
+
+        subgraph API["Nurse / Admin API"]
+            APIGW["API Gateway HTTP API<br/>JWT authorizer"]
+            Cognito["Cognito User Pool<br/>email + MFA<br/>custom:role, custom:facilityIds<br/>admin-create only"]
+            APILambda["Lambda: FastAPI<br/>row-level facility scope<br/>admin vs nurse roles<br/>12 endpoints"]
+            DevicesDDB[("DynamoDB: devices<br/>PK: deviceId<br/>GSI: facility-index")]
+        end
+
+        subgraph Audit["Audit &amp; Governance"]
+            CloudTrail["CloudTrail<br/>multi-region<br/>DDB + S3 data events<br/>7-year Glacier retention"]
+            Admin["ambientcloud-admin CLI<br/>• telemetry mode &lt;device&gt;<br/>• telemetry migrate &lt;facility&gt;<br/>• PILOT-XXXX enforcement<br/>• forbidden-attribute guard"]
+            KMS[("KMS: tenant CMK<br/>SSE-KMS on all buckets<br/>key does not cross accounts")]
+        end
+    end
+
+    subgraph ControlObs["Central Observability (metrics only, no PHI)"]
+        MetricStream["CloudWatch Metric Stream<br/>scalar metrics only<br/>logs stay in tenant account"]
+    end
+
+    %% Factory / first-boot
+    Agent -.->|"first boot only<br/>bootstrap cert"| FleetProv
+    FleetProv -.-> TenantRegistry
+    FleetProv -.->|"provision into<br/>tenant account"| CredProvider
+
+    %% Device — steady state
+    Agent -->|"MQTT QoS 1<br/>fall alerts"| RuleAlerts
+    Agent -->|"MQTT QoS 0<br/>legacy only during dual-write"| RuleTelemetryLegacy
+    Agent -->|"HTTPS POST<br/>request presigned URL"| URLMinter
+    Agent -->|"HTTPS PUT<br/>200–400 KB parquet<br/>(5-min batch)"| S3New
+    Agent <-.->|"shadow sync<br/>incl. telemetry_mode"| Shadow
+    Agent -.->|"temp creds via mTLS"| CredProvider
+
+    %% url-minter scope check
+    URLMinter -.->|"Shadow facility/subject<br/>must match requested key"| Shadow
+
+    %% Hot path
+    RuleAlerts --> AlertLambda
+    AlertLambda --> AlertsDDB
+    AlertLambda -.->|"lookup"| DevicesDDB
+    AlertLambda --> SNS
+    SNS --> Staff
+
+    %% Cold path
+    RuleTelemetryLegacy --> Firehose
+    Firehose --> S3Legacy
+    S3New -.-> Glue
+    S3Legacy -.-> Glue
+    Glue -.-> Athena
+
+    %% Reconciler (dual-write validation)
+    Reconciler -.->|"compare row counts<br/>telemetry_device vs telemetry_firehose"| Athena
+
+    %% Narrative
+    Schedule --> Ella
+    Ella -->|"fanout per subject"| SQS
+    SQS --> Ella
+    Ella -.-> Athena
+    Ella -.-> AlertsDDB
+    Ella --> Bedrock
+    Ella --> UpdatesDDB
+
+    %% API
+    Staff -->|"login + JWT"| Cognito
+    Cognito -.-> APIGW
+    Staff --> APIGW
+    APIGW --> APILambda
+    APILambda -.-> AlertsDDB
+    APILambda -.-> UpdatesDDB
+    APILambda -.-> DevicesDDB
+    APILambda -.-> Athena
+    APILambda -.->|"on-demand narrative"| Ella
+
+    %% Admin
+    Admin --> DevicesDDB
+    Admin --> Shadow
+
+    %% Encryption
+    KMS -.->|"CMK"| S3New
+    KMS -.->|"CMK"| S3Legacy
+    KMS -.->|"CMK"| AlertsDDB
+    KMS -.->|"CMK"| UpdatesDDB
+    KMS -.->|"CMK"| DevicesDDB
+
+    %% Audit
+    CloudTrail -.-> AlertsDDB
+    CloudTrail -.-> UpdatesDDB
+    CloudTrail -.-> DevicesDDB
+    CloudTrail -.-> S3New
+    CloudTrail -.-> S3Legacy
+
+    %% Central observability (scalar metrics only)
+    Reconciler -.->|"TelemetryDivergence"| MetricStream
+    URLMinter -.->|"issuance rate"| MetricStream
+    AlertLambda -.->|"fall rate"| MetricStream
+
+    %% Styling
+    classDef factory  fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
+    classDef device   fill:#f0f0f0,stroke:#374151,stroke-width:2px,color:#000
+    classDef iot      fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    classDef hot      fill:#ffe6e6,stroke:#d32f2f,stroke-width:2px,color:#000
+    classDef coldnew  fill:#e6f4e6,stroke:#2e7d32,stroke-width:2px,color:#000
+    classDef coldold  fill:#e0e0e0,stroke:#616161,stroke-width:2px,color:#000,stroke-dasharray: 5 5
+    classDef llm      fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000
+    classDef api      fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
+    classDef audit    fill:#fff9c4,stroke:#827717,stroke-width:2px,color:#000
+    classDef obs      fill:#e8eaf6,stroke:#283593,stroke-width:2px,color:#000
+
+    class FleetProv,TenantRegistry factory
+    class Radar,Agent device
+    class CredProvider,RuleAlerts,RuleTelemetryLegacy,Shadow iot
+    class AlertLambda,AlertsDDB,SNS,Staff hot
+    class URLMinter,S3New,Reconciler,Glue,Athena coldnew
+    class Firehose,S3Legacy coldold
+    class Schedule,SQS,Ella,Bedrock,UpdatesDDB llm
+    class APIGW,Cognito,APILambda,DevicesDDB api
+    class CloudTrail,Admin,KMS audit
+    class MetricStream obs`;
+
 export default function CloudPage() {
   const [hoveredService, setHoveredService] = useState<string | null>(null);
+  const diagramRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (document.querySelector('script[data-mermaid]')) {
+      // already loaded
+      const m = (window as any).mermaid;
+      if (m) renderDiagram(m);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js';
+    script.setAttribute('data-mermaid', '1');
+    script.async = true;
+    script.onload = () => renderDiagram((window as any).mermaid);
+    document.head.appendChild(script);
+
+    function renderDiagram(m: any) {
+      m.initialize({ startOnLoad: false, theme: 'neutral', flowchart: { htmlLabels: true, curve: 'linear' } });
+      m.render('arch-v4', MERMAID_CONTENT).then(({ svg }: { svg: string }) => {
+        if (diagramRef.current) diagramRef.current.innerHTML = svg;
+      }).catch(console.error);
+    }
+  }, []);
 
   return (
     <>
@@ -358,6 +549,20 @@ export default function CloudPage() {
                 <div style={{ fontSize: 12.5, lineHeight: 1.6, color: C.text3, fontWeight: 300 }}>{p.description}</div>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── Architecture diagram ── */}
+        <section style={{ padding: '0 48px 88px' }}>
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, marginBottom: 14 }}>Architecture diagram</div>
+            <h2 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 'clamp(26px,3vw,40px)', letterSpacing: '-0.02em', margin: '0 0 8px' }}>End-to-end data flow.</h2>
+            <p style={{ fontSize: 13, color: C.text3, margin: 0, fontFamily: 'var(--mono)', letterSpacing: '0.04em' }}>architecture-v4.mmd · ambientintel/ambientcloud</p>
+          </div>
+          <div style={{ background: '#F8F9FA', borderRadius: 4, padding: '32px', overflowX: 'auto', border: `1px solid ${C.border}` }}>
+            <div ref={diagramRef} style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9A9B9D', fontFamily: 'var(--mono)', fontSize: 12 }}>
+              Loading diagram…
+            </div>
           </div>
         </section>
 
