@@ -94,7 +94,7 @@ export default function Landing1() {
         .l1-nav-link:hover { color: #EDEEF0 !important; }
         .l1-stat-val { font-variant-numeric: tabular-nums; }
         .l1-cta-primary {
-          background: #A6F2CC; color: #0C0D0F;
+          background: #2D72D2; color: #0C0D0F;
           border: none; border-radius: 2px;
           padding: 13px 28px; font-size: 13px; font-weight: 600;
           letter-spacing: 0.04em; text-transform: uppercase;
@@ -110,7 +110,7 @@ export default function Landing1() {
           cursor: pointer; transition: border-color 0.2s, color 0.2s;
           font-family: inherit;
         }
-        .l1-cta-ghost:hover { border-color: #A6F2CC; color: #A6F2CC; }
+        .l1-cta-ghost:hover { border-color: #2D72D2; color: #2D72D2; }
       `}</style>
 
       <div style={{ background: C.bg, minHeight: '100vh', color: C.text, fontFamily: 'var(--sans)' }}>
