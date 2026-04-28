@@ -384,7 +384,7 @@ function ActivityRhythm() {
 
 
 
-function TerrainField() {
+function ParticleField() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -393,113 +393,122 @@ function TerrainField() {
     if (!ctx) return;
 
     let animId: number;
-    let t = 0;
+
+    interface Particle {
+      x: number; y: number; vx: number; vy: number;
+      r: number; speed: number; isStreak: boolean;
+    }
+
+    const N = 220;
+    let particles: Particle[] = [];
 
     const resize = () => {
       canvas.width  = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
     };
 
-    const COLS = 110, ROWS = 72;
-    const SPREAD = 1400, DEPTH = 900;
-    const FOV = 520, CAM_Y = 260, CAM_Z_OFF = 420;
-
-    const getH = (x: number, z: number, t: number) => {
-      const r = Math.sqrt(x * x + (z - DEPTH * 0.15) * (z - DEPTH * 0.15));
-      const vortexRing = 140;
-      const crater  = 90  * Math.exp(-Math.pow(r - vortexRing, 2) / (2 * 55 * 55))
-                    - 50  * Math.exp(-r * r / (2 * 65 * 65));
-      const rings   = 55  * Math.sin(r * 0.042 - t * 1.1) * Math.exp(-r * 0.0018);
-      const terrain = 38  * Math.sin(x * 0.009 + t * 0.28) * Math.cos(z * 0.011 - t * 0.19)
-                    + 22  * Math.sin(x * 0.018 - t * 0.44) * Math.sin(z * 0.014 + t * 0.33)
-                    + 14  * Math.cos(x * 0.025 + z * 0.02 - t * 0.6);
-      return crater + rings + terrain;
+    const init = () => {
+      particles = Array.from({ length: N }, () => {
+        const speed  = 0.6 + Math.random() * 2.2;
+        const angle  = Math.random() * Math.PI * 2;
+        const streak = Math.random() < 0.28;
+        return {
+          x:        Math.random() * canvas.width,
+          y:        Math.random() * canvas.height,
+          vx:       Math.cos(angle) * speed,
+          vy:       Math.sin(angle) * speed,
+          r:        streak ? 0.7 + Math.random() * 0.8 : 1.0 + Math.random() * 1.8,
+          speed,
+          isStreak: streak,
+        };
+      });
     };
 
-    const project = (x: number, y: number, z: number, cw: number, ch: number) => {
-      const dz = z + CAM_Z_OFF + FOV;
-      if (dz <= 0) return null;
-      const sc = FOV / dz;
-      return { px: cw / 2 + x * sc, py: ch * 0.62 - (y - CAM_Y) * sc, sc, dz };
-    };
-
-    const hColor = (norm: number) => {
-      if (norm < 0.28) {
-        const u = norm / 0.28;
-        return [Math.round(8 + u * 37), Math.round(18 + u * 96), Math.round(60 + u * 150)];
-      } else if (norm < 0.58) {
-        const u = (norm - 0.28) / 0.30;
-        return [Math.round(45 + u * 25), Math.round(114 + u * 106), Math.round(210 + u * 45)];
-      } else if (norm < 0.82) {
-        const u = (norm - 0.58) / 0.24;
-        return [Math.round(70 + u * 185), Math.round(220 + u * 35), 255];
-      } else {
-        const u = (norm - 0.82) / 0.18;
-        return [255, Math.round(255 - u * 145), Math.round(255 - u * 210)];
-      }
-    };
+    const CONNECT = 140;
 
     const draw = () => {
       const cw = canvas.width, ch = canvas.height;
-      ctx.clearRect(0, 0, cw, ch);
 
-      const pts: { px:number; py:number; sc:number; dz:number; norm:number }[] = [];
-      let minH = Infinity, maxH = -Infinity;
-      const raw: number[] = [];
+      // Film persistence — partial fade instead of clearRect
+      ctx.fillStyle = 'rgba(12,13,15,0.13)';
+      ctx.fillRect(0, 0, cw, ch);
 
-      for (let i = 0; i < COLS; i++) {
-        for (let j = 0; j < ROWS; j++) {
-          const x3 = (i / (COLS - 1) - 0.5) * SPREAD;
-          const z3 = (j / (ROWS - 1)) * DEPTH;
-          const y3 = getH(x3, z3, t);
-          raw.push(y3);
-          if (y3 < minH) minH = y3;
-          if (y3 > maxH) maxH = y3;
-        }
-      }
-      const range = maxH - minH || 1;
-
-      let idx = 0;
-      for (let i = 0; i < COLS; i++) {
-        for (let j = 0; j < ROWS; j++) {
-          const x3 = (i / (COLS - 1) - 0.5) * SPREAD;
-          const z3 = (j / (ROWS - 1)) * DEPTH;
-          const y3 = raw[idx++];
-          const norm = (y3 - minH) / range;
-          const p = project(x3, y3, z3, cw, ch);
-          if (p && p.px > -10 && p.px < cw + 10 && p.py > -10 && p.py < ch + 10) {
-            pts.push({ ...p, norm });
+      // Connection lines
+      for (let i = 0; i < N; i++) {
+        for (let j = i + 1; j < N; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const d  = Math.sqrt(dx * dx + dy * dy);
+          if (d < CONNECT) {
+            const alpha = (1 - d / CONNECT) * 0.16;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(100,180,255,${alpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
           }
         }
       }
 
-      pts.sort((a, b) => b.dz - a.dz);
+      // Particles
+      particles.forEach(p => {
+        if (p.isStreak) {
+          // Elongated streak in direction of motion
+          const len = p.speed * 9;
+          const nx  = p.vx / p.speed, ny = p.vy / p.speed;
+          const grad = ctx.createLinearGradient(
+            p.x, p.y, p.x - nx * len, p.y - ny * len
+          );
+          grad.addColorStop(0, 'rgba(160,220,255,0.85)');
+          grad.addColorStop(1, 'rgba(100,180,255,0)');
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - nx * len, p.y - ny * len);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = p.r * 1.2;
+          ctx.stroke();
+          // bright head
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 0.9, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(200,235,255,0.9)';
+          ctx.fill();
+        } else {
+          // Standard dot — two colors: base blue and light blue
+          const isLight = Math.random() < 0.25;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = isLight
+            ? `rgba(140,210,255,${0.5 + Math.random() * 0.35})`
+            : `rgba(45,114,210,${0.45 + Math.random() * 0.4})`;
+          ctx.fill();
+        }
 
-      pts.forEach(p => {
-        const [r, g, b] = hColor(p.norm);
-        const alpha = 0.35 + p.norm * 0.55;
-        const size  = Math.max(0.4, p.sc * 2.2);
-        ctx.beginPath();
-        ctx.arc(p.px, p.py, size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
-        ctx.fill();
+        // Move
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < -20)      p.x = cw + 20;
+        if (p.x > cw + 20)  p.x = -20;
+        if (p.y < -20)      p.y = ch + 20;
+        if (p.y > ch + 20)  p.y = -20;
       });
 
-      // Fade mask: protect hero text area
-      const grad = ctx.createRadialGradient(cw/2, ch*0.38, ch*0.08, cw/2, ch*0.38, ch*0.42);
-      grad.addColorStop(0,   'rgba(12,13,15,0.72)');
-      grad.addColorStop(0.5, 'rgba(12,13,15,0.18)');
-      grad.addColorStop(1,   'rgba(12,13,15,0)');
-      ctx.fillStyle = grad;
+      // Protect text area with a soft radial dark vignette
+      const vign = ctx.createRadialGradient(cw/2, ch*0.42, ch*0.06, cw/2, ch*0.42, ch*0.46);
+      vign.addColorStop(0,   'rgba(12,13,15,0.60)');
+      vign.addColorStop(0.55,'rgba(12,13,15,0.12)');
+      vign.addColorStop(1,   'rgba(12,13,15,0)');
+      ctx.fillStyle = vign;
       ctx.fillRect(0, 0, cw, ch);
 
-      t += 0.010;
       animId = requestAnimationFrame(draw);
     };
 
     resize();
+    init();
     draw();
-    const ro = new ResizeObserver(resize);
+
+    const ro = new ResizeObserver(() => { resize(); init(); });
     ro.observe(canvas);
     return () => { cancelAnimationFrame(animId); ro.disconnect(); };
   }, []);
@@ -611,7 +620,7 @@ export default function Landing1() {
             linear-gradient(90deg, ${C.grid} 1px, transparent 1px)`,
           backgroundSize: '64px 64px',
         }}>
-          <TerrainField />
+          <ParticleField />
           <div style={{
             position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)',
             width: 600, height: 400, pointerEvents: 'none',
