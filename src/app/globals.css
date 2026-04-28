@@ -116,7 +116,7 @@ input { font-family: inherit; color: inherit; }
 }
 
 /* Main */
-.main { padding: 28px 44px 60px; max-width: 1280px; }
+.main { padding: 28px 44px 60px; max-width: 1280px; width: 100%; box-sizing: border-box; }
 
 .topbar {
   display: flex;
@@ -203,7 +203,7 @@ input { font-family: inherit; color: inherit; }
   grid-template-columns: 90px 1.6fr 1.1fr 1fr 1fr 1.2fr;
   align-items: center;
   gap: 24px;
-  padding: 14px 6px;
+  padding: 14px 0;
 }
 .table-header {
   font-family: var(--mono);
@@ -211,7 +211,7 @@ input { font-family: inherit; color: inherit; }
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--text-4);
-  padding: 14px 6px 12px;
+  padding: 14px 0 12px;
   border-bottom: 1px solid var(--line);
 }
 .table-row { border-bottom: 1px solid var(--line); font-size: 14px; cursor: pointer; transition: background 0.15s; }
@@ -447,6 +447,14 @@ input { font-family: inherit; color: inherit; }
 
 /* Footer */
 .agent-note { margin-top: 40px; font-family: var(--mono); font-size: 10.5px; color: var(--text-4); letter-spacing: 0.14em; text-transform: uppercase; text-align: center; }
+
+/* ── Home page mobile ── */
+@media (max-width: 600px) {
+  .home-wrapper { padding: 40px 16px 56px !important; }
+  .home-brand   { margin-bottom: 32px !important; }
+  .home-grid    { grid-template-columns: 1fr !important; }
+  .home-footer  { margin-top: 36px !important; }
+}
 
 /* ── Notion theme overrides (hardcoded-color fixes) ── */
 .notion-theme .notion-theme .table-row:hover    { background: rgba(124,110,173,0.07); }

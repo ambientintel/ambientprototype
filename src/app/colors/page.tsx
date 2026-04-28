@@ -76,6 +76,37 @@ const schemes: Record<string, Record<string, string>> = {
     "--text": "#08262E", "--text-2": "rgba(8,38,46,0.65)", "--text-3": "rgba(8,38,46,0.43)", "--text-4": "rgba(8,38,46,0.26)",
     "--accent": "#0098B8", "--accent-soft": "rgba(0,152,184,0.12)", "--sage": "oklch(0.58 0.12 195)",
   },
+  // — palantir —
+  "Blueprint Dark": {
+    "--bg": "#1C2127", "--surface-1": "#252A31", "--surface-2": "#2F343C", "--surface-3": "#383E47",
+    "--line": "rgba(255,255,255,0.07)", "--line-strong": "rgba(255,255,255,0.14)",
+    "--text": "#F6F7F8", "--text-2": "rgba(246,247,248,0.65)", "--text-3": "rgba(246,247,248,0.42)", "--text-4": "rgba(246,247,248,0.26)",
+    "--accent": "#2D72D2", "--accent-soft": "rgba(45,114,210,0.18)", "--sage": "#3DCC91",
+  },
+  Foundry: {
+    "--bg": "#1C2127", "--surface-1": "#252A31", "--surface-2": "#2F343C", "--surface-3": "#383E47",
+    "--line": "rgba(255,255,255,0.07)", "--line-strong": "rgba(255,255,255,0.14)",
+    "--text": "#F6F7F8", "--text-2": "rgba(246,247,248,0.65)", "--text-3": "rgba(246,247,248,0.42)", "--text-4": "rgba(246,247,248,0.26)",
+    "--accent": "#2D72D2", "--accent-soft": "rgba(45,114,210,0.18)", "--sage": "#3DCC91",
+  },
+  Gotham: {
+    "--bg": "#0B0F14", "--surface-1": "#121820", "--surface-2": "#1A2230", "--surface-3": "#22303E",
+    "--line": "rgba(180,200,220,0.06)", "--line-strong": "rgba(180,200,220,0.13)",
+    "--text": "#C8D4E0", "--text-2": "rgba(200,212,224,0.65)", "--text-3": "rgba(200,212,224,0.42)", "--text-4": "rgba(200,212,224,0.26)",
+    "--accent": "#F5A623", "--accent-soft": "rgba(245,166,35,0.16)", "--sage": "oklch(0.65 0.12 155)",
+  },
+  AIP: {
+    "--bg": "#090C12", "--surface-1": "#0F1420", "--surface-2": "#161C2C", "--surface-3": "#1E2638",
+    "--line": "rgba(100,150,255,0.07)", "--line-strong": "rgba(100,150,255,0.14)",
+    "--text": "#E4EAF6", "--text-2": "rgba(228,234,246,0.65)", "--text-3": "rgba(228,234,246,0.42)", "--text-4": "rgba(228,234,246,0.26)",
+    "--accent": "#00CFA0", "--accent-soft": "rgba(0,207,160,0.16)", "--sage": "oklch(0.68 0.14 165)",
+  },
+  "Blueprint Light": {
+    "--bg": "#F5F8FA", "--surface-1": "#FFFFFF", "--surface-2": "#EBF1F5", "--surface-3": "#D8E1E8",
+    "--line": "rgba(16,22,26,0.08)", "--line-strong": "rgba(16,22,26,0.16)",
+    "--text": "#182026", "--text-2": "rgba(24,32,38,0.65)", "--text-3": "rgba(24,32,38,0.44)", "--text-4": "rgba(24,32,38,0.28)",
+    "--accent": "#137CBD", "--accent-soft": "rgba(19,124,189,0.12)", "--sage": "oklch(0.55 0.10 155)",
+  },
   // — brand-inspired —
   Palantir: {
     "--bg": "#0A0A0A", "--surface-1": "#111111", "--surface-2": "#1A1A1A", "--surface-3": "#222222",
@@ -167,6 +198,67 @@ const schemes: Record<string, Record<string, string>> = {
     "--text": "#E8E2D4", "--text-2": "rgba(232,226,212,0.65)", "--text-3": "rgba(232,226,212,0.42)", "--text-4": "rgba(232,226,212,0.26)",
     "--accent": "#C5A24A", "--accent-soft": "rgba(197,162,74,0.14)", "--sage": "oklch(0.62 0.09 85)",
   },
+  // — data platforms —
+  Grafana: {
+    "--bg": "#111217", "--surface-1": "#181B1F", "--surface-2": "#22252B", "--surface-3": "#2C3038",
+    "--line": "rgba(255,255,255,0.07)", "--line-strong": "rgba(255,255,255,0.13)",
+    "--text": "#D0D5DD", "--text-2": "rgba(208,213,221,0.65)", "--text-3": "rgba(208,213,221,0.42)", "--text-4": "rgba(208,213,221,0.26)",
+    "--accent": "#FF780A", "--accent-soft": "rgba(255,120,10,0.15)", "--sage": "oklch(0.62 0.12 150)",
+  },
+  Datadog: {
+    "--bg": "#1B1C2A", "--surface-1": "#232438", "--surface-2": "#2C2E46", "--surface-3": "#363856",
+    "--line": "rgba(255,255,255,0.07)", "--line-strong": "rgba(255,255,255,0.13)",
+    "--text": "#E2E4F0", "--text-2": "rgba(226,228,240,0.65)", "--text-3": "rgba(226,228,240,0.42)", "--text-4": "rgba(226,228,240,0.26)",
+    "--accent": "#7B46E0", "--accent-soft": "rgba(123,70,224,0.16)", "--sage": "oklch(0.62 0.10 155)",
+  },
+  Splunk: {
+    "--bg": "#0D1117", "--surface-1": "#161C24", "--surface-2": "#1E2630", "--surface-3": "#26303C",
+    "--line": "rgba(255,255,255,0.07)", "--line-strong": "rgba(255,255,255,0.13)",
+    "--text": "#C8D4DE", "--text-2": "rgba(200,212,222,0.65)", "--text-3": "rgba(200,212,222,0.42)", "--text-4": "rgba(200,212,222,0.26)",
+    "--accent": "#65A637", "--accent-soft": "rgba(101,166,55,0.15)", "--sage": "oklch(0.65 0.14 145)",
+  },
+  Tableau: {
+    "--bg": "#FAFBFC", "--surface-1": "#FFFFFF", "--surface-2": "#F0F2F5", "--surface-3": "#E6E9ED",
+    "--line": "rgba(0,0,0,0.07)", "--line-strong": "rgba(0,0,0,0.14)",
+    "--text": "#1A1F24", "--text-2": "rgba(26,31,36,0.65)", "--text-3": "rgba(26,31,36,0.44)", "--text-4": "rgba(26,31,36,0.28)",
+    "--accent": "#1F77B4", "--accent-soft": "rgba(31,119,180,0.12)", "--sage": "oklch(0.55 0.10 145)",
+  },
+  Retool: {
+    "--bg": "#1A2130", "--surface-1": "#222C40", "--surface-2": "#2A3650", "--surface-3": "#324060",
+    "--line": "rgba(255,255,255,0.07)", "--line-strong": "rgba(255,255,255,0.14)",
+    "--text": "#E2EAF6", "--text-2": "rgba(226,234,246,0.65)", "--text-3": "rgba(226,234,246,0.42)", "--text-4": "rgba(226,234,246,0.26)",
+    "--accent": "#3B82F6", "--accent-soft": "rgba(59,130,246,0.16)", "--sage": "oklch(0.65 0.12 155)",
+  },
+  Hex: {
+    "--bg": "#FFFFFF", "--surface-1": "#FAFAFA", "--surface-2": "#F3F4F6", "--surface-3": "#ECEDF0",
+    "--line": "rgba(0,0,0,0.07)", "--line-strong": "rgba(0,0,0,0.13)",
+    "--text": "#1A1823", "--text-2": "rgba(26,24,35,0.65)", "--text-3": "rgba(26,24,35,0.44)", "--text-4": "rgba(26,24,35,0.28)",
+    "--accent": "#5D47E0", "--accent-soft": "rgba(93,71,224,0.12)", "--sage": "oklch(0.55 0.10 155)",
+  },
+  Metabase: {
+    "--bg": "#FFFFFF", "--surface-1": "#F9FBFC", "--surface-2": "#EEF2F5", "--surface-3": "#E2E8ED",
+    "--line": "rgba(0,60,100,0.08)", "--line-strong": "rgba(0,60,100,0.15)",
+    "--text": "#0C3048", "--text-2": "rgba(12,48,72,0.65)", "--text-3": "rgba(12,48,72,0.44)", "--text-4": "rgba(12,48,72,0.28)",
+    "--accent": "#509EE3", "--accent-soft": "rgba(80,158,227,0.12)", "--sage": "oklch(0.55 0.10 195)",
+  },
+  Superset: {
+    "--bg": "#0D1520", "--surface-1": "#142030", "--surface-2": "#1C2C40", "--surface-3": "#243650",
+    "--line": "rgba(255,255,255,0.07)", "--line-strong": "rgba(255,255,255,0.14)",
+    "--text": "#D8E6F4", "--text-2": "rgba(216,230,244,0.65)", "--text-3": "rgba(216,230,244,0.42)", "--text-4": "rgba(216,230,244,0.26)",
+    "--accent": "#44AEFF", "--accent-soft": "rgba(68,174,255,0.15)", "--sage": "oklch(0.68 0.14 160)",
+  },
+  Observable: {
+    "--bg": "#1E1E2E", "--surface-1": "#26263A", "--surface-2": "#303048", "--surface-3": "#3A3A58",
+    "--line": "rgba(255,255,255,0.08)", "--line-strong": "rgba(255,255,255,0.15)",
+    "--text": "#E8E8FA", "--text-2": "rgba(232,232,250,0.65)", "--text-3": "rgba(232,232,250,0.42)", "--text-4": "rgba(232,232,250,0.26)",
+    "--accent": "#F95F78", "--accent-soft": "rgba(249,95,120,0.16)", "--sage": "oklch(0.65 0.10 155)",
+  },
+  Amplitude: {
+    "--bg": "#0F1218", "--surface-1": "#171B24", "--surface-2": "#1F2432", "--surface-3": "#272E40",
+    "--line": "rgba(255,255,255,0.07)", "--line-strong": "rgba(255,255,255,0.13)",
+    "--text": "#DDE4F0", "--text-2": "rgba(221,228,240,0.65)", "--text-3": "rgba(221,228,240,0.42)", "--text-4": "rgba(221,228,240,0.26)",
+    "--accent": "#2B6DEF", "--accent-soft": "rgba(43,109,239,0.16)", "--sage": "oklch(0.65 0.12 155)",
+  },
 };
 
 const tokens = [
@@ -179,7 +271,9 @@ const tokens = [
 const groups = [
   { label: "Original", names: ["Warm", "Cool", "Dark", "Slate"] },
   { label: "Modern", names: ["Studio", "Void", "Milk", "Electric", "Uranium", "Ember", "Thistle", "Glacier"] },
+  { label: "Palantir", names: ["Blueprint Dark", "Blueprint Light", "Foundry", "Gotham", "AIP"] },
   { label: "Brand-inspired", names: ["Palantir", "Apple", "Mayo", "OpenAI", "Nike", "Arcteryx", "Stone Island", "Porsche", "Patek", "Hermès", "Linear", "Notion", "Patagonia", "Aesop", "Audemars Piguet"] },
+  { label: "Data Platforms", names: ["Grafana", "Datadog", "Splunk", "Tableau", "Retool", "Hex", "Metabase", "Superset", "Observable", "Amplitude"] },
 ];
 
 export default function ColorsPage() {
