@@ -95,13 +95,13 @@ export default function PatientDashboard() {
             <h1 className="page-title">Nurse <em>Dashboard</em></h1>
           </div>
           <div className="tool-group">
-            <button className="btn btn-ghost">
+            <a href="/" className="btn btn-ghost">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
                 <circle cx="8" cy="5" r="2.5"/>
                 <path d="M3 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" strokeLinecap="round"/>
               </svg>
               Login
-            </button>
+            </a>
           </div>
         </header>
 
