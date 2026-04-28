@@ -1,174 +1,37 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useState, useEffect, useRef } from 'react';
 
-const C = {
-  bg:        '#0C0D0F',
-  surface:   '#13151A',
-  surface2:  '#1C1F26',
-  surface3:  '#22262F',
-  border:    'rgba(255,255,255,0.07)',
-  accent:    '#A6F2CC',
-  accentDim: 'rgba(166,242,204,0.10)',
-  accentGlow:'rgba(166,242,204,0.06)',
-  amber:     '#F2C94C',
-  amberDim:  'rgba(242,201,76,0.10)',
-  blue:      '#7EB8F7',
-  blueDim:   'rgba(126,184,247,0.10)',
-  red:       '#F28B82',
-  text:      '#EDEEF0',
-  text2:     '#9A9B9D',
-  text3:     '#5C5E62',
-  grid:      'rgba(255,255,255,0.025)',
-};
+type Tab = 'services' | 'paths' | 'architecture' | 'accounts' | 'runbooks';
 
 const SERVICES = [
-  {
-    id: 'ella',
-    tag: 'AI · Bedrock',
-    label: 'Ella',
-    description: 'Twice-daily Claude Sonnet narrative per subject via Bedrock — de-identified summaries stored in DynamoDB for clinical staff.',
-    path: 'services/ella/',
-    tests: 11,
-    infra: true,
-    color: C.accent,
-    colorDim: C.accentDim,
-  },
-  {
-    id: 'api',
-    tag: 'REST API',
-    label: 'Nurse/Admin API',
-    description: 'FastAPI + Cognito JWT with row-level facility scoping. Twelve endpoints serving staff web and mobile clients via API Gateway.',
-    path: 'services/api/',
-    tests: 19,
-    infra: true,
-    color: C.blue,
-    colorDim: C.blueDim,
-  },
-  {
-    id: 'telemetry',
-    tag: 'Streaming',
-    label: 'Telemetry',
-    description: 'Fall-alert Lambda → SNS for sub-2s staff notification; per-minute aggregates → Firehose → Parquet on S3.',
-    path: 'services/telemetry/',
-    tests: 15,
-    infra: true,
-    color: C.amber,
-    colorDim: C.amberDim,
-  },
-  {
-    id: 'admin-cli',
-    tag: 'CLI',
-    label: 'Admin CLI',
-    description: 'Operator CLI (`ambientcloud-admin`) for device provisioning — mints tenant X.509 certs and registers rooms in DynamoDB.',
-    path: 'services/admin-cli/',
-    tests: 28,
-    infra: false,
-    color: C.accent,
-    colorDim: C.accentDim,
-  },
-  {
-    id: 'url-minter',
-    tag: 'Upload',
-    label: 'URL Minter',
-    description: 'Presigned S3 upload URLs for device Parquet batches — eliminates MQTT overhead for analytic cold-path data.',
-    path: 'services/url-minter/',
-    tests: null,
-    infra: true,
-    color: C.blue,
-    colorDim: C.blueDim,
-  },
-  {
-    id: 'athena',
-    tag: 'Analytics',
-    label: 'Athena',
-    description: 'Glue table and partition projection for raw radar frames on the cold path — queryable without ETL.',
-    path: 'services/athena/',
-    tests: null,
-    infra: true,
-    color: C.amber,
-    colorDim: C.amberDim,
-  },
-  {
-    id: 'cloudtrail',
-    tag: 'Audit',
-    label: 'CloudTrail',
-    description: 'Data-event audit logging on all sensitive DynamoDB tables — every read/write attributed for HIPAA compliance.',
-    path: 'services/cloudtrail/',
-    tests: null,
-    infra: true,
-    color: C.text2,
-    colorDim: 'rgba(154,155,157,0.10)',
-  },
+  { id: 'ella',       tag: 'AI · Bedrock', label: 'Ella',            path: 'services/ella/',        tests: 11,  desc: 'Twice-daily Claude Sonnet narrative per subject via Bedrock — de-identified summaries stored in DynamoDB for clinical staff.', tf: true },
+  { id: 'api',        tag: 'REST API',     label: 'Nurse/Admin API', path: 'services/api/',         tests: 19,  desc: 'FastAPI + Cognito JWT with row-level facility scoping. Twelve endpoints serving staff web and mobile clients.', tf: true },
+  { id: 'telemetry',  tag: 'Streaming',    label: 'Telemetry',       path: 'services/telemetry/',   tests: 15,  desc: 'Fall-alert Lambda → SNS for sub-2s staff notification; per-minute aggregates → Firehose → Parquet on S3.', tf: true },
+  { id: 'admin-cli',  tag: 'CLI',          label: 'Admin CLI',       path: 'services/admin-cli/',   tests: 28,  desc: 'Operator CLI for device provisioning — mints tenant X.509 certs and registers rooms in DynamoDB.', tf: false },
+  { id: 'url-minter', tag: 'Upload',       label: 'URL Minter',      path: 'services/url-minter/',  tests: null, desc: 'Presigned S3 upload URLs for device Parquet batches — eliminates MQTT overhead for analytic cold-path data.', tf: true },
+  { id: 'athena',     tag: 'Analytics',    label: 'Athena',          path: 'services/athena/',      tests: null, desc: 'Glue table and partition projection for raw radar frames on the cold path — queryable without ETL.', tf: true },
+  { id: 'cloudtrail', tag: 'Audit',        label: 'CloudTrail',      path: 'services/cloudtrail/',  tests: null, desc: 'Data-event audit logging on all sensitive DynamoDB tables — every read/write attributed for HIPAA compliance.', tf: true },
 ];
 
 const PATHS = [
-  {
-    label: 'Hot path',
-    tag: '< 2s',
-    tagColor: C.accent,
-    flow: ['Device MQTT', 'IoT Rule', 'Lambda', 'DynamoDB', 'SNS → Staff'],
-    description: 'Fall alerts. QoS 1 guaranteed delivery, sub-2-second latency budget.',
-  },
-  {
-    label: 'Cold path',
-    tag: 'New',
-    tagColor: C.blue,
-    flow: ['Device (5-min Parquet)', 'url-minter', 'Presigned URL', 'S3'],
-    description: 'Device writes Parquet batches locally and uploads directly to S3 — no MQTT for analytic data.',
-  },
-  {
-    label: 'Cold path',
-    tag: 'Legacy',
-    tagColor: C.amber,
-    flow: ['Device MQTT', 'IoT Rule', 'Firehose', 'S3 (JSON→Parquet)'],
-    description: 'Being retired. Dual-writes alongside the new path during migration.',
-  },
-  {
-    label: 'Narrative path',
-    tag: '12h cadence',
-    tagColor: C.accent,
-    flow: ['EventBridge cron', 'SQS fanout', 'Ella Lambda', 'Bedrock Claude', 'DynamoDB'],
-    description: 'De-identified daily summaries generated per subject, surfaced in the Nurse Dashboard.',
-  },
-  {
-    label: 'Nurse/Admin API',
-    tag: 'REST',
-    tagColor: C.blue,
-    flow: ['API Gateway', 'Cognito JWT', 'FastAPI Lambda', 'DynamoDB'],
-    description: 'Twelve endpoints, row-level facility scoping, served to staff web and mobile clients.',
-  },
+  { label: 'Hot path',      tag: '< 2s',      flow: ['Device MQTT', 'IoT Rule', 'Lambda', 'DynamoDB', 'SNS → Staff'],                                  desc: 'Fall alerts. QoS 1 guaranteed delivery, sub-2-second latency budget.' },
+  { label: 'Cold path',     tag: 'New',        flow: ['Device (5-min Parquet)', 'url-minter', 'Presigned URL', 'S3'],                                   desc: 'Device writes Parquet batches locally and uploads directly to S3 — no MQTT for analytic data.' },
+  { label: 'Cold path',     tag: 'Legacy',     flow: ['Device MQTT', 'IoT Rule', 'Firehose', 'S3 (JSON→Parquet)'],                                      desc: 'Being retired. Dual-writes alongside the new path during migration.' },
+  { label: 'Narrative',     tag: '12h cadence',flow: ['EventBridge cron', 'SQS fanout', 'Ella Lambda', 'Bedrock Claude', 'DynamoDB'],                   desc: 'De-identified daily summaries generated per subject, surfaced in the Nurse Dashboard.' },
+  { label: 'Nurse/Admin API', tag: 'REST',     flow: ['API Gateway', 'Cognito JWT', 'FastAPI Lambda', 'DynamoDB'],                                       desc: 'Twelve endpoints, row-level facility scoping.' },
 ];
 
 const ACCOUNTS = [
-  {
-    label: 'Tenant plane',
-    count: 'One per org',
-    color: C.accent,
-    colorDim: C.accentDim,
-    items: ['Fall alerts', 'Telemetry (hot + cold)', 'Ella narratives', 'Nurse API', 'Tenant CMK (KMS)', 'CloudTrail audit'],
-  },
-  {
-    label: 'Control plane',
-    count: 'One (us)',
-    color: C.blue,
-    colorDim: C.blueDim,
-    items: ['Fleet provisioning', 'Bootstrap cert issuance', 'Tenant registry', 'Service Catalog'],
-  },
-  {
-    label: 'Central observability',
-    count: 'One (us)',
-    color: C.amber,
-    colorDim: C.amberDim,
-    items: ['Scalar metrics only', 'No logs or traces', 'No PHI ever crosses', 'TelemetryDivergence', 'Fall rate per facility'],
-  },
+  { label: 'Tenant plane',         count: 'One per org',  items: ['Fall alerts (hot)', 'Telemetry (cold)', 'Ella narratives', 'Nurse/Admin API', 'Tenant CMK (KMS)', 'CloudTrail audit'] },
+  { label: 'Control plane',        count: 'One (us)',     items: ['Fleet provisioning', 'Bootstrap cert issuance', 'Tenant registry', 'Service Catalog'] },
+  { label: 'Central observability', count: 'One (us)',    items: ['Scalar metrics only', 'No logs or traces', 'No PHI crosses boundary', 'TelemetryDivergence', 'Fall rate per facility'] },
 ];
 
-const STATS = [
-  { value: '73', label: 'Tests passing' },
-  { value: '7', label: 'Services' },
-  { value: '11', label: 'Runbooks' },
-  { value: '3', label: 'Account types' },
+const RUNBOOKS = [
+  'API 5xx', 'Auth login failure', 'Cost spike', 'Device offline',
+  'Escalation', 'Fall alert — false positive', 'Fall alert — missed',
+  'IRB data request', 'Narrative broken', 'Telemetry gap',
 ];
 
 const MERMAID_CONTENT = `flowchart LR
@@ -340,286 +203,287 @@ const MERMAID_CONTENT = `flowchart LR
     class MetricStream obs`;
 
 export default function CloudPage() {
-  const [hoveredService, setHoveredService] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('services');
   const diagramRef = useRef<HTMLDivElement>(null);
+  const [diagramLoaded, setDiagramLoaded] = useState(false);
 
   useEffect(() => {
-    if (document.querySelector('script[data-mermaid]')) {
-      // already loaded
-      const m = (window as any).mermaid;
-      if (m) renderDiagram(m);
-      return;
-    }
+    if (tab !== 'architecture') return;
+    if (diagramLoaded) return;
+
+    const existing = document.querySelector('script[data-mermaid]');
+    const render = (m: any) => {
+      m.initialize({ startOnLoad: false, theme: 'neutral', flowchart: { htmlLabels: true, curve: 'linear' } });
+      m.render('arch-v4', MERMAID_CONTENT).then(({ svg }: { svg: string }) => {
+        if (diagramRef.current) { diagramRef.current.innerHTML = svg; setDiagramLoaded(true); }
+      }).catch(console.error);
+    };
+
+    if (existing) { render((window as any).mermaid); return; }
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js';
     script.setAttribute('data-mermaid', '1');
     script.async = true;
-    script.onload = () => renderDiagram((window as any).mermaid);
+    script.onload = () => render((window as any).mermaid);
     document.head.appendChild(script);
+  }, [tab, diagramLoaded]);
 
-    function renderDiagram(m: any) {
-      m.initialize({ startOnLoad: false, theme: 'neutral', flowchart: { htmlLabels: true, curve: 'linear' } });
-      m.render('arch-v4', MERMAID_CONTENT).then(({ svg }: { svg: string }) => {
-        if (diagramRef.current) diagramRef.current.innerHTML = svg;
-      }).catch(console.error);
-    }
-  }, []);
+  const navItems: { key: Tab; label: string }[] = [
+    { key: 'services',      label: 'Services' },
+    { key: 'paths',         label: 'Data Paths' },
+    { key: 'architecture',  label: 'Architecture' },
+    { key: 'accounts',      label: 'Account Model' },
+    { key: 'runbooks',      label: 'Runbooks' },
+  ];
+
+  const totalTests = SERVICES.reduce((s, svc) => s + (svc.tests ?? 0), 0);
 
   return (
-    <>
-      <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .cl-fadeup { animation: fadeUp 0.5s ease both; }
-        .cl-nav-link { transition: color 0.2s; }
-        .cl-nav-link:hover { color: #EDEEF0 !important; }
-        .cl-arrow { transition: transform 0.2s; }
-        .cl-svc:hover .cl-arrow { transform: translate(3px,-3px); }
-        .cl-svc { transition: background 0.18s; }
-        .cl-flow-node {
-          padding: 5px 12px; border-radius: 2px;
-          font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em;
-          white-space: nowrap;
-        }
-        .cl-flow-arrow { color: #5C5E62; font-size: 12px; }
-        .cl-cta {
-          display: inline-block; padding: 13px 28px; border-radius: 2px;
-          font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
-          text-transform: uppercase; font-weight: 500; cursor: pointer;
-          transition: opacity 0.2s; text-decoration: none;
-          background: #A6F2CC; color: #0C0D0F; border: none;
-        }
-        .cl-cta:hover { opacity: 0.85; }
-        .cl-cta-ghost {
-          display: inline-block; padding: 12px 28px; border-radius: 2px;
-          font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
-          text-transform: uppercase; font-weight: 500; cursor: pointer;
-          transition: border-color 0.2s, color 0.2s; text-decoration: none;
-          background: transparent; color: #9A9B9D;
-          border: 1px solid rgba(255,255,255,0.12);
-        }
-        .cl-cta-ghost:hover { border-color: #A6F2CC; color: #A6F2CC; }
-      `}</style>
+    <div className="app">
 
-      <div style={{ background: C.bg, minHeight: '100vh', color: C.text, fontFamily: 'var(--sans)' }}>
+      {/* ── Sidebar ── */}
+      <nav className="sidebar">
+        <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className="brand">
+            <span className="brand-name">Ambient <em>Intelligence</em></span>
+          </div>
+        </Link>
 
-        {/* ── Nav ── */}
-        <nav style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 48px', height: 60,
-          borderBottom: `1px solid ${C.border}`,
-          background: 'rgba(12,13,15,0.9)', backdropFilter: 'blur(12px)',
-        }}>
-          <Link href="/" style={{ textDecoration: 'none', color: C.text }}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 500 }}>
-              Ambient Intelligence
-            </span>
-          </Link>
-          <div style={{ display: 'flex', gap: 32 }}>
-            {[['Dashboard','/dashboard'],['BOM','/bom'],['Cloud','#'],['SaMD','/samd']].map(([l, h]) => (
-              <Link key={h} href={h} className="cl-nav-link" style={{ textDecoration: 'none', color: h === '#' ? C.accent : C.text2, fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{l}</Link>
+        <div className="nav-section">
+          <p className="nav-label">Cloud</p>
+          {navItems.map(item => (
+            <button key={item.key} className={`nav-item${tab === item.key ? ' active' : ''}`} onClick={() => setTab(item.key)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 'auto' }}>
+          <p className="nav-label">Status</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 8px' }}>
+            {[
+              { label: 'Services',      value: `${SERVICES.length}` },
+              { label: 'Tests passing', value: `${totalTests}` },
+              { label: 'Runbooks',      value: `${RUNBOOKS.length}` },
+              { label: 'Account types', value: '3' },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                <span style={{ color: 'var(--text-3)' }}>{label}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontWeight: 600, color: 'var(--accent)' }}>{value}</span>
+              </div>
             ))}
           </div>
-          <a href="https://github.com/ambientintel/ambientcloud" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.accent, border: `1px solid ${C.accentDim}`, padding: '5px 12px', borderRadius: 2 }}>
-              GitHub ↗
-            </span>
-          </a>
-        </nav>
+        </div>
+      </nav>
 
-        {/* ── Hero ── */}
-        <section style={{
-          paddingTop: 160, paddingBottom: 100, paddingLeft: 48, paddingRight: 48,
-          position: 'relative', overflow: 'hidden',
-          backgroundImage: `linear-gradient(${C.grid} 1px,transparent 1px),linear-gradient(90deg,${C.grid} 1px,transparent 1px)`,
-          backgroundSize: '64px 64px',
-        }}>
-          <div style={{ position: 'absolute', top: '30%', right: '10%', width: 500, height: 400, pointerEvents: 'none', background: `radial-gradient(ellipse at center, ${C.accentGlow} 0%, transparent 70%)` }} />
+      {/* ── Main ── */}
+      <main style={{ padding: '32px 40px', overflowY: 'auto' }}>
 
-          <div style={{ maxWidth: 820 }}>
-            <div className="cl-fadeup" style={{ animationDelay: '0.05s', marginBottom: 20 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: C.accent, boxShadow: `0 0 8px ${C.accent}` }} />
-                ambientintel/ambientcloud · AWS Architecture v4
-              </span>
-            </div>
-
-            <h1 className="cl-fadeup" style={{ animationDelay: '0.12s', fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 'clamp(44px,6vw,80px)', lineHeight: 1.06, letterSpacing: '-0.03em', margin: '0 0 24px' }}>
-              Cloud infrastructure<br />
-              <em style={{ color: C.accent, fontStyle: 'italic' }}>for senior care.</em>
-            </h1>
-
-            <p className="cl-fadeup" style={{ animationDelay: '0.2s', fontSize: 17, lineHeight: 1.65, color: C.text2, maxWidth: 560, margin: '0 0 16px', fontWeight: 300 }}>
-              AWS backend for fall-detection at scale — seven independently deployable services across hot alerts, cold telemetry, AI narratives, and a REST API.
-            </p>
-            <p className="cl-fadeup" style={{ animationDelay: '0.22s', fontFamily: 'var(--mono)', fontSize: 10.5, color: C.text3, letterSpacing: '0.08em', margin: '0 0 40px' }}>
-              IRB-approved research pilot · HIPAA §164.514(c) coded data · One AWS account per tenant
-            </p>
-
-            <div className="cl-fadeup" style={{ animationDelay: '0.3s', display: 'flex', gap: 12 }}>
-              <a href="https://github.com/ambientintel/ambientcloud" target="_blank" rel="noreferrer" className="cl-cta">View on GitHub</a>
-              <Link href="/dashboard" className="cl-cta-ghost">Nurse Dashboard →</Link>
-            </div>
+        {/* Header card */}
+        <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 20px', marginBottom: 28, display: 'flex', gap: 32, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Repo</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--accent)' }}>ambientintel/ambientcloud</div>
           </div>
-        </section>
-
-        {/* ── Stats ── */}
-        <section style={{ borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
-          {STATS.map((s, i) => (
-            <div key={i} style={{ padding: '32px 48px', borderRight: i < 3 ? `1px solid ${C.border}` : 'none' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 38, fontWeight: 500, color: C.text, letterSpacing: '-0.02em', lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: C.text3, marginTop: 8 }}>{s.label}</div>
-            </div>
-          ))}
-        </section>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Architecture</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--text-2)' }}>v4 · 2026-04-21</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Data handling</div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>IRB-approved · HIPAA §164.514(c) coded data · No names, DOBs, or MRNs</div>
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'center' }}>
+            {['Terraform 1.14+', 'Python 3.12', 'FastAPI', 'AWS Bedrock'].map(tag => (
+              <span key={tag} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 4, padding: '2px 7px' }}>{tag}</span>
+            ))}
+            <a href="https://github.com/ambientintel/ambientcloud" target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', textDecoration: 'none', borderBottom: '1px solid var(--accent)', paddingBottom: 1 }}>github ↗</a>
+          </div>
+        </div>
 
         {/* ── Services ── */}
-        <section style={{ padding: '88px 48px' }}>
-          <div style={{ marginBottom: 48 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, marginBottom: 14 }}>Services</div>
-            <h2 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 'clamp(26px,3vw,40px)', letterSpacing: '-0.02em', margin: 0 }}>Seven independently deployable services.</h2>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, border: `1px solid ${C.border}` }}>
-            {SERVICES.map((svc, i) => (
-              <a key={svc.id} href={`https://github.com/ambientintel/ambientcloud/tree/main/${svc.path}`} target="_blank" rel="noreferrer"
-                className="cl-svc" style={{ textDecoration: 'none', color: 'inherit' }}
-                onMouseEnter={() => setHoveredService(svc.id)}
-                onMouseLeave={() => setHoveredService(null)}>
-                <div style={{
-                  padding: '32px 28px', minHeight: 200,
-                  background: hoveredService === svc.id ? C.surface2 : C.surface,
-                  borderRight: (i % 3 !== 2) ? `1px solid ${C.border}` : 'none',
-                  borderBottom: (i < SERVICES.length - (SERVICES.length % 3 || 3)) ? `1px solid ${C.border}` : 'none',
-                  display: 'flex', flexDirection: 'column', gap: 14, transition: 'background 0.18s',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: svc.color, background: svc.colorDim, padding: '3px 8px', borderRadius: 2 }}>{svc.tag}</span>
-                    <span className="cl-arrow" style={{ color: C.text3, fontSize: 16 }}>↗</span>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 400, letterSpacing: '-0.01em', color: C.text, marginBottom: 8 }}>{svc.label}</div>
-                    <div style={{ fontSize: 13, lineHeight: 1.65, color: C.text2, fontWeight: 300 }}>{svc.description}</div>
-                  </div>
-                  <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-                    {svc.tests !== null && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: C.accent }} />
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, letterSpacing: '0.08em' }}>{svc.tests} tests</span>
-                      </span>
-                    )}
-                    {svc.infra && (
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, letterSpacing: '0.08em' }}>Terraform</span>
-                    )}
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, letterSpacing: '0.06em', marginLeft: 'auto' }}>{svc.path}</span>
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Data paths ── */}
-        <section style={{ padding: '0 48px 88px' }}>
-          <div style={{ marginBottom: 48 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, marginBottom: 14 }}>Architecture</div>
-            <h2 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 'clamp(26px,3vw,40px)', letterSpacing: '-0.02em', margin: 0 }}>Five data paths.</h2>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, border: `1px solid ${C.border}` }}>
-            {PATHS.map((p, i) => (
-              <div key={i} style={{ background: C.surface, borderBottom: i < PATHS.length - 1 ? `1px solid ${C.border}` : 'none', padding: '28px 32px', display: 'grid', gridTemplateColumns: '200px 1fr 260px', alignItems: 'center', gap: 32 }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: p.tagColor, background: `${p.tagColor}18`, padding: '2px 7px', borderRadius: 2 }}>{p.tag}</span>
-                  </div>
-                  <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 400, letterSpacing: '-0.01em', color: C.text }}>{p.label}</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  {p.flow.map((node, ni) => (
-                    <span key={ni} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span className="cl-flow-node" style={{ background: C.surface2, color: C.text2, border: `1px solid ${C.border}` }}>{node}</span>
-                      {ni < p.flow.length - 1 && <span className="cl-flow-arrow">→</span>}
-                    </span>
-                  ))}
-                </div>
-                <div style={{ fontSize: 12.5, lineHeight: 1.6, color: C.text3, fontWeight: 300 }}>{p.description}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Architecture diagram ── */}
-        <section style={{ padding: '0 48px 88px' }}>
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, marginBottom: 14 }}>Architecture diagram</div>
-            <h2 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 'clamp(26px,3vw,40px)', letterSpacing: '-0.02em', margin: '0 0 8px' }}>End-to-end data flow.</h2>
-            <p style={{ fontSize: 13, color: C.text3, margin: 0, fontFamily: 'var(--mono)', letterSpacing: '0.04em' }}>architecture-v4.mmd · ambientintel/ambientcloud</p>
-          </div>
-          <div style={{ background: '#F8F9FA', borderRadius: 4, padding: '32px', overflowX: 'auto', border: `1px solid ${C.border}` }}>
-            <div ref={diagramRef} style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9A9B9D', fontFamily: 'var(--mono)', fontSize: 12 }}>
-              Loading diagram…
+        {tab === 'services' && (
+          <>
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · AWS</p>
+              <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>Services</h1>
             </div>
-          </div>
-        </section>
-
-        {/* ── Account model ── */}
-        <section style={{ padding: '0 48px 88px' }}>
-          <div style={{ marginBottom: 48 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, marginBottom: 14 }}>Isolation model</div>
-            <h2 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 'clamp(26px,3vw,40px)', letterSpacing: '-0.02em', margin: 0 }}>One AWS account per tenant.</h2>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-            {ACCOUNTS.map((acc, i) => (
-              <div key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 3, padding: '32px 28px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: acc.color, background: acc.colorDim, padding: '3px 8px', borderRadius: 2 }}>{acc.count}</span>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Services',  value: SERVICES.length },
+                { label: 'Tests',     value: totalTests },
+                { label: 'With Terraform', value: SERVICES.filter(s => s.tf).length },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 500, color: 'var(--text)' }}>{value}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
                 </div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 400, letterSpacing: '-0.01em', color: C.text, marginBottom: 20 }}>{acc.label}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {acc.items.map((item, j) => (
-                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ display: 'inline-block', width: 4, height: 4, borderRadius: '50%', background: acc.color, flexShrink: 0 }} />
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text2, letterSpacing: '0.04em' }}>{item}</span>
-                    </div>
+              ))}
+            </div>
+            <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--line)' }}>
+                    {['Service', 'Type', 'Description', 'Tests', 'Infra'].map(h => (
+                      <th key={h} style={{ padding: '9px 14px', textAlign: 'left', fontSize: 11, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-3)', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {SERVICES.map((svc, i) => (
+                    <tr key={svc.id} style={{ borderBottom: '1px solid var(--line)', background: 'transparent' }}>
+                      <td style={{ padding: '11px 14px' }}>
+                        <a href={`https://github.com/ambientintel/ambientcloud/tree/main/${svc.path}`} target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)', textDecoration: 'none' }}>{svc.label} ↗</a>
+                      </td>
+                      <td style={{ padding: '11px 14px' }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 4, padding: '2px 7px' }}>{svc.tag}</span>
+                      </td>
+                      <td style={{ padding: '11px 14px', fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5, maxWidth: 400 }}>{svc.desc}</td>
+                      <td style={{ padding: '11px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: svc.tests ? 'var(--text)' : 'var(--text-4)', textAlign: 'center' }}>
+                        {svc.tests ?? '—'}
+                      </td>
+                      <td style={{ padding: '11px 14px', textAlign: 'center' }}>
+                        <span style={{ fontSize: 13, color: svc.tf ? 'var(--accent)' : 'var(--text-4)' }}>{svc.tf ? '✓' : '—'}</span>
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
-        {/* ── Runbooks ── */}
-        <section style={{ padding: '0 48px 88px' }}>
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 3, padding: '40px 40px', display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 32 }}>
-            <div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, marginBottom: 12 }}>Incident response</div>
-              <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 24, letterSpacing: '-0.02em', color: C.text, marginBottom: 12 }}>11 runbooks. Ready for on-call.</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {['API 5xx','Auth failure','Cost spike','Device offline','Escalation','Fall alert — false positive','Fall alert — missed','IRB data request','Narrative broken','Telemetry gap'].map(rb => (
-                  <span key={rb} style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.08em', color: C.text3, background: C.surface2, border: `1px solid ${C.border}`, padding: '4px 10px', borderRadius: 2 }}>{rb}</span>
+        {/* ── Data Paths ── */}
+        {tab === 'paths' && (
+          <>
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · Architecture v4</p>
+              <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>Data Paths</h1>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {PATHS.map((p, i) => (
+                <div key={i} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '20px 22px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <span style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 400 }}>{p.label}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 99, letterSpacing: '0.06em' }}>{p.tag}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                    {p.flow.map((node, ni) => (
+                      <span key={ni} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 4, padding: '4px 10px', color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{node}</span>
+                        {ni < p.flow.length - 1 && <span style={{ color: 'var(--text-4)', fontSize: 12 }}>→</span>}
+                      </span>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0, lineHeight: 1.5 }}>{p.desc}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── Architecture ── */}
+        {tab === 'architecture' && (
+          <>
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · architecture-v4.mmd</p>
+              <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>Architecture Diagram</h1>
+            </div>
+            <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'auto', background: '#F8F9FA', padding: 24 }}>
+              <div ref={diagramRef} style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-4)', fontFamily: 'var(--mono)', fontSize: 12 }}>
+                Loading diagram…
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', marginTop: 10 }}>
+              Mermaid flowchart · v4 · 2026-04-21 ·{' '}
+              <a href="https://github.com/ambientintel/ambientcloud/blob/main/docs/architecture-v4.mmd" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>view source ↗</a>
+            </p>
+          </>
+        )}
+
+        {/* ── Account Model ── */}
+        {tab === 'accounts' && (
+          <>
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · tenancy.md</p>
+              <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>Account Isolation Model</h1>
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 24, lineHeight: 1.6 }}>
+              One AWS account per tenant organization — the strongest isolation boundary AWS offers and the correct default for HIPAA workloads handling PHI from distinct covered entities.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+              {ACCOUNTS.map((acc) => (
+                <div key={acc.label} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '20px 20px' }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 99, letterSpacing: '0.06em', display: 'inline-block', marginBottom: 12 }}>{acc.count}</div>
+                  <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 400, marginBottom: 14 }}>{acc.label}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {acc.items.map(item => (
+                      <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, display: 'inline-block' }} />
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-2)' }}>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '16px 20px' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-4)', marginBottom: 10 }}>What crosses account boundaries</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 32px' }}>
+                {[
+                  ['✓ Scalar CloudWatch metrics (no strings)', 'var(--text-2)'],
+                  ['✓ First-boot device provisioning (once)', 'var(--text-2)'],
+                  ['✗ Logs, traces, or any PHI', '#a02020'],
+                  ['✗ KMS keys (tenant CMK stays in tenant acct)', '#a02020'],
+                  ['✗ Device telemetry or fall events', '#a02020'],
+                  ['✗ Narrative content or API responses', '#a02020'],
+                ].map(([text, color]) => (
+                  <div key={text as string} style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: color as string }}>{text as string}</div>
                 ))}
               </div>
             </div>
-            <a href="https://github.com/ambientintel/ambientcloud/tree/main/docs/runbooks" target="_blank" rel="noreferrer" className="cl-cta" style={{ whiteSpace: 'nowrap' }}>View runbooks ↗</a>
-          </div>
-        </section>
+          </>
+        )}
 
-        {/* ── Footer ── */}
-        <footer style={{ padding: '28px 48px', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.text3 }}>
-            Ambient Intelligence · Not for clinical use
-          </span>
-          <Link href="/" style={{ textDecoration: 'none', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: C.text3 }}>
-            ← Control Center
-          </Link>
-        </footer>
+        {/* ── Runbooks ── */}
+        {tab === 'runbooks' && (
+          <>
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · docs/runbooks/</p>
+              <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>Incident Runbooks</h1>
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 24, lineHeight: 1.6 }}>
+              {RUNBOOKS.length} runbooks covering all major failure modes — written to be followed on-call without prior system knowledge.
+            </p>
+            <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--line)' }}>
+                    {['Runbook', 'Path', 'Source'].map(h => (
+                      <th key={h} style={{ padding: '9px 14px', textAlign: 'left', fontSize: 11, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-3)', fontWeight: 500 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {RUNBOOKS.map((rb, i) => {
+                    const slug = rb.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--line)' }}>
+                        <td style={{ padding: '11px 14px', fontSize: 13 }}>{rb}</td>
+                        <td style={{ padding: '11px 14px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>docs/runbooks/{slug}.md</td>
+                        <td style={{ padding: '11px 14px' }}>
+                          <a href={`https://github.com/ambientintel/ambientcloud/blob/main/docs/runbooks/${slug}.md`} target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>view ↗</a>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
-      </div>
-    </>
+      </main>
+    </div>
   );
 }
