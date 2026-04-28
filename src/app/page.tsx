@@ -36,6 +36,14 @@ const MODULES = [
     index: 3,
   },
   {
+    href: '/cloud',
+    tag: 'Infrastructure',
+    label: 'Cloud Infrastructure',
+    description: 'AWS backend — seven services across fall-alert hot path, Parquet cold path, Ella AI narratives, and the Nurse API. Architecture v4.',
+    meta: 'ambientcloud · AWS · Terraform',
+    index: 4,
+  },
+  {
     href: '/colors',
     tag: 'Design',
     label: 'Color & Typography',
