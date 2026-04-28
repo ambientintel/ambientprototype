@@ -526,7 +526,7 @@ export default function Landing1() {
           </div>
           <Link href="/control" style={{ textDecoration: 'none' }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.accent, border: `1px solid ${C.accentDim}`, padding: '5px 12px', borderRadius: 2 }}>
-              Control Center
+              View Control Center
             </span>
           </Link>
         </nav>
@@ -768,7 +768,7 @@ export default function Landing1() {
                 One platform. Full visibility.
               </h2>
               <Link href="/control" style={{ textDecoration:'none' }}>
-                <button className="l1-cta-primary" style={{ whiteSpace:'nowrap' }}>Control Center</button>
+                <button className="l1-cta-primary" style={{ whiteSpace:'nowrap' }}>View Control Center</button>
               </Link>
             </div>
           </div>
@@ -824,7 +824,7 @@ export default function Landing1() {
             </h3>
           </div>
           <Link href="/control" style={{ textDecoration: 'none' }}>
-            <button className="l1-cta-primary">Go to Control Center</button>
+            <button className="l1-cta-primary">View Control Center</button>
           </Link>
         </section>
 
