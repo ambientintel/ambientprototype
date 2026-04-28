@@ -188,7 +188,6 @@ const VIZ_FLOORS: { floor: string; rooms: { id: string; status: RoomStatus }[] }
 ];
 const VIZ_STATUS_COLOR: Record<RoomStatus,string> = { quiet:'#3DCC91', movement:'#FFC940', alert:'#FF6B6B' };
 const VIZ_STATUS_DIM:   Record<RoomStatus,string> = { quiet:'rgba(61,204,145,0.12)', movement:'rgba(255,201,64,0.14)', alert:'rgba(255,107,107,0.16)' };
-const VIZ_TIMELINE = [0,0,1,0,2,1,0,3,8,12,7,5,9,11,6,8,10,14,9,7,5,3,2,1];
 const VIZ_RINGS = [
   { label:'21 CFR 820', sub:'Gap Analysis',       pct:62, color:'#2D72D2' },
   { label:'SaMD Verified', sub:'IEC 62304',        pct:48, color:'#3DCC91' },
