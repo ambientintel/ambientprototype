@@ -14,23 +14,14 @@ export default function PatientDashboard() {
     return () => clearInterval(id);
   }, []);
 
+  const cst = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
   const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const h = now.getHours();
-  const timeOfDay =
-    h < 5  ? 'Late night' :
-    h < 8  ? 'Early morning' :
-    h < 10 ? 'Morning' :
-    h < 12 ? 'Late morning' :
-    h < 13 ? 'Midday' :
-    h < 15 ? 'Afternoon' :
-    h < 17 ? 'Mid afternoon' :
-    h < 19 ? 'Late afternoon' :
-    h < 21 ? 'Evening' : 'Night';
+  const h  = cst.getHours();
   const hh = h % 12 || 12;
-  const mm = String(now.getMinutes()).padStart(2, '0');
+  const mm = String(cst.getMinutes()).padStart(2, '0');
   const ampm = h < 12 ? 'AM' : 'PM';
-  const crumb = `${DAYS[now.getDay()]} · ${MONTHS[now.getMonth()]} ${now.getDate()} · ${hh}:${mm} ${ampm}`;
+  const crumb = `${DAYS[cst.getDay()]} · ${MONTHS[cst.getMonth()]} ${cst.getDate()} · ${hh}:${mm} ${ampm} CST`;
 
   useEffect(() => {
     document.body.style.background = '#F0F0EE';
