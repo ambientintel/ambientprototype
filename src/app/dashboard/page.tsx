@@ -42,11 +42,14 @@ export default function PatientDashboard() {
         </Link>
 
         <nav className="nav-section">
-          <div className="nav-label">Discover</div>
+          <div className="nav-label">Views</div>
           {[
-            { label: "Home", icon: <path d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round" /> },
-            { label: "Browse", icon: <><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L13.5 13.5" strokeLinecap="round"/></> },
-            { label: "Alerts", icon: <><path d="M3.5 12.5h9l-1.5-2V7a3.5 3.5 0 10-7 0v3.5l-1.5 2z" strokeLinejoin="round"/><path d="M6.5 13.5a1.5 1.5 0 003 0" strokeLinecap="round"/></> },
+            { label: "Overview",   icon: <path d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round" /> },
+            { label: "Floor Map",  icon: <><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M2.5 7h11M7 2.5v11"/></> },
+            { label: "Alerts",     icon: <><path d="M3.5 12.5h9l-1.5-2V7a3.5 3.5 0 10-7 0v3.5l-1.5 2z" strokeLinejoin="round"/><path d="M6.5 13.5a1.5 1.5 0 003 0" strokeLinecap="round"/></> },
+            { label: "Browse",     icon: <><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L13.5 13.5" strokeLinecap="round"/></> },
+            { label: "Reports",    icon: <><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" strokeLinecap="round"/></> },
+            { label: "Analytics",  icon: <><path d="M2.5 12.5h11M5 12.5V8.5M8 12.5V5M11 12.5V9.5" strokeLinecap="round"/></> },
           ].map(({ label, icon }) => (
             <div
               key={label}
@@ -60,21 +63,21 @@ export default function PatientDashboard() {
         </nav>
 
         <nav className="nav-section">
-          <div className="nav-label">Library</div>
+          <div className="nav-label">Rooms</div>
           {[
-            { label: "All Residents", icon: <><circle cx="6" cy="6" r="2.2"/><circle cx="11" cy="7" r="1.8"/><path d="M2.5 13c0-2 1.6-3.4 3.5-3.4S9.5 11 9.5 13M10 13c0-1.5 1-2.6 2.5-2.6s2.5 1 2.5 2.6" strokeLinecap="round"/></> },
-            { label: "Floor 1", icon: <><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M2.5 6h11M6 6v7.5"/></> },
-            { label: "Floor 2", icon: <><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M2.5 6h11M2.5 9.5h11M6 2.5v11"/></> },
-            { label: "Floor 3", icon: <><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M2.5 6h11M2.5 9.5h11M6 2.5v11M9.5 2.5v11"/></> },
-            { label: "Floor 4", icon: <><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M2.5 5.5h11M2.5 8.5h11M2.5 11.5h11M6 2.5v11"/></> },
-          ].map(({ label, icon }) => (
+            "MOH 301","MOH 302","MOH 303","MOH 304","MOH 305",
+            "MOH 306","MOH 307","MOH 308","MOH 309","MOH 310",
+          ].map((room) => (
             <div
-              key={label}
-              className={`nav-item${activeNav === label ? " active" : ""}`}
-              onClick={() => setActiveNav(label)}
+              key={room}
+              className={`nav-item${activeNav === room ? " active" : ""}`}
+              onClick={() => setActiveNav(room)}
             >
-              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>
-              {label}
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+                <rect x="3" y="2.5" width="10" height="11" rx="1"/>
+                <path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/>
+              </svg>
+              {room}
             </div>
           ))}
         </nav>
