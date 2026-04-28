@@ -124,6 +124,9 @@ export default function BomPage() {
   }, 0);
   const costKnown = assembly.bom.some(l => (partByPn(l.pn)?.unitCost ?? null) != null);
 
+  const totalUnitCost = PARTS.reduce((sum, p) => sum + (p.unitCost ?? 0), 0);
+  const pricedPartCount = PARTS.filter(p => p.unitCost != null && p.unitCost > 0).length;
+
   const nrndCount = PARTS.filter(p => p.lifecycle === 'NRND' || p.lifecycle === 'EOL').length;
   const lowStockCount = 0;
 
@@ -176,6 +179,24 @@ export default function BomPage() {
 
       {/* Main */}
       <main style={{ padding: '32px 40px', overflowY: 'auto' }}>
+
+        {/* ── Cost summary box ── */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 28 }}>
+          <div style={{
+            background: 'var(--surface-1)', border: '1px solid var(--line-strong)',
+            borderRadius: 10, padding: '14px 20px', minWidth: 200,
+          }}>
+            <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>
+              Total Unit Cost
+            </p>
+            <p style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 400, margin: 0, letterSpacing: '-0.02em' }}>
+              ${totalUnitCost.toFixed(2)}
+            </p>
+            <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)', margin: '5px 0 0' }}>
+              {pricedPartCount} of {PARTS.length} parts priced
+            </p>
+          </div>
+        </div>
 
         {/* ── Parts Library ── */}
         {tab === 'parts' && (
