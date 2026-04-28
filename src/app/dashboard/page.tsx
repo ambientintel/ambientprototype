@@ -92,7 +92,7 @@ export default function PatientDashboard() {
         <header className="topbar">
           <div>
             <div className="crumb">Sunday · Dec 5 · Late morning</div>
-            <h1 className="page-title">Patient <em>Dashboard</em></h1>
+            <h1 className="page-title">Nurse <em>Dashboard</em></h1>
           </div>
           <div className="tool-group">
             <button className="btn btn-ghost">
