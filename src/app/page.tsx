@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 
 const HERO_MODULE = {
@@ -54,6 +54,117 @@ const MODULES = [
     meta: 'ambientdesign · interactive',
   },
 ];
+
+
+// ── Ticker events ──
+const TICKER_EVENTS = [
+  { room:'201', type:'movement', label:'Movement detected', ago:'2s' },
+  { room:'305', type:'alert',    label:'Fall alert',        ago:'14s' },
+  { room:'118', type:'movement', label:'Movement detected', ago:'31s' },
+  { room:'212', type:'quiet',    label:'Room quiet',        ago:'48s' },
+  { room:'307', type:'alert',    label:'Fall alert',        ago:'1m 2s' },
+  { room:'104', type:'movement', label:'Movement detected', ago:'1m 19s' },
+  { room:'220', type:'quiet',    label:'Room quiet',        ago:'1m 44s' },
+  { room:'311', type:'movement', label:'Movement detected', ago:'2m 3s' },
+  { room:'109', type:'alert',    label:'Fall alert resolved', ago:'2m 28s' },
+  { room:'215', type:'movement', label:'Movement detected', ago:'2m 51s' },
+  { room:'302', type:'quiet',    label:'Room quiet',        ago:'3m 10s' },
+  { room:'107', type:'movement', label:'Movement detected', ago:'3m 33s' },
+];
+
+const TICK_COLOR: Record<string,string> = { movement:'#FFC940', alert:'#FF6B6B', quiet:'#3DCC91' };
+
+// ── Pipeline nodes ──
+const PIPELINE = [
+  { id:'sensor',   label:'IWR6843AOP', sub:'Radar sensor',    group:'device' },
+  { id:'kinesis',  label:'Kinesis',    sub:'Ingest stream',   group:'aws' },
+  { id:'lambda',   label:'Lambda',     sub:'Classifier',      group:'aws' },
+  { id:'dynamo',   label:'DynamoDB',   sub:'Alert store',     group:'aws' },
+  { id:'bedrock',  label:'Bedrock',    sub:'Ella AI',         group:'aws' },
+  { id:'api',      label:'API GW',     sub:'Nurse API',       group:'aws' },
+  { id:'dash',     label:'Dashboard',  sub:'Nurse display',   group:'app' },
+];
+
+function Ticker() {
+  const [offset, setOffset] = React.useState(0);
+  React.useEffect(()=>{
+    const id = setInterval(()=>setOffset(o=>(o+1)%TICKER_EVENTS.length), 2800);
+    return ()=>clearInterval(id);
+  },[]);
+  const visible = [...TICKER_EVENTS, ...TICKER_EVENTS].slice(offset, offset+5);
+  return (
+    <div style={{ overflow:'hidden' }}>
+      <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+        {visible.map((e,i)=>(
+          <div key={`${e.room}-${offset}-${i}`} style={{
+            display:'flex', alignItems:'center', gap:16,
+            padding:'13px 0',
+            borderBottom:`1px solid rgba(255,255,255,0.05)`,
+            opacity: i===0 ? 1 : 1-(i*0.15),
+            transition:'opacity 0.4s ease',
+          }}>
+            <span style={{ display:'inline-block', width:6, height:6, borderRadius:'50%', background:TICK_COLOR[e.type], flexShrink:0, boxShadow: e.type==='alert' ? `0 0 6px ${TICK_COLOR[e.type]}` : 'none' }}/>
+            <span style={{ fontFamily:'var(--mono)', fontSize:10.5, color:'#9A9B9D', letterSpacing:'0.06em', width:60, flexShrink:0 }}>Room {e.room}</span>
+            <span style={{ fontFamily:'var(--mono)', fontSize:10.5, color: i===0 ? '#EDEEF0' : '#9A9B9D', letterSpacing:'0.04em', flex:1 }}>{e.label}</span>
+            <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'#5C5E62', letterSpacing:'0.06em' }}>{e.ago} ago</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Pipeline() {
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(()=>{
+    const id = setInterval(()=>setTick(t=>t+1), 600);
+    return ()=>clearInterval(id);
+  },[]);
+  const GROUP_COLOR: Record<string,{bg:string,border:string,text:string}> = {
+    device: { bg:'rgba(45,114,210,0.12)', border:'rgba(45,114,210,0.4)', text:'#2D72D2' },
+    aws:    { bg:'rgba(255,201,64,0.08)', border:'rgba(255,201,64,0.25)', text:'#FFC940' },
+    app:    { bg:'rgba(61,204,145,0.10)', border:'rgba(61,204,145,0.35)', text:'#3DCC91' },
+  };
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:0, overflowX:'auto' }}>
+      {PIPELINE.map((node,i)=>{
+        const gc = GROUP_COLOR[node.group];
+        const active = tick % PIPELINE.length === i;
+        return (
+          <React.Fragment key={node.id}>
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8, flexShrink:0 }}>
+              <div style={{
+                padding:'14px 20px', borderRadius:3,
+                background: active ? gc.bg : 'rgba(255,255,255,0.03)',
+                border:`1px solid ${active ? gc.border : 'rgba(255,255,255,0.07)'}`,
+                transition:'all 0.3s ease', minWidth:110, textAlign:'center',
+              }}>
+                <div style={{ fontFamily:'var(--mono)', fontSize:11, color: active ? gc.text : '#9A9B9D', fontWeight:500, letterSpacing:'0.06em', marginBottom:4, transition:'color 0.3s' }}>
+                  {node.label}
+                </div>
+                <div style={{ fontFamily:'var(--mono)', fontSize:9, color:'#5C5E62', letterSpacing:'0.08em', textTransform:'uppercase' }}>
+                  {node.sub}
+                </div>
+              </div>
+            </div>
+            {i < PIPELINE.length-1 && (
+              <div style={{ flex:1, display:'flex', alignItems:'center', padding:'0 4px', minWidth:24, position:'relative', overflow:'hidden' }}>
+                <div style={{ width:'100%', height:1, background:'rgba(255,255,255,0.08)', position:'relative' }}>
+                  <div style={{
+                    position:'absolute', top:-2, width:5, height:5, borderRadius:'50%',
+                    background:'#2D72D2', boxShadow:'0 0 6px #2D72D2',
+                    left: `${((tick % (PIPELINE.length)) === i ? 80 : (tick % (PIPELINE.length)) > i ? 100 : 0)}%`,
+                    transition:'left 0.55s ease', opacity: (tick % PIPELINE.length) >= i ? 1 : 0.2,
+                  }}/>
+                </div>
+              </div>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
 
 const STATS = [
   { value: '57', label: 'Hardware components' },
@@ -230,6 +341,36 @@ export default function Landing1() {
               </div>
             </div>
           ))}
+        </section>
+
+        {/* ── Live Intelligence ── */}
+        <section style={{ borderTop:`1px solid rgba(255,255,255,0.07)` }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:320 }}>
+            {/* Ticker */}
+            <div style={{ padding:'48px 48px', borderRight:`1px solid rgba(255,255,255,0.07)` }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.22em', textTransform:'uppercase', color:'#2D72D2', marginBottom:8 }}>Live feed</div>
+              <div style={{ fontFamily:'var(--serif)', fontSize:22, fontWeight:300, letterSpacing:'-0.02em', color:'#EDEEF0', marginBottom:28 }}>
+                Events as they happen.
+              </div>
+              <Ticker/>
+            </div>
+            {/* Pipeline */}
+            <div style={{ padding:'48px 48px' }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.22em', textTransform:'uppercase', color:'#2D72D2', marginBottom:8 }}>Data pipeline</div>
+              <div style={{ fontFamily:'var(--serif)', fontSize:22, fontWeight:300, letterSpacing:'-0.02em', color:'#EDEEF0', marginBottom:36 }}>
+                Sensor to screen.
+              </div>
+              <Pipeline/>
+              <div style={{ display:'flex', gap:20, marginTop:28 }}>
+                {[['Device','#2D72D2'],['AWS','#FFC940'],['App','#3DCC91']].map(([label,color])=>(
+                  <div key={label} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ width:7, height:7, borderRadius:1, background:color, display:'inline-block' }}/>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:'#5C5E62', textTransform:'uppercase', letterSpacing:'0.12em' }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* ── Modules ── */}
