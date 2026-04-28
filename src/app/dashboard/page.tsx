@@ -58,22 +58,18 @@ export default function PatientDashboard() {
 
         <nav className="nav-section">
           <div className="nav-label">Views</div>
-          {[
-            { label: "Overview",   icon: <path d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round" /> },
-            { label: "Floor Map",  icon: <><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M2.5 7h11M7 2.5v11"/></> },
-            { label: "Alerts",     icon: <><path d="M3.5 12.5h9l-1.5-2V7a3.5 3.5 0 10-7 0v3.5l-1.5 2z" strokeLinejoin="round"/><path d="M6.5 13.5a1.5 1.5 0 003 0" strokeLinecap="round"/></> },
-            { label: "Browse",     icon: <><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L13.5 13.5" strokeLinecap="round"/></> },
-            { label: "Reports",    icon: <><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" strokeLinecap="round"/></> },
-            { label: "Analytics",  icon: <><path d="M2.5 12.5h11M5 12.5V8.5M8 12.5V5M11 12.5V9.5" strokeLinecap="round"/></> },
-          ].map(({ label, icon }) => (
-            <div
-              key={label}
-              className={`nav-item${activeNav === label ? " active" : ""}`}
-              onClick={() => setActiveNav(label)}
-            >
+          {([
+            ['/dashboard',           'Overview',  <path d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round" />],
+            ['/dashboard/floormap',  'Floor Map', <><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M2.5 7h11M7 2.5v11"/></>],
+            ['/dashboard/alerts',    'Alerts',    <><path d="M3.5 12.5h9l-1.5-2V7a3.5 3.5 0 10-7 0v3.5l-1.5 2z" strokeLinejoin="round"/><path d="M6.5 13.5a1.5 1.5 0 003 0" strokeLinecap="round"/></>],
+            ['/dashboard/reports',   'Reports',   <><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" strokeLinecap="round"/></>],
+            ['/dashboard/analytics', 'Analytics', <><path d="M2.5 12.5h11M5 12.5V8.5M8 12.5V5M11 12.5V9.5" strokeLinecap="round"/></>],
+            ['/dashboard/browse',    'Browse',    <><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L13.5 13.5" strokeLinecap="round"/></>],
+          ] as [string, string, React.ReactNode][]).map(([href, label, icon]) => (
+            <Link key={href} href={href} className="nav-item" style={{ textDecoration:'none', color:'inherit' }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>
               {label}
-            </div>
+            </Link>
           ))}
         </nav>
 
@@ -99,7 +95,7 @@ export default function PatientDashboard() {
 
         <div className="sidebar-footer">
           <span className="status-dot" />
-          <span>Sensors online · 142 rooms</span>
+          <span>Sensors online · MOH 301–310</span>
         </div>
       </aside>
 
