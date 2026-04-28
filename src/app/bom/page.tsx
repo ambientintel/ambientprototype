@@ -156,6 +156,24 @@ export default function BomPage() {
           ))}
         </div>
 
+
+        <div className="nav-section">
+          <p className="nav-label">Pages</p>
+          {([
+            ['/dashboard', 'Nurse Dashboard'],
+            ['/bom',       'Bill of Materials'],
+            ['/gapanalysis','Gap Analysis'],
+            ['/samd',      'SaMD'],
+            ['/cloud',     'Cloud'],
+          ] as [string,string][]).map(([href, label]) => (
+            <Link key={href} href={href}
+              className={`nav-item${typeof window !== 'undefined' && window.location.pathname === href ? ' active' : ''}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}>
+              {label}
+            </Link>
+          ))}
+        </div>
+
         {/* Alert summary */}
         <div style={{ marginTop: 'auto' }}>
           <p className="nav-label">Alerts</p>
