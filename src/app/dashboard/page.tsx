@@ -26,6 +26,7 @@ export default function PatientDashboard() {
     '--accent':      '#7C6EAD',
     '--accent-soft': 'rgba(124,110,173,0.14)',
     '--sage':        'oklch(0.55 0.07 155)',
+    color:           'var(--text)',
   } as React.CSSProperties;
 
   return (
