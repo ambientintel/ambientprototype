@@ -1,30 +1,30 @@
 'use client';
 import Link from 'next/link';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 
 type Tab = 'services' | 'paths' | 'architecture' | 'accounts' | 'runbooks';
 
 const SERVICES = [
-  { id: 'ella',       tag: 'AI · Bedrock', label: 'Ella',            path: 'services/ella/',        tests: 11,  desc: 'Twice-daily Claude Sonnet narrative per subject via Bedrock — de-identified summaries stored in DynamoDB for clinical staff.', tf: true },
-  { id: 'api',        tag: 'REST API',     label: 'Nurse/Admin API', path: 'services/api/',         tests: 19,  desc: 'FastAPI + Cognito JWT with row-level facility scoping. Twelve endpoints serving staff web and mobile clients.', tf: true },
-  { id: 'telemetry',  tag: 'Streaming',    label: 'Telemetry',       path: 'services/telemetry/',   tests: 15,  desc: 'Fall-alert Lambda → SNS for sub-2s staff notification; per-minute aggregates → Firehose → Parquet on S3.', tf: true },
-  { id: 'admin-cli',  tag: 'CLI',          label: 'Admin CLI',       path: 'services/admin-cli/',   tests: 28,  desc: 'Operator CLI for device provisioning — mints tenant X.509 certs and registers rooms in DynamoDB.', tf: false },
+  { id: 'ella',       tag: 'AI · Bedrock', label: 'Ella',            path: 'services/ella/',        tests: 11,   desc: 'Twice-daily Claude Sonnet narrative per subject via Bedrock — de-identified summaries stored in DynamoDB for clinical staff.', tf: true },
+  { id: 'api',        tag: 'REST API',     label: 'Nurse/Admin API', path: 'services/api/',         tests: 19,   desc: 'FastAPI + Cognito JWT with row-level facility scoping. Twelve endpoints serving staff web and mobile clients.', tf: true },
+  { id: 'telemetry',  tag: 'Streaming',    label: 'Telemetry',       path: 'services/telemetry/',   tests: 15,   desc: 'Fall-alert Lambda → SNS for sub-2s staff notification; per-minute aggregates → Firehose → Parquet on S3.', tf: true },
+  { id: 'admin-cli',  tag: 'CLI',          label: 'Admin CLI',       path: 'services/admin-cli/',   tests: 28,   desc: 'Operator CLI for device provisioning — mints tenant X.509 certs and registers rooms in DynamoDB.', tf: false },
   { id: 'url-minter', tag: 'Upload',       label: 'URL Minter',      path: 'services/url-minter/',  tests: null, desc: 'Presigned S3 upload URLs for device Parquet batches — eliminates MQTT overhead for analytic cold-path data.', tf: true },
   { id: 'athena',     tag: 'Analytics',    label: 'Athena',          path: 'services/athena/',      tests: null, desc: 'Glue table and partition projection for raw radar frames on the cold path — queryable without ETL.', tf: true },
   { id: 'cloudtrail', tag: 'Audit',        label: 'CloudTrail',      path: 'services/cloudtrail/',  tests: null, desc: 'Data-event audit logging on all sensitive DynamoDB tables — every read/write attributed for HIPAA compliance.', tf: true },
 ];
 
 const PATHS = [
-  { label: 'Hot path',      tag: '< 2s',      flow: ['Device MQTT', 'IoT Rule', 'Lambda', 'DynamoDB', 'SNS → Staff'],                                  desc: 'Fall alerts. QoS 1 guaranteed delivery, sub-2-second latency budget.' },
-  { label: 'Cold path',     tag: 'New',        flow: ['Device (5-min Parquet)', 'url-minter', 'Presigned URL', 'S3'],                                   desc: 'Device writes Parquet batches locally and uploads directly to S3 — no MQTT for analytic data.' },
-  { label: 'Cold path',     tag: 'Legacy',     flow: ['Device MQTT', 'IoT Rule', 'Firehose', 'S3 (JSON→Parquet)'],                                      desc: 'Being retired. Dual-writes alongside the new path during migration.' },
-  { label: 'Narrative',     tag: '12h cadence',flow: ['EventBridge cron', 'SQS fanout', 'Ella Lambda', 'Bedrock Claude', 'DynamoDB'],                   desc: 'De-identified daily summaries generated per subject, surfaced in the Nurse Dashboard.' },
-  { label: 'Nurse/Admin API', tag: 'REST',     flow: ['API Gateway', 'Cognito JWT', 'FastAPI Lambda', 'DynamoDB'],                                       desc: 'Twelve endpoints, row-level facility scoping.' },
+  { label: 'Hot path',       tag: '< 2s',       flow: ['Device MQTT', 'IoT Rule', 'Lambda', 'DynamoDB', 'SNS → Staff'],                            desc: 'Fall alerts. QoS 1 guaranteed delivery, sub-2-second latency budget.' },
+  { label: 'Cold path',      tag: 'New',         flow: ['Device (5-min Parquet)', 'url-minter', 'Presigned URL', 'S3'],                             desc: 'Device writes Parquet batches locally and uploads directly to S3 — no MQTT for analytic data.' },
+  { label: 'Cold path',      tag: 'Legacy',      flow: ['Device MQTT', 'IoT Rule', 'Firehose', 'S3 (JSON→Parquet)'],                                desc: 'Being retired. Dual-writes alongside the new path during migration.' },
+  { label: 'Narrative',      tag: '12h cadence', flow: ['EventBridge cron', 'SQS fanout', 'Ella Lambda', 'Bedrock Claude', 'DynamoDB'],             desc: 'De-identified daily summaries generated per subject, surfaced in the Nurse Dashboard.' },
+  { label: 'Nurse/Admin API',tag: 'REST',        flow: ['API Gateway', 'Cognito JWT', 'FastAPI Lambda', 'DynamoDB'],                                desc: 'Twelve endpoints, row-level facility scoping.' },
 ];
 
 const ACCOUNTS = [
-  { label: 'Tenant plane',         count: 'One per org',  items: ['Fall alerts (hot)', 'Telemetry (cold)', 'Ella narratives', 'Nurse/Admin API', 'Tenant CMK (KMS)', 'CloudTrail audit'] },
-  { label: 'Control plane',        count: 'One (us)',     items: ['Fleet provisioning', 'Bootstrap cert issuance', 'Tenant registry', 'Service Catalog'] },
+  { label: 'Tenant plane',          count: 'One per org', items: ['Fall alerts (hot)', 'Telemetry (cold)', 'Ella narratives', 'Nurse/Admin API', 'Tenant CMK (KMS)', 'CloudTrail audit'] },
+  { label: 'Control plane',         count: 'One (us)',    items: ['Fleet provisioning', 'Bootstrap cert issuance', 'Tenant registry', 'Service Catalog'] },
   { label: 'Central observability', count: 'One (us)',    items: ['Scalar metrics only', 'No logs or traces', 'No PHI crosses boundary', 'TelemetryDivergence', 'Fall rate per facility'] },
 ];
 
@@ -34,206 +34,252 @@ const RUNBOOKS = [
   'IRB data request', 'Narrative broken', 'Telemetry gap',
 ];
 
-const MERMAID_CONTENT = `flowchart LR
-    subgraph Factory["Factory &amp; Control Plane (separate AWS account)"]
-        FleetProv["IoT Fleet Provisioning<br/>• bootstrap cert → tenant cert<br/>• tenant registry lookup<br/>• one-time at first boot"]
-        TenantRegistry[("Tenant Registry<br/>device UUID → tenant_id<br/>DDB + CloudTrail")]
-    end
+// ── Diagram primitives ────────────────────────────────────────────────────────
 
-    subgraph Device["Ambient Device (3 per room)"]
-        Radar["mmWave Radar + Actigraphy<br/>IWR6843AOP on AM62x"]
-        Agent["ambientapp agent<br/>• on-device fall detection<br/>• per-minute aggregator<br/>• WAL + spool (500 MB cap)<br/>• 5-min Parquet writer (ZSTD)"]
-        Radar --> Agent
-    end
+const TYPE_STYLE: Record<string, { bg: string; border: string; label: string; labelColor: string }> = {
+  factory:   { bg: 'rgba(190,18,60,0.07)',   border: 'rgba(190,18,60,0.28)',   label: 'Factory / Control',  labelColor: '#be123c' },
+  device:    { bg: 'rgba(55,65,81,0.10)',    border: 'rgba(55,65,81,0.35)',    label: 'Device',             labelColor: 'var(--text-2)' },
+  iot:       { bg: 'rgba(194,65,12,0.07)',   border: 'rgba(194,65,12,0.28)',   label: 'IoT Core',           labelColor: '#c2410c' },
+  hot:       { bg: 'rgba(185,28,28,0.07)',   border: 'rgba(185,28,28,0.28)',   label: 'Hot path',           labelColor: '#b91c1c' },
+  coldnew:   { bg: 'rgba(21,128,61,0.07)',   border: 'rgba(21,128,61,0.28)',   label: 'Cold path (new)',    labelColor: '#15803d' },
+  coldold:   { bg: 'rgba(107,114,128,0.07)', border: 'rgba(107,114,128,0.28)','label': 'Cold path (legacy)',labelColor: 'var(--text-3)' },
+  query:     { bg: 'rgba(21,128,61,0.05)',   border: 'rgba(21,128,61,0.20)',   label: 'Query layer',        labelColor: '#15803d' },
+  narrative: { bg: 'rgba(126,34,206,0.07)',  border: 'rgba(126,34,206,0.28)', label: 'Narrative',          labelColor: '#7c22ce' },
+  api:       { bg: 'rgba(29,78,216,0.07)',   border: 'rgba(29,78,216,0.28)',   label: 'API',                labelColor: '#1d4ed8' },
+  audit:     { bg: 'rgba(161,98,7,0.07)',    border: 'rgba(161,98,7,0.28)',    label: 'Audit',              labelColor: '#a16207' },
+  obs:       { bg: 'rgba(67,56,202,0.07)',   border: 'rgba(67,56,202,0.28)',   label: 'Observability',      labelColor: '#4338ca' },
+};
 
-    subgraph TenantPlane["Tenant Account (one per organization — see tenancy.md)"]
-        subgraph IoTCore["AWS IoT Core (mTLS, X.509)"]
-            CredProvider["Credentials Provider<br/>role alias → temp AWS creds"]
-            RuleAlerts["IoT Rule: fall enricher<br/>$aws/rules/fall-enricher/<br/>ambient/v1/alerts/fall/+<br/>(Basic Ingest — see §7.1)"]
-            RuleTelemetryLegacy["IoT Rule: telemetry (legacy)<br/>ambient/v1/telemetry/+<br/>retired after dual-write"]
-            Shadow[("Device Shadow<br/>desired: facility/subject/<br/>room/zone/telemetry_mode")]
-        end
+function Node({ label, sub, type, dashed }: { label: string; sub?: string; type: string; dashed?: boolean }) {
+  const s = TYPE_STYLE[type] ?? TYPE_STYLE.device;
+  return (
+    <div style={{
+      background: s.bg,
+      border: `1px ${dashed ? 'dashed' : 'solid'} ${s.border}`,
+      borderRadius: 5, padding: '5px 10px',
+      display: 'inline-flex', flexDirection: 'column', gap: 1, flexShrink: 0,
+    }}>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: s.labelColor, whiteSpace: 'nowrap', fontWeight: 500 }}>{label}</span>
+      {sub && <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-4)', whiteSpace: 'nowrap' }}>{sub}</span>}
+    </div>
+  );
+}
 
-        subgraph Hot["Hot path — fall alerts &lt;2s"]
-            AlertLambda["Lambda: alert enricher<br/>• DDB lookup<br/>• audit write<br/>• SNS publish"]
-            AlertsDDB[("DynamoDB: alerts<br/>PK: subject_date<br/>GSI: facility-time, eventId")]
-            SNS{{"SNS: fall-alerts<br/>filter by facilityId"}}
-            Staff["Medical Staff<br/>SMS + push + web"]
-        end
+function Arr({ dashed }: { dashed?: boolean }) {
+  return <span style={{ color: 'var(--text-4)', fontSize: 13, flexShrink: 0, opacity: dashed ? 0.5 : 1 }}>{dashed ? '╌╌▶' : '→'}</span>;
+}
 
-        subgraph ColdNew["Cold path (new) — device-side Parquet"]
-            URLMinter["Lambda: url-minter<br/>• SigV4 auth<br/>• Shadow scope check<br/>• 5-min presigned PUT<br/>• sha256 + CMK pinned"]
-            S3New[("S3: ambient-TENANT-parquet<br/>raw-device/date=/facility=/<br/>subject=/device=/*.parquet<br/>SSE-KMS with tenant CMK")]
-        end
+function DashArr() {
+  return <span style={{ color: 'var(--text-4)', fontSize: 11, flexShrink: 0 }}>- - ▶</span>;
+}
 
-        subgraph ColdLegacy["Cold path (legacy) — retiring"]
-            Firehose["Kinesis Firehose<br/>5 min / 128 MB buffer<br/>JSON → Parquet (ZSTD)"]
-            S3Legacy[("S3: same bucket<br/>raw/ prefix<br/>retired post-migration")]
-        end
+function Row({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{children}</div>;
+}
 
-        subgraph ColdShared["Cold path (shared) — query"]
-            Reconciler["Lambda: reconciler<br/>• every 15 min<br/>• Athena row-count delta<br/>• CloudWatch metric:<br/>TelemetryDivergence"]
-            Glue[("Glue Data Catalog<br/>partition projection<br/>UNION ALL view")]
-            Athena["Amazon Athena<br/>10 GB scan cap per query"]
-        end
+function Group({ label, type, children, note }: { label: string; type: string; children: React.ReactNode; note?: string }) {
+  const s = TYPE_STYLE[type] ?? TYPE_STYLE.device;
+  return (
+    <div style={{ border: `1px solid ${s.border}`, borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ padding: '4px 12px', background: s.bg, borderBottom: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: s.labelColor, fontWeight: 600 }}>{label}</span>
+        {note && <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', letterSpacing: '0.06em' }}>{note}</span>}
+      </div>
+      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
+    </div>
+  );
+}
 
-        subgraph Narrative["Narrative path — 12h cadence"]
-            Schedule{{"EventBridge<br/>cron: 7am + 7pm"}}
-            SQS[("SQS: ella-fanout<br/>DLQ on 3x failure")]
-            Ella["Lambda: Ella<br/>• Athena aggregates<br/>• DDB fall counts<br/>• Bedrock call<br/>• de-id system prompt"]
-            Bedrock[["AWS Bedrock<br/>Claude Sonnet 4.5<br/>(4.6 upgrade path available)<br/>HIPAA eligible, no egress"]]
-            UpdatesDDB[("DynamoDB: daily-updates<br/>PK: subjectId<br/>90-day TTL")]
-        end
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: 'var(--text-4)', marginBottom: 8 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
 
-        subgraph API["Nurse / Admin API"]
-            APIGW["API Gateway HTTP API<br/>JWT authorizer"]
-            Cognito["Cognito User Pool<br/>email + MFA<br/>custom:role, custom:facilityIds<br/>admin-create only"]
-            APILambda["Lambda: FastAPI<br/>row-level facility scope<br/>admin vs nurse roles<br/>12 endpoints"]
-            DevicesDDB[("DynamoDB: devices<br/>PK: deviceId<br/>GSI: facility-index")]
-        end
+function Legend() {
+  return (
+    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '12px 0', borderTop: '1px solid var(--line)', marginTop: 8 }}>
+      {Object.entries(TYPE_STYLE).map(([key, s]) => (
+        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: s.bg, border: `1px solid ${s.border}` }} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)', letterSpacing: '0.06em' }}>{s.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-        subgraph Audit["Audit &amp; Governance"]
-            CloudTrail["CloudTrail<br/>multi-region<br/>DDB + S3 data events<br/>7-year Glacier retention"]
-            Admin["ambientcloud-admin CLI<br/>• telemetry mode &lt;device&gt;<br/>• telemetry migrate &lt;facility&gt;<br/>• PILOT-XXXX enforcement<br/>• forbidden-attribute guard"]
-            KMS[("KMS: tenant CMK<br/>SSE-KMS on all buckets<br/>key does not cross accounts")]
-        end
-    end
+function ArchDiagram() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-    subgraph ControlObs["Central Observability (metrics only, no PHI)"]
-        MetricStream["CloudWatch Metric Stream<br/>scalar metrics only<br/>logs stay in tenant account"]
-    end
+      {/* Top row: Factory + Device + IoT Core */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <Group label="Factory & Control Plane" type="factory" note="separate AWS account">
+          <Row><Node label="Fleet Provisioning" sub="bootstrap cert → tenant cert" type="factory" /></Row>
+          <Row><Node label="Tenant Registry" sub="DDB + CloudTrail" type="factory" /></Row>
+        </Group>
 
-    %% Factory / first-boot
-    Agent -.->|"first boot only<br/>bootstrap cert"| FleetProv
-    FleetProv -.-> TenantRegistry
-    FleetProv -.->|"provision into<br/>tenant account"| CredProvider
+        <Group label="Ambient Device" type="device" note="3 per room">
+          <Row><Node label="mmWave Radar" sub="IWR6843AOP on AM62x" type="device" /></Row>
+          <Row><Node label="ambientapp agent" sub="WAL + spool · 5-min Parquet" type="device" /></Row>
+        </Group>
 
-    %% Device — steady state
-    Agent -->|"MQTT QoS 1<br/>fall alerts"| RuleAlerts
-    Agent -->|"MQTT QoS 0<br/>legacy only during dual-write"| RuleTelemetryLegacy
-    Agent -->|"HTTPS POST<br/>request presigned URL"| URLMinter
-    Agent -->|"HTTPS PUT<br/>200–400 KB parquet<br/>(5-min batch)"| S3New
-    Agent <-.->|"shadow sync<br/>incl. telemetry_mode"| Shadow
-    Agent -.->|"temp creds via mTLS"| CredProvider
+        <Group label="AWS IoT Core" type="iot" note="mTLS · X.509">
+          <Row><Node label="Credentials Provider" sub="role alias → temp AWS creds" type="iot" /></Row>
+          <Row><Node label="Device Shadow" sub="facility / subject / room / zone" type="iot" /></Row>
+          <Row><Node label="IoT Rule: fall-enricher" sub="Basic Ingest · QoS 1" type="iot" /></Row>
+          <Row><Node label="IoT Rule: telemetry" sub="legacy · QoS 0 · retiring" type="iot" dashed /></Row>
+        </Group>
+      </div>
 
-    %% url-minter scope check
-    URLMinter -.->|"Shadow facility/subject<br/>must match requested key"| Shadow
+      {/* Hot path */}
+      <Group label="Hot path — fall alerts" type="hot" note="< 2s latency budget">
+        <Row>
+          <Node label="Device" sub="MQTT QoS 1" type="device" />
+          <Arr />
+          <Node label="IoT Rule" sub="fall-enricher" type="iot" />
+          <Arr />
+          <Node label="Lambda" sub="alert enricher" type="hot" />
+          <Arr />
+          <Node label="DynamoDB" sub="alerts · PK: subject_date" type="hot" />
+          <Arr />
+          <Node label="SNS" sub="fall-alerts · filter by facilityId" type="hot" />
+          <Arr />
+          <Node label="Medical Staff" sub="SMS + push + web" type="hot" />
+        </Row>
+      </Group>
 
-    %% Hot path
-    RuleAlerts --> AlertLambda
-    AlertLambda --> AlertsDDB
-    AlertLambda -.->|"lookup"| DevicesDDB
-    AlertLambda --> SNS
-    SNS --> Staff
+      {/* Cold paths */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <Group label="Cold path (new) — device-side Parquet" type="coldnew">
+          <Row>
+            <Node label="Device" sub="5-min batch · ZSTD" type="device" />
+            <Arr />
+            <Node label="url-minter" sub="SigV4 · Shadow scope check" type="coldnew" />
+            <Arr />
+            <Node label="S3" sub="raw-device/date=/facility=/" type="coldnew" />
+          </Row>
+        </Group>
 
-    %% Cold path
-    RuleTelemetryLegacy --> Firehose
-    Firehose --> S3Legacy
-    S3New -.-> Glue
-    S3Legacy -.-> Glue
-    Glue -.-> Athena
+        <Group label="Cold path (legacy) — retiring" type="coldold">
+          <Row>
+            <Node label="Device" sub="MQTT QoS 0" type="device" dashed />
+            <Arr dashed />
+            <Node label="IoT Rule" sub="telemetry" type="iot" dashed />
+            <Arr dashed />
+            <Node label="Firehose" sub="5 min / 128 MB · JSON→Parquet" type="coldold" dashed />
+            <Arr dashed />
+            <Node label="S3" sub="raw/ prefix · retiring" type="coldold" dashed />
+          </Row>
+        </Group>
+      </div>
 
-    %% Reconciler (dual-write validation)
-    Reconciler -.->|"compare row counts<br/>telemetry_device vs telemetry_firehose"| Athena
+      {/* Query layer */}
+      <Group label="Cold path — shared query layer" type="query">
+        <Row>
+          <Node label="S3 (new + legacy)" type="coldnew" />
+          <Arr />
+          <Node label="Glue Data Catalog" sub="partition projection · UNION ALL" type="query" />
+          <Arr />
+          <Node label="Amazon Athena" sub="10 GB scan cap per query" type="query" />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-4)', marginLeft: 8 }}>← Ella, API, Reconciler</span>
+        </Row>
+        <Row>
+          <Node label="Reconciler Lambda" sub="every 15 min · Athena row-count delta" type="query" />
+          <Arr />
+          <Node label="CloudWatch" sub="TelemetryDivergence metric" type="obs" />
+        </Row>
+      </Group>
 
-    %% Narrative
-    Schedule --> Ella
-    Ella -->|"fanout per subject"| SQS
-    SQS --> Ella
-    Ella -.-> Athena
-    Ella -.-> AlertsDDB
-    Ella --> Bedrock
-    Ella --> UpdatesDDB
+      {/* Narrative */}
+      <Group label="Narrative path — Ella" type="narrative" note="12h cadence · 7am + 7pm">
+        <Row>
+          <Node label="EventBridge" sub="cron: 7am + 7pm" type="narrative" />
+          <Arr />
+          <Node label="Ella Lambda" sub="Athena + DDB fall counts" type="narrative" />
+          <Arr />
+          <Node label="SQS fanout" sub="DLQ on 3× failure" type="narrative" />
+          <Arr />
+          <Node label="Bedrock" sub="Claude Sonnet 4.5 · HIPAA eligible" type="narrative" />
+          <Arr />
+          <Node label="DynamoDB" sub="daily-updates · 90-day TTL" type="narrative" />
+        </Row>
+      </Group>
 
-    %% API
-    Staff -->|"login + JWT"| Cognito
-    Cognito -.-> APIGW
-    Staff --> APIGW
-    APIGW --> APILambda
-    APILambda -.-> AlertsDDB
-    APILambda -.-> UpdatesDDB
-    APILambda -.-> DevicesDDB
-    APILambda -.-> Athena
-    APILambda -.->|"on-demand narrative"| Ella
+      {/* API */}
+      <Group label="Nurse / Admin API" type="api" note="12 endpoints · row-level facility scope">
+        <Row>
+          <Node label="Staff" sub="login + JWT" type="hot" />
+          <Arr />
+          <Node label="Cognito" sub="email + MFA · admin-create only" type="api" />
+          <Arr />
+          <Node label="API Gateway" sub="HTTP API · JWT authorizer" type="api" />
+          <Arr />
+          <Node label="FastAPI Lambda" sub="admin vs nurse roles" type="api" />
+          <Arr />
+          <Node label="DynamoDB" sub="alerts · updates · devices" type="api" />
+        </Row>
+      </Group>
 
-    %% Admin
-    Admin --> DevicesDDB
-    Admin --> Shadow
+      {/* Audit + Observability */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <Group label="Audit & Governance" type="audit">
+          <Row>
+            <Node label="CloudTrail" sub="multi-region · 7-year Glacier" type="audit" />
+            <Arr />
+            <Node label="DDB data events" sub="alerts · updates · devices" type="audit" />
+          </Row>
+          <Row>
+            <Node label="KMS: tenant CMK" sub="SSE-KMS · key stays in tenant acct" type="audit" />
+            <Arr />
+            <Node label="S3 + DynamoDB" sub="all tables encrypted" type="audit" />
+          </Row>
+          <Row>
+            <Node label="Admin CLI" sub="PILOT-XXXX enforcement" type="audit" />
+            <Arr />
+            <Node label="devices DDB + Shadow" type="audit" />
+          </Row>
+        </Group>
 
-    %% Encryption
-    KMS -.->|"CMK"| S3New
-    KMS -.->|"CMK"| S3Legacy
-    KMS -.->|"CMK"| AlertsDDB
-    KMS -.->|"CMK"| UpdatesDDB
-    KMS -.->|"CMK"| DevicesDDB
+        <Group label="Central Observability" type="obs" note="metrics only · no PHI">
+          <Row>
+            <Node label="Reconciler" sub="TelemetryDivergence" type="query" />
+            <Arr />
+            <Node label="CloudWatch Metric Stream" sub="scalar metrics · logs stay in tenant" type="obs" />
+          </Row>
+          <Row>
+            <Node label="url-minter" sub="issuance rate" type="coldnew" />
+            <Arr />
+            <Node label="CloudWatch Metric Stream" type="obs" />
+          </Row>
+          <Row>
+            <Node label="Alert Lambda" sub="fall rate per facility" type="hot" />
+            <Arr />
+            <Node label="CloudWatch Metric Stream" type="obs" />
+          </Row>
+        </Group>
+      </div>
 
-    %% Audit
-    CloudTrail -.-> AlertsDDB
-    CloudTrail -.-> UpdatesDDB
-    CloudTrail -.-> DevicesDDB
-    CloudTrail -.-> S3New
-    CloudTrail -.-> S3Legacy
+      <Legend />
+    </div>
+  );
+}
 
-    %% Central observability (scalar metrics only)
-    Reconciler -.->|"TelemetryDivergence"| MetricStream
-    URLMinter -.->|"issuance rate"| MetricStream
-    AlertLambda -.->|"fall rate"| MetricStream
-
-    %% Styling
-    classDef factory  fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
-    classDef device   fill:#f0f0f0,stroke:#374151,stroke-width:2px,color:#000
-    classDef iot      fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
-    classDef hot      fill:#ffe6e6,stroke:#d32f2f,stroke-width:2px,color:#000
-    classDef coldnew  fill:#e6f4e6,stroke:#2e7d32,stroke-width:2px,color:#000
-    classDef coldold  fill:#e0e0e0,stroke:#616161,stroke-width:2px,color:#000,stroke-dasharray: 5 5
-    classDef llm      fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000
-    classDef api      fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
-    classDef audit    fill:#fff9c4,stroke:#827717,stroke-width:2px,color:#000
-    classDef obs      fill:#e8eaf6,stroke:#283593,stroke-width:2px,color:#000
-
-    class FleetProv,TenantRegistry factory
-    class Radar,Agent device
-    class CredProvider,RuleAlerts,RuleTelemetryLegacy,Shadow iot
-    class AlertLambda,AlertsDDB,SNS,Staff hot
-    class URLMinter,S3New,Reconciler,Glue,Athena coldnew
-    class Firehose,S3Legacy coldold
-    class Schedule,SQS,Ella,Bedrock,UpdatesDDB llm
-    class APIGW,Cognito,APILambda,DevicesDDB api
-    class CloudTrail,Admin,KMS audit
-    class MetricStream obs`;
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CloudPage() {
   const [tab, setTab] = useState<Tab>('services');
-  const diagramRef = useRef<HTMLDivElement>(null);
-  const [diagramLoaded, setDiagramLoaded] = useState(false);
-
-  useEffect(() => {
-    if (tab !== 'architecture') return;
-    if (diagramLoaded) return;
-
-    const existing = document.querySelector('script[data-mermaid]');
-    const render = (m: any) => {
-      m.initialize({ startOnLoad: false, theme: 'neutral', flowchart: { htmlLabels: true, curve: 'linear' } });
-      m.render('arch-v4', MERMAID_CONTENT).then(({ svg }: { svg: string }) => {
-        if (diagramRef.current) { diagramRef.current.innerHTML = svg; setDiagramLoaded(true); }
-      }).catch(console.error);
-    };
-
-    if (existing) { render((window as any).mermaid); return; }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js';
-    script.setAttribute('data-mermaid', '1');
-    script.async = true;
-    script.onload = () => render((window as any).mermaid);
-    document.head.appendChild(script);
-  }, [tab, diagramLoaded]);
 
   const navItems: { key: Tab; label: string }[] = [
-    { key: 'services',      label: 'Services' },
-    { key: 'paths',         label: 'Data Paths' },
-    { key: 'architecture',  label: 'Architecture' },
-    { key: 'accounts',      label: 'Account Model' },
-    { key: 'runbooks',      label: 'Runbooks' },
+    { key: 'services',     label: 'Services' },
+    { key: 'paths',        label: 'Data Paths' },
+    { key: 'architecture', label: 'Architecture' },
+    { key: 'accounts',     label: 'Account Model' },
+    { key: 'runbooks',     label: 'Runbooks' },
   ];
 
   const totalTests = SERVICES.reduce((s, svc) => s + (svc.tests ?? 0), 0);
@@ -293,7 +339,7 @@ export default function CloudPage() {
             <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Data handling</div>
             <div style={{ fontSize: 13, color: 'var(--text-3)' }}>IRB-approved · HIPAA §164.514(c) coded data · No names, DOBs, or MRNs</div>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             {['Terraform 1.14+', 'Python 3.12', 'FastAPI', 'AWS Bedrock'].map(tag => (
               <span key={tag} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 4, padding: '2px 7px' }}>{tag}</span>
             ))}
@@ -310,8 +356,8 @@ export default function CloudPage() {
             </div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
               {[
-                { label: 'Services',  value: SERVICES.length },
-                { label: 'Tests',     value: totalTests },
+                { label: 'Services',       value: SERVICES.length },
+                { label: 'Tests',          value: totalTests },
                 { label: 'With Terraform', value: SERVICES.filter(s => s.tf).length },
               ].map(({ label, value }) => (
                 <div key={label} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -330,8 +376,8 @@ export default function CloudPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {SERVICES.map((svc, i) => (
-                    <tr key={svc.id} style={{ borderBottom: '1px solid var(--line)', background: 'transparent' }}>
+                  {SERVICES.map(svc => (
+                    <tr key={svc.id} style={{ borderBottom: '1px solid var(--line)' }}>
                       <td style={{ padding: '11px 14px' }}>
                         <a href={`https://github.com/ambientintel/ambientcloud/tree/main/${svc.path}`} target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)', textDecoration: 'none' }}>{svc.label} ↗</a>
                       </td>
@@ -339,12 +385,8 @@ export default function CloudPage() {
                         <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 4, padding: '2px 7px' }}>{svc.tag}</span>
                       </td>
                       <td style={{ padding: '11px 14px', fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5, maxWidth: 400 }}>{svc.desc}</td>
-                      <td style={{ padding: '11px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: svc.tests ? 'var(--text)' : 'var(--text-4)', textAlign: 'center' }}>
-                        {svc.tests ?? '—'}
-                      </td>
-                      <td style={{ padding: '11px 14px', textAlign: 'center' }}>
-                        <span style={{ fontSize: 13, color: svc.tf ? 'var(--accent)' : 'var(--text-4)' }}>{svc.tf ? '✓' : '—'}</span>
-                      </td>
+                      <td style={{ padding: '11px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: svc.tests ? 'var(--text)' : 'var(--text-4)', textAlign: 'center' }}>{svc.tests ?? '—'}</td>
+                      <td style={{ padding: '11px 14px', textAlign: 'center', fontSize: 13, color: svc.tf ? 'var(--accent)' : 'var(--text-4)' }}>{svc.tf ? '✓' : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -389,14 +431,11 @@ export default function CloudPage() {
               <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · architecture-v4.mmd</p>
               <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>Architecture Diagram</h1>
             </div>
-            <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'auto', background: '#F8F9FA', padding: 24 }}>
-              <div ref={diagramRef} style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-4)', fontFamily: 'var(--mono)', fontSize: 12 }}>
-                Loading diagram…
-              </div>
-            </div>
-            <p style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', marginTop: 10 }}>
-              Mermaid flowchart · v4 · 2026-04-21 ·{' '}
-              <a href="https://github.com/ambientintel/ambientcloud/blob/main/docs/architecture-v4.mmd" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>view source ↗</a>
+            <ArchDiagram />
+            <p style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', marginTop: 16 }}>
+              Source:{' '}
+              <a href="https://github.com/ambientintel/ambientcloud/blob/main/docs/architecture-v4.mmd" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>architecture-v4.mmd ↗</a>
+              {' '}· Dashed borders = legacy / retiring paths
             </p>
           </>
         )}
@@ -411,10 +450,10 @@ export default function CloudPage() {
             <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 24, lineHeight: 1.6 }}>
               One AWS account per tenant organization — the strongest isolation boundary AWS offers and the correct default for HIPAA workloads handling PHI from distinct covered entities.
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
-              {ACCOUNTS.map((acc) => (
-                <div key={acc.label} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '20px 20px' }}>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 99, letterSpacing: '0.06em', display: 'inline-block', marginBottom: 12 }}>{acc.count}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+              {ACCOUNTS.map(acc => (
+                <div key={acc.label} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '20px' }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 99, display: 'inline-block', marginBottom: 12 }}>{acc.count}</div>
                   <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 400, marginBottom: 14 }}>{acc.label}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {acc.items.map(item => (
@@ -428,17 +467,17 @@ export default function CloudPage() {
               ))}
             </div>
             <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '16px 20px' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-4)', marginBottom: 10 }}>What crosses account boundaries</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-4)', marginBottom: 12 }}>What crosses account boundaries</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 32px' }}>
-                {[
+                {([
                   ['✓ Scalar CloudWatch metrics (no strings)', 'var(--text-2)'],
                   ['✓ First-boot device provisioning (once)', 'var(--text-2)'],
                   ['✗ Logs, traces, or any PHI', '#a02020'],
                   ['✗ KMS keys (tenant CMK stays in tenant acct)', '#a02020'],
                   ['✗ Device telemetry or fall events', '#a02020'],
                   ['✗ Narrative content or API responses', '#a02020'],
-                ].map(([text, color]) => (
-                  <div key={text as string} style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: color as string }}>{text as string}</div>
+                ] as [string, string][]).map(([text, color]) => (
+                  <div key={text} style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color }}>{text}</div>
                 ))}
               </div>
             </div>
