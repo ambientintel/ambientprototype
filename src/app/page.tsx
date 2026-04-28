@@ -136,7 +136,7 @@ export default function Landing1() {
               </Link>
             ))}
           </div>
-          <Link href="/home" style={{ textDecoration: 'none' }}>
+          <Link href="/control" style={{ textDecoration: 'none' }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.accent, border: `1px solid ${C.accentDim}`, padding: '5px 12px', borderRadius: 2 }}>
               Control Center
             </span>
@@ -195,7 +195,7 @@ export default function Landing1() {
               <Link href="/dashboard" style={{ textDecoration: 'none' }}>
                 <button className="l1-cta-primary">Enter Dashboard</button>
               </Link>
-              <Link href="/home" style={{ textDecoration: 'none' }}>
+              <Link href="/control" style={{ textDecoration: 'none' }}>
                 <button className="l1-cta-ghost">View all modules</button>
               </Link>
             </div>
@@ -354,7 +354,7 @@ export default function Landing1() {
               Access the control center.
             </h3>
           </div>
-          <Link href="/home" style={{ textDecoration: 'none' }}>
+          <Link href="/control" style={{ textDecoration: 'none' }}>
             <button className="l1-cta-primary">Go to Control Center</button>
           </Link>
         </section>
