@@ -384,7 +384,7 @@ function ActivityRhythm() {
 
 
 
-function ParticleField() {
+function TerrainField() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -393,88 +393,122 @@ function ParticleField() {
     if (!ctx) return;
 
     let animId: number;
-    const N = 90;
-    const CONNECT_DIST = 160;
-    const COLOR = '45,114,210';
-
-    interface Particle { x:number; y:number; vx:number; vy:number; r:number; }
-    let particles: Particle[] = [];
+    let t = 0;
 
     const resize = () => {
       canvas.width  = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
     };
 
-    const init = () => {
-      particles = Array.from({ length: N }, () => ({
-        x:  Math.random() * canvas.width,
-        y:  Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        r:  Math.random() * 1.5 + 0.5,
-      }));
+    const COLS = 110, ROWS = 72;
+    const SPREAD = 1400, DEPTH = 900;
+    const FOV = 520, CAM_Y = 260, CAM_Z_OFF = 420;
+
+    const getH = (x: number, z: number, t: number) => {
+      const r = Math.sqrt(x * x + (z - DEPTH * 0.15) * (z - DEPTH * 0.15));
+      const vortexRing = 140;
+      const crater  = 90  * Math.exp(-Math.pow(r - vortexRing, 2) / (2 * 55 * 55))
+                    - 50  * Math.exp(-r * r / (2 * 65 * 65));
+      const rings   = 55  * Math.sin(r * 0.042 - t * 1.1) * Math.exp(-r * 0.0018);
+      const terrain = 38  * Math.sin(x * 0.009 + t * 0.28) * Math.cos(z * 0.011 - t * 0.19)
+                    + 22  * Math.sin(x * 0.018 - t * 0.44) * Math.sin(z * 0.014 + t * 0.33)
+                    + 14  * Math.cos(x * 0.025 + z * 0.02 - t * 0.6);
+      return crater + rings + terrain;
+    };
+
+    const project = (x: number, y: number, z: number, cw: number, ch: number) => {
+      const dz = z + CAM_Z_OFF + FOV;
+      if (dz <= 0) return null;
+      const sc = FOV / dz;
+      return { px: cw / 2 + x * sc, py: ch * 0.62 - (y - CAM_Y) * sc, sc, dz };
+    };
+
+    const hColor = (norm: number) => {
+      if (norm < 0.28) {
+        const u = norm / 0.28;
+        return [Math.round(8 + u * 37), Math.round(18 + u * 96), Math.round(60 + u * 150)];
+      } else if (norm < 0.58) {
+        const u = (norm - 0.28) / 0.30;
+        return [Math.round(45 + u * 25), Math.round(114 + u * 106), Math.round(210 + u * 45)];
+      } else if (norm < 0.82) {
+        const u = (norm - 0.58) / 0.24;
+        return [Math.round(70 + u * 185), Math.round(220 + u * 35), 255];
+      } else {
+        const u = (norm - 0.82) / 0.18;
+        return [255, Math.round(255 - u * 145), Math.round(255 - u * 210)];
+      }
     };
 
     const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cw = canvas.width, ch = canvas.height;
+      ctx.clearRect(0, 0, cw, ch);
 
-      // connections
-      for (let i = 0; i < N; i++) {
-        for (let j = i + 1; j < N; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const d  = Math.sqrt(dx * dx + dy * dy);
-          if (d < CONNECT_DIST) {
-            const alpha = (1 - d / CONNECT_DIST) * 0.18;
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(${COLOR},${alpha})`;
-            ctx.lineWidth = 0.6;
-            ctx.stroke();
+      const pts: { px:number; py:number; sc:number; dz:number; norm:number }[] = [];
+      let minH = Infinity, maxH = -Infinity;
+      const raw: number[] = [];
+
+      for (let i = 0; i < COLS; i++) {
+        for (let j = 0; j < ROWS; j++) {
+          const x3 = (i / (COLS - 1) - 0.5) * SPREAD;
+          const z3 = (j / (ROWS - 1)) * DEPTH;
+          const y3 = getH(x3, z3, t);
+          raw.push(y3);
+          if (y3 < minH) minH = y3;
+          if (y3 > maxH) maxH = y3;
+        }
+      }
+      const range = maxH - minH || 1;
+
+      let idx = 0;
+      for (let i = 0; i < COLS; i++) {
+        for (let j = 0; j < ROWS; j++) {
+          const x3 = (i / (COLS - 1) - 0.5) * SPREAD;
+          const z3 = (j / (ROWS - 1)) * DEPTH;
+          const y3 = raw[idx++];
+          const norm = (y3 - minH) / range;
+          const p = project(x3, y3, z3, cw, ch);
+          if (p && p.px > -10 && p.px < cw + 10 && p.py > -10 && p.py < ch + 10) {
+            pts.push({ ...p, norm });
           }
         }
       }
 
-      // dots
-      particles.forEach(p => {
+      pts.sort((a, b) => b.dz - a.dz);
+
+      pts.forEach(p => {
+        const [r, g, b] = hColor(p.norm);
+        const alpha = 0.35 + p.norm * 0.55;
+        const size  = Math.max(0.4, p.sc * 2.2);
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${COLOR},0.45)`;
+        ctx.arc(p.px, p.py, size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
         ctx.fill();
       });
 
-      // move
-      particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-      });
+      // Fade mask: protect hero text area
+      const grad = ctx.createRadialGradient(cw/2, ch*0.38, ch*0.08, cw/2, ch*0.38, ch*0.42);
+      grad.addColorStop(0,   'rgba(12,13,15,0.72)');
+      grad.addColorStop(0.5, 'rgba(12,13,15,0.18)');
+      grad.addColorStop(1,   'rgba(12,13,15,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, cw, ch);
 
+      t += 0.010;
       animId = requestAnimationFrame(draw);
     };
 
     resize();
-    init();
     draw();
-
-    const ro = new ResizeObserver(() => { resize(); init(); });
+    const ro = new ResizeObserver(resize);
     ro.observe(canvas);
-
     return () => { cancelAnimationFrame(animId); ro.disconnect(); };
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'absolute', inset: 0, width: '100%', height: '100%',
-        pointerEvents: 'none', zIndex: 0, opacity: 0.85,
-      }}
-    />
+    <canvas ref={canvasRef} style={{
+      position: 'absolute', inset: 0, width: '100%', height: '100%',
+      pointerEvents: 'none', zIndex: 0,
+    }} />
   );
 }
 
@@ -577,7 +611,7 @@ export default function Landing1() {
             linear-gradient(90deg, ${C.grid} 1px, transparent 1px)`,
           backgroundSize: '64px 64px',
         }}>
-          <ParticleField />
+          <TerrainField />
           <div style={{
             position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)',
             width: 600, height: 400, pointerEvents: 'none',
