@@ -266,6 +266,123 @@ function LandingDonut({ pct, color, size=88 }: { pct:number; color:string; size?
   );
 }
 
+// ── Ella narratives ──
+const ELLA_NARRATIVES = [
+  { room:'201', name:'E. Rodriguez', narrative:'Resident showed reduced ambulation compared to 7-day average. Total movement events down 31%. No falls detected. Overnight restlessness noted between 02:00–03:40. Recommend monitoring hydration and sleep quality.', flag:'Monitor', flagColor:'#FFC940' },
+  { room:'305', name:'H. Nakamura',  narrative:'Two fall alerts recorded this week, both resolved without injury. Gait pattern analysis suggests increased unsteadiness near bathroom entry. Physical therapy consult recommended. Alert frequency up 2× vs. prior week.', flag:'Alert', flagColor:'#FF6B6B' },
+  { room:'118', name:'D. Okafor',    narrative:'Consistent ambulation pattern maintained. Morning activity window 07:15–09:30 stable. No fall events in 14 days. Sleep quality indicators within normal range. Resident activity trending positively.', flag:'Stable', flagColor:'#3DCC91' },
+  { room:'212', name:'M. Kowalski',  narrative:'Notable increase in nighttime movement events. Possible sleep disruption. No fall events but alert threshold crossed twice. Recommend nursing check-in during 01:00–04:00 window over next 48 hours.', flag:'Watch', flagColor:'#FFC940' },
+];
+
+// ── Activity rhythm data (7 days × 24 hours) ──
+const RHYTHM_DATA: number[][] = [
+  [0,0,1,0,0,0,0,2,5,8,6,4,7,9,5,6,8,11,7,5,3,1,0,0],  // Mon
+  [0,0,0,1,0,0,0,3,6,9,7,5,8,10,6,7,9,12,8,4,2,1,0,0], // Tue
+  [0,1,0,0,0,0,1,2,5,7,5,4,6,8,4,5,7,10,6,4,2,1,0,0],  // Wed
+  [0,0,0,0,1,0,0,3,7,10,8,6,9,11,7,8,10,14,9,5,3,1,0,0],// Thu
+  [0,0,1,0,0,0,0,2,6,8,7,5,7,9,5,7,8,12,7,4,3,2,1,0],  // Fri
+  [0,0,0,1,0,0,1,1,3,5,4,3,5,6,4,4,5,7,5,3,2,1,0,0],   // Sat
+  [0,0,0,0,0,0,0,1,2,4,3,2,4,5,3,3,4,6,4,2,1,0,0,0],   // Sun
+];
+const RHYTHM_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const RHYTHM_MAX = Math.max(...RHYTHM_DATA.flat());
+
+function EllaCarousel() {
+  const [idx, setIdx] = React.useState(0);
+  const [fade, setFade] = React.useState(true);
+  React.useEffect(()=>{
+    const id = setInterval(()=>{
+      setFade(false);
+      setTimeout(()=>{ setIdx(i=>(i+1)%ELLA_NARRATIVES.length); setFade(true); }, 300);
+    }, 4200);
+    return ()=>clearInterval(id);
+  },[]);
+  const n = ELLA_NARRATIVES[idx];
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      {/* dots */}
+      <div style={{ display:'flex', gap:6, marginBottom:24 }}>
+        {ELLA_NARRATIVES.map((_,i)=>(
+          <button key={i} onClick={()=>{setFade(false);setTimeout(()=>{setIdx(i);setFade(true);},200);}}
+            style={{ width: i===idx?20:6, height:6, borderRadius:3, border:'none', cursor:'pointer', background: i===idx ? '#2D72D2' : 'rgba(255,255,255,0.12)', transition:'all 0.25s', padding:0 }}/>
+        ))}
+      </div>
+      <div style={{ opacity: fade?1:0, transition:'opacity 0.28s ease', flex:1, display:'flex', flexDirection:'column', gap:16 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <span style={{ fontFamily:'var(--mono)', fontSize:11, color:'#9A9B9D' }}>Room {n.room}</span>
+          <span style={{ fontFamily:'var(--sans)', fontSize:13, fontWeight:500, color:'#EDEEF0' }}>{n.name}</span>
+          <span style={{ marginLeft:'auto', fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.12em', textTransform:'uppercase', color:n.flagColor, background:`${n.flagColor}18`, padding:'2px 8px', borderRadius:2 }}>{n.flag}</span>
+        </div>
+        <p style={{ margin:0, fontSize:13, lineHeight:1.75, color:'#9A9B9D', fontStyle:'italic', flex:1 }}>
+          &ldquo;{n.narrative}&rdquo;
+        </p>
+        <div style={{ display:'flex', alignItems:'center', gap:8, paddingTop:8, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+          <span style={{ display:'inline-block', width:6, height:6, borderRadius:'50%', background:'#2D72D2', boxShadow:'0 0 6px #2D72D2' }}/>
+          <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'#5C5E62', letterSpacing:'0.08em' }}>Ella AI · Generated {new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityRhythm() {
+  const [tip, setTip] = React.useState<{day:string;hour:number;val:number}|null>(null);
+  const nowH = new Date().getHours();
+  const nowD = new Date().getDay(); // 0=Sun
+  const todayIdx = nowD===0 ? 6 : nowD-1;
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      {/* Hour labels */}
+      <div style={{ display:'flex', gap:3, paddingLeft:32 }}>
+        {Array.from({length:24},(_,h)=>(
+          <div key={h} style={{ flex:1, textAlign:'center' }}>
+            {h%6===0 && <span style={{ fontFamily:'var(--mono)', fontSize:7.5, color:'#5C5E62' }}>{String(h).padStart(2,'0')}</span>}
+          </div>
+        ))}
+      </div>
+      {/* Grid */}
+      {RHYTHM_DATA.map((row,d)=>(
+        <div key={d} style={{ display:'flex', alignItems:'center', gap:3 }}>
+          <span style={{ fontFamily:'var(--mono)', fontSize:9, color: d===todayIdx ? '#EDEEF0' : '#5C5E62', width:28, flexShrink:0, textAlign:'right' }}>{RHYTHM_DAYS[d]}</span>
+          {row.map((val,h)=>{
+            const intensity = val/RHYTHM_MAX;
+            const isNow = d===todayIdx && h===nowH;
+            return (
+              <div key={h}
+                onMouseEnter={()=>setTip({day:RHYTHM_DAYS[d],hour:h,val})}
+                onMouseLeave={()=>setTip(null)}
+                style={{ flex:1, height:18, borderRadius:2, cursor:'default',
+                  background: isNow ? '#2D72D2' : val===0 ? 'rgba(255,255,255,0.04)' : `rgba(45,114,210,${0.12+intensity*0.75})`,
+                  border: isNow ? '1px solid #2D72D2' : '1px solid transparent',
+                  transition:'background 0.15s',
+                }}/>
+            );
+          })}
+        </div>
+      ))}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:4 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ width:7, height:7, borderRadius:1, background:'#2D72D2', display:'inline-block' }}/>
+          <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#5C5E62' }}>Current hour</span>
+        </div>
+        {tip
+          ? <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#9A9B9D' }}>{tip.day} {String(tip.hour).padStart(2,'0')}:00 · {tip.val} alerts</span>
+          : <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#5C5E62' }}>Hover to inspect</span>
+        }
+        <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+          <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#5C5E62' }}>Low</span>
+          {[0.1,0.3,0.55,0.75,1].map(o=>(
+            <span key={o} style={{ width:10, height:10, borderRadius:1, background:`rgba(45,114,210,${o})`, display:'inline-block' }}/>
+          ))}
+          <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#5C5E62' }}>High</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
 const STATS = [
   { value: '57', label: 'Hardware components' },
   { value: '15', label: 'CFR Part 820 subparts' },
@@ -618,6 +735,18 @@ export default function Landing1() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Row 3: Ella carousel + activity rhythm */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, border:`1px solid ${C.border}`, marginTop:1 }}>
+            <div style={{ padding:'36px 36px', background:C.surface, borderRight:`1px solid ${C.border}` }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:20 }}>Ella AI · Resident summaries</div>
+              <EllaCarousel/>
+            </div>
+            <div style={{ padding:'36px 36px', background:C.surface }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:20 }}>Alert rhythm · 7 days × 24 hours</div>
+              <ActivityRhythm/>
             </div>
           </div>
         </section>
