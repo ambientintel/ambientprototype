@@ -94,7 +94,7 @@ export default function Landing1() {
         .l1-nav-link:hover { color: #EDEEF0 !important; }
         .l1-stat-val { font-variant-numeric: tabular-nums; }
         .l1-cta-primary {
-          background: #2D72D2; color: #0C0D0F;
+          background: #2D72D2; color: #fff;
           border: none; border-radius: 2px;
           padding: 13px 28px; font-size: 13px; font-weight: 600;
           letter-spacing: 0.04em; text-transform: uppercase;
