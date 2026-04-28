@@ -7,6 +7,27 @@ export default function PatientDashboard() {
   const [activeNav, setActiveNav] = useState("Home");
   const [activeView, setActiveView] = useState("list");
   const [speaking, setSpeaking] = useState(false);
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const h = now.getHours();
+  const timeOfDay =
+    h < 5  ? 'Late night' :
+    h < 8  ? 'Early morning' :
+    h < 10 ? 'Morning' :
+    h < 12 ? 'Late morning' :
+    h < 13 ? 'Midday' :
+    h < 15 ? 'Afternoon' :
+    h < 17 ? 'Mid afternoon' :
+    h < 19 ? 'Late afternoon' :
+    h < 21 ? 'Evening' : 'Night';
+  const crumb = `${DAYS[now.getDay()]} · ${MONTHS[now.getMonth()]} ${now.getDate()} · ${timeOfDay}`;
 
   useEffect(() => {
     document.body.style.background = '#F0F0EE';
@@ -94,7 +115,7 @@ export default function PatientDashboard() {
         {/* Topbar */}
         <header className="topbar">
           <div>
-            <div className="crumb">Sunday · Dec 5 · Late morning</div>
+            <div className="crumb">{crumb}</div>
             <h1 className="page-title">Nurse <em>Dashboard</em></h1>
           </div>
           <div className="tool-group">
