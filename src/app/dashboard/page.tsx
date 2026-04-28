@@ -35,7 +35,7 @@ export default function PatientDashboard() {
 
       {/* Sidebar */}
       <aside className="sidebar">
-        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+        <Link href="/home" style={{ textDecoration: "none", color: "inherit" }}>
           <div className="brand">
             <div className="brand-name">Ambient <em>Demo</em></div>
           </div>
