@@ -135,7 +135,7 @@ export default function Landing1() {
             </span>
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-            {[['Nurse Dashboard','/dashboard'],['BOM','/bom'],['Compliance','/gapanalysis'],['SaMD','/samd']].map(([label, href]) => (
+            {[['Dashboard','/dashboard'],['BOM','/bom'],['Gap Analysis','/gapanalysis'],['SaMD','/samd'],['Cloud','/cloud'],['Colors','/colors'],['Brand','/brand']].map(([label, href]) => (
               <Link key={href} href={href} className="l1-nav-link" style={{ textDecoration: 'none', color: C.text2, fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 {label}
               </Link>
