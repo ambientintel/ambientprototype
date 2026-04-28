@@ -89,6 +89,8 @@ input { font-family: inherit; color: inherit; }
   position: relative;
   transition: color 0.15s ease;
   user-select: none;
+  text-align: left;
+  width: 100%;
 }
 .nav-item:hover { color: var(--text); }
 .nav-item .nav-icon { width: 16px; height: 16px; opacity: 0.7; flex: none; }
