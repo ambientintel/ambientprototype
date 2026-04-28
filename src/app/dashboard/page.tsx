@@ -152,7 +152,7 @@ export default function PatientDashboard() {
             <div>Owner</div>
           </div>
           <div className="table-row selected">
-            <div className="room">MOH 301</div>
+            <div className="room">201</div>
             <div className="resident">
               <div className="resident-avatar">E</div>
               <div className="resident-name">Evelyn Rodriguez</div>
@@ -170,177 +170,6 @@ export default function PatientDashboard() {
               <span>Dr. Marisol Vega</span>
             </div>
           </div>
-          <div className="table-row">
-            <div className="room">MOH 302</div>
-            <div className="resident">
-              <div className="resident-avatar">H</div>
-              <div className="resident-name">Harold Nakamura</div>
-            </div>
-            <div>9:47 am</div>
-            <div>
-              <span className="priority high">
-                <span className="priority-dot" />
-                High
-              </span>
-            </div>
-            <div>Dec 5</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Dr. Marisol Vega</span>
-            </div>
-          </div>
-          <div className="table-row">
-            <div className="room">MOH 303</div>
-            <div className="resident">
-              <div className="resident-avatar">D</div>
-              <div className="resident-name">Dorothy Okafor</div>
-            </div>
-            <div>8:15 am</div>
-            <div>
-              <span className="priority" style={{ color: 'var(--sage)', background: 'rgba(60,120,80,0.10)', padding: '2px 8px', borderRadius: 99, fontSize: 12, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <span className="priority-dot" style={{ background: 'var(--sage)' }} />
-                Low
-              </span>
-            </div>
-            <div>Dec 4</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Nurse J. Park</span>
-            </div>
-          </div>
-          <div className="table-row">
-            <div className="room">MOH 304</div>
-            <div className="resident">
-              <div className="resident-avatar">M</div>
-              <div className="resident-name">Margaret Kowalski</div>
-            </div>
-            <div>11:02 am</div>
-            <div>
-              <span className="priority" style={{ color: '#b85a30', background: 'rgba(217,119,87,0.14)', padding: '2px 8px', borderRadius: 99, fontSize: 12, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <span className="priority-dot" style={{ background: '#b85a30' }} />
-                Medium
-              </span>
-            </div>
-            <div>Dec 5</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Dr. Marisol Vega</span>
-            </div>
-          </div>
-          <div className="table-row">
-            <div className="room">MOH 305</div>
-            <div className="resident">
-              <div className="resident-avatar">R</div>
-              <div className="resident-name">Robert Steinberg</div>
-            </div>
-            <div>7:58 am</div>
-            <div>
-              <span className="priority high">
-                <span className="priority-dot" />
-                High
-              </span>
-            </div>
-            <div>Dec 5</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Nurse J. Park</span>
-            </div>
-          </div>
-          <div className="table-row">
-            <div className="room">MOH 306</div>
-            <div className="resident">
-              <div className="resident-avatar">A</div>
-              <div className="resident-name">Agnes Thornton</div>
-            </div>
-            <div>9:30 am</div>
-            <div>
-              <span className="priority" style={{ color: 'var(--sage)', background: 'rgba(60,120,80,0.10)', padding: '2px 8px', borderRadius: 99, fontSize: 12, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <span className="priority-dot" style={{ background: 'var(--sage)' }} />
-                Low
-              </span>
-            </div>
-            <div>Dec 3</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Dr. Marisol Vega</span>
-            </div>
-          </div>
-          <div className="table-row">
-            <div className="room">MOH 307</div>
-            <div className="resident">
-              <div className="resident-avatar">W</div>
-              <div className="resident-name">Walter Chen</div>
-            </div>
-            <div>10:45 am</div>
-            <div>
-              <span className="priority" style={{ color: '#b85a30', background: 'rgba(217,119,87,0.14)', padding: '2px 8px', borderRadius: 99, fontSize: 12, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <span className="priority-dot" style={{ background: '#b85a30' }} />
-                Medium
-              </span>
-            </div>
-            <div>Dec 5</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Nurse J. Park</span>
-            </div>
-          </div>
-          <div className="table-row">
-            <div className="room">MOH 308</div>
-            <div className="resident">
-              <div className="resident-avatar">B</div>
-              <div className="resident-name">Beatrice Fontaine</div>
-            </div>
-            <div>8:40 am</div>
-            <div>
-              <span className="priority" style={{ color: 'var(--sage)', background: 'rgba(60,120,80,0.10)', padding: '2px 8px', borderRadius: 99, fontSize: 12, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <span className="priority-dot" style={{ background: 'var(--sage)' }} />
-                Low
-              </span>
-            </div>
-            <div>Dec 4</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Dr. Marisol Vega</span>
-            </div>
-          </div>
-          <div className="table-row">
-            <div className="room">MOH 309</div>
-            <div className="resident">
-              <div className="resident-avatar">F</div>
-              <div className="resident-name">Franklin Oduya</div>
-            </div>
-            <div>11:18 am</div>
-            <div>
-              <span className="priority high">
-                <span className="priority-dot" />
-                High
-              </span>
-            </div>
-            <div>Dec 5</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Nurse J. Park</span>
-            </div>
-          </div>
-          <div className="table-row">
-            <div className="room">MOH 310</div>
-            <div className="resident">
-              <div className="resident-avatar">C</div>
-              <div className="resident-name">Clara Petersen</div>
-            </div>
-            <div>9:05 am</div>
-            <div>
-              <span className="priority" style={{ color: '#b85a30', background: 'rgba(217,119,87,0.14)', padding: '2px 8px', borderRadius: 99, fontSize: 12, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <span className="priority-dot" style={{ background: '#b85a30' }} />
-                Medium
-              </span>
-            </div>
-            <div>Dec 4</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Dr. Marisol Vega</span>
-            </div>
-          </div>
         </div>
 
         {/* Ella AI Daily Update */}
@@ -352,7 +181,7 @@ export default function PatientDashboard() {
         <article className="ella">
           <div className="portrait">
             <div className="silhouette" />
-            <div className="badge">Evelyn · MOH 301</div>
+            <div className="badge">Evelyn · Room 201</div>
           </div>
           <div className="ella-body">
             <div className="ella-eyebrow">
@@ -454,7 +283,7 @@ export default function PatientDashboard() {
 
           <div className="stat is-accent">
             <div className="stat-label">Sitting</div>
-            <div className="stat-value">MOH 301</div>
+            <div className="stat-value">201</div>
             <div className="stat-unit">Estimated minutes</div>
             <div className="stat-foot">
               <span className="stat-delta up">
