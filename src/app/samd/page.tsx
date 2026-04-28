@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 import { useState, useMemo } from 'react';
 import {
@@ -110,9 +111,11 @@ export default function SamdPage() {
     <div className="app">
       {/* Sidebar */}
       <nav className="sidebar">
-        <div className="brand">
-          <span className="brand-name">Ambient <em>Intelligence</em></span>
-        </div>
+        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+          <div className="brand">
+            <span className="brand-name">Ambient <em>Intelligence</em></span>
+          </div>
+        </Link>
 
         <div className="nav-section">
           <p className="nav-label">SaMD</p>
