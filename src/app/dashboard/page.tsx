@@ -8,24 +8,24 @@ export default function PatientDashboard() {
   const [speaking, setSpeaking] = useState(false);
 
   useEffect(() => {
-    document.body.style.background = '#FFFFFF';
+    document.body.style.background = '#F0F0EE';
     return () => { document.body.style.background = ''; };
   }, []);
 
   const notion: React.CSSProperties = {
-    '--bg':          '#FFFFFF',
+    '--bg':          '#F0F0EE',
     '--surface-1':   '#F7F7F5',
-    '--surface-2':   '#EFEFED',
-    '--surface-3':   '#E3E2DF',
-    '--line':        'rgba(55,53,47,0.09)',
-    '--line-strong': 'rgba(55,53,47,0.16)',
-    '--text':        '#37352F',
-    '--text-2':      'rgba(55,53,47,0.75)',
-    '--text-3':      'rgba(55,53,47,0.58)',
-    '--text-4':      'rgba(55,53,47,0.42)',
-    '--accent':      '#2383E2',
-    '--accent-soft': 'rgba(35,131,226,0.12)',
-    '--sage':        '#0F7B6C',
+    '--surface-2':   '#E4E4E0',
+    '--surface-3':   '#D8D8D3',
+    '--line':        'rgba(30,30,28,0.08)',
+    '--line-strong': 'rgba(30,30,28,0.16)',
+    '--text':        '#1A1A18',
+    '--text-2':      'rgba(26,26,24,0.72)',
+    '--text-3':      'rgba(26,26,24,0.55)',
+    '--text-4':      'rgba(26,26,24,0.40)',
+    '--accent':      '#7C6EAD',
+    '--accent-soft': 'rgba(124,110,173,0.14)',
+    '--sage':        'oklch(0.55 0.07 155)',
   } as React.CSSProperties;
 
   return (

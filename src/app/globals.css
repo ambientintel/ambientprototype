@@ -462,25 +462,25 @@ input { font-family: inherit; color: inherit; }
   background: linear-gradient(135deg, #37352F 0%, #5A5750 100%);
   border: 1px solid rgba(55,53,47,0.25);
 }
-.notion-theme .table-row:hover   { background: rgba(35,131,226,0.06); }
-.notion-theme .table-row.selected { background: rgba(35,131,226,0.10); }
-.notion-theme .priority.high .priority-dot { box-shadow: 0 0 0 3px rgba(35,131,226,0.18); }
-.notion-theme .resident-avatar { background: linear-gradient(135deg, #E3E2DF, #CFCECA); color: #37352F; }
+.notion-theme .table-row:hover    { background: rgba(124,110,173,0.07); }
+.notion-theme .table-row.selected { background: rgba(124,110,173,0.12); }
+.notion-theme .priority.high .priority-dot { box-shadow: 0 0 0 3px rgba(124,110,173,0.20); }
+.notion-theme .resident-avatar { background: linear-gradient(135deg, #E4E4E0, #D0D0CB); color: #1A1A18; }
 .notion-theme .owner-avatar { background: linear-gradient(135deg, #9B8EA0, #6B5B72); }
-.notion-theme .speak-btn:hover { background: var(--surface-3); border-color: rgba(55,53,47,0.22); }
+.notion-theme .speak-btn:hover { background: var(--surface-3); border-color: rgba(30,30,28,0.20); }
 .notion-theme .play-circle { color: #FFFFFF; }
-.notion-theme .delta-badge { background: rgba(35,131,226,0.10); border-color: rgba(35,131,226,0.28); }
+.notion-theme .delta-badge { background: rgba(124,110,173,0.12); border-color: rgba(124,110,173,0.30); }
 .notion-theme .stat-delta.up { color: var(--accent); }
 .notion-theme .stat.is-accent .stat-spark path { stroke: var(--accent); }
 .notion-theme .portrait {
   background:
-    radial-gradient(120% 80% at 30% 20%, #C8D8E8 0%, transparent 60%),
-    radial-gradient(140% 90% at 80% 100%, #A0B8CC 0%, transparent 70%),
-    linear-gradient(180deg, #BDCFDF, #E4EBF2);
+    radial-gradient(120% 80% at 30% 20%, #C8C0DC 0%, transparent 60%),
+    radial-gradient(140% 90% at 80% 100%, #A898C0 0%, transparent 70%),
+    linear-gradient(180deg, #C4BAD8, #DDD9E8);
 }
 .notion-theme .ella-eyebrow .pulse { animation: pulse-notion 2.4s ease-out infinite; }
 @keyframes pulse-notion {
-  0%   { box-shadow: 0 0 0 0 rgba(35,131,226,0.55); }
-  70%  { box-shadow: 0 0 0 8px rgba(35,131,226,0); }
-  100% { box-shadow: 0 0 0 0 rgba(35,131,226,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(124,110,173,0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(124,110,173,0); }
+  100% { box-shadow: 0 0 0 0 rgba(124,110,173,0); }
 }
