@@ -42,6 +42,14 @@ const PAGES = [
     description: 'Design token reference — CSS custom properties, color palette, badge states, type families, and type scale for the Palantir Blueprint dark theme.',
     meta: 'ambientdesign · tokens · globals.css',
   },
+  {
+    href: '/brand',
+    label: 'Brand & Color Picker',
+    tag: 'Design',
+    tagColor: { bg: 'rgba(45,114,210,0.18)', color: '#669EFF' },
+    description: 'Interactive color palette — click any swatch to copy its value. Brand mark at scale, badge states, and type scale.',
+    meta: 'ambientdesign · brand · interactive',
+  },
 ];
 
 function Tag({ label, style }: { label: string; style: { bg: string; color: string } }) {
