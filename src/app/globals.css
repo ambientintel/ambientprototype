@@ -55,15 +55,6 @@ input { font-family: inherit; color: inherit; }
   gap: 36px;
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
-.brand-mark {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 32%, #5C93E5 0%, transparent 55%),
-    radial-gradient(circle at 70% 70%, #1A4A8A 0%, transparent 65%),
-    #2D72D2;
-  border: 1px solid rgba(45,114,210,0.35);
-}
 .brand-name { font-family: var(--serif); font-weight: 400; font-size: 18px; letter-spacing: -0.01em; }
 .brand-name em { font-style: italic; color: var(--text-2); font-weight: 300; }
 
@@ -458,11 +449,7 @@ input { font-family: inherit; color: inherit; }
 .agent-note { margin-top: 40px; font-family: var(--mono); font-size: 10.5px; color: var(--text-4); letter-spacing: 0.14em; text-transform: uppercase; text-align: center; }
 
 /* ── Notion theme overrides (hardcoded-color fixes) ── */
-.notion-theme .brand-mark {
-  background: linear-gradient(135deg, #37352F 0%, #5A5750 100%);
-  border: 1px solid rgba(55,53,47,0.25);
-}
-.notion-theme .table-row:hover    { background: rgba(124,110,173,0.07); }
+.notion-theme .notion-theme .table-row:hover    { background: rgba(124,110,173,0.07); }
 .notion-theme .table-row.selected { background: rgba(124,110,173,0.12); }
 .notion-theme .priority.high .priority-dot { box-shadow: 0 0 0 3px rgba(124,110,173,0.20); }
 .notion-theme .resident-avatar { background: linear-gradient(135deg, #E4E4E0, #D0D0CB); color: #1A1A18; }
