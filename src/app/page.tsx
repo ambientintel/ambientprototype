@@ -2,22 +2,21 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
+const HERO_MODULE = {
+  href: '/dashboard',
+  tag: 'Operations',
+  label: 'Nurse Dashboard',
+  description: 'Real-time resident activity monitoring, fall-detection alerts, and AI-generated clinical summaries across all floors. The operational core of the Ambient Intelligence platform.',
+  meta: 'IWR6843AOP · Live',
+};
+
 const MODULES = [
-  {
-    href: '/dashboard',
-    tag: 'Operations',
-    label: 'Nurse Dashboard',
-    description: 'Real-time resident activity monitoring, fall-detection alerts, and AI-generated clinical summaries across all floors.',
-    meta: 'IWR6843AOP · Live',
-    index: 0,
-  },
   {
     href: '/bom',
     tag: 'Engineering',
     label: 'Bill of Materials',
     description: 'Full parts library, assembly BOMs, and build orders for EVT-0.1 hardware. 57 components priced from DigiKey and Mouser.',
     meta: 'EVT-0.1 · 57 parts',
-    index: 1,
   },
   {
     href: '/gapanalysis',
@@ -25,7 +24,6 @@ const MODULES = [
     label: '21 CFR 820 Gap Analysis',
     description: 'Interactive tracker for all 15 subparts of 21 CFR Part 820. Mark evidence, add notes, auto-persisted.',
     meta: 'FDA QSR · 15 subparts',
-    index: 2,
   },
   {
     href: '/samd',
@@ -33,7 +31,6 @@ const MODULES = [
     label: 'SaMD Dashboard',
     description: 'Requirements, risk register, SOUP inventory, verification status, and release tracking per IEC 62304 and ISO 14971.',
     meta: 'IEC 62304 / ISO 14971',
-    index: 3,
   },
   {
     href: '/cloud',
@@ -41,7 +38,6 @@ const MODULES = [
     label: 'Cloud Infrastructure',
     description: 'AWS backend — seven services across fall-alert hot path, Parquet cold path, Ella AI narratives, and the Nurse API. Architecture v4.',
     meta: 'ambientcloud · AWS · Terraform',
-    index: 4,
   },
   {
     href: '/colors',
@@ -49,7 +45,6 @@ const MODULES = [
     label: 'Color & Typography',
     description: 'Design token reference — CSS custom properties, color palette, badge states, type families, and full type scale.',
     meta: 'globals.css · tokens',
-    index: 4,
   },
   {
     href: '/brand',
@@ -57,7 +52,6 @@ const MODULES = [
     label: 'Brand & Color Picker',
     description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and type scale reference.',
     meta: 'ambientdesign · interactive',
-    index: 5,
   },
 ];
 
@@ -84,6 +78,7 @@ const C = {
 
 export default function Landing1() {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [heroHovered, setHeroHovered] = useState(false);
 
   return (
     <>
@@ -159,7 +154,6 @@ export default function Landing1() {
             linear-gradient(90deg, ${C.grid} 1px, transparent 1px)`,
           backgroundSize: '64px 64px',
         }}>
-          {/* Glow */}
           <div style={{
             position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)',
             width: 600, height: 400, pointerEvents: 'none',
@@ -207,7 +201,6 @@ export default function Landing1() {
             </div>
           </div>
 
-          {/* Scroll hint */}
           <div style={{
             position: 'absolute', bottom: 40, left: 48,
             fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.18em',
@@ -250,6 +243,56 @@ export default function Landing1() {
             </h2>
           </div>
 
+          {/* ── Featured: Nurse Dashboard ── */}
+          <Link href={HERO_MODULE.href} className="l1-card" style={{ textDecoration: 'none', color: 'inherit', display: 'block', marginBottom: 1 }}
+            onMouseEnter={() => setHeroHovered(true)}
+            onMouseLeave={() => setHeroHovered(false)}>
+            <div style={{
+              padding: '48px 48px',
+              background: heroHovered ? C.surface2 : C.surface,
+              border: `1px solid ${heroHovered ? 'rgba(166,242,204,0.18)' : C.border}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              transition: 'background 0.2s ease, border-color 0.2s ease',
+              gap: 48,
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                  <span style={{
+                    fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em',
+                    textTransform: 'uppercase', color: C.accent,
+                    background: C.accentDim, padding: '3px 8px', borderRadius: 2,
+                  }}>{HERO_MODULE.tag}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.text3 }}>
+                    Primary module
+                  </span>
+                </div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(24px, 2.5vw, 34px)', fontWeight: 400, letterSpacing: '-0.02em', color: C.text, marginBottom: 14 }}>
+                  {HERO_MODULE.label}
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.7, color: C.text2, fontWeight: 300, maxWidth: 560 }}>
+                  {HERO_MODULE.description}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 20, flexShrink: 0 }}>
+                <span className="l1-card-arrow" style={{ color: C.text3, fontSize: 22 }}>↗</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: C.accent, boxShadow: `0 0 6px ${C.accent}` }} />
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: C.text3 }}>
+                    {HERO_MODULE.meta}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* ── Supporting modules label ── */}
+          <div style={{ padding: '28px 0 20px', borderTop: `1px solid ${C.border}`, marginTop: 40, marginBottom: 0 }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.text3 }}>
+              Supporting modules
+            </span>
+          </div>
+
+          {/* ── 3-column grid ── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, border: `1px solid ${C.border}` }}>
             {MODULES.map((mod, i) => (
               <Link key={mod.href} href={mod.href} className="l1-card" style={{ textDecoration: 'none', color: 'inherit' }}
