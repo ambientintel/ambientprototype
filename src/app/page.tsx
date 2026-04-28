@@ -383,6 +383,101 @@ function ActivityRhythm() {
 
 
 
+
+function ParticleField() {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    const N = 90;
+    const CONNECT_DIST = 160;
+    const COLOR = '45,114,210';
+
+    interface Particle { x:number; y:number; vx:number; vy:number; r:number; }
+    let particles: Particle[] = [];
+
+    const resize = () => {
+      canvas.width  = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
+
+    const init = () => {
+      particles = Array.from({ length: N }, () => ({
+        x:  Math.random() * canvas.width,
+        y:  Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35,
+        r:  Math.random() * 1.5 + 0.5,
+      }));
+    };
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // connections
+      for (let i = 0; i < N; i++) {
+        for (let j = i + 1; j < N; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const d  = Math.sqrt(dx * dx + dy * dy);
+          if (d < CONNECT_DIST) {
+            const alpha = (1 - d / CONNECT_DIST) * 0.18;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(${COLOR},${alpha})`;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // dots
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${COLOR},0.45)`;
+        ctx.fill();
+      });
+
+      // move
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+      });
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize();
+    init();
+    draw();
+
+    const ro = new ResizeObserver(() => { resize(); init(); });
+    ro.observe(canvas);
+
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute', inset: 0, width: '100%', height: '100%',
+        pointerEvents: 'none', zIndex: 0, opacity: 0.85,
+      }}
+    />
+  );
+}
+
 const STATS = [
   { value: '57', label: 'Hardware components' },
   { value: '15', label: 'CFR Part 820 subparts' },
@@ -482,13 +577,14 @@ export default function Landing1() {
             linear-gradient(90deg, ${C.grid} 1px, transparent 1px)`,
           backgroundSize: '64px 64px',
         }}>
+          <ParticleField />
           <div style={{
             position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)',
             width: 600, height: 400, pointerEvents: 'none',
-            background: 'radial-gradient(ellipse at center, rgba(45,114,210,0.06) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse at center, rgba(45,114,210,0.08) 0%, transparent 70%)',
           }} />
 
-          <div style={{ maxWidth: 900, position: 'relative' }}>
+          <div style={{ maxWidth: 900, position: 'relative', zIndex: 1 }}>
             <div className="l1-fadeup" style={{ animationDelay: '0.05s', marginBottom: 24 }}>
               <span style={{
                 fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.22em',
@@ -530,7 +626,7 @@ export default function Landing1() {
           </div>
 
           <div style={{
-            position: 'absolute', bottom: 40, left: 48,
+            position: 'absolute', bottom: 40, left: 48, zIndex: 1,
             fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.18em',
             textTransform: 'uppercase', color: C.text3,
           }}>
