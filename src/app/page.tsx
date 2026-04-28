@@ -400,7 +400,15 @@ function ParticleField() {
       pulse: number; pulseSpeed: number;
     }
 
-    const N = 72;
+    const N            = 62;
+    const SPEED        = 0.38;
+    const GLOW_RADIUS  = 13.5;
+    const CONNECT      = 165;
+    const CONNECT_OPQ  = 0.47;
+    const BRIGHTNESS   = 0.41;
+    const PULSE_SPEED  = 0.043;
+    const VIGNETTE     = 0.44;
+
     let particles: Particle[] = [];
 
     const resize = () => {
@@ -411,30 +419,27 @@ function ParticleField() {
     const init = () => {
       particles = Array.from({ length: N }, () => {
         const layer = Math.random();
-        const speed = 0.04 + layer * 0.18;
         const angle = Math.random() * Math.PI * 2;
         return {
           x:          Math.random() * canvas.width,
           y:          Math.random() * canvas.height,
-          vx:         Math.cos(angle) * speed,
-          vy:         Math.sin(angle) * speed,
+          vx:         Math.cos(angle),
+          vy:         Math.sin(angle),
           r:          0.6 + layer * 1.8,
           alpha:      0.15 + layer * 0.45,
           layer,
           pulse:      Math.random() * Math.PI * 2,
-          pulseSpeed: 0.004 + Math.random() * 0.012,
+          pulseSpeed: PULSE_SPEED,
         };
       });
     };
-
-    const CONNECT = 110;
 
     const draw = () => {
       const cw = canvas.width, ch = canvas.height;
 
       ctx.clearRect(0, 0, cw, ch);
 
-      // Subtle connection lines — only nearby, same-depth particles
+      // Connection lines
       for (let i = 0; i < N; i++) {
         for (let j = i + 1; j < N; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -442,7 +447,7 @@ function ParticleField() {
           const d  = Math.sqrt(dx * dx + dy * dy);
           if (d < CONNECT) {
             const depth  = (particles[i].layer + particles[j].layer) / 2;
-            const alpha  = (1 - d / CONNECT) * 0.07 * depth;
+            const alpha  = (1 - d / CONNECT) * CONNECT_OPQ * depth;
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
@@ -458,35 +463,34 @@ function ParticleField() {
         p.pulse += p.pulseSpeed;
         const pf  = 0.85 + 0.15 * Math.sin(p.pulse);
         const r   = p.r * pf;
-        const al  = p.alpha * pf;
+        const al  = p.alpha * pf * (BRIGHTNESS / 0.45);
+        const gs  = r * GLOW_RADIUS;
 
-        // Outer glow
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 5);
-        g.addColorStop(0,   `rgba(110,165,255,${al * 0.55})`);
-        g.addColorStop(0.45,`rgba(80,130,220,${al * 0.15})`);
-        g.addColorStop(1,   'rgba(0,0,0,0)');
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, gs);
+        g.addColorStop(0,    `rgba(110,165,255,${al * 0.55})`);
+        g.addColorStop(0.45, `rgba(80,130,220,${al * 0.15})`);
+        g.addColorStop(1,    'rgba(0,0,0,0)');
         ctx.beginPath();
-        ctx.arc(p.x, p.y, r * 5, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, gs, 0, Math.PI * 2);
         ctx.fillStyle = g;
         ctx.fill();
 
-        // Core
         ctx.beginPath();
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(190,215,255,${al})`;
         ctx.fill();
 
-        p.x += p.vx; p.y += p.vy;
+        p.x += p.vx * SPEED; p.y += p.vy * SPEED;
         if (p.x < -10)      p.x = cw + 10;
         if (p.x > cw + 10)  p.x = -10;
         if (p.y < -10)      p.y = ch + 10;
         if (p.y > ch + 10)  p.y = -10;
       });
 
-      // Dark vignette to keep text readable
+      // Vignette
       const vign = ctx.createRadialGradient(cw/2, ch*0.44, ch*0.04, cw/2, ch*0.44, ch*0.52);
-      vign.addColorStop(0,   'rgba(12,13,15,0.72)');
-      vign.addColorStop(0.5, 'rgba(12,13,15,0.18)');
+      vign.addColorStop(0,   `rgba(12,13,15,${VIGNETTE})`);
+      vign.addColorStop(0.5, `rgba(12,13,15,${VIGNETTE * 0.25})`);
       vign.addColorStop(1,   'rgba(12,13,15,0)');
       ctx.fillStyle = vign;
       ctx.fillRect(0, 0, cw, ch);
