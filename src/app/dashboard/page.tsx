@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function PatientDashboard() {
   const [activeNav, setActiveNav] = useState("Home");
   const [activeView, setActiveView] = useState("list");
   const [speaking, setSpeaking] = useState(false);
+
+  useEffect(() => {
+    document.body.style.background = '#FFFFFF';
+    return () => { document.body.style.background = ''; };
+  }, []);
 
   const notion: React.CSSProperties = {
     '--bg':          '#FFFFFF',
@@ -24,7 +29,7 @@ export default function PatientDashboard() {
   } as React.CSSProperties;
 
   return (
-    <div className="app" style={notion}>
+    <div className="app notion-theme" style={notion}>
 
       {/* Sidebar */}
       <aside className="sidebar">
