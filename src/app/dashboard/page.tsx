@@ -27,7 +27,10 @@ export default function PatientDashboard() {
     h < 17 ? 'Mid afternoon' :
     h < 19 ? 'Late afternoon' :
     h < 21 ? 'Evening' : 'Night';
-  const crumb = `${DAYS[now.getDay()]} · ${MONTHS[now.getMonth()]} ${now.getDate()} · ${timeOfDay}`;
+  const hh = h % 12 || 12;
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const crumb = `${DAYS[now.getDay()]} · ${MONTHS[now.getMonth()]} ${now.getDate()} · ${hh}:${mm} ${ampm}`;
 
   useEffect(() => {
     document.body.style.background = '#F0F0EE';
