@@ -16,6 +16,7 @@ export interface Part {
   stock: number | null;
   supplier?: string;
   supplierPn?: string;
+  priceSource?: 'csv' | 'researched';
 }
 
 export interface BomLine {
