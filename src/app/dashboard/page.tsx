@@ -230,7 +230,7 @@ export default function PatientDashboard() {
           <div className="chart-head">
             <div>
               <h3 className="chart-title">Activity</h3>
-              <div className="chart-sub">23 Nov → today · hourly</div>
+              <div className="chart-sub">{chartSub}</div>
             </div>
             <div className="delta-badge">
               <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -271,7 +271,7 @@ export default function PatientDashboard() {
           </svg>
 
           <div className="chart-legend">
-            <div className="legend-item"><span className="legend-swatch solid" /> Today · Dec 5</div>
+            <div className="legend-item"><span className="legend-swatch solid" /> Today · {todayLabel}</div>
             <div className="legend-item"><span className="legend-swatch dashed" /> 7-day average</div>
           </div>
         </div>
