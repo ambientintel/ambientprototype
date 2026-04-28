@@ -197,13 +197,13 @@ input { font-family: inherit; color: inherit; }
 .view-toggle svg { width: 14px; height: 14px; }
 
 /* Resident table */
-.table { margin-top: 6px; margin-left: -44px; margin-right: -44px; border-top: 1px solid var(--line); }
+.table { margin-top: 6px; border-top: 1px solid var(--line); width: 100%; }
 .table-header, .table-row {
   display: grid;
   grid-template-columns: 90px 1.6fr 1.1fr 1fr 1fr 1.2fr;
   align-items: center;
   gap: 24px;
-  padding: 14px 50px;
+  padding: 14px 6px;
 }
 .table-header {
   font-family: var(--mono);
@@ -211,7 +211,7 @@ input { font-family: inherit; color: inherit; }
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--text-4);
-  padding: 14px 50px 12px;
+  padding: 14px 6px 12px;
   border-bottom: 1px solid var(--line);
 }
 .table-row { border-bottom: 1px solid var(--line); font-size: 14px; cursor: pointer; transition: background 0.15s; }
