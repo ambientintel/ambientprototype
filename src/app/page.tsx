@@ -396,10 +396,11 @@ function ParticleField() {
 
     interface Particle {
       x: number; y: number; vx: number; vy: number;
-      r: number; speed: number; isStreak: boolean;
+      r: number; alpha: number; layer: number;
+      pulse: number; pulseSpeed: number;
     }
 
-    const N = 220;
+    const N = 72;
     let particles: Particle[] = [];
 
     const resize = () => {
@@ -409,94 +410,83 @@ function ParticleField() {
 
     const init = () => {
       particles = Array.from({ length: N }, () => {
-        const speed  = 0.6 + Math.random() * 2.2;
-        const angle  = Math.random() * Math.PI * 2;
-        const streak = Math.random() < 0.28;
+        const layer = Math.random();
+        const speed = 0.04 + layer * 0.18;
+        const angle = Math.random() * Math.PI * 2;
         return {
-          x:        Math.random() * canvas.width,
-          y:        Math.random() * canvas.height,
-          vx:       Math.cos(angle) * speed,
-          vy:       Math.sin(angle) * speed,
-          r:        streak ? 0.7 + Math.random() * 0.8 : 1.0 + Math.random() * 1.8,
-          speed,
-          isStreak: streak,
+          x:          Math.random() * canvas.width,
+          y:          Math.random() * canvas.height,
+          vx:         Math.cos(angle) * speed,
+          vy:         Math.sin(angle) * speed,
+          r:          0.6 + layer * 1.8,
+          alpha:      0.15 + layer * 0.45,
+          layer,
+          pulse:      Math.random() * Math.PI * 2,
+          pulseSpeed: 0.004 + Math.random() * 0.012,
         };
       });
     };
 
-    const CONNECT = 140;
+    const CONNECT = 110;
 
     const draw = () => {
       const cw = canvas.width, ch = canvas.height;
 
-      // Film persistence — partial fade instead of clearRect
-      ctx.fillStyle = 'rgba(12,13,15,0.13)';
-      ctx.fillRect(0, 0, cw, ch);
+      ctx.clearRect(0, 0, cw, ch);
 
-      // Connection lines
+      // Subtle connection lines — only nearby, same-depth particles
       for (let i = 0; i < N; i++) {
         for (let j = i + 1; j < N; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const d  = Math.sqrt(dx * dx + dy * dy);
           if (d < CONNECT) {
-            const alpha = (1 - d / CONNECT) * 0.16;
+            const depth  = (particles[i].layer + particles[j].layer) / 2;
+            const alpha  = (1 - d / CONNECT) * 0.07 * depth;
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(100,180,255,${alpha})`;
-            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = `rgba(100,150,255,${alpha})`;
+            ctx.lineWidth = 0.4;
             ctx.stroke();
           }
         }
       }
 
-      // Particles
+      // Particles — soft glowing orbs
       particles.forEach(p => {
-        if (p.isStreak) {
-          // Elongated streak in direction of motion
-          const len = p.speed * 9;
-          const nx  = p.vx / p.speed, ny = p.vy / p.speed;
-          const grad = ctx.createLinearGradient(
-            p.x, p.y, p.x - nx * len, p.y - ny * len
-          );
-          grad.addColorStop(0, 'rgba(160,220,255,0.85)');
-          grad.addColorStop(1, 'rgba(100,180,255,0)');
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p.x - nx * len, p.y - ny * len);
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = p.r * 1.2;
-          ctx.stroke();
-          // bright head
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r * 0.9, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(200,235,255,0.9)';
-          ctx.fill();
-        } else {
-          // Standard dot — two colors: base blue and light blue
-          const isLight = Math.random() < 0.25;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = isLight
-            ? `rgba(140,210,255,${0.5 + Math.random() * 0.35})`
-            : `rgba(45,114,210,${0.45 + Math.random() * 0.4})`;
-          ctx.fill();
-        }
+        p.pulse += p.pulseSpeed;
+        const pf  = 0.85 + 0.15 * Math.sin(p.pulse);
+        const r   = p.r * pf;
+        const al  = p.alpha * pf;
 
-        // Move
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < -20)      p.x = cw + 20;
-        if (p.x > cw + 20)  p.x = -20;
-        if (p.y < -20)      p.y = ch + 20;
-        if (p.y > ch + 20)  p.y = -20;
+        // Outer glow
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 5);
+        g.addColorStop(0,   `rgba(110,165,255,${al * 0.55})`);
+        g.addColorStop(0.45,`rgba(80,130,220,${al * 0.15})`);
+        g.addColorStop(1,   'rgba(0,0,0,0)');
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r * 5, 0, Math.PI * 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+
+        // Core
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(190,215,255,${al})`;
+        ctx.fill();
+
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < -10)      p.x = cw + 10;
+        if (p.x > cw + 10)  p.x = -10;
+        if (p.y < -10)      p.y = ch + 10;
+        if (p.y > ch + 10)  p.y = -10;
       });
 
-      // Protect text area with a soft radial dark vignette
-      const vign = ctx.createRadialGradient(cw/2, ch*0.42, ch*0.06, cw/2, ch*0.42, ch*0.46);
-      vign.addColorStop(0,   'rgba(12,13,15,0.60)');
-      vign.addColorStop(0.55,'rgba(12,13,15,0.12)');
+      // Dark vignette to keep text readable
+      const vign = ctx.createRadialGradient(cw/2, ch*0.44, ch*0.04, cw/2, ch*0.44, ch*0.52);
+      vign.addColorStop(0,   'rgba(12,13,15,0.72)');
+      vign.addColorStop(0.5, 'rgba(12,13,15,0.18)');
       vign.addColorStop(1,   'rgba(12,13,15,0)');
       ctx.fillStyle = vign;
       ctx.fillRect(0, 0, cw, ch);
