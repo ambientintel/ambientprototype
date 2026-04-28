@@ -7,8 +7,24 @@ export default function PatientDashboard() {
   const [activeView, setActiveView] = useState("list");
   const [speaking, setSpeaking] = useState(false);
 
+  const notion: React.CSSProperties = {
+    '--bg':          '#FFFFFF',
+    '--surface-1':   '#F7F7F5',
+    '--surface-2':   '#EFEFED',
+    '--surface-3':   '#E3E2DF',
+    '--line':        'rgba(55,53,47,0.09)',
+    '--line-strong': 'rgba(55,53,47,0.16)',
+    '--text':        '#37352F',
+    '--text-2':      'rgba(55,53,47,0.65)',
+    '--text-3':      'rgba(55,53,47,0.45)',
+    '--text-4':      'rgba(55,53,47,0.28)',
+    '--accent':      '#2383E2',
+    '--accent-soft': 'rgba(35,131,226,0.12)',
+    '--sage':        '#0F7B6C',
+  } as React.CSSProperties;
+
   return (
-    <div className="app">
+    <div className="app" style={notion}>
 
       {/* Sidebar */}
       <aside className="sidebar">
