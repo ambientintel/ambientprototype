@@ -585,7 +585,7 @@ export default function Landing1() {
                 <button className="l1-cta-primary">Enter Dashboard</button>
               </Link>
               <Link href="/control" style={{ textDecoration: 'none' }}>
-                <button className="l1-cta-ghost">View all modules</button>
+                <button className="l1-cta-ghost">View Control Center</button>
               </Link>
             </div>
           </div>
