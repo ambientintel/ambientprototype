@@ -20,10 +20,23 @@ const C = {
 };
 
 // ── Room heatmap data ──
-const FLOORS: { floor: string; rooms: { id: string; status: 'quiet'|'movement'|'alert' }[] }[] = [
-  { floor: '3F', rooms: Array.from({length:14},(_,i)=>({ id:`3${String(i+1).padStart(2,'0')}`, status: ([,'quiet','quiet','movement','quiet','alert','quiet','quiet','movement','quiet','quiet','movement','quiet','quiet'] as const)[i+1] })) },
-  { floor: '2F', rooms: Array.from({length:14},(_,i)=>({ id:`2${String(i+1).padStart(2,'0')}`, status: ([,'quiet','movement','quiet','quiet','quiet','movement','alert','quiet','movement','quiet','quiet','alert','quiet','movement'] as const)[i+1] })) },
-  { floor: '1F', rooms: Array.from({length:14},(_,i)=>({ id:`1${String(i+1).padStart(2,'0')}`, status: ([,'quiet','quiet','quiet','movement','quiet','quiet','movement','quiet','alert','quiet','movement','quiet','quiet','quiet'] as const)[i+1] })) },
+type RoomStatus = 'quiet'|'movement'|'alert';
+const FLOORS: { floor: string; rooms: { id: string; status: RoomStatus }[] }[] = [
+  { floor:'3F', rooms:[
+    {id:'301',status:'quiet'},{id:'302',status:'quiet'},{id:'303',status:'movement'},{id:'304',status:'quiet'},{id:'305',status:'alert'},
+    {id:'306',status:'quiet'},{id:'307',status:'quiet'},{id:'308',status:'movement'},{id:'309',status:'quiet'},{id:'310',status:'quiet'},
+    {id:'311',status:'movement'},{id:'312',status:'quiet'},{id:'313',status:'quiet'},{id:'314',status:'quiet'},
+  ]},
+  { floor:'2F', rooms:[
+    {id:'201',status:'quiet'},{id:'202',status:'movement'},{id:'203',status:'quiet'},{id:'204',status:'quiet'},{id:'205',status:'quiet'},
+    {id:'206',status:'movement'},{id:'207',status:'alert'},{id:'208',status:'quiet'},{id:'209',status:'movement'},{id:'210',status:'quiet'},
+    {id:'211',status:'quiet'},{id:'212',status:'alert'},{id:'213',status:'quiet'},{id:'214',status:'movement'},
+  ]},
+  { floor:'1F', rooms:[
+    {id:'101',status:'quiet'},{id:'102',status:'quiet'},{id:'103',status:'quiet'},{id:'104',status:'movement'},{id:'105',status:'quiet'},
+    {id:'106',status:'quiet'},{id:'107',status:'movement'},{id:'108',status:'quiet'},{id:'109',status:'alert'},{id:'110',status:'quiet'},
+    {id:'111',status:'movement'},{id:'112',status:'quiet'},{id:'113',status:'quiet'},{id:'114',status:'quiet'},
+  ]},
 ];
 
 const STATUS_COLOR = { quiet: C.green, movement: C.amber, alert: C.red };
