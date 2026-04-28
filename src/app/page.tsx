@@ -77,10 +77,7 @@ export default function Home() {
       {/* Brand */}
       <div style={{ marginBottom: 52, textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 7,
-            background: 'var(--accent)', flexShrink: 0,
-          }} />
+
           <span style={{ fontFamily: 'var(--serif)', fontSize: 22, letterSpacing: '-0.02em' }}>
             Ambient <em>Intelligence</em>
           </span>
