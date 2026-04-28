@@ -707,7 +707,19 @@ export default function Landing1() {
             </h2>
           </div>
 
-          {/* Row 1: heatmap + timeline */}
+          {/* Row 1: Ella carousel + activity rhythm */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, border:`1px solid ${C.border}`, marginBottom:1 }}>
+            <div style={{ padding:'36px 36px', background:C.surface, borderRight:`1px solid ${C.border}` }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:20 }}>Ella AI · Resident summaries</div>
+              <EllaCarousel/>
+            </div>
+            <div style={{ padding:'36px 36px', background:C.surface }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:20 }}>Alert rhythm · 7 days × 24 hours</div>
+              <ActivityRhythm/>
+            </div>
+          </div>
+
+          {/* Row 2: heatmap + timeline */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, border:`1px solid ${C.border}`, marginBottom:1 }}>
             <div style={{ padding:'36px 36px', background:C.surface, borderRight:`1px solid ${C.border}` }}>
               <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:20 }}>Floor activity · 42 rooms</div>
@@ -719,7 +731,7 @@ export default function Landing1() {
             </div>
           </div>
 
-          {/* Row 2: compliance rings full width */}
+          {/* Row 3: compliance rings full width */}
           <div style={{ background:C.surface, border:`1px solid ${C.border}`, padding:'36px 36px' }}>
             <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:32 }}>Regulatory compliance</div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:0 }}>
@@ -735,18 +747,6 @@ export default function Landing1() {
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Row 3: Ella carousel + activity rhythm */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, border:`1px solid ${C.border}`, marginTop:1 }}>
-            <div style={{ padding:'36px 36px', background:C.surface, borderRight:`1px solid ${C.border}` }}>
-              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:20 }}>Ella AI · Resident summaries</div>
-              <EllaCarousel/>
-            </div>
-            <div style={{ padding:'36px 36px', background:C.surface }}>
-              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:20 }}>Alert rhythm · 7 days × 24 hours</div>
-              <ActivityRhythm/>
             </div>
           </div>
         </section>
