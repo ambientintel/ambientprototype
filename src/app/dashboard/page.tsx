@@ -35,7 +35,6 @@ export default function PatientDashboard() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark" />
           <div className="brand-name">Ambient <em>Demo</em></div>
         </div>
 
