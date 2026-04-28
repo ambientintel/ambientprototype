@@ -761,16 +761,16 @@ export default function Landing1() {
 
         {/* ── Platform Intelligence ── */}
         <section style={{ borderTop:`1px solid ${C.border}`, padding:'80px 48px' }}>
-          <div style={{ marginBottom:48, display:'flex', alignItems:'flex-end', justifyContent:'space-between' }}>
-            <div>
-              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.22em', textTransform:'uppercase', color:C.accent, marginBottom:14 }}>Platform intelligence</div>
+          <div style={{ marginBottom:48 }}>
+            <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.22em', textTransform:'uppercase', color:C.accent, marginBottom:14 }}>Platform intelligence</div>
+            <div style={{ display:'flex', alignItems:'center', gap:24, flexWrap:'wrap' }}>
               <h2 style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:'clamp(26px,3vw,38px)', letterSpacing:'-0.02em', margin:0, color:C.text }}>
                 One platform. Full visibility.
               </h2>
+              <Link href="/control" style={{ textDecoration:'none' }}>
+                <button className="l1-cta-primary" style={{ whiteSpace:'nowrap' }}>Control Center</button>
+              </Link>
             </div>
-            <Link href="/control" style={{ textDecoration:'none' }}>
-              <button className="l1-cta-primary" style={{ whiteSpace:'nowrap' }}>Control Center</button>
-            </Link>
           </div>
 
           {/* Row 1: heatmap full width */}
