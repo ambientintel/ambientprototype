@@ -17,7 +17,8 @@ Opens at http://localhost:3000
 
 | Page | URL |
 |---|---|
-| Patient Dashboard | [/](https://ambientprototype.vercel.app) |
+| Home | [/](https://ambientprototype.vercel.app) |
+| Patient Dashboard | [/dashboard](https://ambientprototype.vercel.app/dashboard) |
 | 21 CFR 820 Gap Analysis | [/gapanalysis](https://ambientprototype.vercel.app/gapanalysis) |
 | PLM — Bill of Materials | [/bom](https://ambientprototype.vercel.app/bom) |
 | SaMD Regulatory Dashboard | [/samd](https://ambientprototype.vercel.app/samd) |
