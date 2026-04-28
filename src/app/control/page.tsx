@@ -4,14 +4,6 @@ import Link from 'next/link';
 
 const MODULES = [
   {
-    href: '/dashboard',
-    tag: 'Operations',
-    label: 'Nurse Dashboard',
-    description: 'Real-time resident activity monitoring, fall-detection alerts, and AI-generated clinical summaries across all floors.',
-    meta: 'IWR6843AOP · Live',
-    featured: true,
-  },
-  {
     href: '/bom',
     tag: 'Engineering',
     label: 'Bill of Materials',
@@ -69,8 +61,7 @@ const C = {
 
 export default function ControlCenter() {
   const [hovered, setHovered] = useState<string | null>(null);
-  const featured = MODULES.filter(m => m.featured);
-  const supporting = MODULES.filter(m => !m.featured);
+  const supporting = MODULES;
 
   return (
     <>
@@ -131,51 +122,10 @@ export default function ControlCenter() {
         {/* ── Modules ── */}
         <div style={{ padding: '48px 48px 96px' }}>
 
-          {/* Featured */}
-          {featured.map(mod => (
-            <Link key={mod.href} href={mod.href} className="cc-card" style={{ textDecoration: 'none', color: 'inherit', display: 'block', marginBottom: 40 }}
-              onMouseEnter={() => setHovered(mod.href)}
-              onMouseLeave={() => setHovered(null)}>
-              <div style={{
-                padding: '40px 44px',
-                background: hovered === mod.href ? C.surface2 : C.surface,
-                border: `1px solid ${hovered === mod.href ? 'rgba(45,114,210,0.3)' : C.border}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 48,
-                transition: 'background 0.2s ease, border-color 0.2s ease',
-              }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                    <span style={{
-                      fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em',
-                      textTransform: 'uppercase', color: C.accent,
-                      background: C.accentDim, padding: '3px 8px', borderRadius: 2,
-                    }}>{mod.tag}</span>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.text3 }}>
-                      Primary module
-                    </span>
-                  </div>
-                  <div style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(22px, 2vw, 30px)', fontWeight: 400, letterSpacing: '-0.02em', color: C.text, marginBottom: 12 }}>
-                    {mod.label}
-                  </div>
-                  <div style={{ fontSize: 13.5, lineHeight: 1.7, color: C.text2, fontWeight: 300, maxWidth: 520 }}>
-                    {mod.description}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 16, flexShrink: 0 }}>
-                  <span className="cc-card-arrow" style={{ color: C.text3, fontSize: 20 }}>↗</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: C.accent, boxShadow: `0 0 6px ${C.accent}` }} />
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: C.text3 }}>{mod.meta}</span>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-
-          {/* Supporting label */}
+          {/* Modules label */}
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', paddingBottom: 20, borderBottom: `1px solid ${C.border}`, marginBottom: 1 }}>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(16px, 1.5vw, 22px)', fontWeight: 300, letterSpacing: '-0.01em', color: C.text }}>
-              Supporting modules
+              Ambient Intelligence Control Center
             </span>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.text3 }}>
               {supporting.length} modules
