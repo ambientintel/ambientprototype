@@ -24,7 +24,7 @@ export default function PatientDashboard() {
   const crumb = `${DAYS[cst.getDay()]} · ${MONTHS[cst.getMonth()]} ${cst.getDate()} · ${hh}:${mm} ${ampm} CST`;
   const todayLabel = `${MONTHS[cst.getMonth()]} ${cst.getDate()}`;
   const thirtyDaysAgo = new Date(cst); thirtyDaysAgo.setDate(cst.getDate() - 30);
-  const chartSub = `${MONTHS[thirtyDaysAgo.getMonth()]} ${thirtyDaysAgo.getDate()} → ${MONTHS[cst.getMonth()]} ${cst.getDate()} · hourly`;
+  const chartSub = `${MONTHS[cst.getMonth()]} ${cst.getDate()} · hourly`;
 
   useEffect(() => {
     document.body.style.background = '#F0F0EE';
