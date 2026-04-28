@@ -277,8 +277,14 @@ export default function BomPage() {
                       <td style={{ padding: '9px 14px' }}><LifecycleBadge lc={part.lifecycle} /></td>
                       <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 13, textAlign: 'right', color: 'var(--text-3)' }}>—</td>
                       <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 13, textAlign: 'right', color: 'var(--text-2)' }}>
-                        {part.unitCost != null && part.unitCost > 0 ? `$${part.unitCost.toFixed(3)}` : '—'}
-                        {part.supplier && <div style={{ fontSize: 10, color: 'var(--text-4)' }}>{part.supplier}</div>}
+                        {part.unitCost != null && part.unitCost > 0 ? (
+                          <>
+                            {part.priceSource === 'researched' && <span style={{ color: 'var(--text-4)' }}>~ </span>}
+                            ${part.unitCost.toFixed(3)}
+                            {part.priceSource === 'researched' && <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 2 }}>est. qty 1</div>}
+                          </>
+                        ) : '—'}
+                        {part.supplier && part.priceSource === 'csv' && <div style={{ fontSize: 10, color: 'var(--text-4)' }}>{part.supplier}</div>}
                       </td>
                     </tr>
                   ))}
@@ -292,6 +298,9 @@ export default function BomPage() {
                 </tbody>
               </table>
             </div>
+            <p style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', marginTop: 10 }}>
+              ~ estimated from DigiKey / Mouser at qty 1 · no symbol = from BOM CSV export
+            </p>
           </>
         )}
 
