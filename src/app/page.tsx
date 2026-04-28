@@ -166,6 +166,106 @@ function Pipeline() {
   );
 }
 
+
+// ── Viz data ──
+type RoomStatus = 'quiet'|'movement'|'alert';
+const VIZ_FLOORS: { floor: string; rooms: { id: string; status: RoomStatus }[] }[] = [
+  { floor:'3F', rooms:[
+    {id:'301',status:'quiet'},{id:'302',status:'quiet'},{id:'303',status:'movement'},{id:'304',status:'quiet'},{id:'305',status:'alert'},
+    {id:'306',status:'quiet'},{id:'307',status:'quiet'},{id:'308',status:'movement'},{id:'309',status:'quiet'},{id:'310',status:'quiet'},
+    {id:'311',status:'movement'},{id:'312',status:'quiet'},{id:'313',status:'quiet'},{id:'314',status:'quiet'},
+  ]},
+  { floor:'2F', rooms:[
+    {id:'201',status:'quiet'},{id:'202',status:'movement'},{id:'203',status:'quiet'},{id:'204',status:'quiet'},{id:'205',status:'quiet'},
+    {id:'206',status:'movement'},{id:'207',status:'alert'},{id:'208',status:'quiet'},{id:'209',status:'movement'},{id:'210',status:'quiet'},
+    {id:'211',status:'quiet'},{id:'212',status:'alert'},{id:'213',status:'quiet'},{id:'214',status:'movement'},
+  ]},
+  { floor:'1F', rooms:[
+    {id:'101',status:'quiet'},{id:'102',status:'quiet'},{id:'103',status:'quiet'},{id:'104',status:'movement'},{id:'105',status:'quiet'},
+    {id:'106',status:'quiet'},{id:'107',status:'movement'},{id:'108',status:'quiet'},{id:'109',status:'alert'},{id:'110',status:'quiet'},
+    {id:'111',status:'movement'},{id:'112',status:'quiet'},{id:'113',status:'quiet'},{id:'114',status:'quiet'},
+  ]},
+];
+const VIZ_STATUS_COLOR: Record<RoomStatus,string> = { quiet:'#3DCC91', movement:'#FFC940', alert:'#FF6B6B' };
+const VIZ_STATUS_DIM:   Record<RoomStatus,string> = { quiet:'rgba(61,204,145,0.12)', movement:'rgba(255,201,64,0.14)', alert:'rgba(255,107,107,0.16)' };
+const VIZ_TIMELINE = [0,0,1,0,2,1,0,3,8,12,7,5,9,11,6,8,10,14,9,7,5,3,2,1];
+const VIZ_RINGS = [
+  { label:'21 CFR 820', sub:'Gap Analysis',       pct:62, color:'#2D72D2' },
+  { label:'SaMD Verified', sub:'IEC 62304',        pct:48, color:'#3DCC91' },
+  { label:'Risk Closed',  sub:'ISO 14971',          pct:71, color:'#FFC940' },
+];
+
+function LandingHeatmap() {
+  const [tip, setTip] = React.useState<{id:string;status:string}|null>(null);
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      {VIZ_FLOORS.map(f=>(
+        <div key={f.floor} style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:'#5C5E62', width:20, flexShrink:0 }}>{f.floor}</span>
+          <div style={{ display:'flex', gap:4, flex:1 }}>
+            {f.rooms.map(r=>(
+              <div key={r.id}
+                onMouseEnter={()=>setTip(r)} onMouseLeave={()=>setTip(null)}
+                style={{ flex:1, height:32, borderRadius:2, background:VIZ_STATUS_DIM[r.status], border:`1px solid ${VIZ_STATUS_COLOR[r.status]}44`, cursor:'default', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <span style={{ fontFamily:'var(--mono)', fontSize:7.5, color:VIZ_STATUS_COLOR[r.status], opacity:0.85 }}>{r.id}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div style={{ display:'flex', gap:16, marginTop:8, alignItems:'center' }}>
+        {(['quiet','movement','alert'] as RoomStatus[]).map(s=>(
+          <div key={s} style={{ display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ width:7, height:7, borderRadius:1, background:VIZ_STATUS_COLOR[s], display:'inline-block' }}/>
+            <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#5C5E62', textTransform:'capitalize' }}>{s}</span>
+          </div>
+        ))}
+        {tip && <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#9A9B9D', marginLeft:'auto' }}>Room {tip.id} · {tip.status}</span>}
+      </div>
+    </div>
+  );
+}
+
+function LandingTimeline() {
+  const max = Math.max(...VIZ_TIMELINE);
+  const now = new Date().getHours();
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+      <div style={{ display:'flex', alignItems:'flex-end', gap:3, height:88 }}>
+        {VIZ_TIMELINE.map((v,h)=>(
+          <div key={h} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center' }}>
+            <div style={{ width:'100%', background: h===now ? '#2D72D2' : 'rgba(45,114,210,0.3)', borderRadius:'2px 2px 0 0', height:`${Math.round((v/max)*84)+4}px`, border: h===now ? '1px solid #2D72D2' : 'none', transition:'height 0.3s' }}/>
+          </div>
+        ))}
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between' }}>
+        {[0,6,12,18,23].map(h=>(
+          <span key={h} style={{ fontFamily:'var(--mono)', fontSize:8.5, color:'#5C5E62' }}>{String(h).padStart(2,'0')}:00</span>
+        ))}
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ width:7, height:7, borderRadius:1, background:'#2D72D2', display:'inline-block' }}/>
+          <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#5C5E62' }}>Current hour</span>
+        </div>
+        <span style={{ fontFamily:'var(--mono)', fontSize:9, color:'#9A9B9D' }}>{VIZ_TIMELINE.reduce((a,b)=>a+b,0)} alerts today</span>
+      </div>
+    </div>
+  );
+}
+
+function LandingDonut({ pct, color, size=88 }: { pct:number; color:string; size?:number }) {
+  const r = (size/2)-9;
+  const circ = 2*Math.PI*r;
+  return (
+    <svg width={size} height={size} style={{ transform:'rotate(-90deg)' }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={7}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={7}
+        strokeDasharray={`${(pct/100)*circ} ${circ}`} strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 const STATS = [
   { value: '57', label: 'Hardware components' },
   { value: '15', label: 'CFR Part 820 subparts' },
@@ -478,6 +578,47 @@ export default function Landing1() {
                 </div>
               </Link>
             ))}
+          </div>
+        </section>
+
+        {/* ── Platform Intelligence ── */}
+        <section style={{ borderTop:`1px solid ${C.border}`, padding:'80px 48px' }}>
+          <div style={{ marginBottom:48 }}>
+            <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.22em', textTransform:'uppercase', color:C.accent, marginBottom:14 }}>Platform intelligence</div>
+            <h2 style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:'clamp(26px,3vw,38px)', letterSpacing:'-0.02em', margin:0, color:C.text }}>
+              One platform. Full visibility.
+            </h2>
+          </div>
+
+          {/* Row 1: heatmap + timeline */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, border:`1px solid ${C.border}`, marginBottom:1 }}>
+            <div style={{ padding:'36px 36px', background:C.surface, borderRight:`1px solid ${C.border}` }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:20 }}>Floor activity · 42 rooms</div>
+              <LandingHeatmap/>
+            </div>
+            <div style={{ padding:'36px 36px', background:C.surface }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:20 }}>Alert volume · 24h</div>
+              <LandingTimeline/>
+            </div>
+          </div>
+
+          {/* Row 2: compliance rings full width */}
+          <div style={{ background:C.surface, border:`1px solid ${C.border}`, padding:'36px 36px' }}>
+            <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:32 }}>Regulatory compliance</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:0 }}>
+              {VIZ_RINGS.map((r,i)=>(
+                <div key={r.label} style={{ display:'flex', alignItems:'center', gap:28, padding:'0 32px', borderRight: i<2 ? `1px solid ${C.border}` : 'none' }}>
+                  <div style={{ position:'relative', width:88, height:88, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <LandingDonut pct={r.pct} color={r.color}/>
+                    <span style={{ position:'absolute', fontFamily:'var(--mono)', fontSize:16, fontWeight:500, color:C.text, letterSpacing:'-0.03em' }}>{r.pct}%</span>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily:'var(--serif)', fontSize:16, color:C.text, marginBottom:6 }}>{r.label}</div>
+                    <div style={{ fontFamily:'var(--mono)', fontSize:9.5, color:C.text3, textTransform:'uppercase', letterSpacing:'0.12em' }}>{r.sub}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
