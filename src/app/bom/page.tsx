@@ -80,10 +80,9 @@ function BomRow({ line, depth = 0, expandedPns, toggle }: {
         </td>
         <td style={{ padding: '8px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: isNrndOrEol ? '#a02020' : 'var(--text-2)' }}>
           {part?.mpn ?? '—'}
-          {part?.altMpn && <div style={{ fontSize: 10, color: '#8a6200' }}>alt: {part.altMpn}</div>}
         </td>
         <td style={{ padding: '8px 14px', fontFamily: 'var(--mono)', fontSize: 13, textAlign: 'right', color: 'var(--text-2)' }}>
-          {part ? `$${(part.unitCost * line.qty).toFixed(2)}` : '—'}
+          {part?.unitCost != null ? `$${(part.unitCost * line.qty).toFixed(2)}` : '—'}
         </td>
       </tr>
       {hasChildren && expanded && line.children!.map(child => (
@@ -97,7 +96,7 @@ export default function BomPage() {
   const [tab, setTab] = useState<Tab>('parts');
   const [search, setSearch] = useState('');
   const [lcFilter, setLcFilter] = useState<Lifecycle | 'All'>('All');
-  const [selectedAssembly, setSelectedAssembly] = useState(ASSEMBLIES[1].pn);
+  const [selectedAssembly, setSelectedAssembly] = useState(ASSEMBLIES[0].pn);
   const [expandedPns, setExpandedPns] = useState<Set<string>>(new Set(['AMB-ASM-001']));
 
   const toggleExpand = (pn: string) => {
@@ -117,16 +116,16 @@ export default function BomPage() {
     );
   }, [search, lcFilter]);
 
-  const alerts = PARTS.filter(p => p.lifecycle !== 'Active' || p.stock <= p.reorderPoint);
   const assembly = ASSEMBLIES.find(a => a.pn === selectedAssembly)!;
 
   const totalBomCost = assembly.bom.reduce((sum, line) => {
     const part = partByPn(line.pn);
-    return sum + (part ? part.unitCost * line.qty : 0);
+    return sum + (part?.unitCost != null ? part.unitCost * line.qty : 0);
   }, 0);
+  const costKnown = assembly.bom.some(l => (partByPn(l.pn)?.unitCost ?? null) != null);
 
   const nrndCount = PARTS.filter(p => p.lifecycle === 'NRND' || p.lifecycle === 'EOL').length;
-  const lowStockCount = PARTS.filter(p => p.stock <= p.reorderPoint).length;
+  const lowStockCount = 0;
 
   const navItems: { key: Tab; label: string }[] = [
     { key: 'parts', label: 'Parts Library' },
@@ -224,7 +223,7 @@ export default function BomPage() {
                 { label: 'Active', value: PARTS.filter(p => p.lifecycle === 'Active').length, color: '#2e7d4f' },
                 { label: 'NRND', value: PARTS.filter(p => p.lifecycle === 'NRND').length, color: '#8a6200' },
                 { label: 'EOL', value: PARTS.filter(p => p.lifecycle === 'EOL').length, color: '#a02020' },
-                { label: 'Low Stock', value: lowStockCount, color: lowStockCount > 0 ? '#a02020' : 'var(--text-3)' },
+                { label: 'With Pricing', value: PARTS.filter(p => p.unitCost != null && p.unitCost > 0).length, color: 'var(--text-2)' },
               ].map(stat => (
                 <div key={stat.label} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 500, color: stat.color }}>{stat.value}</span>
@@ -246,30 +245,22 @@ export default function BomPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredParts.map((part, i) => {
-                    const lowStock = part.stock <= part.reorderPoint;
-                    return (
-                      <tr key={part.pn} style={{ borderBottom: i < filteredParts.length - 1 ? '1px solid var(--line)' : 'none' }}>
-                        <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{part.pn}</td>
-                        <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-4)' }}>{part.rev}</td>
-                        <td style={{ padding: '9px 14px', fontSize: 13 }}>
-                          {part.description}
-                          {part.altMpn && <div style={{ fontSize: 11, color: '#8a6200', marginTop: 2 }}>alt: {part.altMpn}</div>}
-                        </td>
-                        <td style={{ padding: '9px 14px', fontSize: 12, color: 'var(--text-3)' }}>{part.category}</td>
-                        <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 12, whiteSpace: 'nowrap' }}>{part.mpn}</td>
-                        <td style={{ padding: '9px 14px', fontSize: 13, color: 'var(--text-2)' }}>{part.manufacturer}</td>
-                        <td style={{ padding: '9px 14px' }}><LifecycleBadge lc={part.lifecycle} /></td>
-                        <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 13, textAlign: 'right', color: lowStock ? '#a02020' : 'var(--text)', fontWeight: lowStock ? 600 : 400 }}>
-                          {part.stock.toLocaleString()}
-                          {lowStock && <div style={{ fontSize: 10, color: '#a02020' }}>low</div>}
-                        </td>
-                        <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 13, textAlign: 'right', color: 'var(--text-2)' }}>
-                          {part.unitCost > 0 ? `$${part.unitCost.toFixed(3)}` : '—'}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {filteredParts.map((part, i) => (
+                    <tr key={part.pn} style={{ borderBottom: i < filteredParts.length - 1 ? '1px solid var(--line)' : 'none' }}>
+                      <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{part.pn}</td>
+                      <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-4)' }}>{part.rev}</td>
+                      <td style={{ padding: '9px 14px', fontSize: 13 }}>{part.description}</td>
+                      <td style={{ padding: '9px 14px', fontSize: 12, color: 'var(--text-3)' }}>{part.category}</td>
+                      <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 12, whiteSpace: 'nowrap' }}>{part.mpn}</td>
+                      <td style={{ padding: '9px 14px', fontSize: 13, color: 'var(--text-2)' }}>{part.manufacturer}</td>
+                      <td style={{ padding: '9px 14px' }}><LifecycleBadge lc={part.lifecycle} /></td>
+                      <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 13, textAlign: 'right', color: 'var(--text-3)' }}>—</td>
+                      <td style={{ padding: '9px 14px', fontFamily: 'var(--mono)', fontSize: 13, textAlign: 'right', color: 'var(--text-2)' }}>
+                        {part.unitCost != null && part.unitCost > 0 ? `$${part.unitCost.toFixed(3)}` : '—'}
+                        {part.supplier && <div style={{ fontSize: 10, color: 'var(--text-4)' }}>{part.supplier}</div>}
+                      </td>
+                    </tr>
+                  ))}
                   {filteredParts.length === 0 && (
                     <tr>
                       <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-4)', fontSize: 13 }}>
@@ -322,7 +313,10 @@ export default function BomPage() {
               </div>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>BOM Cost</div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 500 }}>${totalBomCost.toFixed(2)}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 500 }}>
+                  {costKnown ? `$${totalBomCost.toFixed(2)}` : '—'}
+                </div>
+                {costKnown && <div style={{ fontSize: 10, color: 'var(--text-4)' }}>partial (priced lines only)</div>}
               </div>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Line Items</div>
@@ -414,31 +408,38 @@ export default function BomPage() {
 
             <div style={{ marginTop: 24, padding: '16px 20px', background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10 }}>
               <p style={{ fontFamily: 'var(--mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-4)', margin: '0 0 10px' }}>
-                Materials Shortage Report — BO-0002
+                Lifecycle Risk — EOL Parts in BOM
               </p>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--line)' }}>
-                    {['Part #', 'Description', 'Required', 'On Hand', 'Shortfall'].map(h => (
-                      <th key={h} style={{ padding: '6px 10px', textAlign: h !== 'Part #' && h !== 'Description' ? 'right' : 'left', fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text-4)', fontWeight: 500 }}>{h}</th>
+                    {['Part #', 'MPN', 'Description', 'Designator', 'Qty', 'Status', 'Action Required'].map(h => (
+                      <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text-4)', fontWeight: 500 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {PARTS.filter(p => p.stock <= p.reorderPoint).map(p => {
-                    const bomLine = ASSEMBLIES[1].bom.find(l => l.pn === p.pn);
-                    const required = (bomLine?.qty ?? 1) * 25;
-                    const shortfall = Math.max(0, required - p.stock);
-                    return shortfall > 0 ? (
-                      <tr key={p.pn}>
-                        <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)' }}>{p.pn}</td>
-                        <td style={{ padding: '6px 10px', fontSize: 12 }}>{p.description}</td>
-                        <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 12, textAlign: 'right' }}>{required}</td>
-                        <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 12, textAlign: 'right' }}>{p.stock}</td>
-                        <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 12, textAlign: 'right', color: '#a02020', fontWeight: 600 }}>−{shortfall}</td>
-                      </tr>
-                    ) : null;
-                  })}
+                  {ASSEMBLIES[0].bom
+                    .filter(line => {
+                      const p = partByPn(line.pn);
+                      return p && (p.lifecycle === 'EOL' || p.lifecycle === 'NRND' || p.lifecycle === 'Obsolete');
+                    })
+                    .map(line => {
+                      const p = partByPn(line.pn)!;
+                      return (
+                        <tr key={line.pn}>
+                          <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)' }}>{p.pn}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 11 }}>{p.mpn}</td>
+                          <td style={{ padding: '6px 10px', fontSize: 12 }}>{p.description}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{line.designator}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 12 }}>{line.qty}</td>
+                          <td style={{ padding: '6px 10px' }}><LifecycleBadge lc={p.lifecycle} /></td>
+                          <td style={{ padding: '6px 10px', fontSize: 12, color: '#a02020' }}>
+                            {p.lifecycle === 'EOL' ? 'Source replacement before DVT' : 'Evaluate alternate for next revision'}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
