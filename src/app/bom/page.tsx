@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 import { useState, useMemo } from 'react';
 import { PARTS, ASSEMBLIES, BUILD_ORDERS, type Part, type BomLine, type Lifecycle } from './data';
@@ -140,9 +141,11 @@ export default function BomPage() {
     <div className="app">
       {/* Sidebar */}
       <nav className="sidebar">
-        <div className="brand">
-          <span className="brand-name">Ambient <em>Intelligence</em></span>
-        </div>
+        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+          <div className="brand">
+            <span className="brand-name">Ambient <em>Intelligence</em></span>
+          </div>
+        </Link>
 
         <div className="nav-section">
           <p className="nav-label">PLM</p>
