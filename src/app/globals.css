@@ -200,7 +200,7 @@ input { font-family: inherit; color: inherit; }
 .table { margin-top: 6px; border-top: 1px solid var(--line); width: 100%; }
 .table-header, .table-row {
   display: grid;
-  grid-template-columns: 90px 1.6fr 1.1fr 1fr 1fr 1.2fr;
+  grid-template-columns: 110px 1.6fr 1.1fr 1fr 1fr 1.2fr;
   align-items: center;
   gap: 24px;
   padding: 14px 0;
