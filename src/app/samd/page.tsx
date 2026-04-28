@@ -111,7 +111,6 @@ export default function SamdPage() {
       {/* Sidebar */}
       <nav className="sidebar">
         <div className="brand">
-          <div className="brand-mark" />
           <span className="brand-name">Ambient <em>Intelligence</em></span>
         </div>
 
