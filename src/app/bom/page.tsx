@@ -6,17 +6,17 @@ import { PARTS, ASSEMBLIES, BUILD_ORDERS, type Part, type BomLine, type Lifecycl
 type Tab = 'parts' | 'bom' | 'builds';
 
 const LIFECYCLE_STYLE: Record<Lifecycle, { bg: string; color: string }> = {
-  Active:   { bg: 'rgba(58,155,92,0.12)',  color: '#2e7d4f' },
-  NRND:     { bg: 'rgba(184,131,10,0.12)', color: '#8a6200' },
-  EOL:      { bg: 'rgba(192,57,43,0.12)',  color: '#a02020' },
-  Obsolete: { bg: 'rgba(120,110,100,0.12)', color: '#6b6256' },
+  Active:   { bg: 'rgba(35,133,81,0.22)',   color: '#3DCC91' },
+  NRND:     { bg: 'rgba(200,150,25,0.22)',  color: '#FFC940' },
+  EOL:      { bg: 'rgba(205,66,70,0.22)',   color: '#FF7373' },
+  Obsolete: { bg: 'rgba(95,107,124,0.22)',  color: '#8F99A8' },
 };
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
-  Draft:       { bg: 'rgba(120,110,100,0.10)', color: '#6b6256' },
-  Released:    { bg: 'rgba(58,155,92,0.12)',   color: '#2e7d4f' },
-  'In Progress': { bg: 'rgba(217,119,87,0.14)', color: '#b85a30' },
-  Complete:    { bg: 'rgba(58,100,200,0.10)',  color: '#2a4fa0' },
+  Draft:       { bg: 'rgba(95,107,124,0.20)',  color: '#8F99A8' },
+  Released:    { bg: 'rgba(35,133,81,0.22)',   color: '#3DCC91' },
+  'In Progress': { bg: 'rgba(45,114,210,0.22)', color: '#669EFF' },
+  Complete:    { bg: 'rgba(35,133,81,0.35)',   color: '#3DCC91' },
 };
 
 function Badge({ label, style }: { label: string; style: { bg: string; color: string } }) {
@@ -78,7 +78,7 @@ function BomRow({ line, depth = 0, expandedPns, toggle }: {
         <td style={{ padding: '8px 14px' }}>
           {part ? <LifecycleBadge lc={part.lifecycle} /> : null}
         </td>
-        <td style={{ padding: '8px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: isNrndOrEol ? '#a02020' : 'var(--text-2)' }}>
+        <td style={{ padding: '8px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: isNrndOrEol ? '#FF7373' : 'var(--text-2)' }}>
           {part?.mpn ?? '—'}
         </td>
         <td style={{ padding: '8px 14px', fontFamily: 'var(--mono)', fontSize: 13, textAlign: 'right', color: 'var(--text-2)' }}>
@@ -159,13 +159,13 @@ export default function BomPage() {
           <p className="nav-label">Alerts</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 8px' }}>
             {nrndCount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#8a6200' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#FFC940' }}>
                 <span>NRND / EOL parts</span>
                 <span style={{ fontFamily: 'var(--mono)', fontWeight: 600 }}>{nrndCount}</span>
               </div>
             )}
             {lowStockCount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#a02020' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#FF7373' }}>
                 <span>Low stock</span>
                 <span style={{ fontFamily: 'var(--mono)', fontWeight: 600 }}>{lowStockCount}</span>
               </div>
@@ -241,9 +241,9 @@ export default function BomPage() {
             <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
               {[
                 { label: 'Total Parts', value: PARTS.length, color: 'var(--text)' },
-                { label: 'Active', value: PARTS.filter(p => p.lifecycle === 'Active').length, color: '#2e7d4f' },
-                { label: 'NRND', value: PARTS.filter(p => p.lifecycle === 'NRND').length, color: '#8a6200' },
-                { label: 'EOL', value: PARTS.filter(p => p.lifecycle === 'EOL').length, color: '#a02020' },
+                { label: 'Active', value: PARTS.filter(p => p.lifecycle === 'Active').length, color: '#3DCC91' },
+                { label: 'NRND', value: PARTS.filter(p => p.lifecycle === 'NRND').length, color: '#FFC940' },
+                { label: 'EOL', value: PARTS.filter(p => p.lifecycle === 'EOL').length, color: '#FF7373' },
                 { label: 'With Pricing', value: PARTS.filter(p => p.unitCost != null && p.unitCost > 0).length, color: 'var(--text-2)' },
               ].map(stat => (
                 <div key={stat.label} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -425,8 +425,8 @@ export default function BomPage() {
                         </td>
                         <td style={{ padding: '11px 14px' }}>
                           {bo.shortage
-                            ? <Badge label="Shortage" style={{ bg: 'rgba(192,57,43,0.10)', color: '#a02020' }} />
-                            : <Badge label="OK" style={{ bg: 'rgba(58,155,92,0.10)', color: '#2e7d4f' }} />
+                            ? <Badge label="Shortage" style={{ bg: 'rgba(205,66,70,0.22)', color: '#FF7373' }} />
+                            : <Badge label="OK" style={{ bg: 'rgba(35,133,81,0.22)', color: '#3DCC91' }} />
                           }
                         </td>
                       </tr>
@@ -464,7 +464,7 @@ export default function BomPage() {
                           <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{line.designator}</td>
                           <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 12 }}>{line.qty}</td>
                           <td style={{ padding: '6px 10px' }}><LifecycleBadge lc={p.lifecycle} /></td>
-                          <td style={{ padding: '6px 10px', fontSize: 12, color: '#a02020' }}>
+                          <td style={{ padding: '6px 10px', fontSize: 12, color: '#FF7373' }}>
                             {p.lifecycle === 'EOL' ? 'Source replacement before DVT' : 'Evaluate alternate for next revision'}
                           </td>
                         </tr>

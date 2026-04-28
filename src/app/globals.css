@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #F5F1EB;
-  --surface-1: #FAF7F2;
-  --surface-2: #EDE7DD;
-  --surface-3: #E4DDD0;
-  --line: rgba(40, 30, 20, 0.08);
-  --line-strong: rgba(40, 30, 20, 0.16);
-  --text: #1F1B16;
-  --text-2: rgba(31, 27, 22, 0.68);
-  --text-3: rgba(31, 27, 22, 0.48);
-  --text-4: rgba(31, 27, 22, 0.30);
-  --accent: #D97757;
-  --accent-soft: rgba(217, 119, 87, 0.14);
-  --sage: oklch(0.55 0.07 150);
+  --bg: #1C2127;
+  --surface-1: #252A31;
+  --surface-2: #2F343C;
+  --surface-3: #383E47;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --text: #F6F7F8;
+  --text-2: rgba(246, 247, 248, 0.65);
+  --text-3: rgba(246, 247, 248, 0.42);
+  --text-4: rgba(246, 247, 248, 0.26);
+  --accent: #2D72D2;
+  --accent-soft: rgba(45, 114, 210, 0.18);
+  --sage: #3DCC91;
   --serif: var(--font-newsreader), 'Iowan Old Style', Georgia, serif;
   --sans: var(--font-inter-tight), -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -59,10 +59,10 @@ input { font-family: inherit; color: inherit; }
   width: 22px; height: 22px;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 32% 32%, #E89579 0%, transparent 55%),
-    radial-gradient(circle at 70% 70%, #B85A3F 0%, transparent 65%),
-    #D97757;
-  border: 1px solid rgba(40,30,20,0.12);
+    radial-gradient(circle at 32% 32%, #5C93E5 0%, transparent 55%),
+    radial-gradient(circle at 70% 70%, #1A4A8A 0%, transparent 65%),
+    #2D72D2;
+  border: 1px solid rgba(45,114,210,0.35);
 }
 .brand-name { font-family: var(--serif); font-weight: 400; font-size: 18px; letter-spacing: -0.01em; }
 .brand-name em { font-style: italic; color: var(--text-2); font-weight: 300; }
@@ -121,7 +121,7 @@ input { font-family: inherit; color: inherit; }
 .status-dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--sage);
-  box-shadow: 0 0 0 3px oklch(0.74 0.05 145 / 0.15);
+  box-shadow: 0 0 0 3px rgba(61, 204, 145, 0.18);
 }
 
 /* Main */
@@ -164,9 +164,9 @@ input { font-family: inherit; color: inherit; }
   white-space: nowrap;
 }
 .btn-ghost { border: 1px solid var(--line-strong); color: var(--text-2); }
-.btn-ghost:hover { color: var(--text); border-color: rgba(237,234,227,0.28); }
-.btn-light { background: var(--text); color: var(--bg); }
-.btn-light:hover { background: #000; }
+.btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+.btn-light { background: var(--accent); color: #fff; }
+.btn-light:hover { background: #215DB0; }
 
 /* Toolbar */
 .toolbar {
@@ -188,7 +188,7 @@ input { font-family: inherit; color: inherit; }
   width: 320px;
   transition: border-color 0.15s;
 }
-.search:focus-within { border-color: rgba(237,234,227,0.32); }
+.search:focus-within { border-color: var(--accent); }
 .search svg { width: 14px; height: 14px; color: var(--text-3); flex: none; }
 .search input { background: transparent; border: 0; outline: 0; flex: 1; font-size: 13px; color: var(--text); }
 .search input::placeholder { color: var(--text-3); }
@@ -224,14 +224,14 @@ input { font-family: inherit; color: inherit; }
   border-bottom: 1px solid var(--line);
 }
 .table-row { border-bottom: 1px solid var(--line); font-size: 14px; cursor: pointer; transition: background 0.15s; }
-.table-row:hover { background: rgba(237,234,227,0.02); }
-.table-row.selected { background: rgba(237,234,227,0.025); }
+.table-row:hover { background: rgba(45,114,210,0.06); }
+.table-row.selected { background: rgba(45,114,210,0.10); }
 .room { font-family: var(--mono); font-size: 13px; color: var(--text-2); }
 .resident { display: flex; align-items: center; gap: 12px; }
 .resident-avatar {
   width: 30px; height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #E4DDD0, #C9BEAB);
+  background: linear-gradient(135deg, #2F343C, #383E47);
   flex: none;
   border: 1px solid var(--line-strong);
   display: flex; align-items: center; justify-content: center;
@@ -276,9 +276,9 @@ input { font-family: inherit; color: inherit; }
   overflow: hidden;
   position: relative;
   background:
-    radial-gradient(120% 80% at 30% 20%, #E89579 0%, transparent 60%),
-    radial-gradient(140% 90% at 80% 100%, #8C5640 0%, transparent 70%),
-    linear-gradient(180deg, #C98C72, #6E4836);
+    radial-gradient(120% 80% at 30% 20%, #3A5E8A 0%, transparent 60%),
+    radial-gradient(140% 90% at 80% 100%, #1A2D4A 0%, transparent 70%),
+    linear-gradient(180deg, #2D4A6E, #111827);
 }
 .portrait::after {
   content: '';
@@ -330,9 +330,9 @@ input { font-family: inherit; color: inherit; }
   animation: pulse 2.4s ease-out infinite;
 }
 @keyframes pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(217,119,87,0.5); }
-  70%  { box-shadow: 0 0 0 8px rgba(217,119,87,0); }
-  100% { box-shadow: 0 0 0 0 rgba(217,119,87,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(45,114,210,0.6); }
+  70%  { box-shadow: 0 0 0 8px rgba(45,114,210,0); }
+  100% { box-shadow: 0 0 0 0 rgba(45,114,210,0); }
 }
 .narrative {
   font-family: var(--serif);
@@ -391,8 +391,8 @@ input { font-family: inherit; color: inherit; }
   gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(217,119,87,0.12);
-  border: 1px solid rgba(217,119,87,0.34);
+  background: rgba(45,114,210,0.14);
+  border: 1px solid rgba(45,114,210,0.35);
   color: var(--accent);
   font-family: var(--mono);
   font-size: 12px;
