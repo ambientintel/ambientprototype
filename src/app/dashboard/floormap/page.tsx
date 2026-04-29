@@ -139,7 +139,7 @@ export default function FloorMap() {
           </div>
         </header>
         <div style={{ padding:'32px 40px', display:'flex', flexDirection:'column', gap:24 }}>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:16 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             {ROOMS.map(r => {
               const s = STATUS[r.status as keyof typeof STATUS];
               return (
