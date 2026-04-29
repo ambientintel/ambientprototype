@@ -23,13 +23,12 @@ const MODULE_GROUPS = [
     ],
   },
   {
-    key: 'engineering',
-    label: 'Engineering & Infrastructure',
+    key: 'infrastructure',
+    label: 'Infrastructure & Hardware',
     accent: '#2D72D2',
     accentDim: 'rgba(45,114,210,0.10)',
-    cols: 3,
+    cols: 2,
     modules: [
-      { href: '/engineering', tag: 'Workflow', label: 'Engineering', description: 'Sprint planning, kanban board, issue tracking, and backlog management for the Ambient Intelligence hardware and software teams.', meta: 'Sprints · Kanban · Issues' },
       { href: '/bom', tag: 'Engineering', label: 'Bill of Materials', description: 'Full parts library, assembly BOMs, and build orders for EVT-0.1 hardware. 57 components priced from DigiKey and Mouser.', meta: 'EVT-0.1 · 57 parts' },
       { href: '/cloud', tag: 'Infrastructure', label: 'Cloud Infrastructure', description: 'AWS backend — seven services across fall-alert hot path, Parquet cold path, Ella AI narratives, and the Nurse API. Architecture v4.', meta: 'ambientcloud · AWS · Terraform' },
     ],
@@ -444,6 +443,33 @@ const STATS = [
   { value: '142', label: 'Rooms monitored' },
 ];
 
+const ENG_SPRINT = {
+  num: 18,
+  dates: 'Apr 21 – May 2',
+  totalIssues: 16,
+  totalPts: 96,
+  donePts: 34,
+  columns: [
+    { id: 'todo',       label: 'To Do',       count: 5, pts: 29, color: '#5C5E62' },
+    { id: 'inprogress', label: 'In Progress',  count: 4, pts: 22, color: '#FFC940' },
+    { id: 'review',     label: 'In Review',    count: 3, pts: 11, color: '#2D72D2' },
+    { id: 'done',       label: 'Done',         count: 4, pts: 34, color: '#3DCC91' },
+  ],
+  critical: {
+    id: 'ENG-144',
+    title: 'Fall alert fires twice when sensor resets mid-event',
+    assignee: 'Abdul',
+    assigneeInitial: 'A',
+    assigneeColor: '#22D3EE',
+    labels: ['alerts', 'sensors'],
+  },
+  team: [
+    { discipline: 'Electrical',        color: '#FB923C', members: [{ name:'Gavin', initial:'G', color:'#00B4D8' },{ name:'Hanna', initial:'H', color:'#F472B6' },{ name:'Paulo', initial:'P', color:'#FB923C' }] },
+    { discipline: 'Software',          color: '#818CF8', members: [{ name:'Isaac', initial:'I', color:'#818CF8' },{ name:'Aki',   initial:'A', color:'#34D399' }] },
+    { discipline: 'Cloud Security',    color: '#22D3EE', members: [{ name:'Abdul', initial:'A', color:'#22D3EE' }] },
+  ],
+};
+
 const C = {
   bg:        '#0C0D0F',
   surface:   '#13151A',
@@ -640,6 +666,132 @@ export default function Landing1() {
                     <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:'#5C5E62', textTransform:'uppercase', letterSpacing:'0.12em' }}>{label}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Engineering ── */}
+        <section style={{ borderTop:`1px solid ${C.border}`, padding:'80px 48px', background: C.surface }}>
+          {/* Header row */}
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:48 }}>
+            <div>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.22em', textTransform:'uppercase', color:'#2D72D2', marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ display:'inline-block', width:6, height:6, borderRadius:'50%', background:'#3DCC91', boxShadow:'0 0 8px #3DCC91' }}/>
+                Engineering · Sprint {ENG_SPRINT.num}
+              </div>
+              <h2 style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:'clamp(28px,3.5vw,48px)', letterSpacing:'-0.03em', margin:0, color:C.text, lineHeight:1.1 }}>
+                Building the platform,<br/>
+                <em style={{ fontStyle:'italic', color:'#2D72D2' }}>issue by issue.</em>
+              </h2>
+            </div>
+            <Link href="/engineering" style={{ textDecoration:'none', flexShrink:0, marginTop:4 }}>
+              <button className="l1-cta-ghost" style={{ display:'flex', alignItems:'center', gap:8 }}>
+                View Engineering Board
+                <span style={{ fontSize:16, lineHeight:1 }}>↗</span>
+              </button>
+            </Link>
+          </div>
+
+          {/* Sprint progress bar */}
+          <div style={{ marginBottom:48, padding:'28px 32px', border:`1px solid ${C.border}`, borderRadius:2, background:C.bg, display:'flex', alignItems:'center', gap:32 }}>
+            <div style={{ fontFamily:'var(--mono)', fontSize:11, color:'#5C5E62', whiteSpace:'nowrap' }}>{ENG_SPRINT.dates}</div>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ height:3, borderRadius:2, background:'rgba(255,255,255,0.06)', overflow:'hidden' }}>
+                <div style={{ height:'100%', width:`${Math.round((ENG_SPRINT.donePts/ENG_SPRINT.totalPts)*100)}%`, background:'linear-gradient(90deg, #2D72D2, #3DCC91)', borderRadius:2, transition:'width 0.8s ease' }}/>
+              </div>
+              <div style={{ display:'flex', gap:20 }}>
+                {ENG_SPRINT.columns.map(col => (
+                  <div key={col.id} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ width:6, height:6, borderRadius:'50%', background:col.color, flexShrink:0 }}/>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:'#5C5E62', textTransform:'uppercase', letterSpacing:'0.1em' }}>{col.label}</span>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:col.color, fontWeight:600 }}>{col.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ fontFamily:'var(--mono)', fontSize:13, color:C.text, whiteSpace:'nowrap', letterSpacing:'-0.01em' }}>
+              {Math.round((ENG_SPRINT.donePts/ENG_SPRINT.totalPts)*100)}%
+              <span style={{ fontSize:10, color:'#5C5E62', marginLeft:8 }}>{ENG_SPRINT.donePts} / {ENG_SPRINT.totalPts} pts</span>
+            </div>
+            <div style={{ fontFamily:'var(--mono)', fontSize:10, color:'#5C5E62', whiteSpace:'nowrap' }}>
+              {ENG_SPRINT.columns.find(c=>c.id==='done')?.count} of {ENG_SPRINT.totalIssues} issues done
+            </div>
+          </div>
+
+          {/* 3-panel grid */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', border:`1px solid ${C.border}` }}>
+
+            {/* Panel 1: Team */}
+            <div style={{ padding:'36px 36px', borderRight:`1px solid ${C.border}` }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:9.5, letterSpacing:'0.2em', textTransform:'uppercase', color:'#5C5E62', marginBottom:28 }}>Team</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+                {ENG_SPRINT.team.map(d => (
+                  <div key={d.discipline}>
+                    <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:12 }}>
+                      <span style={{ width:5, height:5, borderRadius:1, background:d.color, flexShrink:0 }}/>
+                      <span style={{ fontFamily:'var(--mono)', fontSize:9.5, textTransform:'uppercase', letterSpacing:'0.14em', color:d.color, fontWeight:600 }}>{d.discipline}</span>
+                    </div>
+                    <div style={{ display:'flex', gap:8, paddingLeft:12 }}>
+                      {d.members.map(m => (
+                        <div key={m.name} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                          <div style={{ width:32, height:32, borderRadius:'50%', background:m.color+'22', border:`1px solid ${m.color}44`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--mono)', fontSize:11, fontWeight:700, color:m.color }}>{m.initial}</div>
+                          <span style={{ fontFamily:'var(--mono)', fontSize:10.5, color:'#9A9B9D' }}>{m.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Panel 2: Board columns */}
+            <div style={{ padding:'36px 36px', borderRight:`1px solid ${C.border}` }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:9.5, letterSpacing:'0.2em', textTransform:'uppercase', color:'#5C5E62', marginBottom:28 }}>Sprint Board</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                {ENG_SPRINT.columns.map((col, i) => (
+                  <div key={col.id} style={{ display:'flex', alignItems:'center', gap:16, padding:'18px 20px', background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent', borderRadius:2 }}>
+                    <span style={{ display:'flex', alignItems:'center', gap:8, flex:1 }}>
+                      <span style={{ width:8, height:8, borderRadius:2, background:col.color, flexShrink:0 }}/>
+                      <span style={{ fontFamily:'var(--mono)', fontSize:10.5, color: col.id === 'inprogress' ? col.color : '#9A9B9D', textTransform:'uppercase', letterSpacing:'0.1em', fontWeight: col.id === 'inprogress' ? 600 : 400 }}>{col.label}</span>
+                    </span>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:22, fontWeight:500, color: col.id === 'inprogress' ? col.color : C.text, letterSpacing:'-0.03em', lineHeight:1 }}>{col.count}</span>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:'#5C5E62', whiteSpace:'nowrap' }}>{col.pts} pts</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Panel 3: Critical issue */}
+            <div style={{ padding:'36px 36px' }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:9.5, letterSpacing:'0.2em', textTransform:'uppercase', color:'#5C5E62', marginBottom:28 }}>Active Critical</div>
+              <div style={{ border:'1px solid rgba(255,107,107,0.25)', borderRadius:3, padding:'24px', background:'rgba(255,107,107,0.04)', display:'flex', flexDirection:'column', gap:16 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ width:8, height:8, borderRadius:'50%', background:'#FF6B6B', boxShadow:'0 0 8px #FF6B6B', flexShrink:0 }}/>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:'#FF6B6B', textTransform:'uppercase', letterSpacing:'0.16em', fontWeight:600 }}>Critical</span>
+                  <span style={{ marginLeft:'auto', fontFamily:'var(--mono)', fontSize:10, color:'rgba(255,107,107,0.6)' }}>{ENG_SPRINT.critical.id}</span>
+                </div>
+                <p style={{ margin:0, fontFamily:'var(--serif)', fontSize:16, fontWeight:300, lineHeight:1.5, color:C.text, letterSpacing:'-0.01em' }}>
+                  {ENG_SPRINT.critical.title}
+                </p>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ width:22, height:22, borderRadius:'50%', background:ENG_SPRINT.critical.assigneeColor+'22', border:`1px solid ${ENG_SPRINT.critical.assigneeColor}44`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--mono)', fontSize:9, fontWeight:700, color:ENG_SPRINT.critical.assigneeColor }}>
+                    {ENG_SPRINT.critical.assigneeInitial}
+                  </div>
+                  <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'#9A9B9D' }}>{ENG_SPRINT.critical.assignee}</span>
+                  <div style={{ marginLeft:'auto', display:'flex', gap:5 }}>
+                    {ENG_SPRINT.critical.labels.map(l => (
+                      <span key={l} style={{ fontFamily:'var(--mono)', fontSize:8.5, color:'rgba(255,107,107,0.6)', background:'rgba(255,107,107,0.08)', border:'1px solid rgba(255,107,107,0.15)', padding:'2px 7px', borderRadius:2, textTransform:'uppercase', letterSpacing:'0.08em' }}>{l}</span>
+                    ))}
+                  </div>
+                </div>
+                <Link href="/engineering" style={{ textDecoration:'none' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, fontFamily:'var(--mono)', fontSize:9.5, color:'rgba(255,107,107,0.7)', textTransform:'uppercase', letterSpacing:'0.14em', transition:'color 0.2s' }}
+                    onMouseEnter={e=>(e.currentTarget.style.color='#FF6B6B')}
+                    onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,107,107,0.7)')}>
+                    Open issue ↗
+                  </div>
+                </Link>
               </div>
             </div>
           </div>
