@@ -53,6 +53,13 @@ const MODULES = [
     description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and type scale reference.',
     meta: 'ambientdesign · interactive',
   },
+  {
+    href: '/datascience',
+    tag: 'Data Science',
+    label: 'Data Science',
+    description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the Ambient Intelligence platform.',
+    meta: 'Parquet · ML · Recharts',
+  },
 ];
 
 
