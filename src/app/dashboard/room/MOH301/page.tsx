@@ -162,24 +162,24 @@ export default function PatientDashboard() {
           <h2 className="section-title">Alerts</h2>
         </div>
         <div className="table">
-          <div className="table-header">
-            <div>Room</div>
-            <div>Fall</div>
-            <div>Time</div>
-            <div>Date</div>
-            <div style={{ textAlign:'right' }}>Priority</div>
+          <div className="table-header" style={{ display:'flex', gap:24 }}>
+            <div style={{ width:90, flexShrink:0 }}>Room</div>
+            <div style={{ flex:1 }}>Fall</div>
+            <div style={{ flex:1 }}>Time</div>
+            <div style={{ flex:1 }}>Date</div>
+            <div style={{ marginLeft:'auto' }}>Priority</div>
           </div>
-          <div className="table-row selected">
-            <div className="room">MOH301</div>
-            <div>
+          <div className="table-row selected" style={{ display:'flex', gap:24, alignItems:'center' }}>
+            <div className="room" style={{ width:90, flexShrink:0 }}>MOH301</div>
+            <div style={{ flex:1 }}>
               <span className="priority high">
                 <span className="priority-dot" />
                 Detected
               </span>
             </div>
-            <div>{`${hh}:${mm} ${ampm}`}</div>
-            <div>{todayLabel}</div>
-            <div style={{ textAlign:'right' }}>
+            <div style={{ flex:1 }}>{`${hh}:${mm} ${ampm}`}</div>
+            <div style={{ flex:1 }}>{todayLabel}</div>
+            <div style={{ marginLeft:'auto' }}>
               <span className="priority high">
                 <span className="priority-dot" />
                 High
