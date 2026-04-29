@@ -11,6 +11,9 @@ import {
   PieChart, Pie, Cell,
   RadialBarChart, RadialBar,
   Treemap,
+  FunnelChart, Funnel, LabelList,
+  Sankey,
+  SunburstChart,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
@@ -209,6 +212,73 @@ function HeatCell({ value }: { value: number }) {
   );
 }
 
+// ── Dataset: funnel – alert resolution pipeline ───────────────
+const FUNNEL_DATA = [
+  { name:'Sensor Detections', value:141, fill:C.accent  },
+  { name:'Events Classified',  value:112, fill:C.purple  },
+  { name:'Alerts Triggered',   value: 38, fill:C.amber   },
+  { name:'Nurse Notified',     value: 35, fill:C.coral   },
+  { name:'Resolved',           value: 31, fill:C.sage    },
+];
+
+// ── Dataset: sankey – data pipeline flow ─────────────────────
+const SANKEY_DATA = {
+  nodes: [
+    { name:'Radar A' },   // 0
+    { name:'Radar B' },   // 1
+    { name:'Radar C' },   // 2
+    { name:'Kinesis' },   // 3
+    { name:'Lambda' },    // 4
+    { name:'DynamoDB' },  // 5
+    { name:'Bedrock AI' },// 6
+    { name:'Dashboard' }, // 7
+    { name:'Alerts' },    // 8
+  ],
+  links: [
+    { source:0, target:3, value:48 },
+    { source:1, target:3, value:51 },
+    { source:2, target:3, value:43 },
+    { source:3, target:4, value:142 },
+    { source:4, target:5, value:110 },
+    { source:4, target:8, value:32  },
+    { source:5, target:6, value:110 },
+    { source:6, target:7, value:110 },
+  ],
+};
+
+// ── Dataset: sunburst – activity hierarchy ────────────────────
+const SUNBURST_DATA = {
+  name:'MOH Floor',
+  fill: C.s2,
+  children: [
+    {
+      name:'High Risk', fill:C.red,
+      children:[
+        { name:'MOH 301', value:47, fill:'rgba(255,107,107,0.75)' },
+        { name:'MOH 305', value:31, fill:'rgba(255,107,107,0.60)' },
+        { name:'MOH 308', value:29, fill:'rgba(255,107,107,0.50)' },
+      ],
+    },
+    {
+      name:'Active', fill:C.amber,
+      children:[
+        { name:'MOH 302', value:82, fill:'rgba(255,201,64,0.75)' },
+        { name:'MOH 304', value:44, fill:'rgba(255,201,64,0.60)' },
+        { name:'MOH 307', value:73, fill:'rgba(255,201,64,0.50)' },
+        { name:'MOH 310', value:71, fill:'rgba(255,201,64,0.45)' },
+      ],
+    },
+    {
+      name:'Stable', fill:C.sage,
+      children:[
+        { name:'MOH 303', value:94, fill:'rgba(61,204,145,0.75)' },
+        { name:'MOH 306', value:88, fill:'rgba(61,204,145,0.60)' },
+        { name:'MOH 309', value:85, fill:'rgba(61,204,145,0.50)' },
+      ],
+    },
+  ],
+};
+
 // ── Custom treemap cell ────────────────────────────────────────
 function TreemapCell(props: {
   x?: number; y?: number; width?: number; height?: number;
@@ -269,7 +339,8 @@ export default function DataSciencePage() {
           {[
             'Line Chart','Area Chart','Bar Chart','Stacked Bar',
             'Composed','Scatter Plot','Radar Chart','Pie Chart',
-            'Radial Bar','Treemap','Heatmap',
+            'Radial Bar','Treemap','Heatmap','Funnel Chart',
+            'Sankey','Sunburst Chart',
           ].map(name => (
             <div key={name} className="nav-item" style={{ fontSize:12, color:C.text3 }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
@@ -550,10 +621,61 @@ export default function DataSciencePage() {
             </div>
           </ChartCard>
 
+          {/* 12 · Funnel Chart – alert resolution pipeline */}
+          <ChartCard title="Funnel Chart" sub="Alert resolution pipeline · daily average">
+            <ResponsiveContainer width="100%" height={260}>
+              <FunnelChart margin={{ top:4, right:8, bottom:4, left:8 }}>
+                <Tooltip contentStyle={TT_STYLE}/>
+                <Funnel dataKey="value" data={FUNNEL_DATA} isAnimationActive>
+                  {FUNNEL_DATA.map((entry, i) => (
+                    <Cell key={i} fill={entry.fill} fillOpacity={0.82} stroke={C.s1} strokeWidth={2}/>
+                  ))}
+                  <LabelList dataKey="name" position="right" style={{ fontFamily:'var(--mono)', fontSize:10, fill:C.text3 }}/>
+                  <LabelList dataKey="value" position="center" style={{ fontFamily:'var(--mono)', fontSize:11, fontWeight:600, fill:C.text }}/>
+                </Funnel>
+              </FunnelChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          {/* 13 · Sankey – sensor data pipeline flow */}
+          <ChartCard title="Sankey" sub="Sensor data pipeline · events per day">
+            <ResponsiveContainer width="100%" height={260}>
+              <Sankey
+                data={SANKEY_DATA}
+                nodePadding={18}
+                nodeWidth={14}
+                linkCurvature={0.5}
+                margin={{ top:8, right:80, bottom:8, left:8 }}
+                node={{ fill:C.accent, fillOpacity:0.85, stroke:'none', rx:3 }}
+                link={{ fill:C.accent, fillOpacity:0.12, stroke:'none' }}
+              >
+                <Tooltip contentStyle={TT_STYLE}/>
+              </Sankey>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          {/* 14 · Sunburst – room activity hierarchy */}
+          <ChartCard title="Sunburst Chart" sub="Floor → risk tier → room · walking minutes" full>
+            <div style={{ display:'flex', justifyContent:'center' }}>
+              <SunburstChart
+                width={560} height={320}
+                data={SUNBURST_DATA}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={40}
+                padding={2}
+                ringPadding={4}
+                stroke={C.s1}
+              >
+                <Tooltip contentStyle={TT_STYLE}/>
+              </SunburstChart>
+            </div>
+          </ChartCard>
+
         </div>
 
         <div className="agent-note" style={{ marginTop:48 }}>
-          — Ambient Intelligence · sensor analytics · recharts on Vercel —
+          — Ambient Intelligence · sensor analytics · 14 chart types · recharts on Vercel —
         </div>
       </main>
     </div>
