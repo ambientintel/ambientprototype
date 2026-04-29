@@ -158,26 +158,32 @@ export default function PatientDashboard() {
         </div>
 
         {/* Alerts table */}
-        <div className="section-head">
+        <div className="section-head" style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <h2 className="section-title">Alerts</h2>
+          <span style={{ fontFamily:'var(--mono)', fontSize:11, color:'var(--text-3)' }}>{todayLabel}</span>
         </div>
         <div className="table">
           <div className="table-header">
             <div>Room</div>
-            <div>Last Visit</div>
+            <div>Fall</div>
+            <div>Time</div>
             <div>Priority</div>
-            <div>Date</div>
           </div>
           <div className="table-row selected">
-            <div className="room">201</div>
-            <div>10:23 am</div>
+            <div className="room">MOH301</div>
+            <div>
+              <span className="priority high">
+                <span className="priority-dot" />
+                Detected
+              </span>
+            </div>
+            <div>{`${hh}:${mm} ${ampm}`}</div>
             <div>
               <span className="priority high">
                 <span className="priority-dot" />
                 High
               </span>
             </div>
-            <div>{todayLabel}</div>
           </div>
         </div>
 
