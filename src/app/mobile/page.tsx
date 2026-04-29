@@ -36,15 +36,58 @@ const ANDROID_STEPS = [
   { icon: '🔔', text: 'Open the app and allow notifications when prompted' },
 ];
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function subscribeToPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  const reg = await navigator.serviceWorker.ready;
+  const existing = await reg.pushManager.getSubscription();
+  if (existing) return existing;
+  return reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
+    ),
+  });
+}
+
 export default function MobilePage() {
   const [os, setOs] = useState<OS>('unknown');
   const [tab, setTab] = useState<'ios' | 'android'>('ios');
+  const [notifStatus, setNotifStatus] = useState<'unknown' | 'granted' | 'denied' | 'subscribing'>('unknown');
 
   useEffect(() => {
     const detected = detectOS();
     setOs(detected);
     if (detected === 'android') setTab('android');
+    if (typeof Notification !== 'undefined') {
+      setNotifStatus(Notification.permission === 'granted' ? 'granted' : Notification.permission === 'denied' ? 'denied' : 'unknown');
+    }
   }, []);
+
+  async function enableNotifications() {
+    setNotifStatus('subscribing');
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') { setNotifStatus('denied'); return; }
+    try {
+      const sub = await subscribeToPush();
+      if (sub) {
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub.toJSON()),
+        });
+      }
+      setNotifStatus('granted');
+    } catch {
+      setNotifStatus('granted');
+    }
+  }
 
   const steps = tab === 'ios' ? IOS_STEPS : ANDROID_STEPS;
 
@@ -79,6 +122,45 @@ export default function MobilePage() {
             fontSize: 13, color: C.green, fontWeight: 600,
           }}>
             {os === 'ios' ? '📱 iPhone detected — follow the steps below' : '🤖 Android detected — follow the steps below'}
+          </div>
+        )}
+
+        {/* Notification enable button — shown after install */}
+        {'Notification' in (typeof window !== 'undefined' ? window : {}) && notifStatus !== 'granted' && (
+          <div style={{
+            background: notifStatus === 'denied' ? 'rgba(255,107,107,0.08)' : C.accentDim,
+            border: `1px solid ${notifStatus === 'denied' ? 'rgba(255,107,107,0.3)' : C.accent + '44'}`,
+            borderRadius: 12, padding: '16px', marginBottom: 24, textAlign: 'center',
+          }}>
+            {notifStatus === 'denied' ? (
+              <>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#FF6B6B', marginBottom: 4 }}>Notifications blocked</div>
+                <div style={{ fontSize: 12, color: C.text2 }}>Go to Settings → Safari → Notifications and allow Ambient.</div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 13, color: C.text2, marginBottom: 12 }}>
+                  {notifStatus === 'subscribing' ? 'Enabling notifications…' : 'Tap below to receive fall alerts on this device.'}
+                </div>
+                <button onClick={enableNotifications} disabled={notifStatus === 'subscribing'} style={{
+                  background: C.accent, border: 'none', borderRadius: 10,
+                  color: '#fff', fontSize: 14, fontWeight: 700, padding: '12px 28px',
+                  cursor: 'pointer', opacity: notifStatus === 'subscribing' ? 0.6 : 1,
+                }}>
+                  {notifStatus === 'subscribing' ? 'Enabling…' : '🔔  Enable Fall Alert Notifications'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {notifStatus === 'granted' && (
+          <div style={{
+            background: C.greenDim, border: `1px solid ${C.green}33`, borderRadius: 10,
+            padding: '12px 16px', marginBottom: 24, textAlign: 'center',
+            fontSize: 13, color: C.green, fontWeight: 700,
+          }}>
+            ✓ Notifications enabled — you will receive fall alerts
           </div>
         )}
 
