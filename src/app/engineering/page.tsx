@@ -110,6 +110,7 @@ export default function EngineeringPage() {
   const [colInputs, setColInputs] = useState<Record<string, string>>({});
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<Column | null>(null);
+  const [history, setHistory] = useState<Issue[]>([]);
   const colCounter = useRef(200);
 
   const weekNum = (() => {
@@ -128,8 +129,10 @@ export default function EngineeringPage() {
     try {
       const saved = localStorage.getItem("eng_personal_tasks");
       const savedDone = localStorage.getItem("eng_completed_tasks");
+      const savedHistory = localStorage.getItem("eng_history");
       if (saved) setPersonalTasks(JSON.parse(saved));
       if (savedDone) setCompletedTasks(JSON.parse(savedDone));
+      if (savedHistory) setHistory(JSON.parse(savedHistory));
     } catch {}
   }, []);
 
@@ -142,6 +145,11 @@ export default function EngineeringPage() {
   useEffect(() => {
     try { localStorage.setItem("eng_completed_tasks", JSON.stringify(completedTasks)); } catch {}
   }, [completedTasks]);
+
+  // Persist history
+  useEffect(() => {
+    try { localStorage.setItem("eng_history", JSON.stringify(history)); } catch {}
+  }, [history]);
 
   // addPersonalTask is inlined per-engineer inside the map to guarantee fresh closure
 
@@ -218,6 +226,24 @@ export default function EngineeringPage() {
         return next ? { ...prev, column: next } : prev;
       });
     }
+  }
+
+  function archiveIssue(id: string) {
+    const issue = issues.find(i => i.id === id);
+    if (!issue) return;
+    const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
+    setHistory(prev => [{ ...issue, updated: today }, ...prev]);
+    setIssues(prev => prev.filter(i => i.id !== id));
+    if (selected?.id === id) setSelected(null);
+  }
+
+  function clearColumn(col: Column) {
+    const toRemove = issues.filter(i => i.column === col);
+    if (col === "done") {
+      const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
+      setHistory(prev => [...toRemove.map(i => ({ ...i, updated: today })), ...prev]);
+    }
+    setIssues(prev => prev.filter(i => i.column !== col));
   }
 
   function createIssue() {
@@ -572,7 +598,15 @@ export default function EngineeringPage() {
                     <div style={s.colHead}>
                       <span style={{ width:8, height:8, borderRadius:2, background:col.color, flexShrink:0 }}/>
                       <span style={{ fontSize:12, fontWeight:600, color:"var(--text-2)", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:"var(--mono)" }}>{col.label}</span>
-                      <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", marginLeft:"auto" }}>{colIssues.length} · {colPts}pts</span>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>{colIssues.length} · {colPts}pts</span>
+                      {colIssues.length > 0 && (
+                        <button onClick={() => clearColumn(col.id)} title={col.id === "done" ? "Move all to History" : "Clear column"}
+                          style={{ marginLeft:"auto", background:"none", border:"none", cursor:"pointer", fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.08em", padding:"2px 6px", borderRadius:4, transition:"color 0.12s, background 0.12s" }}
+                          onMouseEnter={e => { e.currentTarget.style.color = col.id === "done" ? "#3DCC91" : "#FF6B6B"; e.currentTarget.style.background = "var(--surface-2)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = "var(--text-4)"; e.currentTarget.style.background = "none"; }}>
+                          {col.id === "done" ? "→ History" : "Clear"}
+                        </button>
+                      )}
                     </div>
 
                     {/* Drop zone + cards */}
@@ -583,6 +617,7 @@ export default function EngineeringPage() {
                           onSelect={() => setSelected(issue)}
                           onMoveBack={() => moveIssueStep(issue.id, -1)}
                           onMoveForward={() => moveIssueStep(issue.id, 1)}
+                          onArchive={() => archiveIssue(issue.id)}
                           onDragStart={() => setDraggedId(issue.id)}
                           onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
                           isDragging={draggedId === issue.id}
@@ -609,6 +644,41 @@ export default function EngineeringPage() {
                         <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
                       </button>
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── History strip ── */}
+        {history.length > 0 && (
+          <div style={{ padding:"0 32px 40px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)" }}>History · {history.length}</div>
+              <button onClick={() => setHistory([])}
+                style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.08em", color:"var(--text-4)", background:"none", border:"none", cursor:"pointer", padding:"2px 6px", borderRadius:4, transition:"color 0.12s" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "#FF6B6B")}
+                onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>
+                Clear History
+              </button>
+            </div>
+            <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:8 }}>
+              {history.map((item, idx) => {
+                const tm = TYPE_META[item.type];
+                return (
+                  <div key={`${item.id}-${idx}`} style={{ flexShrink:0, width:180, background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:10, padding:"12px 14px", opacity:0.7 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:7 }}>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:10, color:tm.color, fontWeight:700 }}>{tm.symbol}</span>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", flex:1 }}>{item.id}</span>
+                      {item.assigneeInitial && (
+                        <span style={{ width:16, height:16, borderRadius:"50%", background:item.assigneeColor+"33", color:item.assigneeColor, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:8, fontWeight:700, flexShrink:0 }}>
+                          {item.assigneeInitial}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ margin:"0 0 8px", fontSize:11.5, lineHeight:1.4, color:"var(--text-2)", textDecoration:"line-through" }}>{item.title}</p>
+                    <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)" }}>Archived {item.updated}</div>
                   </div>
                 );
               })}
@@ -757,12 +827,13 @@ export default function EngineeringPage() {
 }
 
 // ── IssueCard ──────────────────────────────────────────────────────────────
-function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onDragStart, onDragEnd, isDragging }: {
+function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArchive, onDragStart, onDragEnd, isDragging }: {
   issue: Issue;
   colIndex: number;
   onSelect: () => void;
   onMoveBack: () => void;
   onMoveForward: () => void;
+  onArchive: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
   isDragging: boolean;
@@ -819,17 +890,26 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onDra
       )}
       {/* Move buttons */}
       {hovered && (
-        <div style={{ display:"flex", gap:4, marginTop:10 }} onClick={e => e.stopPropagation()}>
-          <button onClick={onMoveBack} disabled={!canBack}
-            style={{ flex:1, padding:"4px 0", borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", color: canBack ? "var(--text-2)" : "var(--text-4)", cursor: canBack ? "pointer" : "default", fontFamily:"var(--mono)", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 3L5 8l5 5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            Back
-          </button>
-          <button onClick={onMoveForward} disabled={!canForward}
-            style={{ flex:1, padding:"4px 0", borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", color: canForward ? "var(--text-2)" : "var(--text-4)", cursor: canForward ? "pointer" : "default", fontFamily:"var(--mono)", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
-            Forward
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3l5 5-5 5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
+        <div style={{ display:"flex", flexDirection:"column", gap:4, marginTop:10 }} onClick={e => e.stopPropagation()}>
+          <div style={{ display:"flex", gap:4 }}>
+            <button onClick={onMoveBack} disabled={!canBack}
+              style={{ flex:1, padding:"4px 0", borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", color: canBack ? "var(--text-2)" : "var(--text-4)", cursor: canBack ? "pointer" : "default", fontFamily:"var(--mono)", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 3L5 8l5 5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Back
+            </button>
+            <button onClick={onMoveForward} disabled={!canForward}
+              style={{ flex:1, padding:"4px 0", borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", color: canForward ? "var(--text-2)" : "var(--text-4)", cursor: canForward ? "pointer" : "default", fontFamily:"var(--mono)", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+              Forward
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3l5 5-5 5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          </div>
+          {colIndex === 3 && (
+            <button onClick={onArchive}
+              style={{ width:"100%", padding:"4px 0", borderRadius:5, border:"1px solid rgba(61,204,145,0.3)", background:"rgba(61,204,145,0.08)", color:"#3DCC91", cursor:"pointer", fontFamily:"var(--mono)", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+              <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 5h12v9H2zM2 5l2-3h8l2 3M6 9h4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Move to History
+            </button>
+          )}
         </div>
       )}
     </div>
