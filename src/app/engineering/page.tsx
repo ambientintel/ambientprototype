@@ -228,6 +228,11 @@ export default function EngineeringPage() {
     }
   }
 
+  function deleteIssue(id: string) {
+    setIssues(prev => prev.filter(i => i.id !== id));
+    if (selected?.id === id) setSelected(null);
+  }
+
   function archiveIssue(id: string) {
     const issue = issues.find(i => i.id === id);
     if (!issue) return;
@@ -619,6 +624,7 @@ export default function EngineeringPage() {
                           onMoveBack={() => moveIssueStep(issue.id, -1)}
                           onMoveForward={() => moveIssueStep(issue.id, 1)}
                           onArchive={() => archiveIssue(issue.id)}
+                          onClear={() => deleteIssue(issue.id)}
                           onDragStart={() => setDraggedId(issue.id)}
                           onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
                           isDragging={draggedId === issue.id}
@@ -828,13 +834,14 @@ export default function EngineeringPage() {
 }
 
 // ── IssueCard ──────────────────────────────────────────────────────────────
-function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArchive, onDragStart, onDragEnd, isDragging }: {
+function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArchive, onClear, onDragStart, onDragEnd, isDragging }: {
   issue: Issue;
   colIndex: number;
   onSelect: () => void;
   onMoveBack: () => void;
   onMoveForward: () => void;
   onArchive: () => void;
+  onClear: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
   isDragging: boolean;
@@ -865,6 +872,10 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
       <div style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:8 }}>
         <span style={{ fontFamily:"var(--mono)", fontSize:11, color:tm.color, fontWeight:700, marginTop:1, flexShrink:0 }}>{tm.symbol}</span>
         <p style={{ margin:0, fontSize:13, lineHeight:1.4, color:"var(--text)", flex:1 }}>{issue.title}</p>
+        <button onClick={e => { e.stopPropagation(); onClear(); }}
+          style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:13, lineHeight:1, padding:"0 0 0 4px", transition:"color 0.12s", marginTop:-1 }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#FF6B6B")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>✕</button>
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
         <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)" }}>{issue.id}</span>
