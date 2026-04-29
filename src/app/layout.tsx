@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Newsreader, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -26,7 +26,21 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Ambient Intelligence",
-  description: "Prototype",
+  description: "Nurse dashboard — fall alerts and room monitoring",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Ambient",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0C0D0F",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -39,7 +53,21 @@ export default function RootLayout({
       lang="en"
       className={`${newsreader.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
-      <body>{children}</body>
+      <head>
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+      </head>
+      <body>
+        {children}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+              });
+            }
+          `,
+        }} />
+      </body>
     </html>
   );
 }
