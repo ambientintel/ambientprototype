@@ -151,7 +151,7 @@ export default function AlertsPage() {
             <div className="crumb">{crumb}</div>
             <h1 className="page-title">Alerts <em>Feed</em></h1>
           </div>
-          <div style={{ display:'flex', gap:6 }}>
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}><a href="/login" className="btn btn-ghost"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="5" r="2.5"/><path d="M3 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" strokeLinecap="round"/></svg>Login</a>
             {filters.map(f=>(
               <button key={f} onClick={()=>setFilter(f)} style={{ fontFamily:'var(--mono)', fontSize:11, padding:'5px 12px', borderRadius:6, border:'1px solid var(--line)', background: filter===f ? 'var(--accent)' : 'var(--surface-1)', color: filter===f ? 'white' : 'var(--text-2)', cursor:'pointer' }}>{f}</button>
             ))}
