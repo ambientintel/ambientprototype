@@ -180,10 +180,16 @@ export default function PatientDashboard() {
             <div style={{ flex:1 }}>{`${hh}:${mm} ${ampm}`}</div>
             <div style={{ flex:1 }}>{todayLabel}</div>
             <div style={{ marginLeft:'auto' }}>
-              <span className="priority high">
-                <span className="priority-dot" />
+              <button style={{
+                display:'inline-flex', alignItems:'center', gap:6,
+                padding:'5px 14px', borderRadius:4, border:'1px solid rgba(255,107,107,0.35)',
+                background:'rgba(255,107,107,0.12)', color:'#FF6B6B',
+                fontFamily:'var(--mono)', fontSize:11, letterSpacing:'0.08em',
+                cursor:'pointer', fontWeight:500,
+              }}>
+                <span style={{ width:6, height:6, borderRadius:'50%', background:'#FF6B6B', display:'inline-block', flexShrink:0 }}/>
                 High
-              </span>
+              </button>
             </div>
           </div>
         </div>
