@@ -247,32 +247,33 @@ const SANKEY_DATA = {
 };
 
 // ── Dataset: sunburst – activity hierarchy ────────────────────
+// Every node (including root + intermediate) must have value = sum of leaf descendants
+// so that scaleLinear([0, data.value], [0, 360]) resolves correctly.
 const SUNBURST_DATA = {
-  name:'MOH Floor',
-  fill: C.s2,
+  name:'MOH Floor', value:644, fill:C.s2,
   children: [
     {
-      name:'High Risk', fill:C.red,
+      name:'High Risk', value:107, fill:C.red,
       children:[
-        { name:'MOH 301', value:47, fill:'rgba(255,107,107,0.75)' },
-        { name:'MOH 305', value:31, fill:'rgba(255,107,107,0.60)' },
+        { name:'MOH 301', value:47, fill:'rgba(255,107,107,0.80)' },
+        { name:'MOH 305', value:31, fill:'rgba(255,107,107,0.65)' },
         { name:'MOH 308', value:29, fill:'rgba(255,107,107,0.50)' },
       ],
     },
     {
-      name:'Active', fill:C.amber,
+      name:'Active', value:270, fill:C.amber,
       children:[
-        { name:'MOH 302', value:82, fill:'rgba(255,201,64,0.75)' },
-        { name:'MOH 304', value:44, fill:'rgba(255,201,64,0.60)' },
-        { name:'MOH 307', value:73, fill:'rgba(255,201,64,0.50)' },
+        { name:'MOH 302', value:82, fill:'rgba(255,201,64,0.80)' },
+        { name:'MOH 304', value:44, fill:'rgba(255,201,64,0.65)' },
+        { name:'MOH 307', value:73, fill:'rgba(255,201,64,0.55)' },
         { name:'MOH 310', value:71, fill:'rgba(255,201,64,0.45)' },
       ],
     },
     {
-      name:'Stable', fill:C.sage,
+      name:'Stable', value:267, fill:C.sage,
       children:[
-        { name:'MOH 303', value:94, fill:'rgba(61,204,145,0.75)' },
-        { name:'MOH 306', value:88, fill:'rgba(61,204,145,0.60)' },
+        { name:'MOH 303', value:94, fill:'rgba(61,204,145,0.80)' },
+        { name:'MOH 306', value:88, fill:'rgba(61,204,145,0.65)' },
         { name:'MOH 309', value:85, fill:'rgba(61,204,145,0.50)' },
       ],
     },
