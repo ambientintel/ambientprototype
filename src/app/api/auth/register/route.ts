@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 declare global {
   // eslint-disable-next-line no-var
-  var __ambientPending: Map<string, { code: string; name: string; role: string; expires: number }> | undefined;
+  var __ambientPending: Map<string, { code: string; name: string; email: string; role: string; expires: number }> | undefined;
 }
 
 function getStore() {
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const store = getStore();
-  store.set(email.toLowerCase(), { code, name, role, expires: Date.now() + 15 * 60 * 1000 });
+  store.set(email.toLowerCase(), { code, name, email: email.toLowerCase(), role, expires: Date.now() + 15 * 60 * 1000 });
 
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {
