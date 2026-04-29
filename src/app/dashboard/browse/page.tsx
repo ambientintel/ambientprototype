@@ -65,7 +65,7 @@ export default function BrowsePage() {
         </Link>
         <nav className="nav-section">
           <div className="nav-label">Views</div>
-            <Link href="/dashboard" className={"nav-item"} style={{ textDecoration:'none', color:'inherit' }}>
+            <Link href="/dashboard/room/MOH301" className={"nav-item"} style={{ textDecoration:'none', color:'inherit' }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{<path d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round" />}</svg>
               Overview
             </Link>

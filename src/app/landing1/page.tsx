@@ -190,7 +190,7 @@ export default function Landing1() {
             </p>
 
             <div className="l1-fadeup" style={{ animationDelay: '0.35s', display: 'flex', gap: 12 }}>
-              <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+              <Link href="/dashboard/room/MOH301" style={{ textDecoration: 'none' }}>
                 <button className="l1-cta-primary">Enter Dashboard</button>
               </Link>
               <Link href="/" style={{ textDecoration: 'none' }}>
