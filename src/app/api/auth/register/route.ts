@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __ambientPending: Map<string, { code: string; name: string; email: string; role: string; expires: number }> | undefined;
-}
-
 function getStore() {
   if (!globalThis.__ambientPending) {
     globalThis.__ambientPending = new Map();
@@ -16,7 +11,7 @@ function purge() {
   const store = getStore();
   const now = Date.now();
   for (const [k, v] of store.entries()) {
-    if (v.expires < now) store.delete(k);
+    if (now - v.createdAt > 15 * 60 * 1000) store.delete(k);
   }
 }
 
@@ -28,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const store = getStore();
-  store.set(email.toLowerCase(), { code, name, email: email.toLowerCase(), role, expires: Date.now() + 15 * 60 * 1000 });
+  store.set(email.toLowerCase(), { code, name, email, role, createdAt: Date.now() });
 
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {
