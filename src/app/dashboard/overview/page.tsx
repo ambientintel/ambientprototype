@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { AuthButton } from "@/components/AuthButton";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -157,15 +158,7 @@ export default function OverviewPage() {
             <div className="crumb">{crumb}</div>
             <h1 className="page-title">Floor <em>Overview</em></h1>
           </div>
-          <div className="tool-group">
-            <a href="/login" className="btn btn-ghost">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <circle cx="8" cy="5" r="2.5"/>
-                <path d="M3 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" strokeLinecap="round"/>
-              </svg>
-              Login
-            </a>
-          </div>
+          <div className="tool-group"><AuthButton /></div>
         </header>
 
         {/* ── Status strip ── */}
