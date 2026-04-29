@@ -157,22 +157,19 @@ export default function PatientDashboard() {
           </div>
         </div>
 
-        {/* Resident table */}
+        {/* Alerts table */}
+        <div className="section-head">
+          <h2 className="section-title">Alerts</h2>
+        </div>
         <div className="table">
           <div className="table-header">
             <div>Room</div>
-            <div>Name</div>
             <div>Last Visit</div>
             <div>Priority</div>
             <div>Date</div>
-            <div>Owner</div>
           </div>
           <div className="table-row selected">
             <div className="room">201</div>
-            <div className="resident">
-              <div className="resident-avatar">E</div>
-              <div className="resident-name">Evelyn Rodriguez</div>
-            </div>
             <div>10:23 am</div>
             <div>
               <span className="priority high">
@@ -181,10 +178,6 @@ export default function PatientDashboard() {
               </span>
             </div>
             <div>{todayLabel}</div>
-            <div className="owner">
-              <div className="owner-avatar" />
-              <span>Dr. Marisol Vega</span>
-            </div>
           </div>
         </div>
 
