@@ -4,7 +4,7 @@ import { ResponsiveChord } from "@nivo/chord";
 import { ResponsiveCalendar } from "@nivo/calendar";
 import { ResponsiveBump } from "@nivo/bump";
 import { ResponsiveNetwork } from "@nivo/network";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   LineChart, Line,
   AreaChart, Area,
@@ -231,9 +231,22 @@ const TT_STYLE = {
   padding: '10px 14px',
 };
 
+// ── Slider control row ─────────────────────────────────────────
+type SliderDef = { label: string; min: number; max: number; step: number; value: number; fmt?: (v: number) => string; onChange: (v: number) => void };
+function SliderRow({ label, min, max, step, value, fmt, onChange }: SliderDef) {
+  return (
+    <div className="ctrl-row">
+      <span className="ctrl-label">{label}</span>
+      <input className="ctrl-slider" type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(Number(e.target.value))}/>
+      <span className="ctrl-val">{fmt ? fmt(value) : value}</span>
+    </div>
+  );
+}
+
 // ── Chart card wrapper ─────────────────────────────────────────
-function ChartCard({ title, sub, badge, children, full }: {
-  title: string; sub: string; badge?: string; children: React.ReactNode; full?: boolean;
+function ChartCard({ title, sub, badge, children, full, sliders }: {
+  title: string; sub: string; badge?: string; children: React.ReactNode; full?: boolean; sliders?: SliderDef[];
 }) {
   return (
     <div style={{
@@ -253,13 +266,18 @@ function ChartCard({ title, sub, badge, children, full }: {
         )}
       </div>
       {children}
+      {sliders && sliders.length > 0 && (
+        <div className="ctrl-strip">
+          {sliders.map(s => <SliderRow key={s.label} {...s}/>)}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Heatmap cell ──────────────────────────────────────────────
-function HeatCell({ value }: { value: number }) {
-  const norm = Math.min(1, value / 28);
+function HeatCell({ value, max }: { value: number; max: number }) {
+  const norm = Math.min(1, value / max);
   const bg = norm < 0.15 ? C.s3
     : norm < 0.35 ? `rgba(45,114,210,0.25)`
     : norm < 0.55 ? `rgba(45,114,210,0.50)`
@@ -369,6 +387,41 @@ export default function DataSciencePage() {
     return () => { document.body.style.background = ''; };
   }, []);
 
+  // ── Per-chart control state ──────────────────────────────────
+  const [lineStroke,      setLineStroke]      = useState(1.8);
+  const [areaOpacity,     setAreaOpacity]     = useState(0.30);
+  const [areaStroke,      setAreaStroke]      = useState(1.8);
+  const [barSize,         setBarSize]         = useState(18);
+  const [barRadius,       setBarRadius]       = useState(4);
+  const [stackBarSize,    setStackBarSize]    = useState(18);
+  const [compAreaOp,      setCompAreaOp]      = useState(0.12);
+  const [compBarSize,     setCompBarSize]     = useState(12);
+  const [riskThresh,      setRiskThresh]      = useState(20);
+  const [radarFillOp,     setRadarFillOp]     = useState(0.15);
+  const [radarStroke,     setRadarStroke]     = useState(1.5);
+  const [pieInner,        setPieInner]        = useState(0);
+  const [piePad,          setPiePad]          = useState(3);
+  const [radialInner,     setRadialInner]     = useState(30);
+  const [radialOuter,     setRadialOuter]     = useState(110);
+  const [treemapRatio,    setTreemapRatio]    = useState(1.33);
+  const [heatMax,         setHeatMax]         = useState(28);
+  const [funnelOpacity,   setFunnelOpacity]   = useState(0.82);
+  const [sankeyNodeW,     setSankeyNodeW]     = useState(14);
+  const [sankeyNodePad,   setSankeyNodePad]   = useState(18);
+  const [sunInner,        setSunInner]        = useState(36);
+  const [sunRingPad,      setSunRingPad]      = useState(6);
+  const [chordPadAngle,   setChordPadAngle]   = useState(0.02);
+  const [chordInnerR,     setChordInnerR]     = useState(0.86);
+  const [chordRibbonOp,   setChordRibbonOp]  = useState(0.5);
+  const [bumpLine,        setBumpLine]        = useState(2);
+  const [bumpPoint,       setBumpPoint]       = useState(8);
+  const [calBorder,       setCalBorder]       = useState(2);
+  const [netRepulse,      setNetRepulse]      = useState(6);
+  const [netLinkThick,    setNetLinkThick]    = useState(1.5);
+
+  const p2 = (v: number) => v.toFixed(2);
+  const p1 = (v: number) => v.toFixed(1);
+
   return (
     <div className="app" style={{ color:C.text }}>
 
@@ -453,8 +506,11 @@ export default function DataSciencePage() {
         {/* ── Grid of charts ── */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
 
-          {/* 1 · Line Chart – 24h activity breakdown */}
-          <ChartCard title="Line Chart" sub="24-hour activity distribution · all rooms" badge="Hourly" full>
+          {/* 1 · Line Chart */}
+          <ChartCard title="Line Chart" sub="24-hour activity distribution · all rooms" badge="Hourly" full
+            sliders={[
+              { label:'Stroke width', min:0.5, max:4, step:0.5, value:lineStroke, fmt:p1, onChange:setLineStroke },
+            ]}>
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={HOURLY_ACTIVITY} margin={{ top:4, right:8, left:-20, bottom:0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.line}/>
@@ -462,26 +518,30 @@ export default function DataSciencePage() {
                 <YAxis tick={{ fontFamily:'var(--mono)', fontSize:10, fill:C.text4 }} tickLine={false} axisLine={false}/>
                 <Tooltip contentStyle={TT_STYLE} cursor={{ stroke:C.lineS }}/>
                 <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily:'var(--mono)', fontSize:10, paddingTop:12 }}/>
-                <Line type="monotone" dataKey="quiet"    stroke={C.sage}   strokeWidth={1.8} dot={false} name="Quiet %"/>
-                <Line type="monotone" dataKey="movement" stroke={C.amber}  strokeWidth={1.8} dot={false} name="Movement %"/>
-                <Line type="monotone" dataKey="fall"     stroke={C.red}    strokeWidth={1.8} dot={false} name="Fall Alert %"/>
-                <ReferenceLine x="07" stroke={C.text4} strokeDasharray="3 3" label={{ value:'Wake', fontFamily:'var(--mono)', fontSize:9, fill:C.text4 }}/>
+                <Line type="monotone" dataKey="quiet"    stroke={C.sage}  strokeWidth={lineStroke} dot={false} name="Quiet %"/>
+                <Line type="monotone" dataKey="movement" stroke={C.amber} strokeWidth={lineStroke} dot={false} name="Movement %"/>
+                <Line type="monotone" dataKey="fall"     stroke={C.red}   strokeWidth={lineStroke} dot={false} name="Fall Alert %"/>
+                <ReferenceLine x="07" stroke={C.text4} strokeDasharray="3 3" label={{ value:'Wake',  fontFamily:'var(--mono)', fontSize:9, fill:C.text4 }}/>
                 <ReferenceLine x="21" stroke={C.text4} strokeDasharray="3 3" label={{ value:'Sleep', fontFamily:'var(--mono)', fontSize:9, fill:C.text4 }}/>
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 2 · Area Chart – weekly sensor events */}
-          <ChartCard title="Area Chart" sub="7-day sensor detection events">
+          {/* 2 · Area Chart */}
+          <ChartCard title="Area Chart" sub="7-day sensor detection events"
+            sliders={[
+              { label:'Fill opacity', min:0.02, max:0.7, step:0.02, value:areaOpacity, fmt:p2, onChange:setAreaOpacity },
+              { label:'Stroke width', min:0.5,  max:4,   step:0.5,  value:areaStroke,  fmt:p1, onChange:setAreaStroke  },
+            ]}>
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={WEEKLY_EVENTS} margin={{ top:4, right:8, left:-20, bottom:0 }}>
                 <defs>
                   <linearGradient id="areaDetect" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor={C.accent} stopOpacity={0.3}/>
+                    <stop offset="5%"  stopColor={C.accent} stopOpacity={areaOpacity}/>
                     <stop offset="95%" stopColor={C.accent} stopOpacity={0.02}/>
                   </linearGradient>
                   <linearGradient id="areaAlerts" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor={C.red} stopOpacity={0.3}/>
+                    <stop offset="5%"  stopColor={C.red} stopOpacity={areaOpacity}/>
                     <stop offset="95%" stopColor={C.red} stopOpacity={0.02}/>
                   </linearGradient>
                 </defs>
@@ -490,21 +550,25 @@ export default function DataSciencePage() {
                 <YAxis tick={{ fontFamily:'var(--mono)', fontSize:10, fill:C.text4 }} tickLine={false} axisLine={false}/>
                 <Tooltip contentStyle={TT_STYLE}/>
                 <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily:'var(--mono)', fontSize:10, paddingTop:12 }}/>
-                <Area type="monotone" dataKey="detections" stroke={C.accent} fill="url(#areaDetect)" strokeWidth={1.8} name="Detections"/>
-                <Area type="monotone" dataKey="alerts"     stroke={C.red}    fill="url(#areaAlerts)" strokeWidth={1.8} name="Alerts"/>
+                <Area type="monotone" dataKey="detections" stroke={C.accent} fill="url(#areaDetect)" strokeWidth={areaStroke} name="Detections"/>
+                <Area type="monotone" dataKey="alerts"     stroke={C.red}    fill="url(#areaAlerts)" strokeWidth={areaStroke} name="Alerts"/>
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 3 · Bar Chart – falls by room */}
-          <ChartCard title="Bar Chart" sub="Fall incidents per room · this week">
+          {/* 3 · Bar Chart */}
+          <ChartCard title="Bar Chart" sub="Fall incidents per room · this week"
+            sliders={[
+              { label:'Bar width',    min:6,  max:36, step:2, value:barSize,   onChange:setBarSize   },
+              { label:'Corner radius',min:0,  max:12, step:1, value:barRadius, onChange:setBarRadius },
+            ]}>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={ROOM_INCIDENTS} margin={{ top:4, right:8, left:-20, bottom:0 }} barSize={18}>
+              <BarChart data={ROOM_INCIDENTS} margin={{ top:4, right:8, left:-20, bottom:0 }} barSize={barSize}>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false}/>
                 <XAxis dataKey="room" tick={{ fontFamily:'var(--mono)', fontSize:9, fill:C.text4 }} tickLine={false} axisLine={false} interval={0}/>
                 <YAxis tick={{ fontFamily:'var(--mono)', fontSize:10, fill:C.text4 }} tickLine={false} axisLine={false}/>
                 <Tooltip contentStyle={TT_STYLE}/>
-                <Bar dataKey="falls" name="Falls" radius={[4,4,0,0]}>
+                <Bar dataKey="falls" name="Falls" radius={[barRadius,barRadius,0,0]}>
                   {ROOM_INCIDENTS.map((entry, i) => (
                     <Cell key={i} fill={entry.falls === 0 ? C.sage : entry.falls >= 3 ? C.red : C.amber}/>
                   ))}
@@ -513,10 +577,13 @@ export default function DataSciencePage() {
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 4 · Stacked Bar – activity hours by room */}
-          <ChartCard title="Stacked Bar" sub="Activity type breakdown by room (hours/week)">
+          {/* 4 · Stacked Bar */}
+          <ChartCard title="Stacked Bar" sub="Activity type breakdown by room (hours/week)"
+            sliders={[
+              { label:'Bar width', min:6, max:36, step:2, value:stackBarSize, onChange:setStackBarSize },
+            ]}>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={ROOM_INCIDENTS} margin={{ top:4, right:8, left:-20, bottom:0 }} barSize={18}>
+              <BarChart data={ROOM_INCIDENTS} margin={{ top:4, right:8, left:-20, bottom:0 }} barSize={stackBarSize}>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false}/>
                 <XAxis dataKey="room" tick={{ fontFamily:'var(--mono)', fontSize:9, fill:C.text4 }} tickLine={false} axisLine={false} interval={0}/>
                 <YAxis tick={{ fontFamily:'var(--mono)', fontSize:10, fill:C.text4 }} tickLine={false} axisLine={false}/>
@@ -529,8 +596,12 @@ export default function DataSciencePage() {
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 5 · Composed Chart – detections, falls, response time */}
-          <ChartCard title="Composed Chart" sub="Detections + falls + response time overlay · 7 days">
+          {/* 5 · Composed Chart */}
+          <ChartCard title="Composed Chart" sub="Detections + falls + response time overlay · 7 days"
+            sliders={[
+              { label:'Area fill opacity', min:0.02, max:0.5,  step:0.02, value:compAreaOp, fmt:p2, onChange:setCompAreaOp },
+              { label:'Bar width',         min:4,    max:24,   step:2,    value:compBarSize,        onChange:setCompBarSize },
+            ]}>
             <ResponsiveContainer width="100%" height={240}>
               <ComposedChart data={WEEKLY_EVENTS} margin={{ top:4, right:28, left:-20, bottom:0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.line}/>
@@ -539,15 +610,18 @@ export default function DataSciencePage() {
                 <YAxis yAxisId="right" orientation="right" tick={{ fontFamily:'var(--mono)', fontSize:10, fill:C.text4 }} tickLine={false} axisLine={false} domain={[0,10]}/>
                 <Tooltip contentStyle={TT_STYLE}/>
                 <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily:'var(--mono)', fontSize:10, paddingTop:12 }}/>
-                <Area yAxisId="left"  type="monotone" dataKey="detections" fill={`rgba(45,114,210,0.12)`} stroke={C.accent} strokeWidth={1.5} name="Detections"/>
-                <Bar  yAxisId="left"  dataKey="falls" fill={C.red} fillOpacity={0.7} name="Falls" radius={[3,3,0,0]} barSize={12}/>
+                <Area yAxisId="left"  type="monotone" dataKey="detections" fill={`rgba(45,114,210,${compAreaOp})`} stroke={C.accent} strokeWidth={1.5} name="Detections"/>
+                <Bar  yAxisId="left"  dataKey="falls" fill={C.red} fillOpacity={0.7} name="Falls" radius={[3,3,0,0]} barSize={compBarSize}/>
                 <Line yAxisId="right" type="monotone" dataKey="response" stroke={C.amber} strokeWidth={2} dot={{ r:3, fill:C.amber }} name="Resp (min)"/>
               </ComposedChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 6 · Scatter Plot – walking vs fall risk */}
-          <ChartCard title="Scatter Plot" sub="Daily walking distance (m) vs fall risk score">
+          {/* 6 · Scatter Plot */}
+          <ChartCard title="Scatter Plot" sub="Daily walking distance (m) vs fall risk score"
+            sliders={[
+              { label:'High-risk threshold', min:10, max:35, step:1, value:riskThresh, onChange:setRiskThresh },
+            ]}>
             <ResponsiveContainer width="100%" height={240}>
               <ScatterChart margin={{ top:4, right:8, left:-20, bottom:0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.line}/>
@@ -559,39 +633,46 @@ export default function DataSciencePage() {
                 />
                 <Scatter name="Residents" data={SCATTER_DATA}>
                   {SCATTER_DATA.map((d, i) => (
-                    <Cell key={i} fill={d.risk > 25 ? C.red : d.risk > 15 ? C.amber : C.sage} fillOpacity={0.85}/>
+                    <Cell key={i} fill={d.risk > riskThresh ? C.red : d.risk > riskThresh*0.6 ? C.amber : C.sage} fillOpacity={0.85}/>
                   ))}
                 </Scatter>
-                <ReferenceLine y={20} stroke={C.red} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value:'High risk', fontFamily:'var(--mono)', fontSize:9, fill:C.red, position:'right' }}/>
+                <ReferenceLine y={riskThresh} stroke={C.red} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value:'High risk', fontFamily:'var(--mono)', fontSize:9, fill:C.red, position:'right' }}/>
               </ScatterChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 7 · Radar Chart – resident mobility profiles */}
-          <ChartCard title="Radar Chart" sub="Resident mobility profile across 6 dimensions">
+          {/* 7 · Radar Chart */}
+          <ChartCard title="Radar Chart" sub="Resident mobility profile across 6 dimensions"
+            sliders={[
+              { label:'Fill opacity',  min:0, max:0.5, step:0.05, value:radarFillOp, fmt:p2, onChange:setRadarFillOp },
+              { label:'Stroke width',  min:1, max:4,   step:0.5,  value:radarStroke, fmt:p1, onChange:setRadarStroke },
+            ]}>
             <ResponsiveContainer width="100%" height={280}>
               <RadarChart data={MOBILITY_RADAR} margin={{ top:12, right:32, bottom:12, left:32 }}>
                 <PolarGrid stroke={C.line}/>
                 <PolarAngleAxis dataKey="metric" tick={{ fontFamily:'var(--mono)', fontSize:10, fill:C.text3 }}/>
                 <PolarRadiusAxis angle={90} domain={[0,100]} tick={{ fontFamily:'var(--mono)', fontSize:9, fill:C.text4 }} tickCount={4}/>
-                <Radar name="Evelyn" dataKey="Evelyn"   stroke={C.accent} fill={C.accent} fillOpacity={0.15} strokeWidth={1.5}/>
-                <Radar name="Harold" dataKey="Harold"   stroke={C.sage}   fill={C.sage}   fillOpacity={0.10} strokeWidth={1.5}/>
-                <Radar name="Alice"  dataKey="Alice"    stroke={C.red}    fill={C.red}    fillOpacity={0.10} strokeWidth={1.5}/>
+                <Radar name="Evelyn" dataKey="Evelyn" stroke={C.accent} fill={C.accent} fillOpacity={radarFillOp}            strokeWidth={radarStroke}/>
+                <Radar name="Harold" dataKey="Harold" stroke={C.sage}   fill={C.sage}   fillOpacity={radarFillOp * 0.67}     strokeWidth={radarStroke}/>
+                <Radar name="Alice"  dataKey="Alice"  stroke={C.red}    fill={C.red}    fillOpacity={radarFillOp * 0.67}     strokeWidth={radarStroke}/>
                 <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily:'var(--mono)', fontSize:10, paddingTop:8 }}/>
                 <Tooltip contentStyle={TT_STYLE}/>
               </RadarChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 8 · Pie Chart – room status distribution */}
-          <ChartCard title="Pie Chart" sub="Current room status distribution · 10 rooms">
+          {/* 8 · Pie Chart */}
+          <ChartCard title="Pie Chart" sub="Current room status distribution · 10 rooms"
+            sliders={[
+              { label:'Inner radius (donut)', min:0, max:70, step:1, value:pieInner, onChange:setPieInner },
+              { label:'Padding angle',        min:0, max:10, step:1, value:piePad,   onChange:setPiePad   },
+            ]}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr auto', alignItems:'center', gap:24 }}>
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie
-                    data={STATUS_PIE} cx="50%" cy="50%"
-                    innerRadius={0} outerRadius={90}
-                    paddingAngle={3} dataKey="value"
+                  <Pie data={STATUS_PIE} cx="50%" cy="50%"
+                    innerRadius={pieInner} outerRadius={90}
+                    paddingAngle={piePad} dataKey="value"
                     label={({ name, percent }) => `${name} ${((percent ?? 0)*100).toFixed(0)}%`}
                     labelLine={{ stroke:C.text4, strokeWidth:1 }}
                   >
@@ -616,11 +697,15 @@ export default function DataSciencePage() {
             </div>
           </ChartCard>
 
-          {/* 9 · Radial Bar – compliance progress */}
-          <ChartCard title="Radial Bar" sub="Regulatory compliance completion rates">
+          {/* 9 · Radial Bar */}
+          <ChartCard title="Radial Bar" sub="Regulatory compliance completion rates"
+            sliders={[
+              { label:'Inner radius', min:10, max:60,  step:5, value:radialInner, onChange:setRadialInner },
+              { label:'Outer radius', min:80, max:130, step:5, value:radialOuter, onChange:setRadialOuter },
+            ]}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr auto', alignItems:'center', gap:16 }}>
               <ResponsiveContainer width="100%" height={260}>
-                <RadialBarChart cx="50%" cy="50%" innerRadius={30} outerRadius={110} data={COMPLIANCE_RADIAL} startAngle={90} endAngle={-270}>
+                <RadialBarChart cx="50%" cy="50%" innerRadius={radialInner} outerRadius={radialOuter} data={COMPLIANCE_RADIAL} startAngle={90} endAngle={-270}>
                   <RadialBar dataKey="value" cornerRadius={4} background={{ fill:C.s2 }}>
                     {COMPLIANCE_RADIAL.map((entry, i) => (
                       <Cell key={i} fill={entry.fill}/>
@@ -641,73 +726,76 @@ export default function DataSciencePage() {
             </div>
           </ChartCard>
 
-          {/* 10 · Treemap – active movement by resident */}
-          <ChartCard title="Treemap" sub="Daily walking distance proportional area by resident">
+          {/* 10 · Treemap */}
+          <ChartCard title="Treemap" sub="Daily walking distance proportional area by resident"
+            sliders={[
+              { label:'Aspect ratio', min:0.5, max:5, step:0.25, value:treemapRatio, fmt:p2, onChange:setTreemapRatio },
+            ]}>
             <ResponsiveContainer width="100%" height={260}>
-              <Treemap
-                data={TREEMAP_DATA}
-                dataKey="size"
-                aspectRatio={4/3}
-                content={<TreemapCell />}
-              >
+              <Treemap data={TREEMAP_DATA} dataKey="size" aspectRatio={treemapRatio} content={<TreemapCell />}>
                 <Tooltip contentStyle={TT_STYLE} formatter={(val, _name, props) => [`${val}m`, props.payload?.name]}/>
               </Treemap>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 11 · Heatmap – activity by hour × day (CSS) */}
-          <ChartCard title="Heatmap" sub="Movement events by time-of-day and day-of-week" full>
+          {/* 11 · Heatmap */}
+          <ChartCard title="Heatmap" sub="Movement events by time-of-day and day-of-week" full
+            sliders={[
+              { label:'Color scale max', min:10, max:40, step:2, value:heatMax, onChange:setHeatMax },
+            ]}>
             <div style={{ display:'grid', gridTemplateColumns:`60px repeat(${HEATMAP_HOURS.length},1fr)`, gap:4, alignItems:'center' }}>
-              {/* Header row */}
               <div/>
               {HEATMAP_HOURS.map(h => (
                 <div key={h} style={{ fontFamily:'var(--mono)', fontSize:9, color:C.text4, textAlign:'center', paddingBottom:6, textTransform:'uppercase', letterSpacing:'0.08em' }}>{h}</div>
               ))}
-              {/* Data rows */}
               {HEATMAP_DAYS.map((day, di) => (
                 <>
                   <div key={`label-${day}`} style={{ fontFamily:'var(--mono)', fontSize:10, color:C.text3, paddingRight:8, textAlign:'right' }}>{day}</div>
                   {HEATMAP_RAW[di].map((val, hi) => (
-                    <HeatCell key={`${di}-${hi}`} value={val}/>
+                    <HeatCell key={`${di}-${hi}`} value={val} max={heatMax}/>
                   ))}
                 </>
               ))}
             </div>
-            {/* Legend */}
             <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:16, justifyContent:'flex-end' }}>
               <span style={{ fontFamily:'var(--mono)', fontSize:9, color:C.text4 }}>Low</span>
-              {[0.05, 0.25, 0.5, 0.75, 1].map(n => (
-                <div key={n} style={{ width:18, height:18, borderRadius:3,
-                  background: n < 0.15 ? C.s3 : n < 0.35 ? `rgba(45,114,210,0.25)` : n < 0.55 ? `rgba(45,114,210,0.50)` : n < 0.75 ? `rgba(45,114,210,0.75)` : C.accent
-                }}/>
+              {[0.05,0.25,0.5,0.75,1].map(n => (
+                <div key={n} style={{ width:18, height:18, borderRadius:3, background: n < 0.15 ? C.s3 : n < 0.35 ? `rgba(45,114,210,0.25)` : n < 0.55 ? `rgba(45,114,210,0.50)` : n < 0.75 ? `rgba(45,114,210,0.75)` : C.accent }}/>
               ))}
               <span style={{ fontFamily:'var(--mono)', fontSize:9, color:C.text4 }}>High</span>
             </div>
           </ChartCard>
 
-          {/* 12 · Funnel Chart – alert resolution pipeline */}
-          <ChartCard title="Funnel Chart" sub="Alert resolution pipeline · daily average">
+          {/* 12 · Funnel Chart */}
+          <ChartCard title="Funnel Chart" sub="Alert resolution pipeline · daily average"
+            sliders={[
+              { label:'Fill opacity', min:0.3, max:1, step:0.05, value:funnelOpacity, fmt:p2, onChange:setFunnelOpacity },
+            ]}>
             <ResponsiveContainer width="100%" height={260}>
               <FunnelChart margin={{ top:4, right:8, bottom:4, left:8 }}>
                 <Tooltip contentStyle={TT_STYLE}/>
                 <Funnel dataKey="value" data={FUNNEL_DATA} isAnimationActive>
                   {FUNNEL_DATA.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} fillOpacity={0.82} stroke={C.s1} strokeWidth={2}/>
+                    <Cell key={i} fill={entry.fill} fillOpacity={funnelOpacity} stroke={C.s1} strokeWidth={2}/>
                   ))}
-                  <LabelList dataKey="name" position="right" style={{ fontFamily:'var(--mono)', fontSize:10, fill:C.text3 }}/>
+                  <LabelList dataKey="name"  position="right"  style={{ fontFamily:'var(--mono)', fontSize:10, fill:C.text3 }}/>
                   <LabelList dataKey="value" position="center" style={{ fontFamily:'var(--mono)', fontSize:11, fontWeight:600, fill:C.text }}/>
                 </Funnel>
               </FunnelChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 13 · Sankey – sensor data pipeline flow */}
-          <ChartCard title="Sankey" sub="Sensor data pipeline · events per day">
+          {/* 13 · Sankey */}
+          <ChartCard title="Sankey" sub="Sensor data pipeline · events per day"
+            sliders={[
+              { label:'Node width',   min:4,  max:28, step:2, value:sankeyNodeW,   onChange:setSankeyNodeW   },
+              { label:'Node padding', min:6,  max:36, step:2, value:sankeyNodePad, onChange:setSankeyNodePad },
+            ]}>
             <ResponsiveContainer width="100%" height={260}>
               <Sankey
                 data={SANKEY_DATA}
-                nodePadding={18}
-                nodeWidth={14}
+                nodePadding={sankeyNodePad}
+                nodeWidth={sankeyNodeW}
                 linkCurvature={0.5}
                 margin={{ top:8, right:80, bottom:8, left:8 }}
                 node={{ fill:C.accent, fillOpacity:0.85, stroke:'none', rx:3 }}
@@ -718,26 +806,23 @@ export default function DataSciencePage() {
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* 14 · Sunburst – room activity hierarchy */}
-          <ChartCard title="Sunburst Chart" sub="Floor → risk tier → room · walking minutes" full>
+          {/* 14 · Sunburst */}
+          <ChartCard title="Sunburst Chart" sub="Floor → risk tier → room · walking minutes" full
+            sliders={[
+              { label:'Inner radius', min:10, max:80, step:2, value:sunInner,   onChange:setSunInner   },
+              { label:'Ring padding', min:1,  max:16, step:1, value:sunRingPad, onChange:setSunRingPad },
+            ]}>
             <div style={{ width:'100%', height:340, display:'flex', justifyContent:'center', alignItems:'center' }}>
               <SunburstChart
                 width={600} height={320}
                 data={SUNBURST_DATA}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={36}
+                innerRadius={sunInner}
                 padding={3}
-                ringPadding={6}
+                ringPadding={sunRingPad}
                 stroke={C.s1}
-                textOptions={{
-                  fontSize: '10px',
-                  fontWeight: 'normal',
-                  fill: C.text,
-                  stroke: 'none',
-                  paintOrder: 'stroke',
-                  pointerEvents: 'none',
-                }}
+                textOptions={{ fontSize:'10px', fontWeight:'normal', fill:C.text, stroke:'none', paintOrder:'stroke', pointerEvents:'none' }}
               >
                 <Tooltip contentStyle={TT_STYLE}/>
               </SunburstChart>
@@ -759,22 +844,27 @@ export default function DataSciencePage() {
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
 
-          {/* 15 · Chord – room state transitions */}
-          <ChartCard title="Chord" sub="State transitions between room categories · per week">
+          {/* 15 · Chord */}
+          <ChartCard title="Chord" sub="State transitions between room categories · per week"
+            sliders={[
+              { label:'Pad angle',        min:0.005, max:0.1,  step:0.005, value:chordPadAngle,  fmt:p2, onChange:setChordPadAngle  },
+              { label:'Inner radius ratio',min:0.6,  max:0.96, step:0.02,  value:chordInnerR,    fmt:p2, onChange:setChordInnerR    },
+              { label:'Ribbon opacity',   min:0.1,   max:1,    step:0.05,  value:chordRibbonOp,  fmt:p2, onChange:setChordRibbonOp  },
+            ]}>
             <div style={{ height:300 }}>
               <ResponsiveChord
                 data={CHORD_MATRIX}
                 keys={CHORD_KEYS}
                 margin={{ top:30, right:30, bottom:30, left:30 }}
                 valueFormat=".0f"
-                padAngle={0.02}
-                innerRadiusRatio={0.86}
+                padAngle={chordPadAngle}
+                innerRadiusRatio={chordInnerR}
                 innerRadiusOffset={0.02}
                 inactiveArcOpacity={0.25}
                 arcBorderWidth={1}
                 arcBorderColor={{ theme:'background' }}
                 colors={CHORD_COLORS}
-                ribbonOpacity={0.5}
+                ribbonOpacity={chordRibbonOp}
                 ribbonBorderWidth={0}
                 enableLabel
                 label="id"
@@ -791,33 +881,30 @@ export default function DataSciencePage() {
             </div>
           </ChartCard>
 
-          {/* 16 · Bump – room activity rank over 7 days */}
-          <ChartCard title="Bump Chart" sub="Room activity rank (1 = most active) · 7 days">
+          {/* 16 · Bump */}
+          <ChartCard title="Bump Chart" sub="Room activity rank (1 = most active) · 7 days"
+            sliders={[
+              { label:'Line width',  min:1, max:6,  step:0.5, value:bumpLine,  fmt:p1, onChange:setBumpLine  },
+              { label:'Point size',  min:2, max:18, step:1,   value:bumpPoint,         onChange:setBumpPoint },
+            ]}>
             <div style={{ height:300 }}>
               <ResponsiveBump
                 data={BUMP_DATA}
                 margin={{ top:16, right:80, bottom:36, left:80 }}
                 colors={[C.sage, C.accent, C.amber, C.purple, C.red]}
-                lineWidth={2}
-                activeLineWidth={4}
+                lineWidth={bumpLine}
+                activeLineWidth={bumpLine * 2}
                 inactiveLineWidth={1}
                 inactiveOpacity={0.2}
-                pointSize={8}
-                activePointSize={12}
+                pointSize={bumpPoint}
+                activePointSize={bumpPoint * 1.5}
                 inactivePointSize={0}
                 pointBorderWidth={2}
                 activePointBorderWidth={2}
                 pointBorderColor={{ from:'serie.color' }}
                 axisTop={null}
-                axisBottom={{
-                  tickSize:0, tickPadding:8,
-                  tickRotation:0,
-                }}
-                axisLeft={{
-                  tickSize:0, tickPadding:8,
-                  tickValues:[1,2,3,4,5],
-                  legend:'Rank', legendPosition:'middle', legendOffset:-60,
-                }}
+                axisBottom={{ tickSize:0, tickPadding:8, tickRotation:0 }}
+                axisLeft={{ tickSize:0, tickPadding:8, tickValues:[1,2,3,4,5], legend:'Rank', legendPosition:'middle', legendOffset:-60 }}
                 theme={{
                   background:'transparent',
                   axis:{ ticks:{ text:{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 } }, legend:{ text:{ fill:C.text3, fontFamily:'var(--mono)', fontSize:10 } } },
@@ -828,8 +915,11 @@ export default function DataSciencePage() {
             </div>
           </ChartCard>
 
-          {/* 17 · Calendar – daily incident count */}
-          <ChartCard title="Calendar" sub="Daily fall + alert incidents · Jan – Apr 2026" full>
+          {/* 17 · Calendar */}
+          <ChartCard title="Calendar" sub="Daily fall + alert incidents · Jan – Apr 2026" full
+            sliders={[
+              { label:'Cell border width', min:0, max:6, step:1, value:calBorder, onChange:setCalBorder },
+            ]}>
             <div style={{ height:160 }}>
               <ResponsiveCalendar
                 data={CALENDAR_DATA}
@@ -840,14 +930,10 @@ export default function DataSciencePage() {
                 margin={{ top:24, right:24, bottom:8, left:48 }}
                 yearSpacing={40}
                 monthBorderColor={C.s1}
-                monthBorderWidth={2}
-                dayBorderWidth={2}
+                monthBorderWidth={calBorder}
+                dayBorderWidth={calBorder}
                 dayBorderColor={C.s1}
-                legends={[{
-                  anchor:'bottom-right', direction:'row', translateY:28,
-                  itemCount:4, itemWidth:42, itemHeight:14, itemDirection:'right-to-left',
-                  itemsSpacing:4,
-                }]}
+                legends={[{ anchor:'bottom-right', direction:'row', translateY:28, itemCount:4, itemWidth:42, itemHeight:14, itemDirection:'right-to-left', itemsSpacing:4 }]}
                 theme={{
                   background:'transparent',
                   text:{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 },
@@ -857,25 +943,27 @@ export default function DataSciencePage() {
             </div>
           </ChartCard>
 
-          {/* 18 · Network – sensor mesh topology */}
-          <ChartCard title="Network Graph" sub="Sensor mesh · data flow topology">
+          {/* 18 · Network */}
+          <ChartCard title="Network Graph" sub="Sensor mesh · data flow topology"
+            sliders={[
+              { label:'Repulsivity',   min:1, max:20,  step:1,   value:netRepulse,   onChange:setNetRepulse   },
+              { label:'Link thickness',min:0.5,max:6,  step:0.5, value:netLinkThick, fmt:p1, onChange:setNetLinkThick },
+            ]}>
             <div style={{ height:300 }}>
               <ResponsiveNetwork
                 data={NETWORK_DATA}
                 margin={{ top:0, right:0, bottom:0, left:0 }}
                 linkDistance={e => e.distance}
                 centeringStrength={0.3}
-                repulsivity={6}
+                repulsivity={netRepulse}
                 nodeSize={n => n.size}
                 activeNodeSize={n => n.size * 1.4}
                 nodeColor={n => n.color}
                 nodeBorderWidth={0}
-                linkThickness={1.5}
+                linkThickness={netLinkThick}
                 linkColor={{ from:'source.color', modifiers:[['opacity',0.4]] }}
                 nodeTooltip={({ node }) => (
-                  <div style={{ background:C.bg, border:`1px solid ${C.lineS}`, padding:'8px 12px', borderRadius:6, fontFamily:'var(--mono)', fontSize:11, color:C.text }}>
-                    {node.id}
-                  </div>
+                  <div style={{ background:C.bg, border:`1px solid ${C.lineS}`, padding:'8px 12px', borderRadius:6, fontFamily:'var(--mono)', fontSize:11, color:C.text }}>{node.id}</div>
                 )}
                 annotations={[]}
                 theme={{

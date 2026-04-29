@@ -448,6 +448,63 @@ input { font-family: inherit; color: inherit; }
 /* Footer */
 .agent-note { margin-top: 40px; font-family: var(--mono); font-size: 10.5px; color: var(--text-4); letter-spacing: 0.14em; text-transform: uppercase; text-align: center; }
 
+/* ── Chart control sliders ── */
+.ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 0;
+}
+.ctrl-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-4);
+  white-space: nowrap;
+  min-width: 100px;
+}
+.ctrl-val {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  min-width: 32px;
+  text-align: right;
+}
+.ctrl-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 2px;
+  background: rgba(255,255,255,0.12);
+  outline: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.ctrl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--surface-1);
+}
+.ctrl-slider::-moz-range-thumb {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--surface-1);
+}
+.ctrl-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
 /* ── Home page mobile ── */
 @media (max-width: 600px) {
   .home-wrapper { padding: 40px 16px 56px !important; }
