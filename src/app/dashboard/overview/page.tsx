@@ -99,7 +99,7 @@ export default function OverviewPage() {
 
       {/* Sidebar */}
       <aside className="sidebar">
-        <Link href="/home" style={{ textDecoration:'none', color:'inherit' }}>
+        <Link href="/" style={{ textDecoration:'none', color:'inherit' }}>
           <div className="brand">
             <div className="brand-name">Ambient <em>Demo</em></div>
           </div>
