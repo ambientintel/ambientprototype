@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [cLoading, setCLoading] = useState(false);
   const [cError, setCError] = useState("");
   const [cSuccess, setCSuccess] = useState(false);
+  const [devVerifyUrl, setDevVerifyUrl] = useState("");
 
   const notion: React.CSSProperties = {
     "--bg": "#F0F0EE",
@@ -76,7 +77,7 @@ export default function LoginPage() {
     setTimeout(() => { setLoading(false); router.push("/dashboard/overview"); }, 900);
   }
 
-  function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setCError("");
     if (!cName.trim()) { setCError("Please enter your name."); return; }
@@ -84,11 +85,21 @@ export default function LoginPage() {
     if (cPassword.length < 6) { setCError("Password must be at least 6 characters."); return; }
     if (cPassword !== cConfirm) { setCError("Passwords do not match."); return; }
     setCLoading(true);
-    setTimeout(() => {
-      setCLoading(false);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: cName, email: cEmail, role: cRole }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { setCError(data.error || "Something went wrong."); return; }
+      if (data.devVerifyUrl) setDevVerifyUrl(data.devVerifyUrl);
       setCSuccess(true);
-      setTimeout(() => { router.push("/dashboard/overview"); }, 1400);
-    }, 1000);
+    } catch {
+      setCError("Network error. Please try again.");
+    } finally {
+      setCLoading(false);
+    }
   }
 
   return (
@@ -166,14 +177,23 @@ export default function LoginPage() {
               </p>
 
               {cSuccess ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: "24px 0" }}>
-                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(61,204,145,0.12)", border: "1px solid rgba(61,204,145,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3DCC91" strokeWidth="2"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "20px 0", textAlign: "center" }}>
+                  <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(124,110,173,0.10)", border: "1px solid rgba(124,110,173,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7C6EAD" strokeWidth="1.8"><path d="M3 8l7.9 5.3a2 2 0 002.2 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text)", marginBottom: 4 }}>Account created</div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)" }}>Redirecting to dashboard…</div>
+                  <div>
+                    <div style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 22, letterSpacing: "-0.01em", marginBottom: 6 }}>Check your email</div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Confirmation sent</div>
                   </div>
+                  <p style={{ fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.6, margin: 0 }}>
+                    We sent a confirmation link to <strong>{cEmail}</strong>. Click it to activate your account.
+                  </p>
+                  {devVerifyUrl && (
+                    <div style={{ width: "100%", background: "rgba(124,110,173,0.08)", border: "1px solid rgba(124,110,173,0.2)", borderRadius: 8, padding: "12px 14px", textAlign: "left" }}>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--accent)", marginBottom: 6 }}>Dev mode — no email sent</div>
+                      <a href={devVerifyUrl} style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--accent)", wordBreak: "break-all" as const }}>Click to verify →</a>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
