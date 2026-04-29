@@ -105,7 +105,20 @@ export default function EngineeringPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newForm, setNewForm] = useState<NewIssueForm>({ title:"", type:"task", priority:"medium", points:"3", assignee:"Priya S." });
   const [movingIssue, setMovingIssue] = useState<string | null>(null);
+  const [personalTasks, setPersonalTasks] = useState<Record<string, string[]>>({});
+  const [personalInputs, setPersonalInputs] = useState<Record<string, string>>({});
   const drawerRef = useRef<HTMLDivElement>(null);
+
+  function addPersonalTask(name: string) {
+    const val = (personalInputs[name] || "").trim();
+    if (!val) return;
+    setPersonalTasks(p => ({ ...p, [name]: [...(p[name] || []), val] }));
+    setPersonalInputs(p => ({ ...p, [name]: "" }));
+  }
+
+  function removePersonalTask(name: string, idx: number) {
+    setPersonalTasks(p => ({ ...p, [name]: (p[name] || []).filter((_, i) => i !== idx) }));
+  }
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -325,6 +338,63 @@ export default function EngineeringPage() {
         {/* ── Board View ── */}
         {view === "board" && (
           <div style={{ ...s.content, flex:1 }}>
+
+            {/* ── Engineer personal lanes ── */}
+            <div style={{ marginBottom:32 }}>
+              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:12 }}>Engineer Lanes</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:12 }}>
+                {DISCIPLINES.flatMap(d => d.members).map(name => {
+                  const t = TEAM.find(tm => tm.name === name)!;
+                  const disc = DISCIPLINES.find(d => d.members.includes(name))!;
+                  const tasks = personalTasks[name] || [];
+                  return (
+                    <div key={name} style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      {/* Column header */}
+                      <div style={{ display:"flex", alignItems:"center", gap:7, padding:"0 2px" }}>
+                        <span style={{ width:22, height:22, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:10, fontWeight:700, flexShrink:0 }}>{t.initial}</span>
+                        <div>
+                          <div style={{ fontSize:12.5, fontWeight:500, color:"var(--text)", lineHeight:1.2 }}>{name}</div>
+                          <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em" }}>{disc.name}</div>
+                        </div>
+                      </div>
+
+                      {/* Task input */}
+                      <div style={{ display:"flex", gap:5 }}>
+                        <input
+                          value={personalInputs[name] || ""}
+                          onChange={e => setPersonalInputs(p => ({ ...p, [name]: e.target.value }))}
+                          onKeyDown={e => e.key === "Enter" && addPersonalTask(name)}
+                          placeholder="Add task…"
+                          style={{ flex:1, background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"6px 9px", fontSize:12, color:"var(--text)", fontFamily:"var(--sans)", outline:"none", minWidth:0 }}
+                        />
+                        <button onClick={() => addPersonalTask(name)}
+                          style={{ flexShrink:0, width:26, height:26, borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", color:"var(--text-3)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"background 0.12s" }}>
+                          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
+                        </button>
+                      </div>
+
+                      {/* Task bucket */}
+                      <div style={{ background:"var(--surface-1)", border:`1px solid ${t.color}22`, borderRadius:10, padding: tasks.length ? "8px" : "16px 12px", minHeight:60, display:"flex", flexDirection:"column", gap:5 }}>
+                        {tasks.length === 0 && (
+                          <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", textAlign:"center", letterSpacing:"0.08em" }}>EMPTY</div>
+                        )}
+                        {tasks.map((task, idx) => (
+                          <div key={idx} style={{ display:"flex", alignItems:"flex-start", gap:6, background:"var(--surface-2)", borderRadius:6, padding:"7px 9px", border:"1px solid var(--line)" }}>
+                            <span style={{ flex:1, fontSize:12, color:"var(--text-2)", lineHeight:1.4 }}>{task}</span>
+                            <button onClick={() => removePersonalTask(name, idx)}
+                              style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:13, lineHeight:1, padding:"0 2px", transition:"color 0.12s" }}
+                              onMouseEnter={e => (e.currentTarget.style.color = "var(--text-2)")}
+                              onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Team roster */}
             <div style={{ marginBottom:28 }}>
