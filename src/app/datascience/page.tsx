@@ -656,16 +656,24 @@ export default function DataSciencePage() {
 
           {/* 14 · Sunburst – room activity hierarchy */}
           <ChartCard title="Sunburst Chart" sub="Floor → risk tier → room · walking minutes" full>
-            <div style={{ display:'flex', justifyContent:'center' }}>
+            <div style={{ width:'100%', height:340, display:'flex', justifyContent:'center', alignItems:'center' }}>
               <SunburstChart
-                width={560} height={320}
+                width={600} height={320}
                 data={SUNBURST_DATA}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={40}
-                padding={2}
-                ringPadding={4}
+                innerRadius={36}
+                padding={3}
+                ringPadding={6}
                 stroke={C.s1}
+                textOptions={{
+                  fontSize: '10px',
+                  fontWeight: 'normal',
+                  fill: C.text,
+                  stroke: 'none',
+                  paintOrder: 'stroke',
+                  pointerEvents: 'none',
+                }}
               >
                 <Tooltip contentStyle={TT_STYLE}/>
               </SunburstChart>
