@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
-interface Pending {
-  name: string;
-  email: string;
-  role: string;
-  createdAt: number;
+declare global {
+  // eslint-disable-next-line no-var
+  var __ambientPending: Map<string, { name: string; email: string; role: string; createdAt: number }> | undefined;
 }
 
-// Module-level map — persists across requests in the same serverless instance.
-// Suitable for prototype; replace with Redis/DB for production.
-const pending = new Map<string, Pending>();
+const pending = (globalThis.__ambientPending ??= new Map());
 
-// Clean expired tokens (>24h) on each request
 function purge() {
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   for (const [k, v] of pending) if (v.createdAt < cutoff) pending.delete(k);
@@ -42,10 +37,10 @@ export async function POST(req: NextRequest) {
           <span style="font-size:20px;font-weight:300;letter-spacing:-0.01em;">Ambient <em style="font-style:italic;color:#888;">Demo</em></span>
         </div>
         <h1 style="font-size:26px;font-weight:300;margin:0 0 8px;letter-spacing:-0.02em;">Confirm your <em style="font-style:italic;color:#888;">account</em></h1>
-        <p style="font-size:14px;color:#555;margin:0 0 28px;line-height:1.6;">Hi ${name}, click the button below to confirm your email address and activate your account.</p>
+        <p style="font-size:14px;color:#555;margin:0 0 28px;line-height:1.6;">Hi ${name}, click the button below to confirm your email and activate your account.</p>
         <a href="${verifyUrl}" style="display:inline-block;background:#7C6EAD;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:500;">Confirm account</a>
-        <p style="font-size:12px;color:#999;margin-top:28px;">Or copy this link: <a href="${verifyUrl}" style="color:#7C6EAD;">${verifyUrl}</a></p>
-        <p style="font-size:11px;color:#bbb;margin-top:32px;border-top:1px solid #ddd;padding-top:16px;">This link expires in 24 hours. If you did not request this, ignore this email.</p>
+        <p style="font-size:12px;color:#999;margin-top:28px;">Or copy this link:<br><a href="${verifyUrl}" style="color:#7C6EAD;">${verifyUrl}</a></p>
+        <p style="font-size:11px;color:#bbb;margin-top:32px;border-top:1px solid #ddd;padding-top:16px;">Link expires in 24 hours. If you did not request this, ignore this email.</p>
       </div>`;
 
     const res = await fetch("https://api.resend.com/emails", {
@@ -55,11 +50,11 @@ export async function POST(req: NextRequest) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return NextResponse.json({ error: "Failed to send confirmation email.", detail: err }, { status: 500 });
+      return NextResponse.json({ error: "Failed to send email.", detail: err }, { status: 500 });
     }
     return NextResponse.json({ success: true });
   }
 
-  // No API key — dev mode: return the verify URL directly so it can be shown in the UI
+  // No API key — dev/demo mode: return the link so the UI can display it
   return NextResponse.json({ success: true, devVerifyUrl: verifyUrl });
 }
