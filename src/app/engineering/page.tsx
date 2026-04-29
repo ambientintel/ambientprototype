@@ -105,6 +105,12 @@ export default function EngineeringPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newForm, setNewForm] = useState<NewIssueForm>({ title:"", type:"task", priority:"medium", points:"3", assignee:"Priya S." });
   const [movingIssue, setMovingIssue] = useState<string | null>(null);
+
+  const weekNum = (() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    return Math.ceil((((now.getTime() - start.getTime()) / 86400000) + start.getDay() + 1) / 7);
+  })();
   const [personalTasks, setPersonalTasks] = useState<Record<string, string[]>>({});
   const [personalInputs, setPersonalInputs] = useState<Record<string, string>>({});
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -268,7 +274,7 @@ export default function EngineeringPage() {
         <div style={{ marginTop:"auto", fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", letterSpacing:"0.1em", textTransform:"uppercase" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <span style={{ width:6, height:6, borderRadius:"50%", background:"#3DCC91", boxShadow:"0 0 6px #3DCC91", flexShrink:0 }}/>
-            Engineering · Sprint 14
+            Engineering · Sprint {weekNum}
           </div>
         </div>
       </aside>
@@ -280,9 +286,9 @@ export default function EngineeringPage() {
         <header style={s.topbar}>
           <div style={s.topbarRow}>
             <div>
-              <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", textTransform:"uppercase", letterSpacing:"0.12em", marginBottom:4 }}>Engineering / Sprint 14</div>
+              <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", textTransform:"uppercase", letterSpacing:"0.12em", marginBottom:4 }}>Engineering / Sprint {weekNum}</div>
               <h1 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:26, letterSpacing:"-0.02em" }}>
-                Sprint <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>Board</em>
+                Sprint <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>{weekNum} · Board</em>
               </h1>
             </div>
             <div style={{ display:"flex", gap:8 }}>
@@ -460,7 +466,7 @@ export default function EngineeringPage() {
             {/* Sprint issues */}
             <div style={{ marginBottom:32 }}>
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
-                <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-2)" }}>Sprint 14</span>
+                <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-2)" }}>Sprint {weekNum}</span>
                 <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)" }}>Apr 21 – May 2 · {issues.length} issues</span>
               </div>
               <BacklogTable issues={filtered} onSelect={setSelected}/>
