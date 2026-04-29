@@ -28,7 +28,7 @@ const ROOMS: Record<string, RoomProfile> = {
     ellaEyebrow: 'Overnight summary · 11:00 PM → 10:30 AM',
     ellaNarrative: [
       'Evelyn had a calm and positive night. She settled into bed shortly after 11 PM and remained peacefully asleep until around 4:30 AM, when the height sensor shows she got up briefly — likely a bathroom visit — before returning to bed without incident.',
-      'She rose for the day just before 7 AM, which is her usual pattern. Since getting up, her overall activity has been excellent: the tracker shows a steady and strong upward trend through the morning, reaching the highest levels we've seen from her all week.',
+      'She rose for the day just before 7 AM, which is her usual pattern. Since getting up, her overall activity has been excellent: the tracker shows a steady and strong upward trend through the morning, reaching the highest levels we\'ve seen from her all week.',
     ],
     ellaCallout: '+21% above her 7-day average by late morning.',
     walking: 53, walkingDelta: -21, sitting: 201, sittingDelta: 10, falls: 1, fallsDelta: 1,
