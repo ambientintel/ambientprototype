@@ -111,7 +111,7 @@ export default function SamdPage() {
     <div className="app">
       {/* Sidebar */}
       <nav className="sidebar">
-        <Link href="/home" style={{ textDecoration: "none", color: "inherit" }}>
+        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
           <div className="brand">
             <span className="brand-name">Ambient <em>Intelligence</em></span>
           </div>
