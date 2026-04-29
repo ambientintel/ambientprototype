@@ -74,7 +74,11 @@ export default function LoginPage() {
     setError("");
     if (!email || !password) { setError("Please enter your email and password."); return; }
     setLoading(true);
-    setTimeout(() => { setLoading(false); router.push("/dashboard/overview"); }, 900);
+    setTimeout(() => {
+      setLoading(false);
+      try { localStorage.setItem("ambient_auth", JSON.stringify({ email, name: email.split("@")[0] })); } catch {}
+      router.push("/dashboard/overview");
+    }, 900);
   }
 
   async function handleCreate(e: React.FormEvent) {
