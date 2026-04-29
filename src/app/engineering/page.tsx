@@ -120,6 +120,7 @@ export default function EngineeringPage() {
   const [personalTasks, setPersonalTasks] = useState<Record<string, string[]>>({});
   const [completedTasks, setCompletedTasks] = useState<Record<string, string[]>>({});
   const [personalInputs, setPersonalInputs] = useState<Record<string, string>>({});
+  const [engineerColSelect, setEngineerColSelect] = useState<Record<string, Column>>({});
   const drawerRef = useRef<HTMLDivElement>(null);
 
   // Load from localStorage on mount
@@ -145,7 +146,15 @@ export default function EngineeringPage() {
   function addPersonalTask(name: string) {
     const val = (personalInputs[name] || "").trim();
     if (!val) return;
-    setPersonalTasks(p => ({ ...p, [name]: [...(p[name] || []), val] }));
+    const col = engineerColSelect[name] || "todo";
+    const t = TEAM.find(tm => tm.name === name)!;
+    const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
+    const id = `ENG-${colCounter.current++}`;
+    setIssues(prev => [...prev, {
+      id, type:"task", title:val, priority:"medium", points:1,
+      assignee:name, assigneeInitial:t.initial, assigneeColor:t.color,
+      labels:[], column:col, description:"", created:today, updated:today,
+    }]);
     setPersonalInputs(p => ({ ...p, [name]: "" }));
   }
 
@@ -434,18 +443,29 @@ export default function EngineeringPage() {
                       </div>
 
                       {/* Task input */}
-                      <div style={{ display:"flex", gap:5 }}>
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                         <input
                           value={personalInputs[name] || ""}
                           onChange={e => setPersonalInputs(p => ({ ...p, [name]: e.target.value }))}
                           onKeyDown={e => e.key === "Enter" && addPersonalTask(name)}
                           placeholder="Add task…"
-                          style={{ flex:1, background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"6px 9px", fontSize:12, color:"var(--text)", fontFamily:"var(--sans)", outline:"none", minWidth:0 }}
+                          style={{ width:"100%", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"6px 9px", fontSize:12, color:"var(--text)", fontFamily:"var(--sans)", outline:"none", boxSizing:"border-box" }}
                         />
-                        <button onClick={() => addPersonalTask(name)}
-                          style={{ flexShrink:0, width:26, height:26, borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", color:"var(--text-3)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"background 0.12s" }}>
-                          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
-                        </button>
+                        <div style={{ display:"flex", gap:3 }}>
+                          {COLUMNS.map(col => {
+                            const active = (engineerColSelect[name] || "todo") === col.id;
+                            return (
+                              <button key={col.id} onClick={() => setEngineerColSelect(p => ({ ...p, [name]: col.id }))}
+                                style={{ flex:1, padding:"4px 2px", borderRadius:4, border:`1px solid ${active ? col.color : "var(--line)"}`, background: active ? col.color + "22" : "var(--surface-2)", color: active ? col.color : "var(--text-4)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:8.5, textTransform:"uppercase", letterSpacing:"0.06em", transition:"all 0.12s", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                                {col.label}
+                              </button>
+                            );
+                          })}
+                          <button onClick={() => addPersonalTask(name)}
+                            style={{ flexShrink:0, width:26, borderRadius:4, border:"1px solid var(--line)", background:"var(--accent)", color:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
+                          </button>
+                        </div>
                       </div>
 
                       {/* Active task bucket */}
