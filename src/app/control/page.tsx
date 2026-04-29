@@ -36,7 +36,8 @@ const MODULE_GROUPS = [
       { href: '/datascience',   tag: 'Data Science', label: 'Data Science',          description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the platform.', meta: 'Parquet · ML · Recharts' },
       { href: '/backgroundlab', tag: 'Design',       label: 'Background Lab',        description: 'Generative backgrounds, motion studies, and ambient UI pattern experiments for the Ambient Intelligence design system.', meta: 'Canvas · Motion · UI' },
       { href: '/brand',         tag: 'Design',       label: 'Brand & Color Picker',  description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and full type scale reference.', meta: 'ambientdesign · interactive' },
-      { href: '/colors',        tag: 'Design',       label: 'Color & Typography',    description: 'Design token reference — CSS custom properties, color palette, badge states, type families, and full type scale.', meta: 'globals.css · tokens' },
+      { href: '/colors',     tag: 'Design',  label: 'Color & Typography', description: 'Design token reference — CSS custom properties, color palette, badge states, type families, and full type scale.', meta: 'globals.css · tokens' },
+      { href: '/mobilelab', tag: 'Mobile',  label: 'Mobile Lab',         description: 'Nurse dashboard mobile design studio — customize layout, theme, and density. Simulate and deliver fall alerts to nurse devices in real time.', meta: 'Nurse App · Alerts · Mobile' },
     ],
   },
 ];
