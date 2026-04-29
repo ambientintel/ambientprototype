@@ -445,7 +445,7 @@ export default function MobileLab() {
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'acknowledged' } : a));
   };
 
-  const triggerFallAlert = () => {
+  const triggerFallAlert = async () => {
     const rooms = ['301', '304', '206', '110', '213'];
     const patients = ['S. Nguyen', 'A. Müller', 'F. López', 'C. Osei', 'Y. Kim'];
     const idx = Math.floor(Math.random() * rooms.length);
@@ -464,6 +464,15 @@ export default function MobileLab() {
     setAlerts(prev => [newAlert, ...prev]);
     if (alertsEnabled) {
       setToast({ id: newAlert.id, room: newAlert.room, patient: newAlert.patient, severity: sev, confidence: newAlert.confidence, time: newAlert.time });
+      // Send real push notification to all subscribed nurse devices
+      fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room: newAlert.room, patient: newAlert.patient, floor: newAlert.floor,
+          severity: newAlert.severity, confidence: newAlert.confidence, sensor: newAlert.sensor,
+        }),
+      }).catch(() => null);
     }
   };
 
