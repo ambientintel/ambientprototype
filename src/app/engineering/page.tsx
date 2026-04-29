@@ -457,6 +457,7 @@ export default function EngineeringPage() {
                       assignee:name, assigneeInitial:t.initial, assigneeColor:t.color,
                       labels:[], column:selectedCol, description:"", created:today, updated:today,
                     }]);
+                    setPersonalTasks(p => ({ ...p, [name]: [...(p[name] || []), val] }));
                     setPersonalInputs(p => ({ ...p, [name]: "" }));
                   };
 
