@@ -161,24 +161,40 @@ export default function PatientDashboard() {
         <div className="section-head">
           <h2 className="section-title">Alerts</h2>
         </div>
-        <div className="table">
-          <div className="table-header" style={{ display:'flex', gap:24 }}>
+        <div style={{
+          background: 'var(--surface-1)',
+          border: '1px solid var(--line)',
+          borderRadius: 14,
+          padding: '0 28px',
+          marginBottom: 24,
+        }}>
+          {/* Header row */}
+          <div style={{
+            display:'flex', gap:24, alignItems:'center',
+            padding:'14px 0', borderBottom:'1px solid var(--line)',
+            fontFamily:'var(--mono)', fontSize:11, color:'var(--text-3)',
+            letterSpacing:'0.06em', textTransform:'uppercase',
+          }}>
             <div style={{ width:90, flexShrink:0 }}>Room</div>
             <div style={{ flex:1 }}>Fall</div>
             <div style={{ flex:1 }}>Time</div>
             <div style={{ flex:1 }}>Date</div>
             <div style={{ marginLeft:'auto' }}>Priority</div>
           </div>
-          <div className="table-row selected" style={{ display:'flex', gap:24, alignItems:'center' }}>
-            <div className="room" style={{ width:90, flexShrink:0 }}>MOH301</div>
+          {/* Data row */}
+          <div style={{
+            display:'flex', gap:24, alignItems:'center',
+            padding:'18px 0', fontSize:14, color:'var(--text)',
+          }}>
+            <div style={{ width:90, flexShrink:0, fontFamily:'var(--mono)', fontSize:12, fontWeight:500 }}>MOH301</div>
             <div style={{ flex:1 }}>
               <span className="priority high">
                 <span className="priority-dot" />
                 Detected
               </span>
             </div>
-            <div style={{ flex:1 }}>{`${hh}:${mm} ${ampm}`}</div>
-            <div style={{ flex:1 }}>{todayLabel}</div>
+            <div style={{ flex:1, fontFamily:'var(--mono)', fontSize:13 }}>{`${hh}:${mm} ${ampm}`}</div>
+            <div style={{ flex:1, fontFamily:'var(--mono)', fontSize:13 }}>{todayLabel}</div>
             <div style={{ marginLeft:'auto' }}>
               <button style={{
                 display:'inline-flex', alignItems:'center', gap:6,
