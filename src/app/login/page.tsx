@@ -247,7 +247,7 @@ export default function LoginPage() {
                 </>
               )}
 
-              {cStep === "success" && (
+              {cStep === "success" ? (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "20px 0", textAlign: "center" }}>
                   <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(61,204,145,0.12)", border: "1px solid rgba(61,204,145,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3DCC91" strokeWidth="2.2"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
