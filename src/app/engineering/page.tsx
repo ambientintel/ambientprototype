@@ -107,6 +107,10 @@ export default function EngineeringPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newForm, setNewForm] = useState<NewIssueForm>({ title:"", type:"task", priority:"medium", points:"3", assignee:"Priya S." });
   const [movingIssue, setMovingIssue] = useState<string | null>(null);
+  const [colInputs, setColInputs] = useState<Record<string, string>>({});
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<Column | null>(null);
+  const colCounter = useRef(200);
 
   const weekNum = (() => {
     const now = new Date();
@@ -186,6 +190,38 @@ export default function EngineeringPage() {
     setIssues(prev => prev.map(i => i.id === id ? { ...i, column: col } : i));
     setMovingIssue(null);
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, column: col } : null);
+  }
+
+  function addToColumn(col: Column) {
+    const title = (colInputs[col] || "").trim();
+    if (!title) return;
+    const id = `ENG-${colCounter.current++}`;
+    const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
+    setIssues(prev => [...prev, {
+      id, type:"task", title, priority:"medium", points:1,
+      assignee:"—", assigneeInitial:"", assigneeColor:"var(--text-3)",
+      labels:[], column:col, description:"", created:today, updated:today,
+    }]);
+    setColInputs(p => ({ ...p, [col]:"" }));
+  }
+
+  function moveIssueStep(id: string, direction: 1 | -1) {
+    const colOrder: Column[] = ["todo","inprogress","review","done"];
+    setIssues(prev => prev.map(i => {
+      if (i.id !== id) return i;
+      const idx = colOrder.indexOf(i.column);
+      const next = colOrder[idx + direction];
+      return next ? { ...i, column: next } : i;
+    }));
+    if (selected?.id === id) {
+      setSelected(prev => {
+        if (!prev) return null;
+        const colOrder: Column[] = ["todo","inprogress","review","done"];
+        const idx = colOrder.indexOf(prev.column);
+        const next = colOrder[idx + direction];
+        return next ? { ...prev, column: next } : prev;
+      });
+    }
   }
 
   function createIssue() {
@@ -495,11 +531,20 @@ export default function EngineeringPage() {
             </div>
 
             <div style={s.board}>
-              {COLUMNS.map(col => {
+              {COLUMNS.map((col, colIdx) => {
                 const colIssues = byColumn(col.id);
                 const colPts    = colIssues.reduce((a, i) => a + i.points, 0);
+                const isOver    = dragOverCol === col.id;
                 return (
-                  <div key={col.id} style={s.col}>
+                  <div key={col.id} style={s.col}
+                    onDragOver={e => { e.preventDefault(); setDragOverCol(col.id); }}
+                    onDragLeave={() => setDragOverCol(null)}
+                    onDrop={e => {
+                      e.preventDefault();
+                      if (draggedId) moveIssue(draggedId, col.id);
+                      setDraggedId(null);
+                      setDragOverCol(null);
+                    }}>
                     {/* Column header */}
                     <div style={s.colHead}>
                       <span style={{ width:8, height:8, borderRadius:2, background:col.color, flexShrink:0 }}/>
@@ -507,16 +552,40 @@ export default function EngineeringPage() {
                       <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", marginLeft:"auto" }}>{colIssues.length} · {colPts}pts</span>
                     </div>
 
-                    {/* Cards */}
-                    {colIssues.map(issue => (
-                      <IssueCard key={issue.id} issue={issue} onSelect={() => setSelected(issue)}/>
-                    ))}
+                    {/* Drop zone + cards */}
+                    <div style={{ flex:1, minHeight:80, borderRadius:10, border: isOver ? `2px dashed ${col.color}` : "2px solid transparent", transition:"border-color 0.15s", padding:isOver ? 4 : 0, display:"flex", flexDirection:"column", gap:8 }}>
+                      {colIssues.map(issue => (
+                        <IssueCard key={issue.id} issue={issue}
+                          colIndex={colIdx}
+                          onSelect={() => setSelected(issue)}
+                          onMoveBack={() => moveIssueStep(issue.id, -1)}
+                          onMoveForward={() => moveIssueStep(issue.id, 1)}
+                          onDragStart={() => setDraggedId(issue.id)}
+                          onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
+                          isDragging={draggedId === issue.id}
+                        />
+                      ))}
+                      {colIssues.length === 0 && !isOver && (
+                        <div style={{ border:"1px dashed var(--line)", borderRadius:10, padding:"20px 16px", fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", textAlign:"center", letterSpacing:"0.1em" }}>
+                          EMPTY
+                        </div>
+                      )}
+                    </div>
 
-                    {colIssues.length === 0 && (
-                      <div style={{ border:"1px dashed var(--line)", borderRadius:10, padding:"20px 16px", fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", textAlign:"center", letterSpacing:"0.1em" }}>
-                        EMPTY
-                      </div>
-                    )}
+                    {/* Column text entry */}
+                    <div style={{ display:"flex", gap:5, marginTop:4 }}>
+                      <input
+                        value={colInputs[col.id] || ""}
+                        onChange={e => setColInputs(p => ({ ...p, [col.id]: e.target.value }))}
+                        onKeyDown={e => e.key === "Enter" && addToColumn(col.id)}
+                        placeholder={`Add to ${col.label}…`}
+                        style={{ flex:1, background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"7px 10px", fontSize:12, color:"var(--text)", fontFamily:"var(--sans)", outline:"none", minWidth:0 }}
+                      />
+                      <button onClick={() => addToColumn(col.id)}
+                        style={{ flexShrink:0, width:28, height:28, borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", color:"var(--text-3)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -665,22 +734,38 @@ export default function EngineeringPage() {
 }
 
 // ── IssueCard ──────────────────────────────────────────────────────────────
-function IssueCard({ issue, onSelect }: { issue: Issue; onSelect: () => void }) {
+function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onDragStart, onDragEnd, isDragging }: {
+  issue: Issue;
+  colIndex: number;
+  onSelect: () => void;
+  onMoveBack: () => void;
+  onMoveForward: () => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  isDragging: boolean;
+}) {
   const [hovered, setHovered] = useState(false);
   const pm = PRIORITY_META[issue.priority];
   const tm = TYPE_META[issue.type];
+  const canBack    = colIndex > 0;
+  const canForward = colIndex < 3;
+
   return (
     <div
+      draggable
+      onDragStart={e => { onDragStart(); e.dataTransfer.effectAllowed = "move"; }}
+      onDragEnd={onDragEnd}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onSelect}
       style={{
         background:"var(--surface-1)",
         border:`1px solid ${hovered ? "var(--line-strong)" : "var(--line)"}`,
-        borderRadius:10, padding:"13px 15px", cursor:"pointer",
+        borderRadius:10, padding:"13px 15px", cursor:"grab",
         boxShadow: hovered ? "0 4px 16px rgba(0,0,0,0.2)" : "none",
-        transform: hovered ? "translateY(-1px)" : "none",
-        transition:"border-color 0.15s, box-shadow 0.15s, transform 0.15s",
+        transform: isDragging ? "rotate(2deg) scale(0.97)" : hovered ? "translateY(-1px)" : "none",
+        opacity: isDragging ? 0.5 : 1,
+        transition:"border-color 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.15s",
       }}>
       <div style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:8 }}>
         <span style={{ fontFamily:"var(--mono)", fontSize:11, color:tm.color, fontWeight:700, marginTop:1, flexShrink:0 }}>{tm.symbol}</span>
@@ -695,9 +780,11 @@ function IssueCard({ issue, onSelect }: { issue: Issue; onSelect: () => void }) 
           <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", background:"var(--surface-2)", padding:"2px 7px", borderRadius:4 }}>
             {issue.points}pt
           </span>
-          <span style={{ width:20, height:20, borderRadius:"50%", background:issue.assigneeColor+"33", color:issue.assigneeColor, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:9, fontWeight:700 }}>
-            {issue.assigneeInitial}
-          </span>
+          {issue.assigneeInitial && (
+            <span style={{ width:20, height:20, borderRadius:"50%", background:issue.assigneeColor+"33", color:issue.assigneeColor, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:9, fontWeight:700 }}>
+              {issue.assigneeInitial}
+            </span>
+          )}
         </span>
       </div>
       {issue.labels.length > 0 && (
@@ -705,6 +792,21 @@ function IssueCard({ issue, onSelect }: { issue: Issue; onSelect: () => void }) 
           {issue.labels.slice(0,2).map(l => (
             <span key={l} style={{ fontFamily:"var(--mono)", fontSize:9, padding:"2px 6px", borderRadius:3, background:"var(--surface-2)", color:"var(--text-4)" }}>{l}</span>
           ))}
+        </div>
+      )}
+      {/* Move buttons */}
+      {hovered && (
+        <div style={{ display:"flex", gap:4, marginTop:10 }} onClick={e => e.stopPropagation()}>
+          <button onClick={onMoveBack} disabled={!canBack}
+            style={{ flex:1, padding:"4px 0", borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", color: canBack ? "var(--text-2)" : "var(--text-4)", cursor: canBack ? "pointer" : "default", fontFamily:"var(--mono)", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 3L5 8l5 5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Back
+          </button>
+          <button onClick={onMoveForward} disabled={!canForward}
+            style={{ flex:1, padding:"4px 0", borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", color: canForward ? "var(--text-2)" : "var(--text-4)", cursor: canForward ? "pointer" : "default", fontFamily:"var(--mono)", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+            Forward
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3l5 5-5 5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
         </div>
       )}
     </div>
