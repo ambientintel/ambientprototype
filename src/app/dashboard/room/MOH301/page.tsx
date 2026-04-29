@@ -158,12 +158,8 @@ export default function PatientDashboard() {
         </div>
 
         {/* Alerts table */}
-        <div className="section-head" style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div className="section-head">
           <h2 className="section-title">Alerts</h2>
-          <span className="priority high" style={{ display:'inline-flex', alignItems:'center', gap:5 }}>
-            <span className="priority-dot" />
-            High
-          </span>
         </div>
         <div className="table">
           <div className="table-header">
@@ -171,6 +167,7 @@ export default function PatientDashboard() {
             <div>Fall</div>
             <div>Time</div>
             <div>Date</div>
+            <div style={{ textAlign:'right' }}>Priority</div>
           </div>
           <div className="table-row selected">
             <div className="room">MOH301</div>
@@ -182,6 +179,12 @@ export default function PatientDashboard() {
             </div>
             <div>{`${hh}:${mm} ${ampm}`}</div>
             <div>{todayLabel}</div>
+            <div style={{ textAlign:'right' }}>
+              <span className="priority high">
+                <span className="priority-dot" />
+                High
+              </span>
+            </div>
           </div>
         </div>
 
