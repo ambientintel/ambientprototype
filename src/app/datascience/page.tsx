@@ -1,5 +1,9 @@
 "use client";
 import Link from "next/link";
+import { ResponsiveChord } from "@nivo/chord";
+import { ResponsiveCalendar } from "@nivo/calendar";
+import { ResponsiveBump } from "@nivo/bump";
+import { ResponsiveNetwork } from "@nivo/network";
 import { useEffect } from "react";
 import {
   LineChart, Line,
@@ -156,6 +160,65 @@ const TREEMAP_DATA = [
   { name:'MOH 309 – George',  size:85,  color:C.sage   },
   { name:'MOH 310 – Helen',   size:71,  color:C.amber  },
 ];
+
+// ── Dataset: chord – state transitions between room categories ─
+// Matrix: rows/cols = [Quiet, Movement, Fall], value = transitions per week
+const CHORD_MATRIX = [
+  [0,  62, 18],  // from Quiet
+  [58, 0,  24],  // from Movement
+  [14, 21,  0],  // from Fall
+];
+const CHORD_KEYS = ['Quiet', 'Movement', 'Fall Alert'];
+const CHORD_COLORS = [C.sage, C.amber, C.red];
+
+// ── Dataset: calendar – daily incident count (past ~4 months) ─
+function calDays() {
+  const days: { day: string; value: number }[] = [];
+  const start = new Date('2026-01-01');
+  const end   = new Date('2026-04-28');
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const iso = d.toISOString().slice(0,10);
+    const dow = d.getDay();
+    const base = (dow === 0 || dow === 6) ? 1 : 3;
+    days.push({ day: iso, value: Math.max(0, Math.round(base + (Math.sin(d.getTime()/8.6e7)*2))) });
+  }
+  return days;
+}
+const CALENDAR_DATA = calDays();
+
+// ── Dataset: bump – room activity rank over 7 days ────────────
+const BUMP_DATA = [
+  { id:'MOH 302', data:[{x:'Mon',y:1},{x:'Tue',y:2},{x:'Wed',y:1},{x:'Thu',y:3},{x:'Fri',y:2},{x:'Sat',y:1},{x:'Sun',y:1}] },
+  { id:'MOH 306', data:[{x:'Mon',y:2},{x:'Tue',y:1},{x:'Wed',y:2},{x:'Thu',y:1},{x:'Fri',y:1},{x:'Sat',y:2},{x:'Sun',y:2}] },
+  { id:'MOH 303', data:[{x:'Mon',y:3},{x:'Tue',y:3},{x:'Wed',y:3},{x:'Thu',y:2},{x:'Thu',y:2},{x:'Fri',y:3},{x:'Sat',y:3},{x:'Sun',y:3}] },
+  { id:'MOH 307', data:[{x:'Mon',y:4},{x:'Tue',y:4},{x:'Wed',y:5},{x:'Thu',y:4},{x:'Fri',y:4},{x:'Sat',y:4},{x:'Sun',y:5}] },
+  { id:'MOH 301', data:[{x:'Mon',y:5},{x:'Tue',y:5},{x:'Wed',y:4},{x:'Thu',y:5},{x:'Fri',y:5},{x:'Sat',y:5},{x:'Sun',y:4}] },
+];
+
+// ── Dataset: network – sensor mesh topology ───────────────────
+const NETWORK_DATA = {
+  nodes: [
+    { id:'Radar A',   height:2, size:18, color:C.accent },
+    { id:'Radar B',   height:2, size:18, color:C.accent },
+    { id:'Radar C',   height:2, size:18, color:C.accent },
+    { id:'Kinesis',   height:1, size:22, color:C.purple },
+    { id:'Lambda',    height:1, size:20, color:C.purple },
+    { id:'DynamoDB',  height:1, size:20, color:C.amber  },
+    { id:'Bedrock',   height:1, size:20, color:C.coral  },
+    { id:'Dashboard', height:0, size:26, color:C.sage   },
+    { id:'Alerts',    height:0, size:20, color:C.red    },
+  ],
+  links: [
+    { source:'Radar A',  target:'Kinesis',   distance:60 },
+    { source:'Radar B',  target:'Kinesis',   distance:60 },
+    { source:'Radar C',  target:'Kinesis',   distance:60 },
+    { source:'Kinesis',  target:'Lambda',    distance:70 },
+    { source:'Lambda',   target:'DynamoDB',  distance:70 },
+    { source:'Lambda',   target:'Alerts',    distance:80 },
+    { source:'DynamoDB', target:'Bedrock',   distance:70 },
+    { source:'Bedrock',  target:'Dashboard', distance:70 },
+  ],
+};
 
 // ── Shared tooltip style ───────────────────────────────────────
 const TT_STYLE = {
@@ -683,8 +746,150 @@ export default function DataSciencePage() {
 
         </div>
 
+        {/* ── Nivo section ── */}
+        <div style={{ marginTop:48, marginBottom:18 }}>
+          <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between' }}>
+            <h2 className="section-title">Nivo <em>Charts</em></h2>
+            <span className="section-meta">4 chart types unique to @nivo</span>
+          </div>
+          <p style={{ fontFamily:'var(--mono)', fontSize:11, color:C.text3, marginTop:8 }}>
+            Chord · Calendar · Bump · Network — chart types not available in recharts
+          </p>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+
+          {/* 15 · Chord – room state transitions */}
+          <ChartCard title="Chord" sub="State transitions between room categories · per week">
+            <div style={{ height:300 }}>
+              <ResponsiveChord
+                data={CHORD_MATRIX}
+                keys={CHORD_KEYS}
+                margin={{ top:30, right:30, bottom:30, left:30 }}
+                valueFormat=".0f"
+                padAngle={0.02}
+                innerRadiusRatio={0.86}
+                innerRadiusOffset={0.02}
+                inactiveArcOpacity={0.25}
+                arcBorderWidth={1}
+                arcBorderColor={{ theme:'background' }}
+                colors={CHORD_COLORS}
+                ribbonOpacity={0.5}
+                ribbonBorderWidth={0}
+                enableLabel
+                label="id"
+                labelOffset={9}
+                labelRotation={-90}
+                labelTextColor={C.text2}
+                isInteractive
+                theme={{
+                  background:'transparent',
+                  text:{ fill:C.text3, fontFamily:'var(--mono)', fontSize:10 },
+                  tooltip:{ container:{ background:C.bg, border:`1px solid ${C.lineS}`, color:C.text, fontFamily:'var(--mono)', fontSize:11 } },
+                }}
+              />
+            </div>
+          </ChartCard>
+
+          {/* 16 · Bump – room activity rank over 7 days */}
+          <ChartCard title="Bump Chart" sub="Room activity rank (1 = most active) · 7 days">
+            <div style={{ height:300 }}>
+              <ResponsiveBump
+                data={BUMP_DATA}
+                margin={{ top:16, right:80, bottom:36, left:80 }}
+                colors={[C.sage, C.accent, C.amber, C.purple, C.red]}
+                lineWidth={2}
+                activeLineWidth={4}
+                inactiveLineWidth={1}
+                inactiveOpacity={0.2}
+                pointSize={8}
+                activePointSize={12}
+                inactivePointSize={0}
+                pointBorderWidth={2}
+                activePointBorderWidth={2}
+                pointBorderColor={{ from:'serie.color' }}
+                axisTop={null}
+                axisBottom={{
+                  tickSize:0, tickPadding:8,
+                  tickRotation:0,
+                }}
+                axisLeft={{
+                  tickSize:0, tickPadding:8,
+                  tickValues:[1,2,3,4,5],
+                  legend:'Rank', legendPosition:'middle', legendOffset:-60,
+                }}
+                theme={{
+                  background:'transparent',
+                  axis:{ ticks:{ text:{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 } }, legend:{ text:{ fill:C.text3, fontFamily:'var(--mono)', fontSize:10 } } },
+                  grid:{ line:{ stroke:C.line } },
+                  tooltip:{ container:{ background:C.bg, border:`1px solid ${C.lineS}`, color:C.text, fontFamily:'var(--mono)', fontSize:11 } },
+                }}
+              />
+            </div>
+          </ChartCard>
+
+          {/* 17 · Calendar – daily incident count */}
+          <ChartCard title="Calendar" sub="Daily fall + alert incidents · Jan – Apr 2026" full>
+            <div style={{ height:160 }}>
+              <ResponsiveCalendar
+                data={CALENDAR_DATA}
+                from="2026-01-01"
+                to="2026-04-28"
+                emptyColor={C.s3}
+                colors={['rgba(45,114,210,0.25)','rgba(45,114,210,0.55)',C.accent,'#1a4a8f']}
+                margin={{ top:24, right:24, bottom:8, left:48 }}
+                yearSpacing={40}
+                monthBorderColor={C.s1}
+                monthBorderWidth={2}
+                dayBorderWidth={2}
+                dayBorderColor={C.s1}
+                legends={[{
+                  anchor:'bottom-right', direction:'row', translateY:28,
+                  itemCount:4, itemWidth:42, itemHeight:14, itemDirection:'right-to-left',
+                  itemsSpacing:4,
+                }]}
+                theme={{
+                  background:'transparent',
+                  text:{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 },
+                  tooltip:{ container:{ background:C.bg, border:`1px solid ${C.lineS}`, color:C.text, fontFamily:'var(--mono)', fontSize:11 } },
+                }}
+              />
+            </div>
+          </ChartCard>
+
+          {/* 18 · Network – sensor mesh topology */}
+          <ChartCard title="Network Graph" sub="Sensor mesh · data flow topology">
+            <div style={{ height:300 }}>
+              <ResponsiveNetwork
+                data={NETWORK_DATA}
+                margin={{ top:0, right:0, bottom:0, left:0 }}
+                linkDistance={e => e.distance}
+                centeringStrength={0.3}
+                repulsivity={6}
+                nodeSize={n => n.size}
+                activeNodeSize={n => n.size * 1.4}
+                nodeColor={n => n.color}
+                nodeBorderWidth={0}
+                linkThickness={1.5}
+                linkColor={{ from:'source.color', modifiers:[['opacity',0.4]] }}
+                nodeTooltip={({ node }) => (
+                  <div style={{ background:C.bg, border:`1px solid ${C.lineS}`, padding:'8px 12px', borderRadius:6, fontFamily:'var(--mono)', fontSize:11, color:C.text }}>
+                    {node.id}
+                  </div>
+                )}
+                annotations={[]}
+                theme={{
+                  background:'transparent',
+                  tooltip:{ container:{ background:C.bg, border:`1px solid ${C.lineS}`, color:C.text, fontFamily:'var(--mono)', fontSize:11 } },
+                }}
+              />
+            </div>
+          </ChartCard>
+
+        </div>
+
         <div className="agent-note" style={{ marginTop:48 }}>
-          — Ambient Intelligence · sensor analytics · 14 chart types · recharts on Vercel —
+          — Ambient Intelligence · sensor analytics · 18 chart types · recharts + nivo on Vercel —
         </div>
       </main>
     </div>
