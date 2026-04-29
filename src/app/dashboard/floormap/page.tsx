@@ -3,6 +3,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+const ROOM_PRIORITY: Record<string, 'high' | 'medium' | 'low'> = {
+  MOH301: 'high', MOH302: 'medium', MOH303: 'low', MOH304: 'medium',
+  MOH305: 'medium', MOH306: 'low',  MOH307: 'medium', MOH308: 'high',
+  MOH309: 'low',   MOH310: 'low',
+};
+
 const ROOMS = [
   { id:'MOH 301', name:'Evelyn Rodriguez',  status:'alert',    last:'10:23 am', activity:82 },
   { id:'MOH 302', name:'Harold Nakamura',   status:'alert',    last:'9:47 am',  activity:71 },
@@ -89,43 +95,53 @@ export default function FloorMap() {
           <div className="nav-label">Rooms</div>
             <div key="MOH 301" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH301')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 301
+              <span style={{ flex:1 }}>MOH 301</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH301'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH301'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH301'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH301'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
             <div key="MOH 302" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH302')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 302
+              <span style={{ flex:1 }}>MOH 302</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH302'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH302'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH302'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH302'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
             <div key="MOH 303" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH303')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 303
+              <span style={{ flex:1 }}>MOH 303</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH303'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH303'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH303'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH303'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
             <div key="MOH 304" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH304')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 304
+              <span style={{ flex:1 }}>MOH 304</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH304'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH304'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH304'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH304'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
             <div key="MOH 305" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH305')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 305
+              <span style={{ flex:1 }}>MOH 305</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH305'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH305'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH305'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH305'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
             <div key="MOH 306" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH306')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 306
+              <span style={{ flex:1 }}>MOH 306</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH306'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH306'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH306'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH306'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
             <div key="MOH 307" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH307')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 307
+              <span style={{ flex:1 }}>MOH 307</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH307'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH307'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH307'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH307'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
             <div key="MOH 308" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH308')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 308
+              <span style={{ flex:1 }}>MOH 308</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH308'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH308'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH308'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH308'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
             <div key="MOH 309" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH309')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 309
+              <span style={{ flex:1 }}>MOH 309</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH309'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH309'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH309'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH309'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
             <div key="MOH 310" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH310')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
-              MOH 310
+              <span style={{ flex:1 }}>MOH 310</span>
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, background: ROOM_PRIORITY['MOH310'] === 'high' ? '#FF6B6B' : ROOM_PRIORITY['MOH310'] === 'medium' ? '#FFC940' : '#3DCC91', boxShadow: ROOM_PRIORITY['MOH310'] === 'high' ? '0 0 5px #FF6B6B' : ROOM_PRIORITY['MOH310'] === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
         </nav>
         <div className="sidebar-footer">
