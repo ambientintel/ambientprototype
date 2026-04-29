@@ -228,21 +228,6 @@ export default function EngineeringPage() {
           ))}
         </div>
 
-        {/* Team — sprint assignees */}
-        <div>
-          <div style={s.navLabel}>Team</div>
-          {TEAM.filter(t => !DISCIPLINES.flatMap(d => d.members).includes(t.name)).map(t => (
-            <div key={t.name} style={{ ...s.navItem, cursor:"pointer" }}
-              onClick={() => setFilterAssignee(filterAssignee === t.name ? "all" : t.name)}>
-              <div style={{ ...s.avatar, background: t.color + "33", color: t.color, width:20, height:20, fontSize:9 }}>{t.initial}</div>
-              <span style={{ flex:1, fontSize:12.5 }}>{t.name}</span>
-              <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>
-                {issues.filter(i => i.assignee === t.name && i.column !== "done").length}
-              </span>
-            </div>
-          ))}
-        </div>
-
         {/* Disciplines */}
         <div>
           <div style={s.navLabel}>Disciplines</div>
