@@ -78,11 +78,13 @@ const TEAM = [
   { name:"Paulo",     initial:"P", color:"#FB923C" },
   { name:"Isaac",     initial:"I", color:"#818CF8" },
   { name:"Aki",       initial:"A", color:"#34D399" },
+  { name:"Abdul",     initial:"A", color:"#22D3EE" },
 ];
 
 const DISCIPLINES = [
-  { name:"Electrical", color:"#FB923C", members:["Gavin","Hanna","Paulo"] },
-  { name:"Software",   color:"#818CF8", members:["Isaac","Aki"] },
+  { name:"Electrical",        color:"#FB923C", members:["Gavin","Hanna","Paulo"] },
+  { name:"Software",          color:"#818CF8", members:["Isaac","Aki"] },
+  { name:"Cloud Cybersecurity", color:"#22D3EE", members:["Abdul"] },
 ];
 
 // ── Create issue form state type ───────────────────────────────────────────
@@ -348,7 +350,7 @@ export default function EngineeringPage() {
             {/* ── Engineer personal lanes ── */}
             <div style={{ marginBottom:32 }}>
               <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:12 }}>Engineer Lanes</div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:12 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:12 }}>
                 {DISCIPLINES.flatMap(d => d.members).map(name => {
                   const t = TEAM.find(tm => tm.name === name)!;
                   const disc = DISCIPLINES.find(d => d.members.includes(name))!;
