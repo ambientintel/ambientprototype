@@ -306,16 +306,29 @@ export default function CloudPage() {
 
 
         <div className="nav-section">
-          <p className="nav-label">Pages</p>
+          <p className="nav-label">Engineering</p>
           {([
-            ['/dashboard', 'Nurse Dashboard'],
-            ['/bom',       'Bill of Materials'],
-            ['/gapanalysis','Gap Analysis'],
-            ['/samd',      'SaMD'],
-            ['/cloud',     'Cloud'],
+            ['/engineering', 'Engineering Hub'],
+            ['/bom',         'Bill of Materials'],
+            ['/cloud',       'Cloud Infrastructure'],
           ] as [string,string][]).map(([href, label]) => (
             <Link key={href} href={href}
-              className={`nav-item${typeof window !== 'undefined' && window.location.pathname === href ? ' active' : ''}`}
+              className={`nav-item${href === '/cloud' ? ' active' : ''}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}>
+              {label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="nav-section">
+          <p className="nav-label">Pages</p>
+          {([
+            ['/dashboard',  'Nurse Dashboard'],
+            ['/gapanalysis','Gap Analysis'],
+            ['/samd',       'SaMD'],
+          ] as [string,string][]).map(([href, label]) => (
+            <Link key={href} href={href}
+              className="nav-item"
               style={{ textDecoration: 'none', color: 'inherit' }}>
               {label}
             </Link>
