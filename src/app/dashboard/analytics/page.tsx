@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { AuthButton } from '@/components/AuthButton';
 import { useRouter } from 'next/navigation';
 
 const ROOM_PRIORITY: Record<string, 'high' | 'medium' | 'low'> = {
@@ -231,3 +232,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
