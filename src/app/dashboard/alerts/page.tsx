@@ -173,7 +173,6 @@ export default function AlertsPage() {
             {filters.map(f=>(
               <button key={f} onClick={()=>setFilter(f)} style={{ fontFamily:'var(--mono)', fontSize:11, padding:'5px 12px', borderRadius:6, border:'1px solid var(--line)', background: filter===f ? 'var(--accent)' : 'var(--surface-1)', color: filter===f ? 'white' : 'var(--text-2)', cursor:'pointer' }}>{f}</button>
             ))}
-            <AuthButton />
           </div>
         </header>
         <div style={{ padding:'0 40px 40px' }}>
