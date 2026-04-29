@@ -143,20 +143,7 @@ export default function EngineeringPage() {
     try { localStorage.setItem("eng_completed_tasks", JSON.stringify(completedTasks)); } catch {}
   }, [completedTasks]);
 
-  function addPersonalTask(name: string) {
-    const val = (personalInputs[name] || "").trim();
-    if (!val) return;
-    const col = engineerColSelect[name] || "todo";
-    const t = TEAM.find(tm => tm.name === name)!;
-    const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
-    const id = `ENG-${colCounter.current++}`;
-    setIssues(prev => [...prev, {
-      id, type:"task", title:val, priority:"medium", points:1,
-      assignee:name, assigneeInitial:t.initial, assigneeColor:t.color,
-      labels:[], column:col, description:"", created:today, updated:today,
-    }]);
-    setPersonalInputs(p => ({ ...p, [name]: "" }));
-  }
+  // addPersonalTask is inlined per-engineer inside the map to guarantee fresh closure
 
   function completePersonalTask(name: string, idx: number) {
     const task = (personalTasks[name] || [])[idx];
@@ -431,6 +418,22 @@ export default function EngineeringPage() {
                   const t = TEAM.find(tm => tm.name === name)!;
                   const disc = DISCIPLINES.find(d => d.members.includes(name))!;
                   const tasks = personalTasks[name] || [];
+                  const inputVal = personalInputs[name] || "";
+                  const selectedCol: Column = engineerColSelect[name] || "todo";
+
+                  const handleAdd = () => {
+                    const val = inputVal.trim();
+                    if (!val) return;
+                    const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
+                    const id = `ENG-L${Date.now()}`;
+                    setIssues(prev => [...prev, {
+                      id, type:"task" as IssueType, title:val, priority:"medium" as Priority, points:1,
+                      assignee:name, assigneeInitial:t.initial, assigneeColor:t.color,
+                      labels:[], column:selectedCol, description:"", created:today, updated:today,
+                    }]);
+                    setPersonalInputs(p => ({ ...p, [name]: "" }));
+                  };
+
                   return (
                     <div key={name} style={{ display:"flex", flexDirection:"column", gap:8 }}>
                       {/* Column header */}
@@ -445,15 +448,15 @@ export default function EngineeringPage() {
                       {/* Task input */}
                       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                         <input
-                          value={personalInputs[name] || ""}
+                          value={inputVal}
                           onChange={e => setPersonalInputs(p => ({ ...p, [name]: e.target.value }))}
-                          onKeyDown={e => e.key === "Enter" && addPersonalTask(name)}
+                          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
                           placeholder="Add task…"
                           style={{ width:"100%", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"6px 9px", fontSize:12, color:"var(--text)", fontFamily:"var(--sans)", outline:"none", boxSizing:"border-box" }}
                         />
                         <div style={{ display:"flex", gap:3 }}>
                           {COLUMNS.map(col => {
-                            const active = (engineerColSelect[name] || "todo") === col.id;
+                            const active = selectedCol === col.id;
                             return (
                               <button key={col.id} onClick={() => setEngineerColSelect(p => ({ ...p, [name]: col.id }))}
                                 style={{ flex:1, padding:"4px 2px", borderRadius:4, border:`1px solid ${active ? col.color : "var(--line)"}`, background: active ? col.color + "22" : "var(--surface-2)", color: active ? col.color : "var(--text-4)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:8.5, textTransform:"uppercase", letterSpacing:"0.06em", transition:"all 0.12s", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
@@ -461,7 +464,7 @@ export default function EngineeringPage() {
                               </button>
                             );
                           })}
-                          <button onClick={() => addPersonalTask(name)}
+                          <button onClick={handleAdd}
                             style={{ flexShrink:0, width:26, borderRadius:4, border:"1px solid var(--line)", background:"var(--accent)", color:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
                             <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
                           </button>
