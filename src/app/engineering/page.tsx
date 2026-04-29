@@ -868,9 +868,9 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
         <span style={{ fontFamily:"var(--mono)", fontSize:11, color:tm.color, fontWeight:700, marginTop:1, flexShrink:0 }}>{tm.symbol}</span>
         <p style={{ margin:0, fontSize:13, lineHeight:1.4, color:"var(--text)", flex:1 }}>{issue.title}</p>
         <button onClick={e => { e.stopPropagation(); onClear(); }}
-          style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:13, lineHeight:1, padding:"0 0 0 4px", transition:"color 0.12s", marginTop:-1 }}
-          onMouseEnter={e => (e.currentTarget.style.color = "#FF6B6B")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>✕</button>
+          style={{ flexShrink:0, width:22, height:22, borderRadius:5, border:"1px solid var(--line)", background:"var(--surface-2)", cursor:"pointer", color:"var(--text-3)", fontSize:13, fontWeight:600, display:"flex", alignItems:"center", justifyContent:"center", transition:"background 0.12s, border-color 0.12s, color 0.12s", marginTop:-1 }}
+          onMouseEnter={e => { e.currentTarget.style.background="#FF6B6B22"; e.currentTarget.style.borderColor="#FF6B6B55"; e.currentTarget.style.color="#FF6B6B"; }}
+          onMouseLeave={e => { e.currentTarget.style.background="var(--surface-2)"; e.currentTarget.style.borderColor="var(--line)"; e.currentTarget.style.color="var(--text-3)"; }}>✕</button>
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
         <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)" }}>{issue.id}</span>
