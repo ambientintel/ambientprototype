@@ -59,14 +59,24 @@ async function subscribeToPush() {
 export default function MobilePage() {
   const [os, setOs] = useState<OS>('unknown');
   const [tab, setTab] = useState<'ios' | 'android'>('ios');
+  const [mounted, setMounted] = useState(false);
+  const [notifAvailable, setNotifAvailable] = useState(false);
   const [notifStatus, setNotifStatus] = useState<'unknown' | 'granted' | 'denied' | 'subscribing'>('unknown');
 
   useEffect(() => {
+    setMounted(true);
     const detected = detectOS();
     setOs(detected);
     if (detected === 'android') setTab('android');
-    if (typeof Notification !== 'undefined') {
-      setNotifStatus(Notification.permission === 'granted' ? 'granted' : Notification.permission === 'denied' ? 'denied' : 'unknown');
+
+    const hasNotif = typeof Notification !== 'undefined';
+    const hasPush  = 'PushManager' in window;
+    setNotifAvailable(hasNotif && hasPush);
+
+    if (hasNotif) {
+      if (Notification.permission === 'granted') setNotifStatus('granted');
+      else if (Notification.permission === 'denied') setNotifStatus('denied');
+      else setNotifStatus('unknown');
     }
   }, []);
 
@@ -125,43 +135,73 @@ export default function MobilePage() {
           </div>
         )}
 
-        {/* Notification enable button — shown after install */}
-        {'Notification' in (typeof window !== 'undefined' ? window : {}) && notifStatus !== 'granted' && (
-          <div style={{
-            background: notifStatus === 'denied' ? 'rgba(255,107,107,0.08)' : C.accentDim,
-            border: `1px solid ${notifStatus === 'denied' ? 'rgba(255,107,107,0.3)' : C.accent + '44'}`,
-            borderRadius: 12, padding: '16px', marginBottom: 24, textAlign: 'center',
-          }}>
-            {notifStatus === 'denied' ? (
-              <>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#FF6B6B', marginBottom: 4 }}>Notifications blocked</div>
-                <div style={{ fontSize: 12, color: C.text2 }}>Go to Settings → Safari → Notifications and allow Ambient.</div>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: 13, color: C.text2, marginBottom: 12 }}>
-                  {notifStatus === 'subscribing' ? 'Enabling notifications…' : 'Tap below to receive fall alerts on this device.'}
-                </div>
-                <button onClick={enableNotifications} disabled={notifStatus === 'subscribing'} style={{
-                  background: C.accent, border: 'none', borderRadius: 10,
-                  color: '#fff', fontSize: 14, fontWeight: 700, padding: '12px 28px',
-                  cursor: 'pointer', opacity: notifStatus === 'subscribing' ? 0.6 : 1,
-                }}>
-                  {notifStatus === 'subscribing' ? 'Enabling…' : '🔔  Enable Fall Alert Notifications'}
-                </button>
-              </>
+        {/* Notification section — only rendered client-side after mount */}
+        {mounted && (
+          <>
+            {notifStatus === 'granted' && (
+              <div style={{
+                background: C.greenDim, border: `1px solid ${C.green}33`, borderRadius: 12,
+                padding: '14px 16px', marginBottom: 24, textAlign: 'center',
+                fontSize: 13, color: C.green, fontWeight: 700,
+              }}>
+                ✓ Notifications enabled — you will receive fall alerts
+              </div>
             )}
-          </div>
-        )}
 
-        {notifStatus === 'granted' && (
-          <div style={{
-            background: C.greenDim, border: `1px solid ${C.green}33`, borderRadius: 10,
-            padding: '12px 16px', marginBottom: 24, textAlign: 'center',
-            fontSize: 13, color: C.green, fontWeight: 700,
-          }}>
-            ✓ Notifications enabled — you will receive fall alerts
-          </div>
+            {notifStatus === 'denied' && (
+              <div style={{
+                background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.3)',
+                borderRadius: 12, padding: '14px 16px', marginBottom: 24, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#FF6B6B', marginBottom: 4 }}>Notifications blocked</div>
+                <div style={{ fontSize: 12, color: C.text2 }}>
+                  {os === 'ios'
+                    ? 'Go to Settings → Ambient → Notifications and turn on Allow Notifications.'
+                    : 'Go to Settings → Apps → Chrome → Notifications and allow.'}
+                </div>
+              </div>
+            )}
+
+            {notifStatus === 'unknown' && !notifAvailable && (
+              <div style={{
+                background: C.amberDim, border: `1px solid ${C.amber}33`,
+                borderRadius: 12, padding: '14px 16px', marginBottom: 24, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.amber, marginBottom: 4 }}>Install first</div>
+                <div style={{ fontSize: 12, color: C.text2 }}>
+                  Push notifications require the app to be installed to your home screen. Follow the steps below, then return here.
+                </div>
+              </div>
+            )}
+
+            {notifStatus === 'unknown' && notifAvailable && (
+              <div style={{
+                background: C.accentDim, border: `1px solid ${C.accent}44`,
+                borderRadius: 12, padding: '20px 16px', marginBottom: 24, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 13, color: C.text2, marginBottom: 14 }}>
+                  Tap below to receive fall alerts on this device.
+                </div>
+                <button onClick={enableNotifications} style={{
+                  background: C.accent, border: 'none', borderRadius: 10,
+                  color: '#fff', fontSize: 15, fontWeight: 700, padding: '14px 32px',
+                  cursor: 'pointer', width: '100%',
+                }}>
+                  Enable Fall Alert Notifications
+                </button>
+              </div>
+            )}
+
+            {notifStatus === 'subscribing' && (
+              <div style={{
+                background: C.accentDim, border: `1px solid ${C.accent}44`,
+                borderRadius: 12, padding: '14px 16px', marginBottom: 24, textAlign: 'center',
+                fontSize: 13, color: C.accent,
+              }}>
+                Enabling notifications…
+              </div>
+            )}
+          </>
         )}
 
         {/* Tab switcher */}
