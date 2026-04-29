@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 declare global {
   // eslint-disable-next-line no-var
-  var __ambientPending: Map<string, { name: string; email: string; role: string; code: string; createdAt: number }> | undefined;
+  var __ambientPending: Map<string, { code: string; name: string; email: string; role: string; expires: number }> | undefined;
 }
 
-const pending = (globalThis.__ambientPending ??= new Map());
+function getStore() {
+  if (!globalThis.__ambientPending) {
+    globalThis.__ambientPending = new Map();
+  }
+  return globalThis.__ambientPending;
+}
 
 export async function POST(req: NextRequest) {
   const { email, code } = await req.json();
@@ -13,14 +18,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and code are required." }, { status: 400 });
   }
 
-  const entry = pending.get(email.toLowerCase());
+  const store = getStore();
+  const entry = store.get(email.toLowerCase());
   if (!entry) {
     return NextResponse.json({ error: "No pending verification for this email. Please register again." }, { status: 404 });
   }
 
-  const age = Date.now() - entry.createdAt;
-  if (age > 15 * 60 * 1000) {
-    pending.delete(email.toLowerCase());
+  if (entry.expires < Date.now()) {
+    store.delete(email.toLowerCase());
     return NextResponse.json({ error: "Code has expired. Please register again." }, { status: 410 });
   }
 
@@ -28,6 +33,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Incorrect code. Please try again." }, { status: 400 });
   }
 
-  pending.delete(email.toLowerCase());
+  store.delete(email.toLowerCase());
   return NextResponse.json({ success: true, name: entry.name, email: entry.email, role: entry.role });
 }
