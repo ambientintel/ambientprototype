@@ -158,17 +158,10 @@ export default function PatientDashboard() {
         </div>
 
         {/* Alerts table */}
-        <div style={{
-          background: 'rgba(124,110,173,0.08)',
-          border: '1px solid rgba(124,110,173,0.18)',
-          borderRadius: 8,
-          padding: '20px 24px 0',
-          marginBottom: 24,
-        }}>
-        <div className="section-head" style={{ borderBottom:'1px solid rgba(124,110,173,0.14)', marginBottom:0 }}>
-          <h2 className="section-title" style={{ color:'var(--accent)' }}>Alerts</h2>
+        <div className="section-head">
+          <h2 className="section-title">Alerts</h2>
         </div>
-        <div className="table" style={{ background:'transparent', border:'none', borderRadius:0 }}>
+        <div className="table">
           <div className="table-header" style={{ display:'flex', gap:24 }}>
             <div style={{ width:90, flexShrink:0 }}>Room</div>
             <div style={{ flex:1 }}>Fall</div>
@@ -199,7 +192,6 @@ export default function PatientDashboard() {
               </button>
             </div>
           </div>
-        </div>
         </div>
 
         {/* Ella AI Daily Update */}
