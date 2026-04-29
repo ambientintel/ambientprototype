@@ -10,62 +10,42 @@ const HERO_MODULE = {
   meta: 'IWR6843AOP · Live',
 };
 
-const MODULES = [
+const MODULE_GROUPS = [
   {
-    href: '/bom',
-    tag: 'Engineering',
-    label: 'Bill of Materials',
-    description: 'Full parts library, assembly BOMs, and build orders for EVT-0.1 hardware. 57 components priced from DigiKey and Mouser.',
-    meta: 'EVT-0.1 · 57 parts',
+    key: 'regulatory',
+    label: 'Regulatory & Compliance',
+    accent: '#C8922A',
+    accentDim: 'rgba(200,146,42,0.10)',
+    cols: 2,
+    modules: [
+      { href: '/samd', tag: 'Regulatory', label: 'SaMD Dashboard', description: 'Requirements, risk register, SOUP inventory, verification status, and release tracking per IEC 62304 and ISO 14971.', meta: 'IEC 62304 / ISO 14971' },
+      { href: '/gapanalysis', tag: 'Compliance', label: '21 CFR 820 Gap Analysis', description: 'Interactive tracker for all 15 subparts of 21 CFR Part 820. Mark evidence, add notes, auto-persisted.', meta: 'FDA QSR · 15 subparts' },
+    ],
   },
   {
-    href: '/gapanalysis',
-    tag: 'Compliance',
-    label: '21 CFR 820 Gap Analysis',
-    description: 'Interactive tracker for all 15 subparts of 21 CFR Part 820. Mark evidence, add notes, auto-persisted.',
-    meta: 'FDA QSR · 15 subparts',
+    key: 'engineering',
+    label: 'Engineering & Infrastructure',
+    accent: '#2D72D2',
+    accentDim: 'rgba(45,114,210,0.10)',
+    cols: 3,
+    modules: [
+      { href: '/engineering', tag: 'Workflow', label: 'Engineering', description: 'Sprint planning, kanban board, issue tracking, and backlog management for the Ambient Intelligence hardware and software teams.', meta: 'Sprints · Kanban · Issues' },
+      { href: '/bom', tag: 'Engineering', label: 'Bill of Materials', description: 'Full parts library, assembly BOMs, and build orders for EVT-0.1 hardware. 57 components priced from DigiKey and Mouser.', meta: 'EVT-0.1 · 57 parts' },
+      { href: '/cloud', tag: 'Infrastructure', label: 'Cloud Infrastructure', description: 'AWS backend — seven services across fall-alert hot path, Parquet cold path, Ella AI narratives, and the Nurse API. Architecture v4.', meta: 'ambientcloud · AWS · Terraform' },
+    ],
   },
   {
-    href: '/samd',
-    tag: 'Regulatory',
-    label: 'SaMD Dashboard',
-    description: 'Requirements, risk register, SOUP inventory, verification status, and release tracking per IEC 62304 and ISO 14971.',
-    meta: 'IEC 62304 / ISO 14971',
-  },
-  {
-    href: '/cloud',
-    tag: 'Infrastructure',
-    label: 'Cloud Infrastructure',
-    description: 'AWS backend — seven services across fall-alert hot path, Parquet cold path, Ella AI narratives, and the Nurse API. Architecture v4.',
-    meta: 'ambientcloud · AWS · Terraform',
-  },
-  {
-    href: '/colors',
-    tag: 'Design',
-    label: 'Color & Typography',
-    description: 'Design token reference — CSS custom properties, color palette, badge states, type families, and full type scale.',
-    meta: 'globals.css · tokens',
-  },
-  {
-    href: '/brand',
-    tag: 'Design',
-    label: 'Brand & Color Picker',
-    description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and type scale reference.',
-    meta: 'ambientdesign · interactive',
-  },
-  {
-    href: '/datascience',
-    tag: 'Data Science',
-    label: 'Data Science',
-    description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the Ambient Intelligence platform.',
-    meta: 'Parquet · ML · Recharts',
-  },
-  {
-    href: '/backgroundlab',
-    tag: 'Design',
-    label: 'Background Lab',
-    description: 'Interactive visual experiments — generative backgrounds, motion studies, and ambient UI patterns for the Ambient Intelligence design system.',
-    meta: 'Canvas · Motion · UI',
+    key: 'tools',
+    label: 'Design & Tools',
+    accent: '#8B6BE8',
+    accentDim: 'rgba(139,107,232,0.10)',
+    cols: 4,
+    modules: [
+      { href: '/datascience', tag: 'Data Science', label: 'Data Science', description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the platform.', meta: 'Parquet · ML · Recharts' },
+      { href: '/backgroundlab', tag: 'Design', label: 'Background Lab', description: 'Generative backgrounds, motion studies, and ambient UI pattern experiments for the Ambient Intelligence design system.', meta: 'Canvas · Motion · UI' },
+      { href: '/brand', tag: 'Design', label: 'Brand & Color Picker', description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and full type scale reference.', meta: 'ambientdesign · interactive' },
+      { href: '/colors', tag: 'Design', label: 'Color & Typography', description: 'Design token reference — CSS custom properties, color palette, badge states, type families, and full type scale.', meta: 'globals.css · tokens' },
+    ],
   },
 ];
 
@@ -479,7 +459,7 @@ const C = {
 };
 
 export default function Landing1() {
-  const [hovered, setHovered] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
   const [heroHovered, setHeroHovered] = useState(false);
 
   return (
@@ -719,58 +699,74 @@ export default function Landing1() {
           </Link>
 
           {/* ── Supporting modules label ── */}
-          <div style={{ padding: '28px 0 20px', borderTop: `1px solid ${C.border}`, marginTop: 40, marginBottom: 0, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <div style={{ padding: '28px 0 24px', borderTop: `1px solid ${C.border}`, marginTop: 40, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <span style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(16px, 1.5vw, 22px)', fontWeight: 300, letterSpacing: '-0.01em', color: C.text }}>
               Ambient Intelligence Control Center
             </span>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.text3 }}>
-              Supporting modules
+              {MODULE_GROUPS.reduce((n, g) => n + g.modules.length, 0)} modules
             </span>
           </div>
 
-          {/* ── 3-column grid ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, border: `1px solid ${C.border}` }}>
-            {MODULES.map((mod, i) => (
-              <Link key={mod.href} href={mod.href} className="l1-card" style={{ textDecoration: 'none', color: 'inherit' }}
-                onMouseEnter={() => setHovered(i)}
-                onMouseLeave={() => setHovered(null)}>
-                <div style={{
-                  padding: '36px 32px',
-                  background: hovered === i ? C.surface2 : C.surface,
-                  borderRight: (i % 3 !== 2) ? `1px solid ${C.border}` : 'none',
-                  borderBottom: (i < 3) ? `1px solid ${C.border}` : 'none',
-                  display: 'flex', flexDirection: 'column', gap: 16,
-                  transition: 'background 0.2s ease',
-                  minHeight: 220,
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{
-                      fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em',
-                      textTransform: 'uppercase', color: C.accent,
-                      background: C.accentDim, padding: '3px 8px', borderRadius: 2,
-                    }}>{mod.tag}</span>
-                    <span className="l1-card-arrow" style={{ color: C.text3, fontSize: 16 }}>↗</span>
-                  </div>
+          {/* ── Grouped sections ── */}
+          {MODULE_GROUPS.map(group => (
+            <div key={group.key} style={{ marginBottom: 28 }}>
 
-                  <div>
-                    <div style={{ fontFamily: 'var(--serif)', fontSize: 20, fontWeight: 400, letterSpacing: '-0.01em', color: C.text, marginBottom: 10 }}>
-                      {mod.label}
-                    </div>
-                    <div style={{ fontSize: 13, lineHeight: 1.65, color: C.text2, fontWeight: 300 }}>
-                      {mod.description}
-                    </div>
-                  </div>
+              {/* Section header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0 14px', borderTop: `1px solid ${C.border}` }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: group.accent, background: group.accentDim, padding: '3px 9px', borderRadius: 2 }}>
+                  {group.key}
+                </span>
+                <span style={{ fontFamily: 'var(--serif)', fontSize: 15, fontWeight: 300, color: C.text2, letterSpacing: '-0.01em' }}>
+                  {group.label}
+                </span>
+                <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.text3 }}>
+                  {group.modules.length} modules
+                </span>
+              </div>
 
-                  <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: C.accent }} />
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: C.text3 }}>
-                      {mod.meta}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+              {/* Cards grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${group.cols}, 1fr)`, gap: 1, border: `1px solid ${C.border}` }}>
+                {group.modules.map((mod, i) => (
+                  <Link key={mod.href} href={mod.href} className="l1-card" style={{ textDecoration: 'none', color: 'inherit' }}
+                    onMouseEnter={() => setHovered(mod.href)}
+                    onMouseLeave={() => setHovered(null)}>
+                    <div style={{
+                      padding: '26px 24px',
+                      background: hovered === mod.href ? C.surface2 : C.surface,
+                      borderRight: (i % group.cols !== group.cols - 1) ? `1px solid ${C.border}` : 'none',
+                      display: 'flex', flexDirection: 'column', gap: 12,
+                      transition: 'background 0.2s ease',
+                      minHeight: 180,
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <span style={{
+                          fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.18em',
+                          textTransform: 'uppercase', color: group.accent,
+                          background: group.accentDim, padding: '3px 8px', borderRadius: 2,
+                        }}>{mod.tag}</span>
+                        <span className="l1-card-arrow" style={{ color: C.text3, fontSize: 14 }}>↗</span>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 400, letterSpacing: '-0.01em', color: C.text, marginBottom: 8 }}>
+                          {mod.label}
+                        </div>
+                        <div style={{ fontSize: 12, lineHeight: 1.65, color: C.text2, fontWeight: 300 }}>
+                          {mod.description}
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ display: 'inline-block', width: 4, height: 4, borderRadius: '50%', background: group.accent }} />
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.1em', color: C.text3 }}>
+                          {mod.meta}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
 
         {/* ── Platform Intelligence ── */}
