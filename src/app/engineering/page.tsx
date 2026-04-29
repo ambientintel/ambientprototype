@@ -660,10 +660,10 @@ export default function EngineeringPage() {
           </div>
         )}
 
-        {/* ── History strip ── */}
+        {/* ── History ── */}
         {history.length > 0 && (
           <div style={{ padding:"0 32px 40px" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
               <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)" }}>History · {history.length}</div>
               <button onClick={() => setHistory([])}
                 style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.08em", color:"var(--text-4)", background:"none", border:"none", cursor:"pointer", padding:"2px 6px", borderRadius:4, transition:"color 0.12s" }}
@@ -672,22 +672,20 @@ export default function EngineeringPage() {
                 Clear History
               </button>
             </div>
-            <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:8 }}>
+            <div style={{ background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:10, overflow:"hidden", opacity:0.75 }}>
               {history.map((item, idx) => {
                 const tm = TYPE_META[item.type];
                 return (
-                  <div key={`${item.id}-${idx}`} style={{ flexShrink:0, width:180, background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:10, padding:"12px 14px", opacity:0.7 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:7 }}>
-                      <span style={{ fontFamily:"var(--mono)", fontSize:10, color:tm.color, fontWeight:700 }}>{tm.symbol}</span>
-                      <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", flex:1 }}>{item.id}</span>
-                      {item.assigneeInitial && (
-                        <span style={{ width:16, height:16, borderRadius:"50%", background:item.assigneeColor+"33", color:item.assigneeColor, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:8, fontWeight:700, flexShrink:0 }}>
-                          {item.assigneeInitial}
-                        </span>
-                      )}
-                    </div>
-                    <p style={{ margin:"0 0 8px", fontSize:11.5, lineHeight:1.4, color:"var(--text-2)", textDecoration:"line-through" }}>{item.title}</p>
-                    <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)" }}>Archived {item.updated}</div>
+                  <div key={`${item.id}-${idx}`} style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 18px", borderBottom: idx < history.length - 1 ? "1px solid var(--line)" : "none" }}>
+                    <span style={{ fontFamily:"var(--mono)", fontSize:11, color:tm.color, fontWeight:700, flexShrink:0 }}>{tm.symbol}</span>
+                    <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", flexShrink:0, width:72 }}>{item.id}</span>
+                    <span style={{ fontSize:12.5, color:"var(--text-3)", textDecoration:"line-through", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.title}</span>
+                    {item.assigneeInitial && (
+                      <span style={{ width:20, height:20, borderRadius:"50%", background:item.assigneeColor+"33", color:item.assigneeColor, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:8.5, fontWeight:700, flexShrink:0 }}>
+                        {item.assigneeInitial}
+                      </span>
+                    )}
+                    <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", flexShrink:0 }}>Archived {item.updated}</span>
                   </div>
                 );
               })}
