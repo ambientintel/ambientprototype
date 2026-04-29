@@ -135,11 +135,9 @@ export default function OverviewPage() {
                 <path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/>
               </svg>
               <span style={{ flex:1 }}>{r.id.replace('MOH','MOH ')}</span>
-              {r.priority !== 'low' && (
-                <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0,
-                  background: r.priority === 'high' ? '#FF6B6B' : '#FFC940',
-                  boxShadow: r.priority === 'high' ? '0 0 5px #FF6B6B' : 'none' }}/>
-              )}
+              <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0,
+                background: r.priority === 'high' ? '#FF6B6B' : r.priority === 'medium' ? '#FFC940' : '#3DCC91',
+                boxShadow: r.priority === 'high' ? '0 0 5px #FF6B6B' : r.priority === 'low' ? '0 0 4px #3DCC91' : 'none' }}/>
             </div>
           ))}
         </nav>
