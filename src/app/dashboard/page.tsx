@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function DashboardRedirect() {
-  redirect('/dashboard/room/MOH301');
+  redirect('/dashboard/overview');
 }
