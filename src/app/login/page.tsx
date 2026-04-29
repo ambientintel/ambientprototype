@@ -99,7 +99,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) { setCError(data.error || "Something went wrong."); return; }
-      if (data.devCode) setDevCode(data.devCode);
+      if (data.code) setDevCode(data.code);
       setCStep("code");
     } catch {
       setCError("Network error. Please try again.");
@@ -216,9 +216,9 @@ export default function LoginPage() {
                     We sent a 6-digit code to <strong>{cEmail}</strong>.
                   </p>
                   {devCode && (
-                    <div style={{ marginBottom: 16, background: "rgba(124,110,173,0.08)", border: "1px solid rgba(124,110,173,0.2)", borderRadius: 8, padding: "10px 14px" }}>
-                      <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--accent)", marginBottom: 4 }}>Dev mode — your code</div>
-                      <div style={{ fontFamily: "var(--mono)", fontSize: 28, fontWeight: 700, letterSpacing: "0.18em", color: "var(--accent)" }}>{devCode}</div>
+                    <div style={{ marginBottom: 16, background: "rgba(124,110,173,0.08)", border: "1px solid rgba(124,110,173,0.2)", borderRadius: 8, padding: "14px 18px" }}>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-3)", marginBottom: 6 }}>Your verification code</div>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: 36, fontWeight: 700, letterSpacing: "0.22em", color: "var(--accent)" }}>{devCode}</div>
                     </div>
                   )}
                   <form onSubmit={handleVerifyCode} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
