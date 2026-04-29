@@ -147,7 +147,7 @@ export default function FloorMap() {
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                     <div>
                       <div style={{ fontFamily:'var(--mono)', fontSize:11, color:'var(--text-3)', marginBottom:4 }}>{r.id}</div>
-                      <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>{r.name}</div>
+                      <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.name}</div>
                     </div>
                     <span style={{ display:'inline-flex', alignItems:'center', gap:5, background:'white', border:`1px solid ${s.border}`, borderRadius:99, padding:'3px 10px', fontSize:11, fontWeight:500, color:s.text }}>
                       <span style={{ width:6, height:6, borderRadius:'50%', background:s.dot, display:'inline-block' }}/>
