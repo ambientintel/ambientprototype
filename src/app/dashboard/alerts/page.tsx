@@ -69,7 +69,7 @@ export default function AlertsPage() {
             <nav className="sidebar">
         <Link href="/" style={{ textDecoration:"none", color:"inherit" }}>
           <div className="brand">
-            <div className="brand-name">Ambient <em>Demo</em></div>
+            <div className="brand-name">Ambient <em>Intelligence</em></div>
           </div>
         </Link>
         <nav className="nav-section">
