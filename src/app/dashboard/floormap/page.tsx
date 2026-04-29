@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const ROOMS = [
   { id:'MOH 301', name:'Evelyn Rodriguez',  status:'alert',    last:'10:23 am', activity:82 },
@@ -22,6 +23,7 @@ const STATUS = {
 };
 
 export default function FloorMap() {
+  const router = useRouter();
   const [activeRoom, setActiveRoom] = useState('');
     const [now, setNow] = useState(new Date());
   useEffect(()=>{ const id=setInterval(()=>setNow(new Date()),60000); return ()=>clearInterval(id); },[]);
@@ -85,43 +87,43 @@ export default function FloorMap() {
         </nav>
         <nav className="nav-section">
           <div className="nav-label">Rooms</div>
-            <div key="MOH 301" className="nav-item" onClick={()=>setActiveRoom('MOH 301')}>
+            <div key="MOH 301" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH301')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 301
             </div>
-            <div key="MOH 302" className="nav-item" onClick={()=>setActiveRoom('MOH 302')}>
+            <div key="MOH 302" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH302')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 302
             </div>
-            <div key="MOH 303" className="nav-item" onClick={()=>setActiveRoom('MOH 303')}>
+            <div key="MOH 303" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH303')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 303
             </div>
-            <div key="MOH 304" className="nav-item" onClick={()=>setActiveRoom('MOH 304')}>
+            <div key="MOH 304" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH304')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 304
             </div>
-            <div key="MOH 305" className="nav-item" onClick={()=>setActiveRoom('MOH 305')}>
+            <div key="MOH 305" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH305')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 305
             </div>
-            <div key="MOH 306" className="nav-item" onClick={()=>setActiveRoom('MOH 306')}>
+            <div key="MOH 306" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH306')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 306
             </div>
-            <div key="MOH 307" className="nav-item" onClick={()=>setActiveRoom('MOH 307')}>
+            <div key="MOH 307" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH307')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 307
             </div>
-            <div key="MOH 308" className="nav-item" onClick={()=>setActiveRoom('MOH 308')}>
+            <div key="MOH 308" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH308')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 308
             </div>
-            <div key="MOH 309" className="nav-item" onClick={()=>setActiveRoom('MOH 309')}>
+            <div key="MOH 309" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH309')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 309
             </div>
-            <div key="MOH 310" className="nav-item" onClick={()=>setActiveRoom('MOH 310')}>
+            <div key="MOH 310" className="nav-item" onClick={()=>router.push('/dashboard/room/MOH310')}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1"/><path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/></svg>
               MOH 310
             </div>
