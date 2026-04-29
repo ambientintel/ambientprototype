@@ -21,8 +21,10 @@ export default function LoginPage() {
   const [cRole, setCRole] = useState("engineer");
   const [cLoading, setCLoading] = useState(false);
   const [cError, setCError] = useState("");
-  const [cSuccess, setCSuccess] = useState(false);
-  const [devVerifyUrl, setDevVerifyUrl] = useState("");
+  const [cStep, setCStep] = useState<"form" | "code" | "success">("form");
+  const [cCode, setCCode] = useState("");
+  const [cVerifying, setCVerifying] = useState(false);
+  const [devCode, setDevCode] = useState("");
 
   const notion: React.CSSProperties = {
     "--bg": "#F0F0EE",
@@ -97,12 +99,34 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) { setCError(data.error || "Something went wrong."); return; }
-      if (data.devVerifyUrl) setDevVerifyUrl(data.devVerifyUrl);
-      setCSuccess(true);
+      if (data.devCode) setDevCode(data.devCode);
+      setCStep("code");
     } catch {
       setCError("Network error. Please try again.");
     } finally {
       setCLoading(false);
+    }
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setCError("");
+    if (cCode.trim().length !== 6) { setCError("Please enter the 6-digit code."); return; }
+    setCVerifying(true);
+    try {
+      const res = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cEmail, code: cCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { setCError(data.error || "Verification failed."); return; }
+      try { localStorage.setItem("ambient_auth", JSON.stringify({ email: cEmail, name: cName })); } catch {}
+      setCStep("success");
+    } catch {
+      setCError("Network error. Please try again.");
+    } finally {
+      setCVerifying(false);
     }
   }
 
@@ -180,24 +204,62 @@ export default function LoginPage() {
                 Join the team
               </p>
 
-              {cSuccess ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "20px 0", textAlign: "center" }}>
-                  <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(124,110,173,0.10)", border: "1px solid rgba(124,110,173,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7C6EAD" strokeWidth="1.8"><path d="M3 8l7.9 5.3a2 2 0 002.2 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 22, letterSpacing: "-0.01em", marginBottom: 6 }}>Check your email</div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Confirmation sent</div>
-                  </div>
-                  <p style={{ fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.6, margin: 0 }}>
-                    We sent a confirmation link to <strong>{cEmail}</strong>. Click it to activate your account.
+              {cStep === "code" && (
+                <>
+                  <h1 style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 28, letterSpacing: "-0.02em", margin: "0 0 6px" }}>
+                    Enter <em style={{ fontStyle: "italic", fontWeight: 300, color: "var(--text-2)" }}>your code</em>
+                  </h1>
+                  <p style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    Check your email
                   </p>
-                  {devVerifyUrl && (
-                    <div style={{ width: "100%", background: "rgba(124,110,173,0.08)", border: "1px solid rgba(124,110,173,0.2)", borderRadius: 8, padding: "12px 14px", textAlign: "left" }}>
-                      <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--accent)", marginBottom: 6 }}>Dev mode — no email sent</div>
-                      <a href={devVerifyUrl} style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--accent)", wordBreak: "break-all" as const }}>Click to verify →</a>
+                  <p style={{ fontSize: 13, color: "var(--text-2)", margin: "0 0 24px", lineHeight: 1.5 }}>
+                    We sent a 6-digit code to <strong>{cEmail}</strong>.
+                  </p>
+                  {devCode && (
+                    <div style={{ marginBottom: 16, background: "rgba(124,110,173,0.08)", border: "1px solid rgba(124,110,173,0.2)", borderRadius: 8, padding: "10px 14px" }}>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--accent)", marginBottom: 4 }}>Dev mode — your code</div>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: 28, fontWeight: 700, letterSpacing: "0.18em", color: "var(--accent)" }}>{devCode}</div>
                     </div>
                   )}
+                  <form onSubmit={handleVerifyCode} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={labelStyle}>6-digit code</label>
+                      <input
+                        type="text" inputMode="numeric" maxLength={6} autoFocus
+                        placeholder="000000" value={cCode} onChange={e => setCCode(e.target.value.replace(/\D/g, ""))}
+                        style={{ ...inputStyle, fontFamily: "var(--mono)", fontSize: 28, fontWeight: 600, letterSpacing: "0.2em", textAlign: "center" }}
+                        onFocus={e => (e.currentTarget.style.borderColor = "var(--accent)")}
+                        onBlur={e => (e.currentTarget.style.borderColor = "var(--line-strong)")}
+                      />
+                    </div>
+                    {cError && <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "#FF6B6B", padding: "10px 14px", background: "rgba(255,107,107,0.08)", border: "1px solid rgba(255,107,107,0.2)", borderRadius: 6 }}>{cError}</div>}
+                    <button type="submit" disabled={cVerifying || cCode.length !== 6}
+                      style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 13, fontWeight: 500, fontFamily: "var(--sans)", cursor: (cVerifying || cCode.length !== 6) ? "not-allowed" : "pointer", opacity: (cVerifying || cCode.length !== 6) ? 0.6 : 1, transition: "opacity 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                      onMouseEnter={e => { if (!cVerifying && cCode.length === 6) e.currentTarget.style.background = "#6B5E9A"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}>
+                      {cVerifying ? (<><svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ animation: "spin 0.7s linear infinite" }}><circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/><path d="M7 1.5a5.5 5.5 0 015.5 5.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>Verifying…</>) : "Confirm account"}
+                    </button>
+                    <button type="button" onClick={() => { setCStep("form"); setCCode(""); setCError(""); setDevCode(""); }}
+                      style={{ background: "none", border: "none", fontSize: 12, color: "var(--text-3)", cursor: "pointer", fontFamily: "var(--mono)", textDecoration: "underline" }}>
+                      ← Back to form
+                    </button>
+                  </form>
+                </>
+              )}
+
+              {cStep === "success" && (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "20px 0", textAlign: "center" }}>
+                  <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(61,204,145,0.12)", border: "1px solid rgba(61,204,145,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3DCC91" strokeWidth="2.2"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 24, letterSpacing: "-0.01em", marginBottom: 6 }}>Account confirmed</div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Welcome, {cName}</div>
+                  </div>
+                  <p style={{ fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.6, margin: 0 }}>Your account is active. You can now access the dashboard.</p>
+                  <a href="/dashboard/overview" style={{ background: "var(--accent)", color: "#fff", textDecoration: "none", padding: "12px 28px", borderRadius: 8, fontSize: 13, fontWeight: 500, marginTop: 4 }}>
+                    Go to Dashboard →
+                  </a>
                 </div>
               ) : (
                 <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
