@@ -439,7 +439,7 @@ export default function MobileLab() {
   const [vibrate, setVibrate]             = useState(true);
   const [sound, setSound]                 = useState(true);
   const [selectedFloor, setSelectedFloor] = useState<string>('all');
-  const [showPanel, setShowPanel]         = useState<'customization' | 'alertConfig' | null>('customization');
+  const [showPanel, setShowPanel]         = useState<'customization' | 'alertConfig' | 'install'>('customization');
 
   const acknowledgeAlert = (id: string) => {
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'acknowledged' } : a));
@@ -546,14 +546,18 @@ export default function MobileLab() {
         }}>
           {/* Panel tabs */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 20 }}>
-            {(['customization', 'alertConfig'] as const).map(p => (
-              <button key={p} onClick={() => setShowPanel(p)} style={{
-                flex: 1, background: showPanel === p ? C.accentDim : 'transparent',
-                border: `1px solid ${showPanel === p ? C.accent + '55' : C.border}`,
-                borderRadius: 8, color: showPanel === p ? C.accent : C.text2,
-                fontSize: 11, fontWeight: showPanel === p ? 700 : 400,
-                padding: '7px 6px', cursor: 'pointer', letterSpacing: '0.02em',
-              }}>{p === 'customization' ? 'Layout' : 'Alerts'}</button>
+            {([
+              { key: 'customization', label: 'Layout' },
+              { key: 'alertConfig',   label: 'Alerts' },
+              { key: 'install',       label: 'Install' },
+            ] as const).map(p => (
+              <button key={p.key} onClick={() => setShowPanel(p.key)} style={{
+                flex: 1, background: showPanel === p.key ? C.accentDim : 'transparent',
+                border: `1px solid ${showPanel === p.key ? C.accent + '55' : C.border}`,
+                borderRadius: 8, color: showPanel === p.key ? C.accent : C.text2,
+                fontSize: 11, fontWeight: showPanel === p.key ? 700 : 400,
+                padding: '7px 4px', cursor: 'pointer', letterSpacing: '0.02em',
+              }}>{p.label}</button>
             ))}
           </div>
 
@@ -636,6 +640,62 @@ export default function MobileLab() {
             </>
           )}
         </div>
+
+          {showPanel === 'install' && (
+            <>
+              <div style={{ fontSize: 10, color: C.text3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>Install on iPhone</div>
+              {[
+                { step: '1', text: 'Open Safari and go to ambientprototype.vercel.app/mobilelab' },
+                { step: '2', text: 'Tap the Share button (□↑) at the bottom of the screen' },
+                { step: '3', text: 'Scroll down and tap "Add to Home Screen"' },
+                { step: '4', text: 'Tap "Add" — the app icon appears on your home screen' },
+                { step: '5', text: 'Open the app and allow notifications when prompted' },
+              ].map(s => (
+                <div key={s.step} style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                    background: C.accentDim, border: `1px solid ${C.accent}44`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700, color: C.accent,
+                  }}>{s.step}</div>
+                  <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.5, paddingTop: 2 }}>{s.text}</span>
+                </div>
+              ))}
+
+              <div style={{ width: '100%', height: 1, background: C.border, margin: '16px 0' }} />
+              <div style={{ fontSize: 10, color: C.text3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>Install on Android</div>
+              {[
+                { step: '1', text: 'Open Chrome and go to ambientprototype.vercel.app/mobilelab' },
+                { step: '2', text: 'Tap the three-dot menu (⋮) in the top-right corner' },
+                { step: '3', text: 'Tap "Add to Home screen" or "Install app"' },
+                { step: '4', text: 'Tap "Install" to confirm' },
+                { step: '5', text: 'Open the app and allow notifications when prompted' },
+              ].map(s => (
+                <div key={s.step} style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                    background: C.greenDim, border: `1px solid ${C.green}44`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700, color: C.green,
+                  }}>{s.step}</div>
+                  <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.5, paddingTop: 2 }}>{s.text}</span>
+                </div>
+              ))}
+
+              <div style={{ width: '100%', height: 1, background: C.border, margin: '16px 0' }} />
+              <div style={{
+                background: C.amberDim, border: `1px solid ${C.amber}33`, borderRadius: 10, padding: 12,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, marginBottom: 6 }}>After installing</div>
+                <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: 11, color: C.text2, lineHeight: 1.8 }}>
+                  <li>Allow notifications to receive fall alerts</li>
+                  <li>Keep the app on your home screen for quick access</li>
+                  <li>Alerts arrive even when the app is closed</li>
+                  <li>Tap "Respond" on any alert notification to open the app</li>
+                </ul>
+              </div>
+            </>
+          )}
 
         {/* Center — phone preview */}
         <div style={{ padding: '32px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
@@ -745,6 +805,120 @@ export default function MobileLab() {
                     {a.status === 'active' ? '● Active' : a.status === 'acknowledged' ? '● Acked' : '✓ Done'}
                   </span>
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Nurse install instructions — full width */}
+      <div style={{
+        borderTop: `1px solid ${C.border}`, background: C.surface,
+        padding: '28px 32px',
+      }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' }}>Installing on your phone</div>
+              <div style={{ fontSize: 12, color: C.text2, marginTop: 3 }}>Add Ambient to your home screen to receive fall alerts — no App Store required.</div>
+            </div>
+            <div style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
+              background: C.greenDim, color: C.green, border: `1px solid ${C.green}33`,
+              borderRadius: 6, padding: '5px 12px',
+            }}>Free · No download</div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            {/* iPhone */}
+            <div style={{
+              background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, background: C.accentDim,
+                  border: `1px solid ${C.accent}33`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16,
+                }}>📱</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>iPhone · iPad</div>
+                  <div style={{ fontSize: 11, color: C.text2 }}>Safari required</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { step: '1', text: 'Open Safari and visit this page' },
+                  { step: '2', text: 'Tap the Share button (□↑) at the bottom' },
+                  { step: '3', text: 'Tap "Add to Home Screen"' },
+                  { step: '4', text: 'Tap "Add" to confirm' },
+                  { step: '5', text: 'Open from home screen and allow notifications' },
+                ].map(s => (
+                  <div key={s.step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                      background: C.accentDim, border: `1px solid ${C.accent}44`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10, fontWeight: 700, color: C.accent,
+                    }}>{s.step}</div>
+                    <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.5, paddingTop: 2 }}>{s.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Android */}
+            <div style={{
+              background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, background: C.greenDim,
+                  border: `1px solid ${C.green}33`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16,
+                }}>🤖</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>Android</div>
+                  <div style={{ fontSize: 11, color: C.text2 }}>Chrome required</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { step: '1', text: 'Open Chrome and visit this page' },
+                  { step: '2', text: 'Tap the three-dot menu (⋮) top-right' },
+                  { step: '3', text: 'Tap "Add to Home screen" or "Install app"' },
+                  { step: '4', text: 'Tap "Install" to confirm' },
+                  { step: '5', text: 'Open from home screen and allow notifications' },
+                ].map(s => (
+                  <div key={s.step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                      background: C.greenDim, border: `1px solid ${C.green}44`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10, fontWeight: 700, color: C.green,
+                    }}>{s.step}</div>
+                    <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.5, paddingTop: 2 }}>{s.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* After-install tips */}
+          <div style={{
+            marginTop: 16, background: C.amberDim, border: `1px solid ${C.amber}33`,
+            borderRadius: 12, padding: '14px 20px',
+            display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, minWidth: 100, paddingTop: 1 }}>After installing</div>
+            {[
+              'Allow notifications when the app asks — required for fall alerts',
+              'Alerts arrive even when the app is closed or your screen is locked',
+              'Tap "Respond" on any notification to open directly to that room',
+              'Keep the app on your first home screen for fastest access',
+            ].map((tip, i) => (
+              <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', minWidth: 180, flex: 1 }}>
+                <span style={{ color: C.amber, fontSize: 14, lineHeight: 1, flexShrink: 0 }}>·</span>
+                <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{tip}</span>
               </div>
             ))}
           </div>
