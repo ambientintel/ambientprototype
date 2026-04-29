@@ -253,7 +253,7 @@ export default function RoomDashboard() {
         <nav className="nav-section">
           <div className="nav-label">Views</div>
           {([
-            [`/dashboard/room/${roomId}`,  'Overview',  <path key="ov" d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round"/>],
+            ['/dashboard/overview',         'Overview',  <path key="ov" d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round"/>],
             ['/dashboard/floormap',        'Floor Map', <><rect key="fr" x="2.5" y="2.5" width="11" height="11" rx="1"/><path key="fp" d="M2.5 7h11M7 2.5v11"/></>],
             ['/dashboard/alerts',          'Alerts',    <><path key="al" d="M3.5 12.5h9l-1.5-2V7a3.5 3.5 0 10-7 0v3.5l-1.5 2z" strokeLinejoin="round"/><path key="ab" d="M6.5 13.5a1.5 1.5 0 003 0" strokeLinecap="round"/></>],
             ['/dashboard/reports',         'Reports',   <><rect key="re" x="3" y="2" width="10" height="12" rx="1"/><path key="rp" d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" strokeLinecap="round"/></>],
