@@ -412,44 +412,51 @@ export default function EngineeringPage() {
                         </button>
                       </div>
 
-                      {/* Task bucket */}
+                      {/* Active task bucket */}
+                      <div style={{ background:"var(--surface-1)", border:`1px solid ${t.color}22`, borderRadius:10, padding: tasks.length ? "8px" : "16px 12px", minHeight:56, display:"flex", flexDirection:"column", gap:5 }}>
+                        {tasks.length === 0 && (
+                          <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", textAlign:"center", letterSpacing:"0.08em" }}>EMPTY</div>
+                        )}
+                        {tasks.map((task, idx) => (
+                          <div key={idx} style={{ display:"flex", alignItems:"flex-start", gap:6, background:"var(--surface-2)", borderRadius:6, padding:"7px 9px", border:"1px solid var(--line)" }}>
+                            <button onClick={() => completePersonalTask(name, idx)} title="Mark complete"
+                              style={{ flexShrink:0, width:16, height:16, borderRadius:4, border:`1.5px solid ${t.color}66`, background:"transparent", cursor:"pointer", marginTop:1, transition:"background 0.12s, border-color 0.12s", display:"flex", alignItems:"center", justifyContent:"center" }}
+                              onMouseEnter={e => { e.currentTarget.style.background = t.color + "33"; e.currentTarget.style.borderColor = t.color; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = t.color + "66"; }}
+                            />
+                            <span style={{ flex:1, fontSize:12, color:"var(--text-2)", lineHeight:1.4 }}>{task}</span>
+                            <button onClick={() => removePersonalTask(name, idx)}
+                              style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:13, lineHeight:1, padding:"0 2px", transition:"color 0.12s" }}
+                              onMouseEnter={e => (e.currentTarget.style.color = "var(--text-2)")}
+                              onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>✕</button>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Completed task bucket */}
                       {(() => {
                         const done = completedTasks[name] || [];
                         return (
-                          <div style={{ background:"var(--surface-1)", border:`1px solid ${t.color}22`, borderRadius:10, padding: (tasks.length || done.length) ? "8px" : "16px 12px", minHeight:60, display:"flex", flexDirection:"column", gap:5 }}>
-                            {tasks.length === 0 && done.length === 0 && (
-                              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", textAlign:"center", letterSpacing:"0.08em" }}>EMPTY</div>
-                            )}
-                            {tasks.map((task, idx) => (
-                              <div key={idx} style={{ display:"flex", alignItems:"flex-start", gap:6, background:"var(--surface-2)", borderRadius:6, padding:"7px 9px", border:"1px solid var(--line)" }}>
-                                <button onClick={() => completePersonalTask(name, idx)} title="Mark complete"
-                                  style={{ flexShrink:0, width:16, height:16, borderRadius:4, border:`1.5px solid ${t.color}66`, background:"transparent", cursor:"pointer", marginTop:1, transition:"background 0.12s, border-color 0.12s", display:"flex", alignItems:"center", justifyContent:"center" }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = t.color + "33"; e.currentTarget.style.borderColor = t.color; }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = t.color + "66"; }}
-                                />
-                                <span style={{ flex:1, fontSize:12, color:"var(--text-2)", lineHeight:1.4 }}>{task}</span>
-                                <button onClick={() => removePersonalTask(name, idx)}
-                                  style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:13, lineHeight:1, padding:"0 2px", transition:"color 0.12s" }}
-                                  onMouseEnter={e => (e.currentTarget.style.color = "var(--text-2)")}
-                                  onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>✕</button>
-                              </div>
-                            ))}
-                            {done.length > 0 && (
-                              <>
-                                {tasks.length > 0 && <div style={{ height:1, background:"var(--line)", margin:"2px 0" }}/>}
-                                <div style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-4)", padding:"2px 2px 0" }}>Completed · {done.length}</div>
-                                {done.map((task, idx) => (
-                                  <div key={idx} style={{ display:"flex", alignItems:"flex-start", gap:6, borderRadius:6, padding:"6px 9px", opacity:0.5 }}>
-                                    <span style={{ flexShrink:0, width:16, height:16, borderRadius:4, border:"1.5px solid var(--text-4)", background:"var(--surface-3)", display:"flex", alignItems:"center", justifyContent:"center", marginTop:1 }}>
-                                      <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="var(--text-3)" strokeWidth="1.8"><path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                    </span>
-                                    <span style={{ flex:1, fontSize:12, color:"var(--text-3)", lineHeight:1.4, textDecoration:"line-through" }}>{task}</span>
-                                    <button onClick={() => removeCompletedTask(name, idx)}
-                                      style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:13, lineHeight:1, padding:"0 2px" }}>✕</button>
-                                  </div>
-                                ))}
-                              </>
-                            )}
+                          <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:5, padding:"2px 2px 0" }}>
+                              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="var(--text-4)" strokeWidth="1.8"><path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              <span style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-4)" }}>Done · {done.length}</span>
+                            </div>
+                            <div style={{ background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:10, padding: done.length ? "8px" : "12px", minHeight:44, display:"flex", flexDirection:"column", gap:5, opacity:0.75 }}>
+                              {done.length === 0 && (
+                                <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", textAlign:"center", letterSpacing:"0.08em" }}>EMPTY</div>
+                              )}
+                              {done.map((task, idx) => (
+                                <div key={idx} style={{ display:"flex", alignItems:"flex-start", gap:6, borderRadius:6, padding:"6px 9px" }}>
+                                  <span style={{ flexShrink:0, width:16, height:16, borderRadius:4, border:"1.5px solid var(--text-4)", background:"var(--surface-3)", display:"flex", alignItems:"center", justifyContent:"center", marginTop:1 }}>
+                                    <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="var(--text-3)" strokeWidth="1.8"><path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  </span>
+                                  <span style={{ flex:1, fontSize:12, color:"var(--text-3)", lineHeight:1.4, textDecoration:"line-through" }}>{task}</span>
+                                  <button onClick={() => removeCompletedTask(name, idx)}
+                                    style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:13, lineHeight:1, padding:"0 2px" }}>✕</button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         );
                       })()}
