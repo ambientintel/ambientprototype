@@ -73,6 +73,16 @@ const TEAM = [
   { name:"Lena K.",   initial:"L", color:"#FF6B6B" },
   { name:"Jin W.",    initial:"J", color:"#3DCC91" },
   { name:"Sara O.",   initial:"S", color:"#FFC940" },
+  { name:"Gavin",     initial:"G", color:"#00B4D8" },
+  { name:"Hanna",     initial:"H", color:"#F472B6" },
+  { name:"Paulo",     initial:"P", color:"#FB923C" },
+  { name:"Isaac",     initial:"I", color:"#818CF8" },
+  { name:"Aki",       initial:"A", color:"#34D399" },
+];
+
+const DISCIPLINES = [
+  { name:"Electrical", color:"#FB923C", members:["Gavin","Hanna","Paulo"] },
+  { name:"Software",   color:"#818CF8", members:["Isaac","Aki"] },
 ];
 
 // ── Create issue form state type ───────────────────────────────────────────
@@ -218,10 +228,10 @@ export default function EngineeringPage() {
           ))}
         </div>
 
-        {/* Team */}
+        {/* Team — sprint assignees */}
         <div>
           <div style={s.navLabel}>Team</div>
-          {TEAM.map(t => (
+          {TEAM.filter(t => !DISCIPLINES.flatMap(d => d.members).includes(t.name)).map(t => (
             <div key={t.name} style={{ ...s.navItem, cursor:"pointer" }}
               onClick={() => setFilterAssignee(filterAssignee === t.name ? "all" : t.name)}>
               <div style={{ ...s.avatar, background: t.color + "33", color: t.color, width:20, height:20, fontSize:9 }}>{t.initial}</div>
@@ -229,6 +239,29 @@ export default function EngineeringPage() {
               <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>
                 {issues.filter(i => i.assignee === t.name && i.column !== "done").length}
               </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Disciplines */}
+        <div>
+          <div style={s.navLabel}>Disciplines</div>
+          {DISCIPLINES.map(d => (
+            <div key={d.name}>
+              <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 8px 3px", marginBottom:2 }}>
+                <span style={{ width:6, height:6, borderRadius:2, background:d.color, flexShrink:0 }}/>
+                <span style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.1em", color:d.color }}>{d.name}</span>
+              </div>
+              {d.members.map(name => {
+                const t = TEAM.find(tm => tm.name === name)!;
+                return (
+                  <div key={name} style={{ ...s.navItem, paddingLeft:20, cursor:"pointer" }}
+                    onClick={() => setFilterAssignee(filterAssignee === name ? "all" : name)}>
+                    <div style={{ ...s.avatar, background: t.color + "33", color: t.color, width:18, height:18, fontSize:8 }}>{t.initial}</div>
+                    <span style={{ flex:1, fontSize:12.5 }}>{name}</span>
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -307,6 +340,35 @@ export default function EngineeringPage() {
         {/* ── Board View ── */}
         {view === "board" && (
           <div style={{ ...s.content, flex:1 }}>
+
+            {/* Team roster */}
+            <div style={{ marginBottom:28 }}>
+              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:12 }}>Team</div>
+              <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                {DISCIPLINES.map(d => (
+                  <div key={d.name} style={{ background:"var(--surface-1)", border:`1px solid ${d.color}30`, borderRadius:10, padding:"14px 18px", display:"flex", flexDirection:"column", gap:10, minWidth:200 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                      <span style={{ width:7, height:7, borderRadius:2, background:d.color, flexShrink:0 }}/>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.12em", color:d.color, fontWeight:600 }}>{d.name}</span>
+                    </div>
+                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                      {d.members.map(name => {
+                        const t = TEAM.find(tm => tm.name === name)!;
+                        const active = filterAssignee === name;
+                        return (
+                          <button key={name} onClick={() => setFilterAssignee(active ? "all" : name)}
+                            style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 10px 6px 7px", borderRadius:6, border:`1px solid ${active ? t.color + "60" : "var(--line)"}`, background: active ? t.color + "18" : "var(--surface-2)", cursor:"pointer", transition:"all 0.15s" }}>
+                            <span style={{ width:24, height:24, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:10, fontWeight:700, flexShrink:0 }}>{t.initial}</span>
+                            <span style={{ fontSize:12.5, color: active ? "var(--text)" : "var(--text-2)", fontFamily:"var(--sans)" }}>{name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div style={s.board}>
               {COLUMNS.map(col => {
                 const colIssues = byColumn(col.id);
