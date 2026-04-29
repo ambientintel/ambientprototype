@@ -143,44 +143,21 @@ export default function FloorMap() {
           {/* ── Floor Activity Heatmap ── */}
           <div style={{ background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:14, padding:'24px 28px' }}>
             <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--text-3)', marginBottom:18 }}>Floor activity · heatmap</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            <div style={{ display:'flex', gap:4 }}>
               {[
-                { floor:'3F', rooms:[
-                  {id:'301',status:'alert'},{id:'302',status:'quiet'},{id:'303',status:'quiet'},
-                  {id:'304',status:'movement'},{id:'305',status:'alert'},{id:'306',status:'quiet'},
-                  {id:'307',status:'movement'},{id:'308',status:'quiet'},{id:'309',status:'alert'},
-                  {id:'310',status:'movement'},
-                ]},
-                { floor:'2F', rooms:[
-                  {id:'201',status:'quiet'},{id:'202',status:'movement'},{id:'203',status:'quiet'},
-                  {id:'204',status:'quiet'},{id:'205',status:'quiet'},{id:'206',status:'movement'},
-                  {id:'207',status:'alert'},{id:'208',status:'quiet'},{id:'209',status:'movement'},
-                  {id:'210',status:'quiet'},{id:'211',status:'quiet'},{id:'212',status:'alert'},
-                  {id:'213',status:'quiet'},{id:'214',status:'movement'},
-                ]},
-                { floor:'1F', rooms:[
-                  {id:'101',status:'quiet'},{id:'102',status:'quiet'},{id:'103',status:'quiet'},
-                  {id:'104',status:'movement'},{id:'105',status:'quiet'},{id:'106',status:'quiet'},
-                  {id:'107',status:'movement'},{id:'108',status:'quiet'},{id:'109',status:'alert'},
-                  {id:'110',status:'quiet'},{id:'111',status:'movement'},{id:'112',status:'quiet'},
-                  {id:'113',status:'quiet'},{id:'114',status:'quiet'},
-                ]},
-              ].map(f => (
-                <div key={f.floor} style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <span style={{ fontFamily:'var(--mono)', fontSize:10, color:'var(--text-3)', width:22, flexShrink:0 }}>{f.floor}</span>
-                  <div style={{ display:'flex', gap:4, flex:1 }}>
-                    {f.rooms.map(r => {
-                      const color = r.status==='alert' ? '#FF6B6B' : r.status==='movement' ? '#FFC940' : '#3DCC91';
-                      const bg    = r.status==='alert' ? 'rgba(255,107,107,0.12)' : r.status==='movement' ? 'rgba(255,201,64,0.14)' : 'rgba(61,204,145,0.10)';
-                      return (
-                        <div key={r.id} title={`Room ${r.id}`} style={{ flex:1, height:34, borderRadius:3, background:bg, border:`1px solid ${color}44`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'default' }}>
-                          <span style={{ fontFamily:'var(--mono)', fontSize:8, color, opacity:0.9 }}>{r.id}</span>
-                        </div>
-                      );
-                    })}
+                {id:'301',status:'alert'},{id:'302',status:'quiet'},{id:'303',status:'quiet'},
+                {id:'304',status:'movement'},{id:'305',status:'alert'},{id:'306',status:'quiet'},
+                {id:'307',status:'movement'},{id:'308',status:'quiet'},{id:'309',status:'alert'},
+                {id:'310',status:'movement'},
+              ].map(r => {
+                const color = r.status==='alert' ? '#FF6B6B' : r.status==='movement' ? '#FFC940' : '#3DCC91';
+                const bg    = r.status==='alert' ? 'rgba(255,107,107,0.12)' : r.status==='movement' ? 'rgba(255,201,64,0.14)' : 'rgba(61,204,145,0.10)';
+                return (
+                  <div key={r.id} title={`MOH ${r.id}`} style={{ flex:1, height:48, borderRadius:4, background:bg, border:`1px solid ${color}44`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'default' }}>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:9, color, opacity:0.9 }}>{r.id}</span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div style={{ display:'flex', gap:16, marginTop:14 }}>
               {[['#FF6B6B','Alert'],['#FFC940','Movement'],['#3DCC91','Quiet']].map(([c,l])=>(
