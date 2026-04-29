@@ -149,7 +149,7 @@ export default function LoginPage() {
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: "1px solid var(--line-strong)" }}>
           {([["signin", "Sign In"], ["create", "Create Account"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => { setTab(id); setError(""); setCError(""); setCSuccess(false); }}
+            <button key={id} onClick={() => { setTab(id); setError(""); setCError(""); setCStep("form"); }}
               style={{ flex: 1, padding: "16px 0", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--sans)", fontSize: 13, fontWeight: tab === id ? 500 : 400, color: tab === id ? "var(--text)" : "var(--text-3)", borderBottom: tab === id ? "2px solid var(--accent)" : "2px solid transparent", marginBottom: -1, transition: "color 0.15s, border-color 0.15s" }}>
               {label}
             </button>
