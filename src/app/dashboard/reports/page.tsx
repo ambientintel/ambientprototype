@@ -138,7 +138,7 @@ export default function ReportsPage() {
             <div className="crumb">{crumb}</div>
             <h1 className="page-title">Reports <em>&amp; Exports</em></h1>
           </div>
-          <button style={{ fontFamily:'var(--mono)', fontSize:11, padding:'7px 16px', borderRadius:6, border:'none', background:'var(--accent)', color:'white', cursor:'pointer' }}>+ Generate Report</button>
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}><a href="/login" className="btn btn-ghost"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="5" r="2.5"/><path d="M3 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" strokeLinecap="round"/></svg>Login</a><button style={{ fontFamily:'var(--mono)', fontSize:11, padding:'7px 16px', borderRadius:6, border:'none', background:'var(--accent)', color:'white', cursor:'pointer' }}>+ Generate Report</button></div>
         </header>
         <div style={{ padding:'32px 40px', display:'flex', flexDirection:'column', gap:12 }}>
           {REPORTS.map((r,i)=>(
