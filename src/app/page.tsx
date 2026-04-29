@@ -60,6 +60,13 @@ const MODULES = [
     description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the Ambient Intelligence platform.',
     meta: 'Parquet · ML · Recharts',
   },
+  {
+    href: '/backgroundlab',
+    tag: 'Design',
+    label: 'Background Lab',
+    description: 'Interactive visual experiments — generative backgrounds, motion studies, and ambient UI patterns for the Ambient Intelligence design system.',
+    meta: 'Canvas · Motion · UI',
+  },
 ];
 
 
