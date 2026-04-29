@@ -125,11 +125,18 @@ export default function EngineeringPage() {
       const saved = localStorage.getItem("eng_personal_tasks");
       const savedDone = localStorage.getItem("eng_completed_tasks");
       const savedHistory = localStorage.getItem("eng_history");
+      const savedIssues = localStorage.getItem("eng_issues");
       if (saved) setPersonalTasks(JSON.parse(saved));
       if (savedDone) setCompletedTasks(JSON.parse(savedDone));
       if (savedHistory) setHistory(JSON.parse(savedHistory));
+      if (savedIssues) setIssues(JSON.parse(savedIssues));
     } catch {}
   }, []);
+
+  // Persist issues (so deletes/moves survive refresh)
+  useEffect(() => {
+    try { localStorage.setItem("eng_issues", JSON.stringify(issues)); } catch {}
+  }, [issues]);
 
   // Persist active tasks
   useEffect(() => {
