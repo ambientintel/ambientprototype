@@ -56,12 +56,21 @@ async function subscribeToPush() {
   });
 }
 
+interface InAppAlert {
+  id: string;
+  room: string;
+  patient: string;
+  severity: 'critical' | 'warning';
+  confidence: number;
+}
+
 export default function MobilePage() {
   const [os, setOs] = useState<OS>('unknown');
   const [tab, setTab] = useState<'ios' | 'android'>('ios');
   const [mounted, setMounted] = useState(false);
   const [notifAvailable, setNotifAvailable] = useState(false);
   const [notifStatus, setNotifStatus] = useState<'unknown' | 'granted' | 'denied' | 'subscribing'>('unknown');
+  const [inAppAlert, setInAppAlert] = useState<InAppAlert | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -77,6 +86,17 @@ export default function MobilePage() {
       if (Notification.permission === 'granted') setNotifStatus('granted');
       else if (Notification.permission === 'denied') setNotifStatus('denied');
       else setNotifStatus('unknown');
+    }
+
+    if ('serviceWorker' in navigator) {
+      const handler = (e: MessageEvent) => {
+        if (e.data?.type !== 'PUSH_ALERT') return;
+        const d = e.data.payload ?? {};
+        setInAppAlert({ id: `${Date.now()}`, room: d.room ?? '—', patient: d.patient ?? 'Unknown', severity: d.severity === 'critical' ? 'critical' : 'warning', confidence: d.confidence ?? 0 });
+        setTimeout(() => setInAppAlert(null), 8000);
+      };
+      navigator.serviceWorker.addEventListener('message', handler);
+      return () => navigator.serviceWorker.removeEventListener('message', handler);
     }
   }, []);
 
@@ -121,7 +141,40 @@ export default function MobilePage() {
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'center', padding: '40px 20px',
     }}>
-      <style>{`* { box-sizing: border-box; }`}</style>
+      <style>{`* { box-sizing: border-box; } @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
+
+      {/* In-app alert banner — shown when app is open and foreground */}
+      {inAppAlert && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+          background: inAppAlert.severity === 'critical' ? '#1a0a0a' : '#1a1400',
+          borderBottom: `3px solid ${inAppAlert.severity === 'critical' ? C.red : C.amber}`,
+          padding: '14px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          animation: 'slideDown 0.25s ease',
+          boxShadow: `0 4px 24px ${inAppAlert.severity === 'critical' ? 'rgba(255,107,107,0.25)' : 'rgba(255,201,64,0.2)'}`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              background: inAppAlert.severity === 'critical' ? C.redDim : C.amberDim,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18,
+            }}>⚡</div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: inAppAlert.severity === 'critical' ? C.red : C.amber, textTransform: 'uppercase', marginBottom: 2 }}>
+                {inAppAlert.severity === 'critical' ? 'Fall Detected' : 'Fall Alert'}
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Room {inAppAlert.room} · {inAppAlert.patient}</div>
+              <div style={{ fontSize: 11, color: C.text2 }}>{inAppAlert.confidence}% confidence</div>
+            </div>
+          </div>
+          <button onClick={() => setInAppAlert(null)} style={{
+            background: 'transparent', border: 'none', color: C.text3,
+            fontSize: 20, cursor: 'pointer', padding: '4px 8px', flexShrink: 0,
+          }}>×</button>
+        </div>
+      )}
 
       <div style={{ width: '100%', maxWidth: 440 }}>
 
