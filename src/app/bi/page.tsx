@@ -259,7 +259,7 @@ export default function BIPage() {
                 <CartesianGrid stroke={C.line}/>
                 <XAxis dataKey="month" tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false}/>
                 <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={52}/>
-                <Tooltip contentStyle={TT} formatter={(v:number) => [fmt$(v), '']}/>
+                <Tooltip contentStyle={TT} formatter={(v) => [typeof v === 'number' ? fmt$(v) : String(v ?? ''), '']}/>
                 <ReferenceLine x="May" stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value:'Forecast', fill:C.amber, fontFamily:'var(--mono)', fontSize:9 }}/>
                 <Area dataKey="revenue" stroke={C.accent} strokeWidth={2} fill="url(#g-rev)" dot={false} name="Revenue"/>
               </AreaChart>
@@ -273,7 +273,7 @@ export default function BIPage() {
                 <XAxis dataKey="month" tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false}/>
                 <YAxis yAxisId="l" tickFormatter={v => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={52}/>
                 <YAxis yAxisId="r" orientation="right" tickFormatter={v => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={52}/>
-                <Tooltip contentStyle={TT} formatter={(v:number) => [fmt$(v), '']}/>
+                <Tooltip contentStyle={TT} formatter={(v) => [typeof v === 'number' ? fmt$(v) : String(v ?? ''), '']}/>
                 <Bar yAxisId="l" dataKey="revenue" fill={C.accent}  fillOpacity={0.22} radius={[4,4,0,0]} name="Revenue"/>
                 <Bar yAxisId="l" dataKey="cost"    fill={C.red}     fillOpacity={0.22} radius={[4,4,0,0]} name="Cost"/>
                 <Line yAxisId="r" dataKey="margin" stroke={C.sage}  strokeWidth={2}    dot={{ fill:C.sage, r:3 }} name="Net Margin $"/>
@@ -287,7 +287,7 @@ export default function BIPage() {
                 <CartesianGrid stroke={C.line}/>
                 <XAxis dataKey="month" tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false}/>
                 <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={52}/>
-                <Tooltip contentStyle={TT} formatter={(v:number) => [fmt$(v), '']}/>
+                <Tooltip contentStyle={TT} formatter={(v) => [typeof v === 'number' ? fmt$(v) : String(v ?? ''), '']}/>
                 <Legend wrapperStyle={{ fontFamily:'var(--mono)', fontSize:10, color:C.text3 }}/>
                 <Bar dataKey="roomBoard"  stackId="a" fill={C.accent} fillOpacity={0.85} name="Room & Board"/>
                 <Bar dataKey="ancillary" stackId="a" fill={C.teal}   fillOpacity={0.85} name="Ancillary"/>
@@ -328,7 +328,7 @@ export default function BIPage() {
                     <Pie data={PAYER_MIX} cx="50%" cy="50%" innerRadius={64} outerRadius={96} paddingAngle={3} dataKey="value">
                       {PAYER_MIX.map((e, i) => <Cell key={i} fill={e.color} fillOpacity={0.85}/>)}
                     </Pie>
-                    <Tooltip contentStyle={TT} formatter={(v:number) => [`${v}%`, '']}/>
+                    <Tooltip contentStyle={TT} formatter={(v) => [typeof v === 'number' ? `${v}%` : String(v ?? ''), '']}/>
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -362,7 +362,7 @@ export default function BIPage() {
                 <CartesianGrid stroke={C.line}/>
                 <XAxis dataKey="month" tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false}/>
                 <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={44}/>
-                <Tooltip contentStyle={TT} formatter={(v:number) => [fmt$(v), '']}/>
+                <Tooltip contentStyle={TT} formatter={(v) => [typeof v === 'number' ? fmt$(v) : String(v ?? ''), '']}/>
                 <Legend wrapperStyle={{ fontFamily:'var(--mono)', fontSize:10, color:C.text3 }}/>
                 <Bar dataKey="staffing"   stackId="a" fill={C.accent}  fillOpacity={0.85} name="Staffing"/>
                 <Bar dataKey="facilities" stackId="a" fill={C.purple}  fillOpacity={0.85} name="Facilities"/>
@@ -410,7 +410,7 @@ export default function BIPage() {
                 <XAxis dataKey="month" tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false}/>
                 <YAxis yAxisId="l" tickFormatter={v => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={44}/>
                 <YAxis yAxisId="r" orientation="right" tickFormatter={v => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text4, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={44}/>
-                <Tooltip contentStyle={TT} formatter={(v:number) => [fmt$(v), '']}/>
+                <Tooltip contentStyle={TT} formatter={(v) => [typeof v === 'number' ? fmt$(v) : String(v ?? ''), '']}/>
                 <Bar     yAxisId="l" dataKey="monthly"    fill={C.sage}  fillOpacity={0.3}  radius={[3,3,0,0]} name="Monthly Savings"/>
                 <Area    yAxisId="r" dataKey="cumulative" stroke={C.sage} strokeWidth={2}    fill="url(#g-sav)" dot={{ fill:C.sage, r:4 }} name="Cumulative"/>
               </ComposedChart>
