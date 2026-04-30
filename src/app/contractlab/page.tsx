@@ -1147,3 +1147,4 @@ export default function ContractLabPage() {
     </div>
   );
 }
+
