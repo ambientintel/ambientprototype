@@ -601,8 +601,8 @@ export default function Landing1() {
             </p>
 
             <div className="l1-fadeup" style={{ animationDelay: '0.35s', display: 'flex', gap: 12 }}>
-              <Link href="/dashboard/room/MOH301" style={{ textDecoration: 'none' }}>
-                <button className="l1-cta-primary">Enter Dashboard</button>
+              <Link href="/dashboard/overview" style={{ textDecoration: 'none' }}>
+                <button className="l1-cta-primary">Nurse Dashboard</button>
               </Link>
               <Link href="/control" style={{ textDecoration: 'none' }}>
                 <button className="l1-cta-ghost">View Control Center</button>
@@ -1008,3 +1008,4 @@ export default function Landing1() {
     </>
   );
 }
+
