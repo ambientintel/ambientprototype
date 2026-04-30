@@ -45,11 +45,12 @@ const MODULE_GROUPS = [
     label: 'Mobile, Design & Tools',
     accent: '#8B6BE8',
     accentDim: 'rgba(139,107,232,0.10)',
-    cols: 6,
+    cols: 7,
     modules: [
       { href: '/mobilelab', tag: 'Mobile', label: 'Mobile Alert Lab', description: 'Simulated nurse mobile dashboard with live fall-alert push notifications, phone frame preview, and PWA install flow.', meta: 'PWA · Push · iOS · Android' },
       { href: '/mobile', tag: 'Mobile', label: 'Mobile Download', description: 'Install the Ambient nurse app directly from the browser — no App Store required. Step-by-step guide for iOS and Android.', meta: 'PWA · No App Store' },
       { href: '/datascience', tag: 'Data Science', label: 'Data Science', description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the platform.', meta: 'Parquet · ML · Recharts' },
+      { href: '/contractlab', tag: 'Tools', label: 'Contract Lab', description: 'AI-assisted contract authoring, multi-party e-signature workflows, and document status tracking for vendor and partner agreements.', meta: 'NDA · MSA · SOW · E-sign' },
       { href: '/backgroundlab', tag: 'Design', label: 'Background Lab', description: 'Generative backgrounds, motion studies, and ambient UI pattern experiments for the Ambient Intelligence design system.', meta: 'Canvas · Motion · UI' },
       { href: '/brand', tag: 'Design', label: 'Brand & Color Picker', description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and full type scale reference.', meta: 'ambientdesign · interactive' },
       { href: '/colors', tag: 'Design', label: 'Color & Typography', description: 'Design token reference — CSS custom properties, color palette, badge states, type families, and full type scale.', meta: 'globals.css · tokens' },
@@ -618,10 +619,10 @@ export default function Landing1() {
           font-family: inherit;
         }
         .l1-cta-ghost:hover { border-color: #2D72D2; color: #2D72D2; }
-        @media (max-width: 900px) {
-          .l1-tools-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        @media (max-width: 1100px) {
+          .l1-tools-grid { grid-template-columns: repeat(4, 1fr) !important; }
         }
-        @media (max-width: 600px) {
+        @media (max-width: 700px) {
           .l1-tools-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
       `}</style>
