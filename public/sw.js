@@ -1,4 +1,4 @@
-const CACHE = 'ambient-v2';
+const CACHE = 'ambient-v3';
 const PRECACHE = ['/', '/mobile', '/mobilelab'];
 
 self.addEventListener('install', e => {
@@ -21,28 +21,23 @@ self.addEventListener('fetch', e => {
 });
 
 self.addEventListener('push', e => {
-  const data = e.data?.json() ?? {};
-  e.waitUntil(
-    self.registration.showNotification(data.title ?? 'Fall Alert', {
-      body:             data.body    ?? 'A fall event has been detected.',
-      icon:             '/icon-192.png',
-      badge:            '/icon-192.png',
-      tag:              data.tag     ?? 'fall-alert',
-      renotify:         true,
-      requireInteraction: true,
-      vibrate:          [200, 100, 200, 100, 400],
-      data:             { url: data.url ?? '/mobilelab', room: data.room ?? '' },
-      actions: [
-        { action: 'respond', title: 'Respond' },
-        { action: 'dismiss', title: 'Dismiss' },
-      ],
-    })
-  );
+  let data = {};
+  try { data = e.data?.json() ?? {}; } catch { data = { title: 'Fall Alert', body: e.data?.text() ?? '' }; }
+
+  // Keep options minimal for iOS compatibility — no vibrate, no actions, no requireInteraction
+  const options = {
+    body:  data.body  ?? 'A fall event has been detected.',
+    icon:  '/icon-192.png',
+    badge: '/icon-192.png',
+    tag:   data.tag   ?? 'fall-alert',
+    data:  { url: data.url ?? '/mobilelab' },
+  };
+
+  e.waitUntil(self.registration.showNotification(data.title ?? '🚨 Fall Alert', options));
 });
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  if (e.action === 'dismiss') return;
   const url = e.notification.data?.url ?? '/mobilelab';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
