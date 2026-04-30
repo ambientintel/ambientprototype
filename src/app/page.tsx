@@ -35,11 +35,13 @@ const MODULE_GROUPS = [
   },
   {
     key: 'tools',
-    label: 'Design & Tools',
+    label: 'Mobile, Design & Tools',
     accent: '#8B6BE8',
     accentDim: 'rgba(139,107,232,0.10)',
-    cols: 4,
+    cols: 6,
     modules: [
+      { href: '/mobilelab', tag: 'Mobile', label: 'Mobile Alert Lab', description: 'Simulated nurse mobile dashboard with live fall-alert push notifications, phone frame preview, and PWA install flow.', meta: 'PWA · Push · iOS · Android' },
+      { href: '/mobile', tag: 'Mobile', label: 'Mobile Download', description: 'Install the Ambient nurse app directly from the browser — no App Store required. Step-by-step guide for iOS and Android.', meta: 'PWA · No App Store' },
       { href: '/datascience', tag: 'Data Science', label: 'Data Science', description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the platform.', meta: 'Parquet · ML · Recharts' },
       { href: '/backgroundlab', tag: 'Design', label: 'Background Lab', description: 'Generative backgrounds, motion studies, and ambient UI pattern experiments for the Ambient Intelligence design system.', meta: 'Canvas · Motion · UI' },
       { href: '/brand', tag: 'Design', label: 'Brand & Color Picker', description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and full type scale reference.', meta: 'ambientdesign · interactive' },
