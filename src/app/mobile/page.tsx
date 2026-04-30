@@ -85,6 +85,11 @@ export default function MobilePage() {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') { setNotifStatus('denied'); return; }
     try {
+      // Unsubscribe from any stale subscription first
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) await existing.unsubscribe();
+
       const sub = await subscribeToPush();
       if (sub) {
         await fetch('/api/push/subscribe', {
@@ -97,6 +102,14 @@ export default function MobilePage() {
     } catch {
       setNotifStatus('granted');
     }
+  }
+
+  async function sendTestPush() {
+    await fetch('/api/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room: 'TEST', patient: 'Test alert', floor: '—', severity: 'warning', confidence: 100, sensor: 'Manual' }),
+    });
   }
 
   const steps = tab === 'ios' ? IOS_STEPS : ANDROID_STEPS;
@@ -141,10 +154,17 @@ export default function MobilePage() {
             {notifStatus === 'granted' && (
               <div style={{
                 background: C.greenDim, border: `1px solid ${C.green}33`, borderRadius: 12,
-                padding: '14px 16px', marginBottom: 24, textAlign: 'center',
-                fontSize: 13, color: C.green, fontWeight: 700,
+                padding: '16px', marginBottom: 24, textAlign: 'center',
               }}>
-                ✓ Notifications enabled — you will receive fall alerts
+                <div style={{ fontSize: 13, color: C.green, fontWeight: 700, marginBottom: 12 }}>
+                  ✓ Notifications enabled
+                </div>
+                <button onClick={sendTestPush} style={{
+                  background: 'transparent', border: `1px solid ${C.green}55`, borderRadius: 8,
+                  color: C.green, fontSize: 12, fontWeight: 600, padding: '8px 20px', cursor: 'pointer', width: '100%',
+                }}>
+                  Send test notification to this device
+                </button>
               </div>
             )}
 
