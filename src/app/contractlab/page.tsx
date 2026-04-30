@@ -17,32 +17,32 @@ interface ContractDoc {
   created: string; updated: string; signers: Signer[]; content: string;
 }
 
-const SIGNER_COLORS = ["#818CF8","#34D399","#FFC940","#FB923C","#22D3EE","#F472B6"];
+const SIGNER_COLORS = ["#4C6EF5","#12B886","#F59F00","#F76707","#15AABF","#E64980"];
 
-const CAT_META: Record<DocCategory,{label:string;icon:string;color:string}> = {
-  nda:         {label:"Non-Disclosure Agreement", icon:"🔒", color:"#818CF8"},
-  termsheet:   {label:"Term Sheet",               icon:"📋", color:"#34D399"},
-  employment:  {label:"Employment Agreement",     icon:"👤", color:"#FFC940"},
-  consulting:  {label:"Consulting Agreement",     icon:"💼", color:"#FB923C"},
-  service:     {label:"Service Agreement",        icon:"⚙️", color:"#22D3EE"},
-  partnership: {label:"Partnership Agreement",    icon:"🤝", color:"#F472B6"},
-  licensing:   {label:"License Agreement",        icon:"©️", color:"#00B4D8"},
-  contractor:  {label:"Contractor Agreement",     icon:"🔧", color:"#A78BFA"},
-  loi:         {label:"Letter of Intent",         icon:"📝", color:"#FF6B6B"},
+const CAT_META: Record<DocCategory,{label:string;short:string;color:string}> = {
+  nda:         {label:"Non-Disclosure Agreement", short:"NDA",         color:"#4C6EF5"},
+  termsheet:   {label:"Term Sheet",               short:"Term Sheet",  color:"#12B886"},
+  employment:  {label:"Employment Agreement",     short:"Employment",  color:"#F59F00"},
+  consulting:  {label:"Consulting Agreement",     short:"Consulting",  color:"#F76707"},
+  service:     {label:"Service Agreement",        short:"Service",     color:"#15AABF"},
+  partnership: {label:"Partnership Agreement",    short:"Partnership", color:"#E64980"},
+  licensing:   {label:"License Agreement",        short:"License",     color:"#748FFC"},
+  contractor:  {label:"Contractor Agreement",     short:"Contractor",  color:"#A9E34B"},
+  loi:         {label:"Letter of Intent",         short:"LOI",         color:"#FF6B6B"},
 };
 
-const STATUS_META: Record<DocStatus,{color:string;label:string}> = {
-  draft:     {color:"var(--text-3)", label:"Draft"},
-  sent:      {color:"#FFC940",       label:"Sent for Signing"},
-  completed: {color:"#3DCC91",       label:"Completed"},
-  declined:  {color:"#FF6B6B",       label:"Declined"},
+const STATUS_META: Record<DocStatus,{color:string;bg:string;label:string}> = {
+  draft:     {color:"#9AA0A6", bg:"rgba(154,160,166,0.12)", label:"Draft"},
+  sent:      {color:"#F59F00", bg:"rgba(245,159,0,0.12)",   label:"Sent"},
+  completed: {color:"#12B886", bg:"rgba(18,184,134,0.12)",  label:"Completed"},
+  declined:  {color:"#FF6B6B", bg:"rgba(255,107,107,0.12)", label:"Declined"},
 };
 
 const SIGNER_STATUS: Record<SignerStatus,{color:string;label:string}> = {
-  pending:  {color:"var(--text-3)", label:"Pending"},
-  viewed:   {color:"#FFC940",       label:"Viewed"},
-  signed:   {color:"#3DCC91",       label:"Signed"},
-  declined: {color:"#FF6B6B",       label:"Declined"},
+  pending:  {color:"#9AA0A6", label:"Pending"},
+  viewed:   {color:"#F59F00", label:"Viewed"},
+  signed:   {color:"#12B886", label:"Signed"},
+  declined: {color:"#FF6B6B", label:"Declined"},
 };
 
 const TEMPLATES: Record<DocCategory,string> = {
@@ -56,41 +56,47 @@ nda:`# MUTUAL NON-DISCLOSURE AGREEMENT
 
 ## 1. Purpose
 
-The parties wish to explore a potential business relationship (the "Purpose"). Each party may disclose confidential information to the other in connection with the Purpose.
+The parties wish to explore a potential business relationship (the "Purpose"). Each party may disclose Confidential Information to the other in connection with the Purpose.
 
 ## 2. Definition of Confidential Information
 
-"Confidential Information" means any information disclosed by either party, directly or indirectly, in writing, orally, or by inspection, that is designated as "Confidential" or that reasonably should be understood to be confidential.
+"Confidential Information" means any information disclosed by either party, directly or indirectly, in writing, orally, or by inspection of tangible objects, that is designated as "Confidential" or that reasonably should be understood to be confidential given the nature of the information and the circumstances of disclosure.
 
-## 3. Obligations
+## 3. Obligations of Receiving Party
 
 The Receiving Party agrees to:
 
-(a) Hold all Confidential Information in strict confidence using the same degree of care it uses to protect its own confidential information, but no less than reasonable care;
+(a) Hold all Confidential Information in strict confidence using at least the same degree of care it uses to protect its own confidential information, but no less than reasonable care;
 
-(b) Not disclose any Confidential Information to third parties without prior written consent;
+(b) Not disclose any Confidential Information to any third parties without prior written consent of the Disclosing Party;
 
 (c) Use Confidential Information solely for the Purpose described herein;
 
-(d) Limit access to those employees or contractors who need to know for the Purpose.
+(d) Limit access to Confidential Information to employees or contractors who need to know for the Purpose and are bound by confidentiality obligations no less restrictive than this Agreement.
 
 ## 4. Exclusions
 
-Obligations do not apply to information that: (a) becomes publicly known through no breach of this Agreement; (b) was rightfully known before disclosure; (c) is independently developed; (d) is required to be disclosed by law.
+Obligations do not apply to information that: (a) is or becomes publicly known through no breach of this Agreement; (b) was rightfully known before disclosure; (c) is independently developed without use of Confidential Information; (d) is required to be disclosed by applicable law or court order, provided the Receiving Party gives prompt written notice.
 
 ## 5. Term
 
-This Agreement shall remain in effect for **two (2) years** from the Effective Date.
+This Agreement shall remain in effect for **two (2) years** from the Effective Date, unless earlier terminated by mutual written agreement.
 
-## 6. Return of Information
+## 6. Return or Destruction
 
-Upon request, the Receiving Party shall promptly return or destroy all Confidential Information.
+Upon written request or termination, the Receiving Party shall promptly return or destroy all Confidential Information and certify such return or destruction in writing.
 
-## 7. Governing Law
+## 7. Injunctive Relief
 
-This Agreement is governed by the laws of the State of **[STATE]**.
+The parties acknowledge that breach would cause irreparable harm for which monetary damages would be inadequate. The Disclosing Party shall be entitled to seek equitable relief without posting bond or other security.
+
+## 8. Governing Law
+
+This Agreement is governed by the laws of the State of **[STATE]**, without regard to conflict of law principles. Disputes shall be resolved in the courts of [COUNTY], [STATE].
 
 ---
+
+**IN WITNESS WHEREOF**, the parties have executed this Agreement as of the Effective Date.
 
 **[PARTY A NAME]**
 
@@ -108,7 +114,7 @@ termsheet:`# TERM SHEET
 **Company:** [COMPANY NAME] (the "Company")
 **Investor:** [INVESTOR NAME] (the "Investor")
 
-*This term sheet is non-binding except where expressly indicated.*
+*This term sheet is non-binding except where expressly indicated as binding below.*
 
 ---
 
@@ -121,104 +127,113 @@ termsheet:`# TERM SHEET
 | Security Type | Series [A/B] Preferred Stock |
 | Price Per Share | $[PRICE] |
 | Post-Money Valuation | $[POST-MONEY] |
+| Closing Date | [DATE] |
 
 ---
 
-## 1. Securities
+## 1. Type and Amount
 
-The Company will issue [SHARES] shares of Series [X] Preferred Stock at $[PRICE] per share for aggregate proceeds of $[AMOUNT].
+The Company will issue and sell [SHARES] shares of Series [X] Preferred Stock at $[PRICE] per share for aggregate proceeds of $[AMOUNT].
 
 ## 2. Dividends
 
-Non-cumulative dividends at [8]% per annum when declared by the Board.
+Non-cumulative dividends at [8]% per annum when and as declared by the Board.
 
 ## 3. Liquidation Preference
 
-[1x] the Original Issue Price plus declared dividends, in preference to common stockholders.
+[1x] the Original Issue Price plus declared but unpaid dividends, in preference to common stockholders upon any liquidation or winding-up event.
 
 ## 4. Conversion
 
-Convertible at the holder's option into [1] share of Common Stock, subject to standard adjustments.
+Convertible at the holder's option, at any time, into [1] share of Common Stock per Preferred share, subject to standard adjustments for splits, dividends, and recapitalizations.
 
 ## 5. Anti-Dilution
 
-Weighted-average anti-dilution protection.
+Weighted-average anti-dilution protection. No anti-dilution protection for issuances at or above the then-current conversion price.
 
 ## 6. Board Composition
 
-[5] directors: [2] by Investor, [2] by common holders, [1] independent.
+[5] directors: [2] designated by Investor, [2] elected by common stockholders, and [1] independent director mutually agreed upon by both groups.
 
 ## 7. Information Rights
 
-Audited annual financials within 120 days; unaudited quarterly within 45 days.
+Audited annual financials within 120 days of fiscal year end; unaudited quarterly financials within 45 days of each quarter end.
 
 ## 8. Pro Rata Rights
 
-Investor may participate in future rounds to maintain ownership percentage.
+Investor has the right to participate in subsequent equity financings on a pro-rata basis to maintain ownership percentage.
 
 ## 9. Exclusivity *[BINDING]*
 
-[30] days exclusivity following execution — Company shall not solicit alternative proposals.
+For [30] days following execution of this term sheet, the Company shall not solicit, encourage, or entertain alternative acquisition, merger, or financing proposals from third parties.
 
 ## 10. Expenses
 
-Company pays reasonable Investor legal fees up to $[25,000].
+The Company shall pay reasonable legal fees and expenses of the Investor's counsel, up to $[25,000], at closing.
 
 ---
 
-**[COMPANY NAME]** By: _______________________ Date: _________
+**[COMPANY NAME]**
+By: _______________________ Name: _____________ Title: _____________ Date: _________
 
-**[INVESTOR NAME]** By: _______________________ Date: _________`,
+**[INVESTOR NAME]**
+By: _______________________ Name: _____________ Title: _____________ Date: _________`,
 
 employment:`# EMPLOYMENT AGREEMENT
 
 **Effective Date:** [START DATE]
-**Employer:** [COMPANY NAME] ("Company")
+**Employer:** [COMPANY NAME], a [STATE] [ENTITY TYPE] ("Company")
 **Employee:** [EMPLOYEE FULL NAME] ("Employee")
 
 ---
 
 ## 1. Position and Duties
 
-Company employs Employee as **[JOB TITLE]**, reporting to [MANAGER]. Employee shall perform all duties associated with this role and such other duties as assigned.
+The Company employs Employee in the position of **[JOB TITLE]**, reporting to [MANAGER TITLE]. Employee shall devote Employee's full business time and attention to performing all duties associated with this position and such other duties as reasonably assigned.
 
-## 2. Compensation
+## 2. Start Date
 
-**Base Salary:** $[ANNUAL SALARY] per year, paid on standard payroll schedule.
+Employment commences on **[START DATE]**.
 
-**Performance Bonus:** Up to [X]% of base salary annually, at Company's discretion.
+## 3. Compensation
 
-**Equity:** Options to purchase [SHARES] shares at fair market value, vesting over 4 years with a 1-year cliff, subject to Board approval.
+**Base Salary:** $[ANNUAL SALARY] per year, payable in accordance with the Company's standard payroll schedule (currently [bi-weekly / semi-monthly]).
 
-## 3. Benefits
+**Annual Bonus:** Employee is eligible for a discretionary performance bonus of up to [X]% of base salary, based on achievement of individual and Company performance goals as determined by the Board.
 
-- Health, dental, and vision insurance (Company pays [80]% of premiums)
-- [15] days paid vacation per year
-- [10] days paid sick leave per year
-- 401(k) with [4]% Company match
-- $[2,500] annual professional development stipend
+**Equity Grant:** Subject to Board approval, Employee will be granted an option to purchase [SHARES] shares of Common Stock under the Company's [Year] Equity Incentive Plan, at an exercise price equal to the fair market value per share on the grant date. Shares vest over four (4) years, with a one (1)-year cliff.
 
-## 4. At-Will Employment
+## 4. Benefits
 
-This is an at-will employment relationship. Either party may terminate at any time, with or without cause, subject to Section 5.
+Employee shall be eligible for:
 
-## 5. Termination Notice
+(a) Health, dental, and vision insurance (Company pays [80]% of Employee premiums);
+(b) [15] days of paid vacation per year, accruing monthly, increasing to [20] days after three years;
+(c) [10] days of paid sick leave per year;
+(d) 401(k) plan with Company match of [4]% of eligible compensation;
+(e) $[2,500] annual professional development and learning stipend.
 
-(a) For Cause by Company: Immediate, no severance.
-(b) Without Cause by Company: [4] weeks written notice or equivalent pay.
-(c) Resignation by Employee: [2] weeks written notice.
+## 5. At-Will Employment
 
-## 6. Confidentiality and IP
+Employee's employment with the Company is at-will. Either party may terminate the employment relationship at any time, with or without cause or prior notice, subject to Section 6.
 
-Employee agrees to execute the Company's Confidential Information and Invention Assignment Agreement as a condition of employment.
+## 6. Termination and Severance
 
-## 7. Non-Solicitation
+(a) **Termination for Cause by Company:** Immediate termination; no severance.
+(b) **Termination without Cause by Company:** [4] weeks written notice, or equivalent base salary in lieu thereof.
+(c) **Resignation by Employee:** [2] weeks written notice.
 
-During employment and [12] months after, Employee shall not solicit Company employees or customers.
+## 7. Confidentiality and IP Assignment
 
-## 8. Governing Law
+As a condition of employment, Employee agrees to execute the Company's standard Confidential Information and Invention Assignment Agreement ("CIIA").
 
-Laws of **[STATE]**.
+## 8. Non-Solicitation
+
+During the term of employment and for [12] months following termination, Employee shall not directly or indirectly solicit or induce any Company employee to leave the Company, or solicit any Company customer or client.
+
+## 9. Governing Law
+
+This Agreement is governed by the laws of **[STATE]**.
 
 ---
 
@@ -226,356 +241,358 @@ Laws of **[STATE]**.
 
 By: _________________________ Name: _________________ Title: _____________ Date: _________
 
-**Employee:**
+**Employee Acknowledgment and Agreement:**
 
-Signature: _____________________ Name: [EMPLOYEE NAME] Date: _________`,
+Signature: _____________________ Printed Name: [EMPLOYEE FULL NAME] Date: _________`,
 
 consulting:`# CONSULTING AGREEMENT
 
 **Effective Date:** [DATE]
-**Client:** [CLIENT NAME] ("Client")
-**Consultant:** [CONSULTANT NAME] ("Consultant")
+**Client:** [CLIENT NAME], a [STATE] [ENTITY TYPE] ("Client")
+**Consultant:** [CONSULTANT NAME / COMPANY] ("Consultant")
 
 ---
 
 ## 1. Services
 
-Consultant will provide consulting services as described in Statement of Work attached as **Exhibit A**.
+Consultant agrees to provide the consulting services described in the **Statement of Work** attached hereto as **Exhibit A** (the "Services"). The Services and all deliverables, milestones, and acceptance criteria are set forth in Exhibit A.
 
 ## 2. Term
 
-Commences [START DATE] and continues until [END DATE], unless earlier terminated.
+This Agreement commences on **[START DATE]** and continues through **[END DATE]**, unless earlier terminated pursuant to Section 8.
 
-## 3. Compensation
+## 3. Compensation and Payment
 
-**Rate:** $[RATE] per [hour/day/project]
-**Invoicing:** [Monthly] invoices submitted to [BILLING CONTACT]
-**Payment:** Net [30] days from invoice receipt
-**Late Fee:** 1.5% per month on overdue amounts
+**Rate:** $[RATE] per [hour / day / project milestone]
+**Invoicing:** Consultant shall submit invoices [weekly / monthly] to [BILLING CONTACT / EMAIL]
+**Payment Terms:** Net [30] days from Client's receipt of undisputed invoice
+**Late Payment:** Overdue balances accrue interest at 1.5% per month (18% per annum)
 
-## 4. Independent Contractor
+## 4. Expenses
 
-Consultant is an independent contractor, not an employee. Consultant is responsible for all taxes on compensation received.
+Reasonable, pre-approved, documented business expenses will be reimbursed by Client within [15] days of submission with supporting receipts.
 
-## 5. Intellectual Property
+## 5. Independent Contractor Relationship
 
-All work product and deliverables are "work made for hire" owned by Client. Consultant assigns all rights to Client.
+Consultant is an independent contractor. Nothing in this Agreement creates an employer-employee, agency, joint venture, or partnership relationship. Consultant has no authority to bind Client to any obligation.
 
-## 6. Confidentiality
+## 6. Intellectual Property
 
-Consultant shall maintain strict confidentiality of all Client information, during and after this Agreement.
+All work product, inventions, discoveries, developments, and deliverables created by Consultant in connection with the Services shall be deemed "work made for hire" and shall be owned exclusively by Client. To the extent any work product is not deemed work for hire by operation of law, Consultant hereby irrevocably assigns all rights, title, and interest thereto to Client.
 
-## 7. Termination
+## 7. Confidentiality
 
-Either party may terminate upon [14] days written notice.
+Consultant acknowledges that in the course of performing Services, Consultant may have access to Client's Confidential Information. Consultant agrees to: (a) hold all Confidential Information in strict confidence; (b) not disclose Confidential Information to any third party; (c) use Confidential Information solely to perform the Services.
 
-## 8. Limitation of Liability
+## 8. Termination
 
-IN NO EVENT SHALL EITHER PARTY BE LIABLE FOR INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES.
+Either party may terminate this Agreement upon [14] days written notice to the other party. Client may terminate immediately upon written notice for Consultant's material breach.
+
+## 9. Limitation of Liability
+
+IN NO EVENT SHALL EITHER PARTY BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES. EACH PARTY'S TOTAL LIABILITY SHALL NOT EXCEED FEES PAID IN THE [3] MONTHS PRECEDING THE CLAIM.
 
 ---
 
-**CLIENT:** _________________________ Date: _________
+**CLIENT:**
+By: _________________________ Name: _________________ Title: _____________ Date: _________
 
-**CONSULTANT:** ____________________ Date: _________`,
+**CONSULTANT:**
+By: _________________________ Name: _________________ Date: _________`,
 
 service:`# SERVICE AGREEMENT
 
 **Agreement Date:** [DATE]
-**Provider:** [PROVIDER NAME] ("Provider")
+**Service Provider:** [PROVIDER NAME] ("Provider")
 **Client:** [CLIENT NAME] ("Client")
 
 ---
 
 ## 1. Services
 
-Provider will perform services per the **Statement of Work (SOW)** attached as Exhibit A.
+Provider shall perform the professional services described in the **Statement of Work ("SOW")** attached as **Exhibit A**. Any changes to the SOW require a mutually executed Change Order per Section 5.
 
 ## 2. Term
 
-Effective [START DATE] through [END DATE], auto-renewing for [12]-month terms with [60] days written notice to cancel.
+This Agreement is effective as of **[START DATE]** and continues through **[END DATE]**, with automatic renewal for successive [12]-month terms unless either party provides [60] days written notice of non-renewal prior to the then-current term's expiration.
 
 ## 3. Fees and Payment
 
-**Fee:** $[AMOUNT] per [month/project]
-**Invoicing:** Monthly in advance
-**Due:** [30] days from invoice
-**Late Payment:** 1.5% per month after [10]-day grace period
+**Service Fee:** $[AMOUNT] per [month / quarter / project]
+**Invoicing:** Monthly in advance, issued on the 1st of each month
+**Payment Due:** Within [30] days of invoice receipt
+**Late Payment:** 1.5% per month on balances outstanding beyond a [10]-day grace period
+**Disputed Invoices:** Client must notify Provider in writing within [10] days of receipt
 
 ## 4. Service Levels
 
-Provider shall meet SLAs in Exhibit B. Failures entitle Client to service credits per Exhibit B.
+Provider shall meet the service levels set forth in **Exhibit B (SLA)**. Failure to meet applicable SLAs entitles Client to service credits as specified in Exhibit B, as Client's sole and exclusive remedy for SLA failures.
 
 ## 5. Change Orders
 
-Changes to scope require written Change Order before implementation.
+Any modification to the scope, timeline, or fees requires a written Change Order signed by authorized representatives of both parties prior to implementation.
 
 ## 6. Intellectual Property
 
-Pre-existing IP remains with its original owner. Client-specific deliverables owned by Client upon full payment.
+Pre-existing IP owned by either party remains the property of that party. Client-specific deliverables created and paid for under this Agreement shall be owned by Client upon receipt of full payment.
 
 ## 7. Termination
 
-(a) For material breach: [30] days written notice if uncured.
-(b) For convenience by Client: [60] days written notice.
-(c) Provider shall deliver all Client data within [10] business days of termination.
+(a) **For Cause:** Either party may terminate upon [30] days written notice if a material breach remains uncured.
+(b) **For Convenience:** Client may terminate upon [60] days written notice; Client shall pay fees through the effective termination date.
+(c) **Data Return:** Provider shall deliver all Client data within [10] business days of any termination.
 
 ## 8. Limitation of Liability
 
-Provider's aggregate liability shall not exceed fees paid in the preceding [3] months.
+Provider's aggregate liability under this Agreement shall not exceed fees paid by Client in the [3] months immediately preceding the event giving rise to liability.
 
 ---
 
-**PROVIDER:** _______________________ Date: _________
+**PROVIDER:** _________________________ Date: _________
 
-**CLIENT:** _________________________ Date: _________`,
+**CLIENT:** ___________________________ Date: _________`,
 
 partnership:`# GENERAL PARTNERSHIP AGREEMENT
 
 **Effective Date:** [DATE]
-
 **Partners:**
-1. [PARTNER 1 NAME] ("Partner 1")
-2. [PARTNER 2 NAME] ("Partner 2")
+1. [PARTNER 1 NAME], an individual residing at [ADDRESS] ("Partner 1")
+2. [PARTNER 2 NAME], an individual residing at [ADDRESS] ("Partner 2")
 
 ---
 
 ## 1. Formation
 
-The partners form a general partnership under the laws of **[STATE]**.
+The Partners hereby form a general partnership (the "Partnership") under and pursuant to the laws of the State of **[STATE]**.
 
 ## 2. Business Name
 
-The Partnership shall operate as **[BUSINESS NAME]**.
+The Partnership shall conduct business under the name **[BUSINESS NAME]**.
 
-## 3. Purpose
+## 3. Principal Place of Business
 
-**[DESCRIBE BUSINESS PURPOSE]**
+The Partnership's principal place of business shall be located at **[ADDRESS]**.
 
-## 4. Capital Contributions
+## 4. Purpose
 
-| Partner | Contribution | Ownership % |
-|---------|-------------|-------------|
+The Partnership is formed for the purpose of: **[DESCRIBE BUSINESS PURPOSE AND ACTIVITIES]**, and any other lawful activities mutually agreed upon by the Partners.
+
+## 5. Capital Contributions
+
+| Partner | Initial Contribution | Ownership Percentage |
+|---------|---------------------|---------------------|
 | Partner 1 | $[AMOUNT] | [X]% |
 | Partner 2 | $[AMOUNT] | [Y]% |
 
-## 5. Profits and Losses
+Additional capital contributions shall require unanimous written consent of all Partners.
 
-Allocated in proportion to ownership percentages.
+## 6. Profits and Losses
 
-## 6. Management
+Partnership profits and losses shall be allocated among the Partners in proportion to their respective Ownership Percentages as set forth above.
 
-Equal management rights. Decisions requiring unanimous consent: amendments to this Agreement, admission of new partners, transactions exceeding $[THRESHOLD], sale or dissolution.
+## 7. Management and Decision-Making
 
-## 7. Compensation
+Each Partner shall have equal management rights. The following decisions require unanimous written consent of all Partners: (a) amendments to this Agreement; (b) admission of new partners; (c) individual transactions exceeding $[THRESHOLD]; (d) sale of all or substantially all Partnership assets; (e) dissolution of the Partnership.
 
-Partners may draw $[AMOUNT] per year by unanimous approval. Distributions made [quarterly] from available cash flow.
+## 8. Partner Compensation
 
-## 8. Partner Withdrawal
+Partners may receive a management salary of $[AMOUNT] per year, subject to unanimous approval. Distributions from available cash flow shall be made [quarterly] in proportion to Ownership Percentages.
 
-[90] days written notice required. Remaining partners have right of first refusal to purchase the interest at fair market value.
+## 9. Books, Records, and Accounting
 
-## 9. Dissolution
+The Partnership shall maintain complete and accurate books and records. Books shall be maintained on a [cash / accrual] basis with a fiscal year ending December 31. Each Partner shall have access to all Partnership books and records.
 
-Upon: (a) unanimous written consent; (b) death, incapacity, or withdrawal without succession; (c) judicial decree.
+## 10. Partner Withdrawal and Buyout
+
+A withdrawing Partner shall provide [90] days written notice. Remaining Partners shall have the right of first refusal to purchase the withdrawing Partner's interest at fair market value as determined by a mutually agreed independent appraiser.
+
+## 11. Dissolution
+
+The Partnership shall be dissolved upon: (a) unanimous written consent of all Partners; (b) death, incapacity, or withdrawal of a Partner without succession; (c) judicial decree of dissolution.
 
 ---
 
-**PARTNER 1:** _______________________ Date: _________
+**PARTNER 1:**
+Signature: _____________________ Name: [PARTNER 1 NAME] Date: _________
 
-**PARTNER 2:** _______________________ Date: _________`,
+**PARTNER 2:**
+Signature: _____________________ Name: [PARTNER 2 NAME] Date: _________`,
 
 licensing:`# SOFTWARE LICENSE AGREEMENT
 
 **Effective Date:** [DATE]
-**Licensor:** [LICENSOR NAME] ("Licensor")
-**Licensee:** [LICENSEE NAME] ("Licensee")
+**Licensor:** [LICENSOR NAME], a [STATE] [ENTITY TYPE] ("Licensor")
+**Licensee:** [LICENSEE NAME], a [STATE] [ENTITY TYPE] ("Licensee")
 
 ---
 
 ## 1. Grant of License
 
-Licensor grants Licensee a **[non-exclusive / exclusive]**, non-transferable, worldwide license to use **[SOFTWARE NAME]** (the "Software") solely for **[PERMITTED USE]**.
+Subject to the terms and conditions of this Agreement, Licensor hereby grants to Licensee a **[non-exclusive / exclusive]**, non-transferable, non-sublicensable license to install and use the software product known as **[SOFTWARE NAME]**, including all associated documentation (collectively, the "Software"), solely for **[PERMITTED USE / PURPOSE]** during the Term.
 
-## 2. Restrictions
+## 2. License Restrictions
 
-Licensee shall NOT: (a) sublicense, sell, or transfer the Software; (b) reverse engineer or decompile; (c) remove proprietary notices; (d) use to develop competing products.
+Licensee shall NOT, directly or indirectly:
 
-## 3. License Fee
+(a) Sublicense, sell, resell, rent, lease, transfer, assign, or otherwise dispose of the Software or any rights therein;
+(b) Reverse engineer, decompile, disassemble, or attempt to derive the source code of the Software;
+(c) Modify, translate, adapt, or create derivative works based on the Software;
+(d) Remove, obscure, or alter any proprietary rights notices or labels on the Software;
+(e) Use the Software to develop a competing product or service;
+(f) Use the Software in any manner that violates applicable laws or regulations.
 
-**Fee:** $[AMOUNT] per [user/year]
-**Payment:** [Annually] in advance, non-refundable
+## 3. License Fees
 
-## 4. Term
+**Annual License Fee:** $[AMOUNT] per [user seat / deployment / organization]
+**Payment:** Due annually in advance, non-refundable
 
-**[1] year**, automatically renewing unless either party provides [30] days written notice of non-renewal.
+## 4. Term and Renewal
+
+This Agreement is effective for an initial term of **[1] year** and shall automatically renew for successive [1]-year terms unless either party provides [30] days written notice of non-renewal prior to the expiration of the then-current term.
 
 ## 5. Ownership
 
-The Software remains the exclusive property of Licensor. No ownership rights are granted to Licensee.
+The Software and all copies thereof, including all intellectual property rights therein, are and shall remain the exclusive property of Licensor. No title or ownership rights are transferred to Licensee under this Agreement.
 
-## 6. Warranty Disclaimer
+## 6. Updates and Support
 
-THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+Licensor shall provide [Standard / Premium] support as described in the Support Addendum attached hereto. Major version upgrades may require additional licensing fees.
 
-## 7. Termination
+## 7. Disclaimer of Warranties
 
-Either party may terminate upon [30] days written notice of material breach not cured within such period.
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NONINFRINGEMENT.
+
+## 8. Termination
+
+Either party may terminate this Agreement upon [30] days written notice if the other party materially breaches this Agreement and fails to cure such breach within such notice period. Upon termination, Licensee must immediately uninstall and destroy all copies of the Software.
 
 ---
 
-**LICENSOR:** ________________________ Date: _________
+**LICENSOR:**
+By: _________________________ Name: _________________ Title: _____________ Date: _________
 
-**LICENSEE:** ________________________ Date: _________`,
+**LICENSEE:**
+By: _________________________ Name: _________________ Title: _____________ Date: _________`,
 
 contractor:`# INDEPENDENT CONTRACTOR AGREEMENT
 
 **Date:** [DATE]
-**Company:** [COMPANY NAME] ("Company")
-**Contractor:** [CONTRACTOR NAME] ("Contractor")
+**Company:** [COMPANY NAME], a [STATE] [ENTITY TYPE] ("Company")
+**Contractor:** [CONTRACTOR NAME / ENTITY] ("Contractor")
 
 ---
 
 ## 1. Services
 
-Contractor agrees to provide services as described in **Schedule A**.
+Contractor agrees to provide the services described in **Schedule A** attached hereto (the "Services"). Contractor shall perform the Services in a professional and workmanlike manner consistent with industry standards.
 
 ## 2. Compensation
 
-**Rate:** $[AMOUNT] per [hour/project]
-**Invoicing:** [Bi-weekly] invoices to [CONTACT]
-**Payment:** Within [15] business days of approved invoice
+**Rate:** $[AMOUNT] per [hour / project / milestone]
+**Invoicing:** Contractor shall submit invoices [bi-weekly / monthly] to [CONTACT / EMAIL]
+**Payment:** Company shall pay undisputed invoices within [15] business days of receipt
 
 ## 3. Independent Contractor Status
 
-Contractor is an independent contractor, not an employee. No employer-employee, agency, or joint venture relationship is created.
+Contractor's relationship with Company is that of an independent contractor. Nothing in this Agreement shall be construed to create an employer-employee, agency, joint venture, or partnership relationship. Contractor shall have no authority to bind Company to any obligation, contract, or commitment.
 
-## 4. No Benefits
+## 4. No Employee Benefits
 
-Contractor is NOT entitled to employee benefits of any kind.
+As an independent contractor, Contractor is NOT entitled to and shall not receive any employee benefits from Company, including but not limited to: health, dental, or vision insurance; vacation, sick, or holiday pay; workers' compensation; retirement benefits; or participation in any Company employee benefit plan or program.
 
-## 5. Taxes
+## 5. Taxes and Withholding
 
-Contractor is solely responsible for all federal, state, and local taxes. Company will issue Form 1099-NEC as required.
+Contractor is solely responsible for all applicable federal, state, and local taxes, including self-employment taxes, arising from compensation received under this Agreement. Company will not withhold any taxes from amounts paid to Contractor. Company shall issue IRS Form 1099-NEC for all payments as required by applicable law.
 
-## 6. Work Product
+## 6. Work Product and Intellectual Property
 
-All deliverables are "work made for hire" and owned exclusively by Company. Contractor assigns all rights.
+All work product, deliverables, inventions, and developments created by Contractor in connection with the Services shall constitute "work made for hire" owned exclusively by Company. To the extent any work product does not qualify as work for hire, Contractor hereby irrevocably assigns all rights, title, and interest therein to Company.
 
 ## 7. Confidentiality
 
-Contractor shall maintain strict confidentiality of all Company information.
+Contractor acknowledges access to Company Confidential Information and agrees to: (a) maintain strict confidentiality; (b) not disclose to any third party; (c) use solely to perform the Services; (d) return or destroy upon request.
 
 ## 8. Non-Solicitation
 
-For [6] months after termination, Contractor shall not solicit Company's employees or clients.
+For a period of [6] months following termination of this Agreement, Contractor shall not directly or indirectly solicit, hire, or engage any Company employee, contractor, or customer with whom Contractor had contact during the engagement.
 
-## 9. Termination
+## 9. Term and Termination
 
-Either party may terminate with [7] days written notice. Company may terminate immediately for cause.
+Either party may terminate this Agreement upon [7] days written notice. Company may terminate immediately for Contractor's material breach.
 
 ---
 
 **COMPANY:**
-
-By: _________________________ Title: _____________ Date: _________
+By: _________________________ Name: _________________ Title: _____________ Date: _________
 
 **CONTRACTOR:**
-
-Signature: _____________________ Date: _________`,
+Signature: _____________________ Name: _________________ Date: _________`,
 
 loi:`# LETTER OF INTENT
 
 **Date:** [DATE]
 **To:** [TARGET COMPANY NAME]
-**From:** [ACQUIRER/SENDER NAME]
-**Re:** [DEAL DESCRIPTION]
+**From:** [ACQUIRER / SENDER NAME]
+**Re:** Proposed [Acquisition / Investment / Transaction] — [DEAL DESCRIPTION]
 
 ---
 
 Dear [RECIPIENT NAME],
 
-This Letter of Intent ("LOI") sets forth the principal terms under which **[ACQUIRER]** ("Buyer") proposes to acquire **[TARGET]** ("Seller").
+This Letter of Intent ("LOI") sets forth the principal terms and conditions under which **[ACQUIRER]** ("Buyer") proposes to acquire **[TARGET]** ("Seller"). This LOI is intended to facilitate the negotiation of a definitive agreement and is non-binding except where expressly stated otherwise below.
 
 ---
 
 ## 1. Transaction Structure
 
-Buyer proposes to acquire [100%] of the outstanding equity interests of Seller through a [stock purchase / asset purchase / merger].
+Buyer proposes to acquire [100% / XX%] of the outstanding equity interests of Seller through a [stock purchase / asset purchase / merger] (the "Transaction").
 
-## 2. Purchase Price
+## 2. Consideration
 
-**Total Consideration:** $[AMOUNT]
+**Total Purchase Price:** $[AMOUNT]
 
-- $[AMOUNT] cash at closing
-- $[AMOUNT] seller notes over [X] years at [X]% interest
-- $[AMOUNT] earnout tied to [METRIC] over [X] years
+- $[AMOUNT] in cash at closing ([X]% of total);
+- $[AMOUNT] in seller notes, payable over [X] years at [X]% interest per annum; and
+- $[AMOUNT] in earnout consideration, contingent on [REVENUE / EBITDA / other] targets over [X] years post-closing.
 
-## 3. Due Diligence
+## 3. Conditions to Closing
 
-Buyer requires **[45] days** to complete legal, financial, and operational due diligence.
+The Transaction is conditioned upon: (a) satisfactory completion of legal, financial, tax, and operational due diligence; (b) negotiation and execution of a definitive purchase agreement and all ancillary transaction documents; (c) receipt of all required third-party and regulatory consents and approvals; and (d) no material adverse change in Seller's business, assets, financial condition, or results of operations.
 
-## 4. Conditions to Closing
+## 4. Representations and Warranties
 
-(a) Satisfactory completion of due diligence; (b) Execution of definitive agreements; (c) Required consents and regulatory approvals; (d) No material adverse change.
+Seller will provide customary representations and warranties in the definitive agreement. Indemnification for breaches shall be capped at [X]% of the purchase price and shall survive for [12] months post-closing.
 
-## 5. Representations and Warranties
+## 5. Due Diligence
 
-Standard reps and warranties with indemnification cap of [X]% of purchase price; [12]-month survival period.
+Buyer requires **[45] calendar days** following execution of this LOI to complete its due diligence review. Seller shall provide Buyer and its advisors with reasonable access to books, records, facilities, and key personnel.
 
 ## 6. Exclusivity *[BINDING]*
 
-**[45] days** exclusivity — Seller shall not solicit or entertain alternative proposals.
+For **[45] calendar days** following execution of this LOI, Seller and its representatives shall not, directly or indirectly, solicit, initiate, encourage, facilitate, or participate in discussions or negotiations with any other party regarding any acquisition, merger, recapitalization, or similar transaction involving Seller.
 
 ## 7. Confidentiality *[BINDING]*
 
-Both parties shall keep this LOI and all discussions strictly confidential.
+Each party shall keep strictly confidential the existence and contents of this LOI and all related discussions, negotiations, and due diligence materials. The parties' existing Confidentiality Agreement, dated [DATE], is hereby incorporated by reference.
 
-## 8. Non-Binding
+## 8. Transaction Expenses
 
-Except Sections 6, 7, and 8, **this LOI is non-binding**.
+Each party shall bear its own legal fees, advisory fees, and other transaction expenses. [If applicable: A break-up fee of $[AMOUNT] shall be payable by [party] if [condition].]
+
+## 9. Non-Binding Nature
+
+Except for Sections 6 (Exclusivity), 7 (Confidentiality), and 8 (Transaction Expenses), which are intended to be legally binding, **this LOI does not constitute a legally binding obligation** on either party and is subject to the negotiation, execution, and delivery of a mutually acceptable definitive agreement.
 
 ---
 
-**[ACQUIRER/SENDER]:**
+Please execute this LOI where indicated below to confirm your agreement with the foregoing.
 
-By: _________________________ Name: _____________ Title: _____________ Date: _________
+**[ACQUIRER / SENDER]:**
+By: _________________________ Name: _________________ Title: _____________ Date: _________
 
 **ACCEPTED AND AGREED:**
-
-By: _________________________ Name: _____________ Title: _____________ Date: _________`,
+By: _________________________ Name: _________________ Title: _____________ Date: _________`,
 };
-
-const DEMO_DOCS: ContractDoc[] = [
-  {
-    id:"doc-001", title:"Acme Corp — Mutual NDA", category:"nda", status:"sent",
-    created:"Apr 25, 2026", updated:"Apr 28, 2026",
-    signers:[
-      {id:"s1",name:"Brian Bradley",email:"bribradley@gmail.com",role:"Disclosing Party",status:"signed",color:"#818CF8",signedAt:"Apr 28, 2026"},
-      {id:"s2",name:"Sarah Chen",email:"sarah@acme.com",role:"Receiving Party",status:"pending",color:"#34D399"},
-    ],
-    content: TEMPLATES.nda,
-  },
-  {
-    id:"doc-002", title:"Series A Term Sheet — Draft", category:"termsheet", status:"draft",
-    created:"Apr 27, 2026", updated:"Apr 30, 2026",
-    signers:[], content: TEMPLATES.termsheet,
-  },
-  {
-    id:"doc-003", title:"Senior Engineer Offer Letter", category:"employment", status:"completed",
-    created:"Apr 20, 2026", updated:"Apr 22, 2026",
-    signers:[
-      {id:"s3",name:"Brian Bradley",email:"bribradley@gmail.com",role:"Employer",status:"signed",color:"#818CF8",signedAt:"Apr 22, 2026",signature:"Brian Bradley"},
-      {id:"s4",name:"Alex Rivera",email:"alex@example.com",role:"Employee",status:"signed",color:"#FFC940",signedAt:"Apr 22, 2026",signature:"Alex Rivera"},
-    ],
-    content: TEMPLATES.employment,
-  },
-  {
-    id:"doc-004", title:"Design Agency Consulting Agreement", category:"consulting", status:"draft",
-    created:"Apr 29, 2026", updated:"Apr 30, 2026",
-    signers:[], content: TEMPLATES.consulting,
-  },
-];
 
 const CAT_GROUPS = [
   {label:"Agreements",   cats:["nda","service","consulting","licensing"] as DocCategory[]},
@@ -583,27 +600,61 @@ const CAT_GROUPS = [
   {label:"Employment",   cats:["employment","contractor"] as DocCategory[]},
 ];
 
-function renderMarkdown(content: string) {
+const DEMO_DOCS: ContractDoc[] = [
+  {
+    id:"doc-001", title:"Acme Corp — Mutual NDA", category:"nda", status:"sent",
+    created:"Apr 25, 2026", updated:"Apr 28, 2026",
+    signers:[
+      {id:"s1",name:"Brian Bradley",email:"bribradley@gmail.com",role:"Disclosing Party",status:"signed",color:"#4C6EF5",signedAt:"Apr 28, 2026"},
+      {id:"s2",name:"Sarah Chen",email:"sarah@acme.com",role:"Receiving Party",status:"pending",color:"#12B886"},
+    ],
+    content:TEMPLATES.nda,
+  },
+  {
+    id:"doc-002", title:"Series A Term Sheet", category:"termsheet", status:"draft",
+    created:"Apr 27, 2026", updated:"Apr 30, 2026",
+    signers:[], content:TEMPLATES.termsheet,
+  },
+  {
+    id:"doc-003", title:"Senior Engineer Offer Letter", category:"employment", status:"completed",
+    created:"Apr 20, 2026", updated:"Apr 22, 2026",
+    signers:[
+      {id:"s3",name:"Brian Bradley",email:"bribradley@gmail.com",role:"Employer",status:"signed",color:"#4C6EF5",signedAt:"Apr 22, 2026",signature:"Brian Bradley"},
+      {id:"s4",name:"Alex Rivera",email:"alex@example.com",role:"Employee",status:"signed",color:"#F59F00",signedAt:"Apr 22, 2026",signature:"Alex Rivera"},
+    ],
+    content:TEMPLATES.employment,
+  },
+  {
+    id:"doc-004", title:"Design Agency Consulting Agreement", category:"consulting", status:"draft",
+    created:"Apr 29, 2026", updated:"Apr 30, 2026",
+    signers:[], content:TEMPLATES.consulting,
+  },
+];
+
+// ── Markdown renderer — white paper aesthetic ──────────────────────────────
+function renderDoc(content: string) {
   return content.split("\n").map((line, i) => {
     if (line.startsWith("# "))
-      return <h1 key={i} style={{fontSize:22,fontWeight:700,margin:"0 0 20px",color:"var(--text)",fontFamily:"var(--serif)",letterSpacing:"-0.02em"}}>{line.slice(2)}</h1>;
+      return <h1 key={i} style={{fontFamily:"var(--serif)",fontSize:19,fontWeight:400,letterSpacing:"-0.01em",textAlign:"center",color:"#111827",margin:"0 0 36px",lineHeight:1.3}}>{line.slice(2)}</h1>;
     if (line.startsWith("## "))
-      return <h2 key={i} style={{fontSize:14,fontWeight:700,margin:"28px 0 10px",color:"var(--text)",borderBottom:"1px solid var(--line)",paddingBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>{line.slice(3)}</h2>;
-    if (line.startsWith("### "))
-      return <h3 key={i} style={{fontSize:13,fontWeight:600,margin:"20px 0 6px",color:"var(--text)"}}>{line.slice(4)}</h3>;
+      return <h2 key={i} style={{fontFamily:"var(--sans)",fontSize:9.5,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"#6B7280",margin:"36px 0 14px",paddingBottom:8,borderBottom:"1px solid #E5E7EB"}}>{line.slice(3)}</h2>;
     if (line.startsWith("---"))
-      return <hr key={i} style={{border:"none",borderTop:"1px solid var(--line)",margin:"20px 0"}}/>;
+      return <hr key={i} style={{border:"none",borderTop:"1px solid #E5E7EB",margin:"28px 0"}}/>;
     if (line.startsWith("| "))
-      return <div key={i} style={{fontSize:12,color:"var(--text-2)",fontFamily:"var(--mono)",marginBottom:2,lineHeight:1.6}}>{line}</div>;
-    if (/^(\(a\)|\(b\)|\(c\)|\(d\)|- )/.test(line))
-      return <div key={i} style={{fontSize:13,color:"var(--text-2)",marginBottom:5,paddingLeft:16,lineHeight:1.7}}>{line}</div>;
+      return <div key={i} style={{fontFamily:"var(--mono)",fontSize:11.5,color:"#374151",marginBottom:2,lineHeight:1.7,borderBottom:"1px solid #F3F4F6",paddingBottom:2}}>{line}</div>;
+    if (/^\(([a-d])\)/.test(line))
+      return <div key={i} style={{fontFamily:"var(--serif)",fontSize:13.5,color:"#374151",marginBottom:6,paddingLeft:20,lineHeight:1.75}}>{line}</div>;
+    if (line.startsWith("- "))
+      return <div key={i} style={{fontFamily:"var(--serif)",fontSize:13.5,color:"#374151",marginBottom:5,paddingLeft:16,lineHeight:1.75,display:"flex",gap:10}}><span style={{color:"#9CA3AF",flexShrink:0}}>—</span><span>{line.slice(2)}</span></div>;
     if (line.trim()==="") return <div key={i} style={{height:10}}/>;
-    const bold = line.split(/(\*\*[^*]+\*\*)/).map((p,j) =>
+    const bold = line.split(/(\*\*[^*]+\*\*)/).map((p,j)=>
       p.startsWith("**")&&p.endsWith("**")
-        ? <strong key={j} style={{color:"var(--text)",fontWeight:600}}>{p.slice(2,-2)}</strong>
-        : p
+        ? <strong key={j} style={{color:"#111827",fontWeight:600}}>{p.slice(2,-2)}</strong>
+        : p.startsWith("*")&&p.endsWith("*")&&p.length>2
+          ? <em key={j} style={{color:"#4B5563"}}>{p.slice(1,-1)}</em>
+          : p
     );
-    return <p key={i} style={{fontSize:13,color:"var(--text-2)",lineHeight:1.75,margin:"0 0 6px"}}>{bold}</p>;
+    return <p key={i} style={{fontFamily:"var(--serif)",fontSize:13.5,color:"#374151",lineHeight:1.8,margin:"0 0 6px"}}>{bold}</p>;
   });
 }
 
@@ -633,171 +684,178 @@ export default function ContractLabPage() {
   const [exportMsg, setExportMsg] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const selected = docs.find(d=>d.id===selectedId) || docs[0];
+  const selected = docs.find(d=>d.id===selectedId) ?? docs[0];
 
-  useEffect(()=>{try{const s=localStorage.getItem("contractlab_docs");if(s)setDocs(JSON.parse(s));}catch{}},[]);
-  useEffect(()=>{try{localStorage.setItem("contractlab_docs",JSON.stringify(docs));}catch{};},[docs]);
+  useEffect(()=>{try{const s=localStorage.getItem("cl_docs_v2");if(s)setDocs(JSON.parse(s));}catch{}},[]);
+  useEffect(()=>{try{localStorage.setItem("cl_docs_v2",JSON.stringify(docs));}catch{};},[docs]);
   useEffect(()=>{
-    if(selected){
-      setEmailSubject(`Please sign: ${selected.title}`);
-      setEmailMsg(`Hi,\n\nPlease review and sign the attached document:\n\n"${selected.title}"\n\nThank you.`);
-    }
+    if(selected){setEmailSubject(`Signature required: ${selected.title}`);setEmailMsg(`Hi,\n\nPlease review and sign the following document:\n\n"${selected.title}"\n\nThank you.`);}
   },[selectedId]);
 
   const startDraw = useCallback((e:React.MouseEvent<HTMLCanvasElement>)=>{
-    const c=canvasRef.current; if(!c)return;
-    const ctx=c.getContext("2d"); if(!ctx)return;
-    setIsDrawing(true); setHasDrawing(true);
+    const c=canvasRef.current;if(!c)return;
+    const ctx=c.getContext("2d");if(!ctx)return;
+    setIsDrawing(true);setHasDrawing(true);
     const r=c.getBoundingClientRect();
-    ctx.beginPath(); ctx.moveTo(e.clientX-r.left,e.clientY-r.top);
+    ctx.beginPath();ctx.moveTo(e.clientX-r.left,e.clientY-r.top);
   },[]);
   const draw = useCallback((e:React.MouseEvent<HTMLCanvasElement>)=>{
     if(!isDrawing)return;
-    const c=canvasRef.current; if(!c)return;
-    const ctx=c.getContext("2d"); if(!ctx)return;
+    const c=canvasRef.current;if(!c)return;
+    const ctx=c.getContext("2d");if(!ctx)return;
     const r=c.getBoundingClientRect();
     ctx.lineTo(e.clientX-r.left,e.clientY-r.top);
-    ctx.strokeStyle="#2D72D2"; ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineJoin="round";
-    ctx.stroke();
+    ctx.strokeStyle="#111827";ctx.lineWidth=1.8;ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();
   },[isDrawing]);
   const endDraw = useCallback(()=>setIsDrawing(false),[]);
   const clearCanvas = ()=>{
-    const c=canvasRef.current; if(!c)return;
+    const c=canvasRef.current;if(!c)return;
     c.getContext("2d")?.clearRect(0,0,c.width,c.height);
     setHasDrawing(false);
   };
 
   const applySignature = ()=>{
     if(!activeSigner||!selected)return;
-    const sigValue = sigMode==="draw" ? (canvasRef.current?.toDataURL()||"") : typedSig;
+    const sigValue=sigMode==="draw"?(canvasRef.current?.toDataURL()||""):typedSig;
     setDocs(prev=>prev.map(d=>d.id!==selected.id?d:{
       ...d,
-      signers:d.signers.map(s=>s.id!==activeSigner?s:
-        {...s,status:"signed" as SignerStatus,signature:sigValue,signedAt:"Apr 30, 2026"}),
+      signers:d.signers.map(s=>s.id!==activeSigner?s:{...s,status:"signed" as SignerStatus,signature:sigValue,signedAt:"Apr 30, 2026"}),
       status:d.signers.filter(s=>s.id!==activeSigner).every(s=>s.status==="signed")?"completed":"sent" as DocStatus,
     }));
-    setShowSigModal(false); setActiveSigner(null); setHasDrawing(false); setTypedSig("");
+    setShowSigModal(false);setActiveSigner(null);setHasDrawing(false);setTypedSig("");
   };
 
   const addSigner = ()=>{
     if(!newSignerName||!newSignerEmail||!selected)return;
     const idx=selected.signers.length;
     setDocs(prev=>prev.map(d=>d.id!==selected.id?d:{
-      ...d,
-      signers:[...d.signers,{
-        id:`s-${Date.now()}`,name:newSignerName,email:newSignerEmail,
-        role:newSignerRole||"Signer",status:"pending",color:SIGNER_COLORS[idx%SIGNER_COLORS.length],
-      }],
+      ...d,signers:[...d.signers,{id:`s-${Date.now()}`,name:newSignerName,email:newSignerEmail,role:newSignerRole||"Signer",status:"pending",color:SIGNER_COLORS[idx%SIGNER_COLORS.length]}],
     }));
-    setNewSignerName(""); setNewSignerEmail(""); setNewSignerRole("");
+    setNewSignerName("");setNewSignerEmail("");setNewSignerRole("");
   };
 
-  const removeSigner = (sid:string)=>{
-    if(!selected)return;
-    setDocs(prev=>prev.map(d=>d.id!==selected.id?d:{...d,signers:d.signers.filter(s=>s.id!==sid)}));
-  };
+  const removeSigner=(sid:string)=>{if(!selected)return;setDocs(prev=>prev.map(d=>d.id!==selected.id?d:{...d,signers:d.signers.filter(s=>s.id!==sid)}));};
 
-  const sendForSigning = ()=>{
+  const sendForSigning=()=>{
     if(!selected||selected.signers.length===0)return;
     setDocs(prev=>prev.map(d=>d.id!==selected.id?d:{...d,status:"sent"}));
-    setEmailSent(true); setTimeout(()=>setEmailSent(false),3500);
+    setEmailSent(true);setTimeout(()=>setEmailSent(false),3500);
   };
 
-  const createDoc = ()=>{
+  const createDoc=()=>{
     if(!newDocTitle)return;
-    const doc:ContractDoc={
-      id:`doc-${Date.now()}`,title:newDocTitle,category:newDocCat,status:"draft",
-      created:"Apr 30, 2026",updated:"Apr 30, 2026",signers:[],content:TEMPLATES[newDocCat],
-    };
-    setDocs(prev=>[...prev,doc]); setSelectedId(doc.id);
-    setShowNewDoc(false); setNewDocTitle("");
+    const doc:ContractDoc={id:`doc-${Date.now()}`,title:newDocTitle,category:newDocCat,status:"draft",created:"Apr 30, 2026",updated:"Apr 30, 2026",signers:[],content:TEMPLATES[newDocCat]};
+    setDocs(prev=>[...prev,doc]);setSelectedId(doc.id);setShowNewDoc(false);setNewDocTitle("");
   };
 
-  const deleteDoc = (id:string)=>{
-    setDocs(prev=>prev.filter(d=>d.id!==id));
-    if(selectedId===id){const rem=docs.filter(d=>d.id!==id);if(rem.length)setSelectedId(rem[0].id);}
-  };
+  const deleteDoc=(id:string)=>{setDocs(prev=>prev.filter(d=>d.id!==id));if(selectedId===id){const r=docs.filter(d=>d.id!==id);if(r.length)setSelectedId(r[0].id);}};
 
-  const flash = (msg:string)=>{ setExportMsg(msg); setTimeout(()=>setExportMsg(""),3500); };
+  const flash=(msg:string)=>{setExportMsg(msg);setTimeout(()=>setExportMsg(""),3500);};
+  const exportMd=()=>{if(!selected)return;const b=new Blob([selected.content],{type:"text/markdown"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`${selected.title}.md`;a.click();flash("Markdown downloaded");};
+  const exportTxt=()=>{if(!selected)return;const b=new Blob([selected.content.replace(/#{1,6}\s/g,"").replace(/\*\*/g,"")],{type:"text/plain"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`${selected.title}.txt`;a.click();flash("Plain text downloaded");};
+  const exportPdf=()=>{window.print();flash("Print dialog opened");};
+  const exportGoogleDocs=()=>{window.open("https://docs.google.com/document/create","_blank");flash("Opened Google Docs");};
 
-  const exportMd = ()=>{
-    if(!selected)return;
-    const b=new Blob([selected.content],{type:"text/markdown"});
-    const a=document.createElement("a"); a.href=URL.createObjectURL(b);
-    a.download=`${selected.title}.md`; a.click(); flash("Markdown downloaded");
-  };
-  const exportTxt = ()=>{
-    if(!selected)return;
-    const plain=selected.content.replace(/#{1,6}\s/g,"").replace(/\*\*/g,"");
-    const b=new Blob([plain],{type:"text/plain"});
-    const a=document.createElement("a"); a.href=URL.createObjectURL(b);
-    a.download=`${selected.title}.txt`; a.click(); flash("Plain text downloaded");
-  };
-  const exportPdf = ()=>{ window.print(); flash("Print dialog opened — save as PDF"); };
-  const exportGoogleDocs = ()=>{ window.open("https://docs.google.com/document/create","_blank"); flash("Opened Google Docs — paste to import"); };
-
-  const filteredDocs = docs.filter(d=>{
-    const mc = catFilter==="all"||d.category===catFilter;
-    const ms = statusFilter==="all"||d.status===statusFilter;
-    const mq = !search||d.title.toLowerCase().includes(search.toLowerCase());
+  const filteredDocs=docs.filter(d=>{
+    const mc=catFilter==="all"||d.category===catFilter;
+    const ms=statusFilter==="all"||d.status===statusFilter;
+    const mq=!search||d.title.toLowerCase().includes(search.toLowerCase());
     return mc&&ms&&mq;
   });
 
-  const tmeta = CAT_META[selected?.category||"nda"];
-  const canSign = sigMode==="draw"?hasDrawing:typedSig.trim().length>0;
+  const tmeta=CAT_META[selected?.category??"nda"];
+  const smeta=STATUS_META[selected?.status??"draft"];
+  const canSign=sigMode==="draw"?hasDrawing:typedSig.trim().length>0;
+  const signedCount=selected?.signers.filter(s=>s.status==="signed").length??0;
+
+  const inp:React.CSSProperties={width:"100%",padding:"8px 11px",borderRadius:6,background:"var(--surface-2)",border:"1px solid var(--line-strong)",color:"var(--text)",fontSize:12,fontFamily:"var(--sans)",outline:"none",boxSizing:"border-box"};
 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:"var(--bg)",color:"var(--text)",fontFamily:"var(--sans)",overflow:"hidden"}}>
 
-      {/* Topbar */}
-      <header style={{display:"flex",alignItems:"center",gap:14,padding:"0 20px",height:52,borderBottom:"1px solid var(--line)",background:"var(--surface-1)",flexShrink:0,zIndex:10}}>
-        <div style={{display:"flex",alignItems:"center",gap:9}}>
-          <div style={{width:30,height:30,borderRadius:8,background:"var(--accent)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2.5" y="1.5" width="10" height="12" rx="1.5" stroke="white" strokeWidth="1.3"/><path d="M5 5.5h5M5 8h5M5 10.5h3" stroke="white" strokeWidth="1.3" strokeLinecap="round"/></svg>
-          </div>
-          <span style={{fontSize:14,fontWeight:700,letterSpacing:"-0.02em"}}>ContractLab</span>
+      {/* ── Top bar ── */}
+      <header style={{display:"flex",alignItems:"center",gap:0,height:48,borderBottom:"1px solid var(--line)",background:"var(--surface-1)",flexShrink:0,zIndex:10}}>
+        {/* Brand */}
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 20px",height:"100%",borderRight:"1px solid var(--line)"}}>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="1" y="1" width="16" height="16" rx="3" stroke="var(--accent)" strokeWidth="1.3"/>
+            <path d="M5 6h8M5 9h8M5 12h5" stroke="var(--accent)" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+          <span style={{fontFamily:"var(--sans)",fontSize:13,fontWeight:600,letterSpacing:"-0.01em"}}>ContractLab</span>
+        </div>
+        {/* Breadcrumb */}
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 16px",fontFamily:"var(--mono)",fontSize:11,color:"var(--text-4)",letterSpacing:"0.03em"}}>
+          <span>Documents</span>
+          {selected&&<><span style={{opacity:0.4}}>/</span><span style={{color:"var(--text-3)"}}>{selected.title}</span></>}
         </div>
         <div style={{flex:1}}/>
-        <button onClick={()=>setShowNewDoc(true)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",borderRadius:7,background:"var(--accent)",border:"none",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:"-0.01em"}}>
-          <span style={{fontSize:17,lineHeight:1,marginTop:-1}}>+</span> New Document
-        </button>
-        <button onClick={()=>setShowRight(v=>!v)} style={{padding:"6px 12px",borderRadius:7,background:showRight?"var(--accent-soft)":"var(--surface-2)",border:`1px solid ${showRight?"var(--accent)":"var(--line)"}`,color:showRight?"var(--accent)":"var(--text-3)",fontSize:11,cursor:"pointer",fontWeight:500}}>
-          {showRight?"Hide Panel":"Show Panel"}
+        {/* Status pill */}
+        {selected&&(
+          <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:4,background:smeta.bg,border:`1px solid ${smeta.color}30`,marginRight:12}}>
+            <span style={{width:5,height:5,borderRadius:"50%",background:smeta.color,flexShrink:0}}/>
+            <span style={{fontFamily:"var(--mono)",fontSize:10.5,color:smeta.color,fontWeight:500,letterSpacing:"0.04em"}}>{smeta.label.toUpperCase()}</span>
+          </div>
+        )}
+        {/* Signer avatars */}
+        {selected?.signers.length>0&&(
+          <div style={{display:"flex",alignItems:"center",gap:4,marginRight:12}}>
+            {selected.signers.map(s=>(
+              <div key={s.id} title={`${s.name} — ${SIGNER_STATUS[s.status].label}`}
+                style={{width:26,height:26,borderRadius:"50%",background:`${s.color}22`,border:`1.5px solid ${s.status==="signed"?s.color:"var(--line-strong)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:s.color,cursor:"default",fontFamily:"var(--sans)"}}>
+                {s.name.charAt(0)}
+              </div>
+            ))}
+            <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--text-4)",marginLeft:4}}>{signedCount}/{selected.signers.length}</span>
+          </div>
+        )}
+        <button onClick={()=>setShowNewDoc(true)} style={{display:"flex",alignItems:"center",gap:7,height:"100%",padding:"0 18px",background:"var(--accent)",border:"none",borderLeft:"1px solid rgba(255,255,255,0.1)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"var(--sans)",letterSpacing:"-0.01em"}}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          New Document
         </button>
       </header>
 
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
 
-        {/* Left Sidebar */}
-        <aside style={{width:236,background:"var(--surface-1)",borderRight:"1px solid var(--line)",display:"flex",flexDirection:"column",flexShrink:0,overflow:"hidden"}}>
-          <div style={{padding:"10px 10px 0"}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search documents…"
-              style={{width:"100%",padding:"7px 10px",borderRadius:7,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text)",fontSize:12,boxSizing:"border-box",outline:"none"}}/>
+        {/* ── Left sidebar ── */}
+        <aside style={{width:228,background:"var(--surface-1)",borderRight:"1px solid var(--line)",display:"flex",flexDirection:"column",flexShrink:0,overflow:"hidden"}}>
+          {/* Search */}
+          <div style={{padding:"12px 12px 0"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,background:"var(--surface-2)",border:"1px solid var(--line-strong)",borderRadius:6,padding:"7px 10px"}}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{flexShrink:0,color:"var(--text-4)"}}>
+                <circle cx="5.5" cy="5.5" r="3.5" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M8.5 8.5L11 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
+                style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:12,color:"var(--text)",fontFamily:"var(--sans)"}}/>
+            </div>
           </div>
-          {/* Status filter chips */}
-          <div style={{display:"flex",gap:4,padding:"8px 10px",flexWrap:"wrap"}}>
+          {/* Status filters */}
+          <div style={{display:"flex",gap:3,padding:"10px 12px 8px",flexWrap:"wrap"}}>
             {(["all","draft","sent","completed"] as StatusFilter[]).map(sf=>(
-              <button key={sf} onClick={()=>setStatusFilter(sf)} style={{padding:"3px 8px",borderRadius:5,background:statusFilter===sf?"var(--accent-soft)":"transparent",border:`1px solid ${statusFilter===sf?"var(--accent)":"var(--line)"}`,color:statusFilter===sf?"var(--accent)":"var(--text-3)",fontSize:10,fontWeight:600,cursor:"pointer",textTransform:"capitalize"}}>
-                {sf==="all"?"All":sf.charAt(0).toUpperCase()+sf.slice(1)}
+              <button key={sf} onClick={()=>setStatusFilter(sf)}
+                style={{padding:"3px 8px",borderRadius:3,background:statusFilter===sf?"var(--accent)":"transparent",border:`1px solid ${statusFilter===sf?"var(--accent)":"var(--line-strong)"}`,color:statusFilter===sf?"#fff":"var(--text-3)",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em",textTransform:"uppercase"}}>
+                {sf==="all"?"All":sf}
               </button>
             ))}
           </div>
           {/* Category nav */}
-          <div style={{overflowY:"auto",flex:1,padding:"0 6px 6px"}}>
-            <button onClick={()=>setCatFilter("all")} style={{width:"100%",textAlign:"left",padding:"6px 8px",borderRadius:6,background:catFilter==="all"?"var(--accent-soft)":"transparent",border:"none",color:catFilter==="all"?"var(--accent)":"var(--text-2)",fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:2}}>
-              <span style={{fontWeight:600}}>All Documents</span>
-              <span style={{fontSize:10,opacity:0.6}}>{docs.length}</span>
+          <div style={{overflowY:"auto",flex:1,padding:"4px 8px 6px"}}>
+            <button onClick={()=>setCatFilter("all")}
+              style={{width:"100%",textAlign:"left",padding:"6px 8px",borderRadius:5,background:catFilter==="all"?"rgba(45,114,210,0.12)":"transparent",border:"none",color:catFilter==="all"?"var(--accent)":"var(--text-3)",fontSize:11.5,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,fontFamily:"var(--sans)"}}>
+              <span style={{fontWeight:catFilter==="all"?600:400}}>All Documents</span>
+              <span style={{fontFamily:"var(--mono)",fontSize:10,opacity:0.6}}>{docs.length}</span>
             </button>
             {CAT_GROUPS.map(g=>(
               <div key={g.label}>
-                <div style={{padding:"10px 8px 4px",fontSize:10,fontWeight:600,letterSpacing:"0.07em",color:"var(--text-4)",textTransform:"uppercase"}}>{g.label}</div>
+                <div style={{padding:"10px 8px 4px",fontFamily:"var(--mono)",fontSize:9.5,fontWeight:600,letterSpacing:"0.1em",color:"var(--text-4)",textTransform:"uppercase"}}>{g.label}</div>
                 {g.cats.map(cat=>{
-                  const m=CAT_META[cat]; const cnt=docs.filter(d=>d.category===cat).length;
+                  const m=CAT_META[cat];const cnt=docs.filter(d=>d.category===cat).length;
                   return (
-                    <button key={cat} onClick={()=>setCatFilter(cat)} style={{width:"100%",textAlign:"left",padding:"6px 8px",borderRadius:6,background:catFilter===cat?"var(--accent-soft)":"transparent",border:"none",color:catFilter===cat?"var(--accent)":"var(--text-2)",fontSize:11.5,cursor:"pointer",display:"flex",alignItems:"center",gap:7,marginBottom:1}}>
-                      <span style={{fontSize:13}}>{m.icon}</span>
-                      <span style={{flex:1}}>{m.label}</span>
-                      {cnt>0&&<span style={{fontSize:10,opacity:0.5}}>{cnt}</span>}
+                    <button key={cat} onClick={()=>setCatFilter(cat)}
+                      style={{width:"100%",textAlign:"left",padding:"5px 8px",borderRadius:5,background:catFilter===cat?"rgba(45,114,210,0.12)":"transparent",border:"none",color:catFilter===cat?"var(--accent)":"var(--text-2)",fontSize:11.5,cursor:"pointer",display:"flex",alignItems:"center",gap:8,marginBottom:1,fontFamily:"var(--sans)"}}>
+                      <span style={{width:6,height:6,borderRadius:1,background:m.color,flexShrink:0,opacity:0.8}}/>
+                      <span style={{flex:1,fontWeight:catFilter===cat?600:400}}>{m.label}</span>
+                      {cnt>0&&<span style={{fontFamily:"var(--mono)",fontSize:9.5,opacity:0.45}}>{cnt}</span>}
                     </button>
                   );
                 })}
@@ -805,81 +863,74 @@ export default function ContractLabPage() {
             ))}
           </div>
           {/* Document list */}
-          <div style={{borderTop:"1px solid var(--line)",overflowY:"auto",maxHeight:280,padding:"6px 6px 8px"}}>
-            <div style={{padding:"4px 8px 5px",fontSize:10,fontWeight:600,letterSpacing:"0.07em",color:"var(--text-4)",textTransform:"uppercase"}}>Documents</div>
+          <div style={{borderTop:"1px solid var(--line)",overflowY:"auto",maxHeight:300,padding:"6px 8px 8px"}}>
+            <div style={{padding:"4px 8px 6px",fontFamily:"var(--mono)",fontSize:9.5,fontWeight:600,letterSpacing:"0.1em",color:"var(--text-4)",textTransform:"uppercase"}}>Recent</div>
             {filteredDocs.map(doc=>{
-              const sm=STATUS_META[doc.status]; const cm=CAT_META[doc.category];
+              const sm=STATUS_META[doc.status];const cm=CAT_META[doc.category];
               const active=doc.id===selectedId;
               return (
                 <div key={doc.id} style={{position:"relative",marginBottom:2}}>
-                  <button onClick={()=>setSelectedId(doc.id)} style={{width:"100%",textAlign:"left",padding:"8px 28px 8px 8px",borderRadius:7,background:active?"var(--surface-2)":"transparent",border:active?"1px solid var(--line-strong)":"1px solid transparent",color:"var(--text)",fontSize:12,cursor:"pointer"}}>
+                  <button onClick={()=>setSelectedId(doc.id)}
+                    style={{width:"100%",textAlign:"left",padding:"8px 26px 8px 8px",borderRadius:6,background:active?"var(--surface-2)":"transparent",border:active?"1px solid var(--line-strong)":"1px solid transparent",color:"var(--text)",fontSize:12,cursor:"pointer",fontFamily:"var(--sans)"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                      <span style={{fontSize:13}}>{cm.icon}</span>
-                      <span style={{fontSize:11,fontWeight:600,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{doc.title}</span>
+                      <span style={{width:6,height:6,borderRadius:1,background:cm.color,flexShrink:0}}/>
+                      <span style={{fontSize:11,fontWeight:active?600:400,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{doc.title}</span>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:5}}>
-                      <span style={{width:5,height:5,borderRadius:"50%",background:sm.color,flexShrink:0}}/>
-                      <span style={{fontSize:10,color:sm.color}}>{sm.label}</span>
-                      <span style={{fontSize:10,color:"var(--text-4)",marginLeft:"auto"}}>{doc.updated}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:5,paddingLeft:12}}>
+                      <span style={{fontFamily:"var(--mono)",fontSize:9.5,color:sm.color}}>{sm.label}</span>
+                      <span style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",marginLeft:"auto"}}>{doc.updated}</span>
                     </div>
                   </button>
-                  <button onClick={()=>deleteDoc(doc.id)} title="Delete" style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",background:"transparent",border:"none",color:"var(--text-4)",fontSize:14,cursor:"pointer",padding:"2px 4px",opacity:0,transition:"opacity 0.15s"}}
-                    onMouseEnter={e=>(e.currentTarget.style.opacity="1")} onMouseLeave={e=>(e.currentTarget.style.opacity="0")}>
-                    ×
-                  </button>
+                  <button onClick={()=>deleteDoc(doc.id)} title="Delete"
+                    style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",background:"transparent",border:"none",color:"var(--text-4)",fontSize:13,cursor:"pointer",padding:"2px 5px",opacity:0,transition:"opacity 0.15s"}}
+                    onMouseEnter={e=>(e.currentTarget.style.opacity="1")} onMouseLeave={e=>(e.currentTarget.style.opacity="0")}>×</button>
                 </div>
               );
             })}
-            {filteredDocs.length===0&&<div style={{padding:"12px 8px",fontSize:11,color:"var(--text-4)",textAlign:"center"}}>No documents found</div>}
+            {filteredDocs.length===0&&<div style={{padding:"12px 8px",fontSize:11,color:"var(--text-4)",textAlign:"center",fontFamily:"var(--mono)"}}>No documents</div>}
           </div>
         </aside>
 
-        {/* Main document area */}
-        <main style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
+        {/* ── Document area ── */}
+        <main style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0,background:"#F0F2F5"}}>
           {selected?(
             <>
-              {/* Doc header bar */}
-              <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 24px",borderBottom:"1px solid var(--line)",background:"var(--surface-1)",flexShrink:0}}>
-                <span style={{fontSize:22}}>{tmeta.icon}</span>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:15,fontWeight:700,letterSpacing:"-0.02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selected.title}</div>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
-                    <span style={{fontSize:11,color:"var(--text-3)"}}>{tmeta.label}</span>
-                    <span style={{color:"var(--line-strong)"}}>·</span>
-                    <span style={{width:6,height:6,borderRadius:"50%",background:STATUS_META[selected.status].color}}/>
-                    <span style={{fontSize:11,color:STATUS_META[selected.status].color}}>{STATUS_META[selected.status].label}</span>
-                    <span style={{color:"var(--line-strong)"}}>·</span>
-                    <span style={{fontSize:11,color:"var(--text-4)"}}>Updated {selected.updated}</span>
-                  </div>
-                </div>
-                <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                  {selected.signers.map(s=>(
-                    <div key={s.id} title={`${s.name} — ${SIGNER_STATUS[s.status].label}`}
-                      style={{width:28,height:28,borderRadius:"50%",background:s.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff",border:`2px solid ${s.status==="signed"?"#3DCC91":"var(--surface-1)"}`,flexShrink:0,cursor:"default"}}>
-                      {s.name.charAt(0)}
-                    </div>
-                  ))}
-                  <span style={{fontSize:11,color:"var(--text-4)",marginLeft:4}}>{selected.signers.filter(s=>s.status==="signed").length}/{selected.signers.length} signed</span>
-                </div>
+              {/* Document toolbar */}
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 20px",height:44,background:"var(--surface-1)",borderBottom:"1px solid var(--line)",flexShrink:0}}>
+                <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--text-3)",letterSpacing:"0.06em",textTransform:"uppercase"}}>{tmeta.short}</span>
+                <span style={{color:"var(--line-strong)"}}>·</span>
+                <span style={{fontSize:12,fontWeight:500,color:"var(--text-2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selected.title}</span>
+                <div style={{flex:1}}/>
+                <button onClick={()=>setShowRight(v=>!v)}
+                  style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",borderRadius:5,background:showRight?"rgba(45,114,210,0.12)":"transparent",border:`1px solid ${showRight?"rgba(45,114,210,0.3)":"var(--line-strong)"}`,color:showRight?"var(--accent)":"var(--text-3)",fontSize:10.5,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em",textTransform:"uppercase",fontWeight:600}}>
+                  {showRight?"Hide Panel":"Show Panel"}
+                </button>
               </div>
-
-              {/* Document body */}
-              <div id="doc-print-area" style={{flex:1,overflowY:"auto",padding:"36px 48px",background:"var(--bg)"}}>
-                <div style={{maxWidth:680,margin:"0 auto",background:"var(--surface-1)",borderRadius:12,padding:"52px 60px",border:"1px solid var(--line)",boxShadow:"0 4px 32px rgba(0,0,0,0.35)"}}>
-                  {renderMarkdown(selected.content)}
+              {/* Paper document */}
+              <div id="doc-print-area" style={{flex:1,overflowY:"auto",padding:"40px 48px"}}>
+                <div style={{maxWidth:660,margin:"0 auto",background:"#FFFFFF",borderRadius:3,padding:"72px 80px",boxShadow:"0 1px 3px rgba(0,0,0,0.08),0 8px 32px rgba(0,0,0,0.1),0 24px 64px rgba(0,0,0,0.06)",position:"relative"}}>
+                  {/* Document top rule */}
+                  <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg, ${tmeta.color}, ${tmeta.color}88)`,borderRadius:"3px 3px 0 0"}}/>
+                  {/* Category badge */}
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:40}}>
+                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,letterSpacing:"0.12em",textTransform:"uppercase",color:tmeta.color,fontWeight:600}}>{tmeta.label}</div>
+                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"#9CA3AF",letterSpacing:"0.06em"}}>Updated {selected.updated}</div>
+                  </div>
+                  {renderDoc(selected.content)}
+                  {/* Signatures section */}
                   {selected.signers.some(s=>s.status==="signed"&&s.signature)&&(
-                    <div style={{marginTop:40,paddingTop:28,borderTop:"1px solid var(--line)"}}>
-                      <div style={{fontSize:10,color:"var(--text-4)",marginBottom:14,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase"}}>Electronic Signatures</div>
-                      <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
+                    <div style={{marginTop:52,paddingTop:32,borderTop:"2px solid #111827"}}>
+                      <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"#6B7280",marginBottom:20,letterSpacing:"0.1em",textTransform:"uppercase",fontWeight:600}}>Electronic Signatures</div>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(180px, 1fr))",gap:16}}>
                         {selected.signers.filter(s=>s.status==="signed"&&s.signature).map(s=>(
-                          <div key={s.id} style={{background:"var(--surface-2)",borderRadius:10,padding:"14px 18px",border:`1px solid ${s.color}30`,minWidth:160}}>
+                          <div key={s.id} style={{borderTop:`2px solid ${s.color}`,paddingTop:14}}>
                             {s.signature?.startsWith("data:")
-                              ? <img src={s.signature} style={{height:44,marginBottom:6,display:"block"}} alt="sig"/>
-                              : <div style={{fontFamily:"Georgia,serif",fontSize:24,color:s.color,marginBottom:6,fontStyle:"italic"}}>{s.signature}</div>
+                              ? <img src={s.signature} style={{height:36,marginBottom:8,display:"block"}} alt="sig"/>
+                              : <div style={{fontFamily:"Georgia,serif",fontSize:22,fontStyle:"italic",color:"#111827",marginBottom:8,lineHeight:1.2}}>{s.signature}</div>
                             }
-                            <div style={{fontSize:11,color:"var(--text-2)",fontWeight:600}}>{s.name}</div>
-                            <div style={{fontSize:10,color:"var(--text-3)"}}>{s.role}</div>
-                            <div style={{fontSize:10,color:"var(--text-4)",marginTop:3}}>✓ Signed {s.signedAt}</div>
+                            <div style={{fontFamily:"var(--mono)",fontSize:10,color:"#374151",fontWeight:600}}>{s.name}</div>
+                            <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"#9CA3AF",marginTop:2}}>{s.role}</div>
+                            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#D1D5DB",marginTop:3}}>Signed {s.signedAt}</div>
                           </div>
                         ))}
                       </div>
@@ -887,91 +938,87 @@ export default function ContractLabPage() {
                   )}
                 </div>
               </div>
-
-              {/* Bottom export bar */}
-              <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 20px",borderTop:"1px solid var(--line)",background:"var(--surface-1)",flexShrink:0}}>
-                <span style={{fontSize:11,color:"var(--text-4)",marginRight:2}}>Export:</span>
-                {[
-                  {label:"PDF",    action:exportPdf},
-                  {label:"Google Docs", action:exportGoogleDocs},
-                  {label:"Markdown",   action:exportMd},
-                  {label:"Plain Text", action:exportTxt},
-                ].map(opt=>(
-                  <button key={opt.label} onClick={opt.action} style={{padding:"5px 11px",borderRadius:6,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text-2)",fontSize:11,cursor:"pointer"}}>
-                    {opt.label}
+              {/* Export bar */}
+              <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 20px",borderTop:"1px solid var(--line)",background:"var(--surface-1)",flexShrink:0}}>
+                <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--text-4)",letterSpacing:"0.06em",textTransform:"uppercase",marginRight:4}}>Export</span>
+                {[{l:"PDF",a:exportPdf},{l:"Google Docs",a:exportGoogleDocs},{l:"Markdown",a:exportMd},{l:"Plain Text",a:exportTxt}].map(o=>(
+                  <button key={o.l} onClick={o.a}
+                    style={{padding:"5px 11px",borderRadius:4,background:"var(--surface-2)",border:"1px solid var(--line-strong)",color:"var(--text-3)",fontSize:11,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.03em",transition:"color 0.15s,border-color 0.15s"}}
+                    onMouseEnter={e=>{e.currentTarget.style.color="var(--text)";e.currentTarget.style.borderColor="rgba(255,255,255,0.25)";}}
+                    onMouseLeave={e=>{e.currentTarget.style.color="var(--text-3)";e.currentTarget.style.borderColor="var(--line-strong)";}}>
+                    {o.l}
                   </button>
                 ))}
-                {exportMsg&&<span style={{fontSize:11,color:"#3DCC91",marginLeft:6}}>✓ {exportMsg}</span>}
+                {exportMsg&&<span style={{fontFamily:"var(--mono)",fontSize:10.5,color:"#12B886",marginLeft:8}}>✓ {exportMsg}</span>}
               </div>
             </>
           ):(
-            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text-4)",fontSize:14}}>Select a document</div>
+            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text-4)",fontSize:13,fontFamily:"var(--mono)"}}>Select a document</div>
           )}
         </main>
 
-        {/* Right Panel */}
+        {/* ── Right panel ── */}
         {showRight&&selected&&(
-          <aside style={{width:304,background:"var(--surface-1)",borderLeft:"1px solid var(--line)",display:"flex",flexDirection:"column",flexShrink:0}}>
+          <aside style={{width:288,background:"var(--surface-1)",borderLeft:"1px solid var(--line)",display:"flex",flexDirection:"column",flexShrink:0}}>
             <div style={{display:"flex",borderBottom:"1px solid var(--line)"}}>
               {(["sign","share","export"] as RightTab[]).map(tab=>(
-                <button key={tab} onClick={()=>setRightTab(tab)} style={{flex:1,padding:"11px 0",background:"transparent",border:"none",borderBottom:rightTab===tab?"2px solid var(--accent)":"2px solid transparent",color:rightTab===tab?"var(--accent)":"var(--text-3)",fontSize:11,fontWeight:700,cursor:"pointer",letterSpacing:"0.03em",textTransform:"uppercase"}}>
-                  {tab==="sign"?"Signatures":tab==="share"?"Share & Send":"Export"}
+                <button key={tab} onClick={()=>setRightTab(tab)}
+                  style={{flex:1,padding:"12px 0",background:"transparent",border:"none",borderBottom:rightTab===tab?"2px solid var(--accent)":"2px solid transparent",color:rightTab===tab?"var(--accent)":"var(--text-4)",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.07em",textTransform:"uppercase",transition:"color 0.15s"}}>
+                  {tab==="sign"?"Signatures":tab==="share"?"Send":"Export"}
                 </button>
               ))}
             </div>
-            <div style={{flex:1,overflowY:"auto",padding:16}}>
+            <div style={{flex:1,overflowY:"auto",padding:18}}>
 
-              {/* Signatures Tab */}
+              {/* Signatures tab */}
               {rightTab==="sign"&&(
                 <div>
-                  <p style={{fontSize:12,color:"var(--text-3)",marginBottom:16,lineHeight:1.5}}>Add signers, track status, and apply electronic signatures.</p>
+                  {selected.signers.length===0&&(
+                    <div style={{padding:"20px 0 16px",fontFamily:"var(--mono)",fontSize:10.5,color:"var(--text-4)",textAlign:"center",lineHeight:1.7}}>No signers added yet.<br/>Add signers below to begin.</div>
+                  )}
                   {selected.signers.map(signer=>(
-                    <div key={signer.id} style={{background:"var(--surface-2)",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid var(--line)"}}>
+                    <div key={signer.id} style={{background:"var(--surface-2)",borderRadius:6,padding:"10px 12px",marginBottom:8,borderLeft:`2px solid ${signer.color}`}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                        <div style={{width:28,height:28,borderRadius:"50%",background:signer.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff",flexShrink:0}}>{signer.name.charAt(0)}</div>
+                        <div style={{width:26,height:26,borderRadius:"50%",background:`${signer.color}20`,border:`1.5px solid ${signer.color}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:signer.color,flexShrink:0,fontFamily:"var(--sans)"}}>{signer.name.charAt(0)}</div>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{signer.name}</div>
-                          <div style={{fontSize:10,color:"var(--text-3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{signer.email}</div>
+                          <div style={{fontSize:12,fontWeight:600,fontFamily:"var(--sans)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{signer.name}</div>
+                          <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{signer.email}</div>
                         </div>
-                        <button onClick={()=>removeSigner(signer.id)} style={{background:"transparent",border:"none",color:"var(--text-4)",fontSize:15,cursor:"pointer",padding:"2px 5px",flexShrink:0}}>×</button>
+                        <button onClick={()=>removeSigner(signer.id)} style={{background:"transparent",border:"none",color:"var(--text-4)",fontSize:14,cursor:"pointer",padding:"2px 4px",flexShrink:0}}>×</button>
                       </div>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                         <div style={{display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{width:5,height:5,borderRadius:"50%",background:SIGNER_STATUS[signer.status].color}}/>
-                          <span style={{fontSize:11,color:SIGNER_STATUS[signer.status].color}}>{SIGNER_STATUS[signer.status].label}</span>
-                          {signer.signedAt&&<span style={{fontSize:10,color:"var(--text-4)"}}>· {signer.signedAt}</span>}
+                          <span style={{width:4,height:4,borderRadius:"50%",background:SIGNER_STATUS[signer.status].color}}/>
+                          <span style={{fontFamily:"var(--mono)",fontSize:9.5,color:SIGNER_STATUS[signer.status].color,letterSpacing:"0.04em"}}>{SIGNER_STATUS[signer.status].label.toUpperCase()}</span>
+                          {signer.signedAt&&<span style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--text-4)"}}>· {signer.signedAt}</span>}
                         </div>
                         {signer.status!=="signed"&&(
-                          <button onClick={()=>{setActiveSigner(signer.id);setShowSigModal(true);}} style={{padding:"3px 10px",borderRadius:5,background:"var(--accent-soft)",border:"1px solid var(--accent)",color:"var(--accent)",fontSize:10,cursor:"pointer",fontWeight:700}}>
-                            Sign Now
+                          <button onClick={()=>{setActiveSigner(signer.id);setShowSigModal(true);}}
+                            style={{padding:"3px 10px",borderRadius:3,background:"var(--accent)",border:"none",color:"#fff",fontSize:10,cursor:"pointer",fontWeight:700,fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
+                            SIGN
                           </button>
                         )}
                       </div>
-                      {signer.role&&<div style={{fontSize:10,color:"var(--text-4)",marginTop:5}}>Role: {signer.role}</div>}
+                      {signer.role&&<div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",marginTop:6,paddingTop:6,borderTop:"1px solid var(--line)"}}>{signer.role}</div>}
                     </div>
                   ))}
-                  <div style={{background:"var(--surface-2)",borderRadius:8,padding:12,border:"1px dashed var(--line-strong)",marginTop:8}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"var(--text-3)",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>Add Signer</div>
-                    {[
-                      {val:newSignerName,set:setNewSignerName,ph:"Full name"},
-                      {val:newSignerEmail,set:setNewSignerEmail,ph:"Email address"},
-                      {val:newSignerRole, set:setNewSignerRole, ph:"Role (e.g. Buyer, Employee)"},
-                    ].map(({val,set,ph})=>(
-                      <input key={ph} value={val} onChange={e=>set(e.target.value)} placeholder={ph}
-                        style={{width:"100%",padding:"7px 9px",borderRadius:6,background:"var(--surface-3)",border:"1px solid var(--line)",color:"var(--text)",fontSize:11,marginBottom:6,boxSizing:"border-box" as const,outline:"none"}}/>
+                  <div style={{background:"var(--surface-2)",borderRadius:6,padding:12,border:"1px dashed var(--line-strong)",marginTop:8}}>
+                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.08em"}}>Add Signer</div>
+                    {[{val:newSignerName,set:setNewSignerName,ph:"Full name"},{val:newSignerEmail,set:setNewSignerEmail,ph:"Email address"},{val:newSignerRole,set:setNewSignerRole,ph:"Role (e.g. Buyer, Employee)"}].map(({val,set,ph})=>(
+                      <input key={ph} value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{...inp,marginBottom:6}}/>
                     ))}
                     <button onClick={addSigner} disabled={!newSignerName||!newSignerEmail}
-                      style={{width:"100%",padding:"8px",borderRadius:6,background:newSignerName&&newSignerEmail?"var(--accent)":"var(--surface-3)",border:"none",color:newSignerName&&newSignerEmail?"#fff":"var(--text-4)",fontSize:11,fontWeight:700,cursor:newSignerName&&newSignerEmail?"pointer":"default"}}>
-                      Add Signer
+                      style={{width:"100%",padding:"8px",borderRadius:5,background:newSignerName&&newSignerEmail?"var(--accent)":"var(--surface-3)",border:"none",color:newSignerName&&newSignerEmail?"#fff":"var(--text-4)",fontSize:11,fontWeight:700,cursor:newSignerName&&newSignerEmail?"pointer":"default",fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
+                      ADD SIGNER
                     </button>
                   </div>
                   {selected.signers.some(s=>s.signedAt)&&(
-                    <div style={{marginTop:18}}>
-                      <div style={{fontSize:10,fontWeight:700,color:"var(--text-4)",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.07em"}}>Audit Trail</div>
+                    <div style={{marginTop:20}}>
+                      <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.08em"}}>Audit Trail</div>
                       {selected.signers.filter(s=>s.signedAt).map(s=>(
-                        <div key={s.id} style={{display:"flex",gap:8,marginBottom:7,alignItems:"flex-start"}}>
-                          <div style={{width:6,height:6,borderRadius:"50%",background:"#3DCC91",marginTop:4,flexShrink:0}}/>
-                          <div><div style={{fontSize:11,color:"var(--text-2)"}}><strong>{s.name}</strong> signed</div><div style={{fontSize:10,color:"var(--text-4)"}}>{s.signedAt} · {s.role}</div></div>
+                        <div key={s.id} style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
+                          <div style={{width:1,background:s.color,alignSelf:"stretch",flexShrink:0,marginLeft:4}}/>
+                          <div><div style={{fontSize:11,fontFamily:"var(--sans)",color:"var(--text-2)"}}>{s.name} <span style={{color:"var(--text-4)"}}>signed</span></div><div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",marginTop:2}}>{s.signedAt}</div></div>
                         </div>
                       ))}
                     </div>
@@ -979,67 +1026,60 @@ export default function ContractLabPage() {
                 </div>
               )}
 
-              {/* Share Tab */}
+              {/* Share tab */}
               {rightTab==="share"&&(
                 <div>
-                  <p style={{fontSize:12,color:"var(--text-3)",marginBottom:16,lineHeight:1.5}}>Send this document to recipients for review or signature.</p>
-                  <div style={{marginBottom:12}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"var(--text-3)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>Recipients</div>
-                    {selected.signers.length>0?selected.signers.map(s=>(
-                      <div key={s.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"var(--surface-2)",borderRadius:6,marginBottom:4,border:"1px solid var(--line)"}}>
-                        <div style={{width:22,height:22,borderRadius:"50%",background:s.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff",flexShrink:0}}>{s.name.charAt(0)}</div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:11,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
-                          <div style={{fontSize:10,color:"var(--text-3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.email}</div>
-                        </div>
-                        <span style={{width:5,height:5,borderRadius:"50%",background:SIGNER_STATUS[s.status].color,flexShrink:0}}/>
+                  <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.08em"}}>Recipients</div>
+                  {selected.signers.length>0?selected.signers.map(s=>(
+                    <div key={s.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"var(--surface-2)",borderRadius:5,marginBottom:4,borderLeft:`2px solid ${s.color}`}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:11.5,fontWeight:600,fontFamily:"var(--sans)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
+                        <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.email}</div>
                       </div>
-                    )):(
-                      <div style={{padding:"10px",background:"var(--surface-2)",borderRadius:6,fontSize:11,color:"var(--text-4)",textAlign:"center"}}>Add signers in the Signatures tab first</div>
-                    )}
-                  </div>
-                  <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"var(--text-3)",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.05em"}}>Subject</div>
-                    <input value={emailSubject} onChange={e=>setEmailSubject(e.target.value)}
-                      style={{width:"100%",padding:"8px 10px",borderRadius:6,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text)",fontSize:12,boxSizing:"border-box" as const,outline:"none"}}/>
+                      <span style={{fontFamily:"var(--mono)",fontSize:9,color:SIGNER_STATUS[s.status].color,letterSpacing:"0.04em"}}>{SIGNER_STATUS[s.status].label.toUpperCase()}</span>
+                    </div>
+                  )):(
+                    <div style={{padding:"12px",background:"var(--surface-2)",borderRadius:5,fontFamily:"var(--mono)",fontSize:10,color:"var(--text-4)",textAlign:"center"}}>Add signers first</div>
+                  )}
+                  <div style={{marginTop:16,marginBottom:8}}>
+                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Subject</div>
+                    <input value={emailSubject} onChange={e=>setEmailSubject(e.target.value)} style={inp}/>
                   </div>
                   <div style={{marginBottom:16}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"var(--text-3)",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.05em"}}>Message</div>
+                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Message</div>
                     <textarea value={emailMsg} onChange={e=>setEmailMsg(e.target.value)} rows={4}
-                      style={{width:"100%",padding:"8px 10px",borderRadius:6,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text)",fontSize:12,boxSizing:"border-box" as const,outline:"none",resize:"vertical",fontFamily:"var(--sans)"}}/>
+                      style={{...inp,resize:"vertical",fontFamily:"var(--sans)",lineHeight:1.5}}/>
                   </div>
                   <button onClick={sendForSigning} disabled={selected.signers.length===0}
-                    style={{width:"100%",padding:"10px",borderRadius:8,background:selected.signers.length>0?"var(--accent)":"var(--surface-2)",border:"none",color:selected.signers.length>0?"#fff":"var(--text-4)",fontSize:12,fontWeight:700,cursor:selected.signers.length>0?"pointer":"default",marginBottom:8}}>
-                    {emailSent?"✓ Sent for Signing":"Send for Signing"}
+                    style={{width:"100%",padding:"10px",borderRadius:5,background:selected.signers.length>0?"var(--accent)":"var(--surface-2)",border:"none",color:selected.signers.length>0?"#fff":"var(--text-4)",fontSize:11,fontWeight:700,cursor:selected.signers.length>0?"pointer":"default",fontFamily:"var(--mono)",letterSpacing:"0.05em",marginBottom:8}}>
+                    {emailSent?"✓ SENT FOR SIGNING":"SEND FOR SIGNING"}
                   </button>
                   <button onClick={()=>{const e=selected.signers.map(s=>s.email).join(",");window.open(`mailto:${e}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMsg)}`);}}
-                    style={{width:"100%",padding:"8px",borderRadius:8,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text-2)",fontSize:12,cursor:"pointer"}}>
-                    Open in Email Client
+                    style={{width:"100%",padding:"8px",borderRadius:5,background:"transparent",border:"1px solid var(--line-strong)",color:"var(--text-3)",fontSize:11,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
+                    OPEN EMAIL CLIENT
                   </button>
-                  {emailSent&&(
-                    <div style={{marginTop:12,padding:"10px 12px",borderRadius:8,background:"rgba(61,204,145,0.1)",border:"1px solid rgba(61,204,145,0.3)",fontSize:12,color:"#3DCC91"}}>
-                      ✓ Document sent to {selected.signers.length} recipient{selected.signers.length>1?"s":""}
-                    </div>
-                  )}
+                  {emailSent&&<div style={{marginTop:12,padding:"10px 12px",borderRadius:5,background:"rgba(18,184,134,0.1)",border:"1px solid rgba(18,184,134,0.3)",fontFamily:"var(--mono)",fontSize:10.5,color:"#12B886"}}>✓ Sent to {selected.signers.length} recipient{selected.signers.length>1?"s":""}</div>}
                 </div>
               )}
 
-              {/* Export Tab */}
+              {/* Export tab */}
               {rightTab==="export"&&(
                 <div>
-                  <p style={{fontSize:12,color:"var(--text-3)",marginBottom:16,lineHeight:1.5}}>Download or export your document in multiple formats.</p>
                   {[
-                    {label:"PDF Document",     desc:"Print-ready via browser dialog",         icon:"📄",color:"#FF6B6B",action:exportPdf},
-                    {label:"Google Docs",      desc:"Open new doc to paste content",          icon:"G", color:"#4285F4",action:exportGoogleDocs},
-                    {label:"Markdown (.md)",   desc:"Raw markdown source file",               icon:"#", color:"#818CF8",action:exportMd},
-                    {label:"Plain Text (.txt)",desc:"Unformatted text file",                  icon:"T", color:"var(--text-3)",action:exportTxt},
-                  ].map(opt=>(
-                    <button key={opt.label} onClick={opt.action} style={{width:"100%",textAlign:"left",padding:"12px 14px",borderRadius:8,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text)",fontSize:12,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
-                      <div style={{width:34,height:34,borderRadius:8,background:`${opt.color}18`,border:`1px solid ${opt.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:opt.color,fontWeight:700,flexShrink:0}}>{opt.icon}</div>
-                      <div><div style={{fontWeight:600,marginBottom:2}}>{opt.label}</div><div style={{fontSize:10,color:"var(--text-4)"}}>{opt.desc}</div></div>
+                    {l:"PDF Document",     d:"Print dialog → Save as PDF",icon:"PDF",  c:"#FF6B6B",a:exportPdf},
+                    {l:"Google Docs",      d:"Opens new doc to paste into",icon:"G",    c:"#4285F4",a:exportGoogleDocs},
+                    {l:"Markdown",         d:"Raw .md source file",        icon:"MD",  c:"var(--accent)",a:exportMd},
+                    {l:"Plain Text",       d:"Unformatted .txt file",       icon:"TXT", c:"var(--text-3)",a:exportTxt},
+                  ].map(o=>(
+                    <button key={o.l} onClick={o.a}
+                      style={{width:"100%",textAlign:"left",padding:"12px 14px",borderRadius:6,background:"var(--surface-2)",border:"1px solid var(--line-strong)",color:"var(--text)",fontSize:12,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,transition:"border-color 0.15s"}}
+                      onMouseEnter={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,0.2)")}
+                      onMouseLeave={e=>(e.currentTarget.style.borderColor="var(--line-strong)")}>
+                      <div style={{width:32,height:32,borderRadius:5,background:`${o.c}15`,border:`1px solid ${o.c}30`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--mono)",fontSize:9,color:o.c,fontWeight:700,flexShrink:0,letterSpacing:"0.03em"}}>{o.icon}</div>
+                      <div><div style={{fontWeight:600,fontSize:12,marginBottom:2}}>{o.l}</div><div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)"}}>{o.d}</div></div>
                     </button>
                   ))}
-                  {exportMsg&&<div style={{marginTop:8,padding:"10px 12px",borderRadius:8,background:"rgba(61,204,145,0.1)",border:"1px solid rgba(61,204,145,0.3)",fontSize:12,color:"#3DCC91"}}>✓ {exportMsg}</div>}
+                  {exportMsg&&<div style={{marginTop:4,padding:"10px 12px",borderRadius:5,background:"rgba(18,184,134,0.1)",border:"1px solid rgba(18,184,134,0.3)",fontFamily:"var(--mono)",fontSize:10.5,color:"#12B886"}}>✓ {exportMsg}</div>}
                 </div>
               )}
             </div>
@@ -1047,85 +1087,91 @@ export default function ContractLabPage() {
         )}
       </div>
 
-      {/* Signature Modal */}
+      {/* ── Signature modal ── */}
       {showSigModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-          <div style={{background:"var(--surface-1)",borderRadius:16,padding:26,width:480,border:"1px solid var(--line)",boxShadow:"0 24px 80px rgba(0,0,0,0.6)"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,backdropFilter:"blur(4px)"}}>
+          <div style={{background:"var(--surface-1)",borderRadius:10,padding:28,width:480,border:"1px solid var(--line-strong)",boxShadow:"0 32px 96px rgba(0,0,0,0.7)"}}>
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:22}}>
               <div>
-                <div style={{fontSize:16,fontWeight:700}}>Apply Electronic Signature</div>
-                <div style={{fontSize:12,color:"var(--text-3)",marginTop:2}}>{activeSigner&&selected?.signers.find(s=>s.id===activeSigner)?.name}</div>
+                <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>Electronic Signature</div>
+                <div style={{fontSize:16,fontWeight:700,fontFamily:"var(--sans)"}}>{activeSigner&&selected?.signers.find(s=>s.id===activeSigner)?.name}</div>
+                <div style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--text-4)",marginTop:3}}>{activeSigner&&selected?.signers.find(s=>s.id===activeSigner)?.role}</div>
               </div>
-              <button onClick={()=>setShowSigModal(false)} style={{background:"transparent",border:"none",color:"var(--text-3)",fontSize:20,cursor:"pointer",padding:"4px 8px"}}>×</button>
+              <button onClick={()=>setShowSigModal(false)} style={{background:"transparent",border:"none",color:"var(--text-4)",fontSize:20,cursor:"pointer",padding:"4px 8px",lineHeight:1}}>×</button>
             </div>
-            <div style={{display:"flex",gap:4,marginBottom:16,background:"var(--surface-2)",borderRadius:8,padding:3}}>
+            {/* Mode toggle */}
+            <div style={{display:"flex",gap:0,marginBottom:16,background:"var(--surface-2)",borderRadius:5,padding:2}}>
               {(["draw","type"] as SignMode[]).map(m=>(
-                <button key={m} onClick={()=>setSigMode(m)} style={{flex:1,padding:"7px",borderRadius:6,background:sigMode===m?"var(--surface-3)":"transparent",border:sigMode===m?"1px solid var(--line-strong)":"1px solid transparent",color:sigMode===m?"var(--text)":"var(--text-3)",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                  {m==="draw"?"Draw Signature":"Type Signature"}
+                <button key={m} onClick={()=>setSigMode(m)}
+                  style={{flex:1,padding:"7px",borderRadius:4,background:sigMode===m?"var(--surface-3)":"transparent",border:sigMode===m?"1px solid var(--line-strong)":"1px solid transparent",color:sigMode===m?"var(--text)":"var(--text-3)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.05em",textTransform:"uppercase"}}>
+                  {m==="draw"?"Draw":"Type"}
                 </button>
               ))}
             </div>
             {sigMode==="draw"?(
               <div>
-                <canvas ref={canvasRef} width={428} height={160}
+                <canvas ref={canvasRef} width={424} height={160}
                   onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-                  style={{width:"100%",height:160,borderRadius:8,background:"#ffffff",border:"1px solid var(--line)",cursor:"crosshair",display:"block"}}/>
+                  style={{width:"100%",height:160,borderRadius:6,background:"#fafaf8",border:"1px solid #e5e7eb",cursor:"crosshair",display:"block"}}/>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
-                  <span style={{fontSize:11,color:"var(--text-4)"}}>Draw your signature with the mouse</span>
-                  <button onClick={clearCanvas} style={{padding:"4px 10px",borderRadius:5,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text-3)",fontSize:11,cursor:"pointer"}}>Clear</button>
+                  <span style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)"}}>Draw your signature above</span>
+                  <button onClick={clearCanvas} style={{padding:"3px 10px",borderRadius:4,background:"transparent",border:"1px solid var(--line-strong)",color:"var(--text-3)",fontSize:10,cursor:"pointer",fontFamily:"var(--mono)"}}>Clear</button>
                 </div>
               </div>
             ):(
               <div>
                 <input value={typedSig} onChange={e=>setTypedSig(e.target.value)} placeholder="Type your full name"
-                  style={{width:"100%",padding:"16px 20px",borderRadius:8,background:"#ffffff",border:"1px solid var(--line)",color:"#1a1a1a",fontSize:28,fontFamily:"Georgia,'Times New Roman',serif",fontStyle:"italic",boxSizing:"border-box" as const,outline:"none"}}/>
-                <div style={{fontSize:11,color:"var(--text-4)",marginTop:7}}>Your typed name will appear as your signature on the document</div>
+                  style={{width:"100%",padding:"16px 20px",borderRadius:6,background:"#fafaf8",border:"1px solid #e5e7eb",color:"#111827",fontSize:28,fontFamily:"Georgia,'Times New Roman',serif",fontStyle:"italic",boxSizing:"border-box",outline:"none"}}/>
+                <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",marginTop:8}}>Typed name will appear as your signature</div>
               </div>
             )}
             <div style={{display:"flex",gap:10,marginTop:20}}>
-              <button onClick={()=>setShowSigModal(false)} style={{flex:1,padding:"10px",borderRadius:8,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text-2)",fontSize:12,cursor:"pointer"}}>Cancel</button>
+              <button onClick={()=>setShowSigModal(false)} style={{flex:1,padding:"10px",borderRadius:6,background:"transparent",border:"1px solid var(--line-strong)",color:"var(--text-2)",fontSize:11,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em",fontWeight:600}}>CANCEL</button>
               <button onClick={applySignature} disabled={!canSign}
-                style={{flex:2,padding:"10px",borderRadius:8,background:canSign?"var(--accent)":"var(--surface-3)",border:"none",color:canSign?"#fff":"var(--text-4)",fontSize:12,fontWeight:700,cursor:canSign?"pointer":"default"}}>
-                Apply Signature
+                style={{flex:2,padding:"10px",borderRadius:6,background:canSign?"var(--accent)":"var(--surface-3)",border:"none",color:canSign?"#fff":"var(--text-4)",fontSize:11,fontWeight:700,cursor:canSign?"pointer":"default",fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
+                APPLY SIGNATURE
               </button>
             </div>
-            <div style={{marginTop:14,padding:"10px 12px",borderRadius:8,background:"rgba(45,114,210,0.08)",border:"1px solid rgba(45,114,210,0.2)",fontSize:11,color:"var(--text-3)",lineHeight:1.5}}>
-              By clicking "Apply Signature" you agree that your electronic signature has the same legal force as a handwritten signature under applicable law.
+            <div style={{marginTop:14,padding:"10px 12px",borderRadius:5,background:"rgba(45,114,210,0.06)",border:"1px solid rgba(45,114,210,0.15)",fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",lineHeight:1.6,letterSpacing:"0.01em"}}>
+              By applying your signature you agree it has the same legal effect as a handwritten signature under applicable electronic signature law.
             </div>
           </div>
         </div>
       )}
 
-      {/* New Document Modal */}
+      {/* ── New document modal ── */}
       {showNewDoc&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-          <div style={{background:"var(--surface-1)",borderRadius:16,padding:26,width:540,border:"1px solid var(--line)",boxShadow:"0 24px 80px rgba(0,0,0,0.6)",maxHeight:"90vh",overflowY:"auto"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-              <div style={{fontSize:16,fontWeight:700}}>New Document</div>
-              <button onClick={()=>setShowNewDoc(false)} style={{background:"transparent",border:"none",color:"var(--text-3)",fontSize:20,cursor:"pointer",padding:"4px 8px"}}>×</button>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,backdropFilter:"blur(4px)"}}>
+          <div style={{background:"var(--surface-1)",borderRadius:10,padding:28,width:560,border:"1px solid var(--line-strong)",boxShadow:"0 32px 96px rgba(0,0,0,0.7)",maxHeight:"90vh",overflowY:"auto"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
+              <div>
+                <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>New Document</div>
+                <div style={{fontSize:16,fontWeight:700,fontFamily:"var(--sans)"}}>Choose a Template</div>
+              </div>
+              <button onClick={()=>setShowNewDoc(false)} style={{background:"transparent",border:"none",color:"var(--text-4)",fontSize:20,cursor:"pointer",padding:"4px 8px",lineHeight:1}}>×</button>
             </div>
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:"var(--text-3)",marginBottom:7,textTransform:"uppercase",letterSpacing:"0.05em"}}>Document Title</div>
-              <input value={newDocTitle} onChange={e=>setNewDocTitle(e.target.value)} placeholder="e.g., Acme Corp — Mutual NDA"
-                style={{width:"100%",padding:"9px 12px",borderRadius:8,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text)",fontSize:13,boxSizing:"border-box" as const,outline:"none"}}/>
+            <div style={{marginBottom:18}}>
+              <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.08em"}}>Document Title</div>
+              <input value={newDocTitle} onChange={e=>setNewDocTitle(e.target.value)} placeholder="e.g., Acme Corp — Mutual NDA" style={{...inp,fontSize:13,padding:"10px 12px"}}/>
             </div>
-            <div style={{marginBottom:22}}>
-              <div style={{fontSize:11,fontWeight:700,color:"var(--text-3)",marginBottom:9,textTransform:"uppercase",letterSpacing:"0.05em"}}>Template</div>
+            <div style={{marginBottom:24}}>
+              <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.08em"}}>Template</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                 {(Object.entries(CAT_META) as [DocCategory,typeof CAT_META[DocCategory]][]).map(([cat,m])=>(
                   <button key={cat} onClick={()=>setNewDocCat(cat)}
-                    style={{padding:"11px 8px",borderRadius:9,background:newDocCat===cat?"var(--accent-soft)":"var(--surface-2)",border:newDocCat===cat?"1px solid var(--accent)":"1px solid var(--line)",color:newDocCat===cat?"var(--accent)":"var(--text-2)",fontSize:11,cursor:"pointer",textAlign:"center" as const}}>
-                    <div style={{fontSize:20,marginBottom:5}}>{m.icon}</div>
-                    <div style={{fontWeight:600,lineHeight:1.3}}>{m.label}</div>
+                    style={{padding:"12px 10px",borderRadius:6,background:newDocCat===cat?"rgba(45,114,210,0.12)":"var(--surface-2)",border:newDocCat===cat?`1px solid var(--accent)`:"1px solid var(--line-strong)",color:newDocCat===cat?"var(--accent)":"var(--text-2)",fontSize:11,cursor:"pointer",textAlign:"left",transition:"all 0.15s",position:"relative",overflow:"hidden"}}>
+                    <div style={{width:3,height:"100%",position:"absolute",left:0,top:0,background:m.color,borderRadius:"6px 0 0 6px"}}/>
+                    <div style={{fontFamily:"var(--mono)",fontSize:9,color:m.color,marginBottom:5,letterSpacing:"0.06em",paddingLeft:8}}>{m.short.toUpperCase()}</div>
+                    <div style={{fontWeight:600,fontSize:11,lineHeight:1.3,paddingLeft:8,fontFamily:"var(--sans)"}}>{m.label}</div>
                   </button>
                 ))}
               </div>
             </div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setShowNewDoc(false)} style={{flex:1,padding:"10px",borderRadius:8,background:"var(--surface-2)",border:"1px solid var(--line)",color:"var(--text-2)",fontSize:12,cursor:"pointer"}}>Cancel</button>
+              <button onClick={()=>setShowNewDoc(false)} style={{flex:1,padding:"10px",borderRadius:6,background:"transparent",border:"1px solid var(--line-strong)",color:"var(--text-2)",fontSize:11,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em",fontWeight:600}}>CANCEL</button>
               <button onClick={createDoc} disabled={!newDocTitle}
-                style={{flex:2,padding:"10px",borderRadius:8,background:newDocTitle?"var(--accent)":"var(--surface-3)",border:"none",color:newDocTitle?"#fff":"var(--text-4)",fontSize:12,fontWeight:700,cursor:newDocTitle?"pointer":"default"}}>
-                Create from Template
+                style={{flex:2,padding:"10px",borderRadius:6,background:newDocTitle?"var(--accent)":"var(--surface-3)",border:"none",color:newDocTitle?"#fff":"var(--text-4)",fontSize:11,fontWeight:700,cursor:newDocTitle?"pointer":"default",fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
+                CREATE DOCUMENT
               </button>
             </div>
           </div>
@@ -1136,15 +1182,13 @@ export default function ContractLabPage() {
         @media print {
           body > * { display: none !important; }
           #doc-print-area { display: block !important; position: fixed; inset: 0; overflow: auto; background: white !important; }
-          #doc-print-area > div { box-shadow: none !important; border: none !important; background: white !important; color: black !important; max-width: 100% !important; padding: 40px !important; }
-          #doc-print-area h1, #doc-print-area h2, #doc-print-area p, #doc-print-area div { color: black !important; }
+          #doc-print-area > div { box-shadow: none !important; max-width: 100% !important; padding: 48px !important; }
         }
-        input::placeholder, textarea::placeholder { color: var(--text-4) !important; }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
+        *::-webkit-scrollbar { width: 3px; height: 3px; }
+        *::-webkit-scrollbar-track { background: transparent; }
+        *::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
+        input::placeholder, textarea::placeholder { color: var(--text-4) !important; font-family: var(--sans); }
       `}</style>
     </div>
   );
 }
-
