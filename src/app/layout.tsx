@@ -54,7 +54,7 @@ export default function RootLayout({
       className={`${newsreader.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
       <head>
-        <link rel="apple-touch-icon" href="/icon-192.png?v=4" />
+        <link rel="apple-touch-icon" href="/icon-192.png?v=5" />
       </head>
       <body>
         {children}
