@@ -832,135 +832,133 @@ export default function MobileLab() {
         </div>
       </div>
 
-      {/* Deployment protocol — Palantir-style */}
-      <div style={{
-        borderTop: `1px solid rgba(255,255,255,0.06)`,
-        background: '#080A0D',
-        padding: '32px 32px 28px',
-        fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
-      }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      {/* ── Install Guide — full-width landing section ── */}
+      <section style={{ background: '#07080B', borderTop: '1px solid rgba(255,255,255,0.06)', width: '100%' }}>
 
-          {/* Header bar */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 14, marginBottom: 24,
+        {/* Hero headline */}
+        <div style={{ padding: '100px 72px 72px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: C.green, boxShadow: `0 0 10px ${C.green}` }} />
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>
+              Nurse Device Setup · PWA · No App Store Required
+            </span>
+          </div>
+          <h2 style={{
+            fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 'clamp(42px, 5.5vw, 80px)',
+            letterSpacing: '-0.03em', lineHeight: 1.05, margin: '0 0 28px',
+            color: '#EDEEF0',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 6, height: 6, background: C.green, borderRadius: '50%', boxShadow: `0 0 6px ${C.green}` }} />
-              <span style={{ fontSize: 11, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
-                DEPLOYMENT PROTOCOL
-              </span>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>/ NURSE DEVICE SETUP</span>
+            Deploy in minutes.<br />
+            <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.35)', fontWeight: 300 }}>No app store. No config.</em>
+          </h2>
+          <p style={{ fontFamily: 'var(--sans)', fontSize: 17, color: 'rgba(255,255,255,0.4)', maxWidth: 560, lineHeight: 1.7, margin: 0, fontWeight: 300 }}>
+            Ambient runs as a Progressive Web App — install directly from the browser, receive real-time fall alerts via push notification, and launch from the home screen like any native app.
+          </p>
+        </div>
+
+        {/* 3-column install steps */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+
+          {/* iPhone */}
+          <div style={{ padding: '64px 72px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', align: 'center', gap: 10, marginBottom: 40 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.accent, background: 'rgba(45,114,210,0.1)', padding: '4px 10px', borderRadius: 3 }}>iPhone · iPad</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', alignSelf: 'center', paddingLeft: 4 }}>Safari</span>
             </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em' }}>
-              PWA · NO APP STORE · PUSH-ENABLED
-            </div>
+            {[
+              ['Open Safari', 'Must use Safari — Chrome will not work for iOS PWA install.'],
+              ['Navigate to the URL', 'Go to ambientprototype.vercel.app/mobilelab in the address bar.'],
+              ['Tap Share  □↑', 'Tap the Share icon at the bottom center of the screen.'],
+              ['Add to Home Screen', 'Scroll down in the share sheet and tap "Add to Home Screen."'],
+              ['Confirm & Launch', 'Tap "Add." The app icon now appears on your home screen.'],
+              ['Allow Notifications', 'Open from home screen and tap Allow when prompted.'],
+            ].map(([title, desc], i) => (
+              <div key={i} style={{ display: 'flex', gap: 24, marginBottom: 32, alignItems: 'flex-start' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(45,114,210,0.5)', flexShrink: 0, paddingTop: 3, minWidth: 22 }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <div>
+                  <div style={{ fontFamily: 'var(--sans)', fontSize: 15, fontWeight: 500, color: '#EDEEF0', marginBottom: 5 }}>{title}</div>
+                  <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.65 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, background: 'rgba(255,255,255,0.05)' }}>
-
-            {/* Step block — iPhone */}
-            <div style={{ background: '#080A0D', padding: '20px 20px 24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-                <span style={{ fontSize: 10, color: C.accent, letterSpacing: '0.12em', textTransform: 'uppercase' }}>TARGET</span>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>iPhone / iPad</span>
-                <span style={{ marginLeft: 'auto', fontSize: 9, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>SAFARI</span>
-              </div>
-              {[
-                ['01', 'Open Safari — not Chrome'],
-                ['02', 'Navigate to ambientprototype.vercel.app/mobile'],
-                ['03', 'Tap Share (□↑) at bottom of screen'],
-                ['04', 'Select "Add to Home Screen"'],
-                ['05', 'Tap "Add" to confirm installation'],
-                ['06', 'Launch from home screen icon'],
-                ['07', 'Tap "Enable Notifications" — allow when prompted'],
-              ].map(([n, t]) => (
-                <div key={n} style={{ display: 'flex', gap: 12, marginBottom: 10, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 9, color: C.accent, letterSpacing: '0.06em', flexShrink: 0, paddingTop: 1, minWidth: 16 }}>{n}</span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55 }}>{t}</span>
-                </div>
-              ))}
+          {/* Android */}
+          <div style={{ padding: '64px 72px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 40 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.green, background: 'rgba(61,204,145,0.1)', padding: '4px 10px', borderRadius: 3 }}>Android</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', alignSelf: 'center', paddingLeft: 4 }}>Chrome</span>
             </div>
-
-            {/* Step block — Android */}
-            <div style={{ background: '#080A0D', padding: '20px 20px 24px', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-                <span style={{ fontSize: 10, color: C.green, letterSpacing: '0.12em', textTransform: 'uppercase' }}>TARGET</span>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>Android</span>
-                <span style={{ marginLeft: 'auto', fontSize: 9, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>CHROME</span>
-              </div>
-              {[
-                ['01', 'Open Chrome browser'],
-                ['02', 'Navigate to ambientprototype.vercel.app/mobile'],
-                ['03', 'Tap ⋮ menu — top-right corner'],
-                ['04', 'Select "Add to Home screen" or "Install app"'],
-                ['05', 'Tap "Install" to confirm'],
-                ['06', 'Launch from home screen icon'],
-                ['07', 'Tap "Enable Notifications" — allow when prompted'],
-              ].map(([n, t]) => (
-                <div key={n} style={{ display: 'flex', gap: 12, marginBottom: 10, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 9, color: C.green, letterSpacing: '0.06em', flexShrink: 0, paddingTop: 1, minWidth: 16 }}>{n}</span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55 }}>{t}</span>
+            {[
+              ['Open Chrome', 'Use Chrome on Android for the best PWA install experience.'],
+              ['Navigate to the URL', 'Go to ambientprototype.vercel.app/mobilelab in the address bar.'],
+              ['Tap the Menu  ⋮', 'Tap the three-dot menu icon in the top-right corner.'],
+              ['Add to Home Screen', 'Select "Add to Home screen" or "Install app" from the menu.'],
+              ['Confirm Install', 'Tap "Install" to confirm. The icon appears on your home screen.'],
+              ['Allow Notifications', 'Open from home screen and tap Allow when prompted.'],
+            ].map(([title, desc], i) => (
+              <div key={i} style={{ display: 'flex', gap: 24, marginBottom: 32, alignItems: 'flex-start' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(61,204,145,0.5)', flexShrink: 0, paddingTop: 3, minWidth: 22 }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <div>
+                  <div style={{ fontFamily: 'var(--sans)', fontSize: 15, fontWeight: 500, color: '#EDEEF0', marginBottom: 5 }}>{title}</div>
+                  <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.65 }}>{desc}</div>
                 </div>
-              ))}
-            </div>
-
-            {/* Requirements / alerts config */}
-            <div style={{ background: '#080A0D', padding: '20px 20px 24px', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-                <span style={{ fontSize: 10, color: C.amber, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Requirements</span>
               </div>
-              {[
-                { label: 'iOS version',       value: '16.4 or later',       ok: true },
-                { label: 'Android version',   value: '8.0 or later',        ok: true },
-                { label: 'Notifications',     value: 'Must be allowed',      ok: true },
-                { label: 'Launch mode',       value: 'Home screen only',     ok: true },
-                { label: 'Push delivery',     value: 'APNs / FCM',          ok: true },
-                { label: 'App Store',         value: 'Not required',         ok: true },
-              ].map(r => (
-                <div key={r.label} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)',
-                }}>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>{r.label}</span>
-                  <span style={{ fontSize: 10, color: r.ok ? C.green : C.red, fontWeight: 700, letterSpacing: '0.04em' }}>{r.value}</span>
-                </div>
-              ))}
-
-              <div style={{ marginTop: 18, padding: '12px', background: 'rgba(255,201,64,0.06)', border: '1px solid rgba(255,201,64,0.15)' }}>
-                <div style={{ fontSize: 9, color: C.amber, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Critical</div>
-                {[
-                  'Notifications must be allowed at OS level',
-                  'Always launch from the home screen icon',
-                  'Check Settings → [App] → Notifications if alerts are missing',
-                ].map((t, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5 }}>
-                    <span style={{ color: C.amber, fontSize: 10, flexShrink: 0 }}>›</span>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{t}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Footer status bar */}
-          <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 1,
-            padding: '10px 0 0',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          }}>
-            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.08em' }}>
-              AMBIENT INTELLIGENCE · NURSE MOBILE DEPLOYMENT GUIDE
-            </span>
-            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.06em' }}>
-              ambientprototype.vercel.app/mobile
-            </span>
+          {/* Requirements */}
+          <div style={{ padding: '64px 72px' }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 40 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.amber, background: 'rgba(255,201,64,0.08)', padding: '4px 10px', borderRadius: 3 }}>Requirements</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginBottom: 48 }}>
+              {[
+                ['iOS version',     '16.4 or later'],
+                ['Android version', '8.0 or later'],
+                ['Notifications',   'Must be allowed'],
+                ['Launch mode',     'Home screen only'],
+                ['Push delivery',   'APNs / FCM'],
+                ['App Store',       'Not required'],
+              ].map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>{label}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: C.green, fontWeight: 600 }}>{value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: 'rgba(255,201,64,0.05)', border: '1px solid rgba(255,201,64,0.15)', borderRadius: 10, padding: '24px 28px' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.amber, marginBottom: 16 }}>Important</div>
+              {[
+                'Notifications must be allowed at the OS level.',
+                'Always launch from the home screen icon.',
+                'If alerts are missing, check Settings → App → Notifications.',
+              ].map((t, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+                  <span style={{ color: C.amber, fontSize: 14, flexShrink: 0, lineHeight: 1.5 }}>›</span>
+                  <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>{t}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Bottom bar */}
+        <div style={{ padding: '20px 72px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'rgba(255,255,255,0.15)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Ambient Intelligence · Nurse Mobile Deployment Guide
+          </span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'rgba(255,255,255,0.15)', letterSpacing: '0.08em' }}>
+            ambientprototype.vercel.app/mobilelab
+          </span>
+        </div>
+      </section>
     </div>
   );
 }
+
