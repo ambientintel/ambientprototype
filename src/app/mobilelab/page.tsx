@@ -861,7 +861,7 @@ export default function MobileLab() {
 
           {/* iPhone */}
           <div style={{ padding: '64px 72px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ display: 'flex', align: 'center', gap: 10, marginBottom: 40 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.accent, background: 'rgba(45,114,210,0.1)', padding: '4px 10px', borderRadius: 3 }}>iPhone · iPad</span>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', alignSelf: 'center', paddingLeft: 4 }}>Safari</span>
             </div>
