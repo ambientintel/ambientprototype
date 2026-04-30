@@ -744,7 +744,19 @@ export default function MobileLab() {
           borderLeft: `1px solid ${C.border}`, padding: 20,
           overflowY: 'auto', background: C.surface,
         }}>
-          <div style={{ fontSize: 10, color: C.text3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Alert log</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 10, color: C.text3, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Alert log</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => setAlerts(prev => prev.filter(a => a.status !== 'resolved'))} style={{
+                background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 6,
+                color: C.text3, fontSize: 10, fontWeight: 600, padding: '4px 8px', cursor: 'pointer',
+              }}>Clear resolved</button>
+              <button onClick={() => setAlerts([])} style={{
+                background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 6,
+                color: C.red + 'cc', fontSize: 10, fontWeight: 600, padding: '4px 8px', cursor: 'pointer',
+              }}>Clear all</button>
+            </div>
+          </div>
 
           {/* Summary */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
