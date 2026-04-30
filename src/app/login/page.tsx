@@ -108,26 +108,13 @@ export default function LoginPage() {
     }
   }
 
-  async function handleVerifyCode(e: React.FormEvent) {
+  function handleVerifyCode(e: React.FormEvent) {
     e.preventDefault();
     setCError("");
     if (cCode.trim().length !== 6) { setCError("Please enter the 6-digit code."); return; }
-    setCVerifying(true);
-    try {
-      const res = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cEmail, code: cCode.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) { setCError(data.error || "Verification failed."); return; }
-      try { localStorage.setItem("ambient_auth", JSON.stringify({ email: cEmail, name: cName })); } catch {}
-      setCStep("success");
-    } catch {
-      setCError("Network error. Please try again.");
-    } finally {
-      setCVerifying(false);
-    }
+    if (cCode.trim() !== devCode) { setCError("Incorrect code. Please try again."); return; }
+    try { localStorage.setItem("ambient_auth", JSON.stringify({ email: cEmail, name: cName, role: cRole })); } catch {}
+    setCStep("success");
   }
 
   return (
@@ -209,11 +196,8 @@ export default function LoginPage() {
                   <h1 style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 28, letterSpacing: "-0.02em", margin: "0 0 6px" }}>
                     Enter <em style={{ fontStyle: "italic", fontWeight: 300, color: "var(--text-2)" }}>your code</em>
                   </h1>
-                  <p style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    Check your email
-                  </p>
-                  <p style={{ fontSize: 13, color: "var(--text-2)", margin: "0 0 24px", lineHeight: 1.5 }}>
-                    We sent a 6-digit code to <strong>{cEmail}</strong>.
+                  <p style={{ fontSize: 13, color: "var(--text-2)", margin: "0 0 20px", lineHeight: 1.5 }}>
+                    Copy the code below and enter it to confirm your account.
                   </p>
                   {devCode && (
                     <div style={{ marginBottom: 16, background: "rgba(124,110,173,0.08)", border: "1px solid rgba(124,110,173,0.2)", borderRadius: 8, padding: "14px 18px" }}>
@@ -233,11 +217,11 @@ export default function LoginPage() {
                       />
                     </div>
                     {cError && <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "#FF6B6B", padding: "10px 14px", background: "rgba(255,107,107,0.08)", border: "1px solid rgba(255,107,107,0.2)", borderRadius: 6 }}>{cError}</div>}
-                    <button type="submit" disabled={cVerifying || cCode.length !== 6}
-                      style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 13, fontWeight: 500, fontFamily: "var(--sans)", cursor: (cVerifying || cCode.length !== 6) ? "not-allowed" : "pointer", opacity: (cVerifying || cCode.length !== 6) ? 0.6 : 1, transition: "opacity 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-                      onMouseEnter={e => { if (!cVerifying && cCode.length === 6) e.currentTarget.style.background = "#6B5E9A"; }}
+                    <button type="submit" disabled={cCode.length !== 6}
+                      style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 13, fontWeight: 500, fontFamily: "var(--sans)", cursor: cCode.length !== 6 ? "not-allowed" : "pointer", opacity: cCode.length !== 6 ? 0.6 : 1, transition: "opacity 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                      onMouseEnter={e => { if (cCode.length === 6) e.currentTarget.style.background = "#6B5E9A"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}>
-                      {cVerifying ? (<><svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ animation: "spin 0.7s linear infinite" }}><circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/><path d="M7 1.5a5.5 5.5 0 015.5 5.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>Verifying…</>) : "Confirm account"}
+                      Confirm account
                     </button>
                     <button type="button" onClick={() => { setCStep("form"); setCCode(""); setCError(""); setDevCode(""); }}
                       style={{ background: "none", border: "none", fontSize: 12, color: "var(--text-3)", cursor: "pointer", fontFamily: "var(--mono)", textDecoration: "underline" }}>
