@@ -484,6 +484,56 @@ const C = {
   grid:      'rgba(255,255,255,0.025)',
 };
 
+function LiveNav() {
+  const [now, setNow] = React.useState(new Date());
+  const [pulse, setPulse] = React.useState(true);
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    const p = setInterval(() => setPulse(v => !v), 900);
+    return () => { clearInterval(t); clearInterval(p); };
+  }, []);
+  const cst = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  const hh = String(cst.getHours()).padStart(2, '0');
+  const mm = String(cst.getMinutes()).padStart(2, '0');
+  const ss = String(cst.getSeconds()).padStart(2, '0');
+
+  const stats = [
+    { label: 'Active alerts', value: '2', color: '#FF6B6B', dot: true },
+    { label: 'Rooms live',    value: '142', color: '#3DCC91', dot: false },
+    { label: 'Avg confidence', value: '94%', color: '#2D72D2', dot: false },
+    { label: 'Sprint 18',    value: '35% done', color: '#FFC940', dot: false },
+    { label: 'Pipeline',     value: 'NOMINAL', color: '#3DCC91', dot: false },
+  ];
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+      {stats.map((s, i) => (
+        <div key={s.label} style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '0 20px',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+        }}>
+          {s.dot && (
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%',
+              background: s.color,
+              boxShadow: pulse ? `0 0 7px ${s.color}` : 'none',
+              transition: 'box-shadow 0.4s ease',
+              flexShrink: 0,
+            }} />
+          )}
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.1em', textTransform: 'uppercase', marginRight: 2 }}>{s.label}</span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: s.color, fontWeight: 600, letterSpacing: '0.04em' }}>{s.value}</span>
+        </div>
+      ))}
+      <div style={{ padding: '0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>CST</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.08em', fontVariantNumeric: 'tabular-nums' }}>{hh}:{mm}:{ss}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing1() {
   const [hovered, setHovered] = useState<string | null>(null);
   const [heroHovered, setHeroHovered] = useState(false);
@@ -537,13 +587,7 @@ export default function Landing1() {
               Ambient Intelligence
             </span>
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-            {[['Dashboard','/dashboard'],['BOM','/bom'],['Gap Analysis','/gapanalysis'],['SaMD','/samd'],['Cloud','/cloud'],['Colors','/colors'],['Brand','/brand']].map(([label, href]) => (
-              <Link key={href} href={href} className="l1-nav-link" style={{ textDecoration: 'none', color: C.text2, fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                {label}
-              </Link>
-            ))}
-          </div>
+          <LiveNav />
           <Link href="/control" style={{ textDecoration: 'none' }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.accent, border: `1px solid ${C.accentDim}`, padding: '5px 12px', borderRadius: 2 }}>
               View Control Center
@@ -687,7 +731,7 @@ export default function Landing1() {
             </div>
             <Link href="/engineering" style={{ textDecoration:'none', flexShrink:0, marginTop:4 }}>
               <button className="l1-cta-ghost" style={{ display:'flex', alignItems:'center', gap:8 }}>
-                View Engineering Board
+                View Engineering Console
                 <span style={{ fontSize:16, lineHeight:1 }}>↗</span>
               </button>
             </Link>
