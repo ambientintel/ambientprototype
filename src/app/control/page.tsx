@@ -33,6 +33,7 @@ const MODULE_GROUPS = [
     accentDim: 'rgba(139,107,232,0.10)',
     cols: 4,
     modules: [
+      { href: '/bi',            tag: 'Analytics',    label: 'Business Intelligence', description: 'Revenue trends, P&L, payer mix, census, fall-prevention ROI, staff efficiency, and facility benchmarks.', meta: 'BI · Recharts · Q1 2026' },
       { href: '/datascience',   tag: 'Data Science', label: 'Data Science',          description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the platform.', meta: 'Parquet · ML · Recharts' },
       { href: '/backgroundlab', tag: 'Design',       label: 'Background Lab',        description: 'Generative backgrounds, motion studies, and ambient UI pattern experiments for the Ambient Intelligence design system.', meta: 'Canvas · Motion · UI' },
       { href: '/brand',         tag: 'Design',       label: 'Brand & Color Picker',  description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and full type scale reference.', meta: 'ambientdesign · interactive' },
