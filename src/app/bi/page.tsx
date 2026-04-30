@@ -1,10 +1,9 @@
 "use client";
-import { useState } from "react";
 import Link from "next/link";
 import {
   AreaChart, Area,
   BarChart, Bar,
-  LineChart, Line,
+  Line,
   ComposedChart,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   PieChart, Pie, Cell,
@@ -162,8 +161,6 @@ function ChartCard({ title, sub, badge, full, children }: {
 // ── Page ───────────────────────────────────────────────────────
 
 export default function BIPage() {
-  const [, setHover] = useState<string | null>(null);
-
   const NAV: [string, string, React.ReactNode][] = [
     ['/dashboard/overview', 'Dashboard',
       <path key="d" d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round"/>],
