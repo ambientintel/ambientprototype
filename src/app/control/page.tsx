@@ -396,6 +396,12 @@ export default function ControlCenter() {
         .cc-card:hover .cc-card-arrow { transform: translate(3px,-3px); }
         .cc-nav-link { transition: color 0.2s ease; }
         .cc-nav-link:hover { color: #EDEEF0 !important; }
+        @media (max-width: 900px) {
+          .cc-tools-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        @media (max-width: 600px) {
+          .cc-tools-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
       `}</style>
 
       <div style={{ background: C.bg, minHeight:'100vh', color:C.text, fontFamily:'var(--sans)' }}>
@@ -640,7 +646,7 @@ export default function ControlCenter() {
                 </div>
 
                 {/* Card grid */}
-                <div style={{ display:'grid', gridTemplateColumns:`repeat(${group.cols},1fr)`, gap:1, border:`1px solid ${C.border}` }}>
+                <div className={group.key === 'tools' ? 'cc-tools-grid' : ''} style={{ display:'grid', gridTemplateColumns:`repeat(${group.cols},1fr)`, gap:1, border:`1px solid ${C.border}` }}>
                   {group.modules.map((mod, i) => (
                     <Link key={mod.href} href={mod.href} className="cc-card" style={{ textDecoration:'none', color:'inherit' }}
                       onMouseEnter={() => setHovered(mod.href)}
@@ -650,7 +656,7 @@ export default function ControlCenter() {
                         background: hovered === mod.href ? C.surface2 : C.surface,
                         borderRight: (i % group.cols !== group.cols-1) ? `1px solid ${C.border}` : 'none',
                         display:'flex', flexDirection:'column', gap:12,
-                        transition:'background 0.2s ease', minHeight:180,
+                        transition:'background 0.2s ease', minHeight:180, height:'100%', boxSizing:'border-box',
                       }}>
                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                           <span style={{ fontFamily:'var(--mono)', fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:group.accent, background:group.accentDim, padding:'3px 8px', borderRadius:2 }}>{mod.tag}</span>
