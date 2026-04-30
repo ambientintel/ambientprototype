@@ -937,7 +937,11 @@ export default function ContractLab() {
             const meta = cat === "all" ? null : CAT_META[cat];
             const count = cat === "all" ? docs.length : docs.filter(d => d.category === cat).length;
             return (
-              <button key={cat} onClick={() => setCatFilter(cat)}
+              <button key={cat} onClick={() => {
+                setCatFilter(cat);
+                const first = docs.find(d => cat === "all" ? true : d.category === cat);
+                if (first) setSelectedId(first.id);
+              }}
                 style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "5px 8px", marginBottom: 1, background: catFilter === cat ? surf3 : "transparent", border: "none", borderRadius: 3, cursor: "pointer", textAlign: "left" }}>
                 {meta && <span style={{ width: 8, height: 8, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />}
                 <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.05em", color: catFilter === cat ? text1 : text2, flex: 1, textTransform: "uppercase" }}>
