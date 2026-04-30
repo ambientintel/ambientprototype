@@ -571,6 +571,12 @@ export default function Landing1() {
           font-family: inherit;
         }
         .l1-cta-ghost:hover { border-color: #2D72D2; color: #2D72D2; }
+        @media (max-width: 900px) {
+          .l1-tools-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        @media (max-width: 600px) {
+          .l1-tools-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
       `}</style>
 
       <div style={{ background: C.bg, minHeight: '100vh', color: C.text, fontFamily: 'var(--sans)' }}>
@@ -924,7 +930,7 @@ export default function Landing1() {
               </div>
 
               {/* Cards grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${group.cols}, 1fr)`, gap: 1, border: `1px solid ${C.border}` }}>
+              <div className={group.key === 'tools' ? 'l1-tools-grid' : ''} style={{ display: 'grid', gridTemplateColumns: `repeat(${group.cols}, 1fr)`, gap: 1, border: `1px solid ${C.border}` }}>
                 {group.modules.map((mod, i) => (
                   <Link key={mod.href} href={mod.href} className="l1-card" style={{ textDecoration: 'none', color: 'inherit' }}
                     onMouseEnter={() => setHovered(mod.href)}
@@ -935,7 +941,7 @@ export default function Landing1() {
                       borderRight: (i % group.cols !== group.cols - 1) ? `1px solid ${C.border}` : 'none',
                       display: 'flex', flexDirection: 'column', gap: 12,
                       transition: 'background 0.2s ease',
-                      minHeight: 180,
+                      minHeight: 180, height: '100%', boxSizing: 'border-box',
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <span style={{
