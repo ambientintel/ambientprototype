@@ -974,38 +974,6 @@ export default function ContractLab() {
         </div>
       </aside>
 
-      {/* ── Doc list ────────────────────────────────────────────────────── */}
-      <div style={{ width: 260, background: surf1, borderRight: `1px solid ${line}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
-        <div style={{ padding: "14px 16px 10px", borderBottom: `1px solid ${line}` }}>
-          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.1em", color: text3, textTransform: "uppercase" }}>
-            {visible.length} DOCUMENT{visible.length !== 1 ? "S" : ""}
-          </div>
-        </div>
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          {visible.map(doc => {
-            const meta = CAT_META[doc.category];
-            const isActive = doc.id === selectedId;
-            return (
-              <div key={doc.id} onClick={() => { setSelectedId(doc.id); setEditMode(false); }}
-                style={{ padding: "12px 16px", borderBottom: `1px solid ${line}`, cursor: "pointer", background: isActive ? surf2 : "transparent", borderLeft: isActive ? `2px solid ${meta.color}` : "2px solid transparent" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
-                  <span style={{ fontFamily: mono, fontSize: 9, color: meta.color, letterSpacing: "0.08em", textTransform: "uppercase" }}>{meta.label}</span>
-                </div>
-                <div style={{ fontFamily: sans, fontSize: 13, color: isActive ? text1 : text2, fontWeight: 500, marginBottom: 3, lineHeight: 1.3 }}>{doc.name}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "1px 6px", borderRadius: 10, background: `${STATUS_COLOR[doc.status]}18` }}>
-                    <span style={{ width: 4, height: 4, borderRadius: "50%", background: STATUS_COLOR[doc.status] }} />
-                    <span style={{ fontFamily: mono, fontSize: 8, color: STATUS_COLOR[doc.status], letterSpacing: "0.06em", textTransform: "uppercase" }}>{doc.status}</span>
-                  </span>
-                  {doc.githubPath && <span style={{ fontFamily: mono, fontSize: 8, color: text3 }}>⎇ GH</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* ── Main ────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {selected ? (
