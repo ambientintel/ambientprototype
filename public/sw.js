@@ -1,4 +1,4 @@
-const CACHE = 'ambient-v3';
+const CACHE = 'ambient-v4';
 const PRECACHE = ['/', '/mobile', '/mobilelab'];
 
 self.addEventListener('install', e => {
@@ -22,18 +22,33 @@ self.addEventListener('fetch', e => {
 
 self.addEventListener('push', e => {
   let data = {};
-  try { data = e.data?.json() ?? {}; } catch { data = { title: 'Fall Alert', body: e.data?.text() ?? '' }; }
+  try { data = e.data?.json() ?? {}; } catch { data = {}; }
 
-  // Keep options minimal for iOS compatibility — no vibrate, no actions, no requireInteraction
+  const isCritical = data.severity === 'critical';
+
+  const title = isCritical
+    ? `FALL DETECTED — Room ${data.room ?? '—'}`
+    : `FALL ALERT — Room ${data.room ?? '—'}`;
+
+  const body = [
+    data.patient,
+    data.floor,
+    data.confidence ? `${data.confidence}% confidence` : null,
+    data.sensor,
+  ].filter(Boolean).join('  ·  ');
+
   const options = {
-    body:  data.body  ?? 'A fall event has been detected.',
+    body,
     icon:  '/icon-192.png',
-    badge: '/icon-192.png',
-    tag:   data.tag   ?? 'fall-alert',
-    data:  { url: data.url ?? '/mobilelab' },
+    badge: '/badge-96.png',
+    image: isCritical
+      ? 'https://ambientprototype.vercel.app/notif-critical.png'
+      : 'https://ambientprototype.vercel.app/notif-warning.png',
+    tag:   `fall-${data.room ?? 'alert'}`,
+    data:  { url: '/mobilelab' },
   };
 
-  e.waitUntil(self.registration.showNotification(data.title ?? '🚨 Fall Alert', options));
+  e.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', e => {
