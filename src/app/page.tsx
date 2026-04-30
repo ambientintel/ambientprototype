@@ -1,6 +1,13 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
+import {
+  AreaChart, Area, ComposedChart, Bar,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, ReferenceLine,
+} from 'recharts';
 
 const HERO_MODULE = {
   href: '/dashboard/overview',
@@ -470,6 +477,46 @@ const ENG_SPRINT = {
     { discipline: 'Software',          color: '#818CF8', members: [{ name:'Isaac', initial:'I', color:'#818CF8' },{ name:'Aki',   initial:'A', color:'#34D399' }] },
     { discipline: 'Cloud Security',    color: '#22D3EE', members: [{ name:'Abdul', initial:'A', color:'#22D3EE' }] },
   ],
+};
+
+// ── BI data ──
+const BI_MONTHLY_PL = [
+  { month:'Jan', revenue:487200, margin:146160 },
+  { month:'Feb', revenue:462800, margin:137840 },
+  { month:'Mar', revenue:510300, margin:153090 },
+  { month:'Apr', revenue:496800, margin:149040 },
+  { month:'May', revenue:524000, margin:157200 },
+  { month:'Jun', revenue:541600, margin:162480 },
+];
+const BI_FALL_SAVINGS = [
+  { month:'Jan', monthly:48000,  cumulative:48000  },
+  { month:'Feb', monthly:36000,  cumulative:84000  },
+  { month:'Mar', monthly:60000,  cumulative:144000 },
+  { month:'Apr', monthly:48000,  cumulative:192000 },
+];
+const BI_RADAR_DATA = [
+  { metric:'Occupancy',    facility:92, benchmark:88 },
+  { metric:'Rev/Bed',      facility:86, benchmark:80 },
+  { metric:'Fall Rate',    facility:91, benchmark:75 },
+  { metric:'Staff Ratio',  facility:84, benchmark:82 },
+  { metric:'Satisfaction', facility:89, benchmark:85 },
+  { metric:'Response',     facility:93, benchmark:78 },
+];
+const BI_PAYER_MIX = [
+  { name:'Medicare',    value:38, color:'#2D72D2' },
+  { name:'Medicaid',    value:27, color:'#7C6EAD' },
+  { name:'Private Pay', value:22, color:'#3DCC91' },
+  { name:'Insurance',   value:13, color:'#FFC940' },
+];
+const BI_KPIS = [
+  { label:'Monthly Revenue', value:'$496.8K', sub:'Apr 2026 actuals',  color:'#2D72D2', delta:'+7.4% vs Jan'    },
+  { label:'Occupancy Rate',  value:'92.2%',   sub:'7-day rolling avg', color:'#FFC940', delta:'+2.3 pp'         },
+  { label:'Q1 ROI Saved',    value:'$192K',   sub:'16 falls prevented',color:'#3DCC91', delta:'$12K avg/incident'},
+  { label:'Net Margin',      value:'30.0%',   sub:'Apr 2026',          color:'#3DCC91', delta:'+0.4 pp MoM'     },
+];
+const BI_TT: React.CSSProperties = {
+  background:'#13151A', border:'1px solid rgba(255,255,255,0.14)',
+  borderRadius:4, color:'#EDEEF0', fontFamily:'var(--mono)', fontSize:11, padding:'8px 12px',
 };
 
 const C = {
@@ -1021,6 +1068,150 @@ export default function Landing1() {
               ))}
             </div>
           </div>
+        </section>
+
+        {/* ── Business Intelligence ── */}
+        <section style={{ borderTop:`1px solid ${C.border}`, padding:'80px 48px' }}>
+
+          {/* Header */}
+          <div style={{ marginBottom:48 }}>
+            <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.22em', textTransform:'uppercase', color:'#3DCC91', marginBottom:14 }}>Business intelligence</div>
+            <div style={{ display:'flex', alignItems:'center', gap:24, flexWrap:'wrap' }}>
+              <h2 style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:'clamp(26px,3vw,38px)', letterSpacing:'-0.02em', margin:0, color:C.text }}>
+                Financial clarity,{' '}
+                <em style={{ fontStyle:'italic', color:'#3DCC91' }}>at every bed.</em>
+              </h2>
+              <Link href="/bi" style={{ textDecoration:'none' }}>
+                <button className="l1-cta-primary" style={{ whiteSpace:'nowrap', background:'#1a7a52', borderColor:'#3DCC91' }}>View BI Dashboard</button>
+              </Link>
+            </div>
+          </div>
+
+          {/* KPI strip */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', border:`1px solid ${C.border}`, marginBottom:1 }}>
+            {BI_KPIS.map((k, i) => (
+              <div key={k.label} style={{ padding:'28px 32px', borderRight: i < 3 ? `1px solid ${C.border}` : 'none', background:C.surface }}>
+                <div style={{ fontFamily:'var(--mono)', fontSize:9.5, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:10 }}>{k.label}</div>
+                <div style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:34, color:k.color, letterSpacing:'-0.02em', lineHeight:1 }}>{k.value}</div>
+                <div style={{ fontFamily:'var(--mono)', fontSize:10.5, color:'#3DCC91', marginTop:7 }}>{k.delta}</div>
+                <div style={{ fontFamily:'var(--mono)', fontSize:9.5, color:C.text3, marginTop:3 }}>{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Revenue trend — full width */}
+          <div style={{ border:`1px solid ${C.border}`, background:C.surface, marginBottom:1 }}>
+            <div style={{ padding:'36px 36px 28px' }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:24 }}>
+                Revenue &amp; margin · Jan–Jun 2026 · May–Jun forecast
+              </div>
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart data={BI_MONTHLY_PL} margin={{ top:8, right:16, bottom:0, left:0 }}>
+                  <defs>
+                    <linearGradient id="bi-rev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#2D72D2" stopOpacity={0.28}/>
+                      <stop offset="95%" stopColor="#2D72D2" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="bi-mar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#3DCC91" stopOpacity={0.22}/>
+                      <stop offset="95%" stopColor="#3DCC91" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke={C.border}/>
+                  <XAxis dataKey="month" tick={{ fill:C.text3, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                  <YAxis tickFormatter={(v:number) => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text3, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={52}/>
+                  <Tooltip contentStyle={BI_TT} formatter={(v:unknown) => [typeof v === 'number' ? `$${(v/1000).toFixed(0)}K` : String(v ?? ''), '']}/>
+                  <ReferenceLine x="May" stroke="#FFC940" strokeDasharray="4 3" strokeOpacity={0.55}/>
+                  <Area dataKey="revenue" stroke="#2D72D2" strokeWidth={2} fill="url(#bi-rev)" dot={false} name="Revenue"/>
+                  <Area dataKey="margin"  stroke="#3DCC91" strokeWidth={2} fill="url(#bi-mar)" dot={false} name="Net Margin"/>
+                  <Legend wrapperStyle={{ fontFamily:'var(--mono)', fontSize:10, color:C.text3, paddingTop:12 }}/>
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Row 2: Fall ROI + Benchmark radar */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, marginBottom:1 }}>
+
+            <div style={{ border:`1px solid ${C.border}`, background:C.surface, padding:'36px 36px 28px' }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:24 }}>
+                Fall prevention ROI · Q1 2026 · $192K cumulative
+              </div>
+              <ResponsiveContainer width="100%" height={220}>
+                <ComposedChart data={BI_FALL_SAVINGS} margin={{ top:8, right:44, bottom:0, left:0 }}>
+                  <defs>
+                    <linearGradient id="bi-sav" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#3DCC91" stopOpacity={0.25}/>
+                      <stop offset="95%" stopColor="#3DCC91" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke={C.border}/>
+                  <XAxis dataKey="month" tick={{ fill:C.text3, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                  <YAxis yAxisId="l" tickFormatter={(v:number) => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text3, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={44}/>
+                  <YAxis yAxisId="r" orientation="right" tickFormatter={(v:number) => `$${(v/1000).toFixed(0)}K`} tick={{ fill:C.text3, fontFamily:'var(--mono)', fontSize:10 }} axisLine={false} tickLine={false} width={44}/>
+                  <Tooltip contentStyle={BI_TT} formatter={(v:unknown) => [typeof v === 'number' ? `$${(v/1000).toFixed(0)}K` : String(v ?? ''), '']}/>
+                  <Bar  yAxisId="l" dataKey="monthly"    fill="#3DCC91" fillOpacity={0.28} radius={[3,3,0,0]} name="Monthly Savings"/>
+                  <Area yAxisId="r" dataKey="cumulative" stroke="#3DCC91" strokeWidth={2} fill="url(#bi-sav)" dot={false} name="Cumulative"/>
+                  <Legend wrapperStyle={{ fontFamily:'var(--mono)', fontSize:10, color:C.text3, paddingTop:12 }}/>
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div style={{ border:`1px solid ${C.border}`, background:C.surface, padding:'36px 36px 28px' }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:24 }}>
+                Facility benchmark · vs. industry · percentile scores
+              </div>
+              <ResponsiveContainer width="100%" height={220}>
+                <RadarChart data={BI_RADAR_DATA} margin={{ top:8, right:24, bottom:8, left:24 }}>
+                  <PolarGrid stroke={C.border}/>
+                  <PolarAngleAxis dataKey="metric" tick={{ fill:C.text3, fontFamily:'var(--mono)', fontSize:10 }}/>
+                  <PolarRadiusAxis angle={90} domain={[0,100]} tick={{ fill:C.text3, fontFamily:'var(--mono)', fontSize:9 }}/>
+                  <Radar name="Facility"  dataKey="facility"  stroke="#2D72D2" fill="#2D72D2" fillOpacity={0.18} strokeWidth={2}/>
+                  <Radar name="Benchmark" dataKey="benchmark" stroke="#FFC940" fill="#FFC940" fillOpacity={0.06} strokeWidth={1.5} strokeDasharray="4 3"/>
+                  <Tooltip contentStyle={BI_TT}/>
+                  <Legend wrapperStyle={{ fontFamily:'var(--mono)', fontSize:10, color:C.text3, paddingTop:12 }}/>
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+
+          </div>
+
+          {/* Row 3: Payer mix */}
+          <div style={{ border:`1px solid ${C.border}`, background:C.surface, padding:'36px 36px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:64, alignItems:'center' }}>
+              <div>
+                <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:24 }}>Payer mix · Apr 2026</div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={BI_PAYER_MIX} cx="50%" cy="50%" innerRadius={58} outerRadius={88} paddingAngle={3} dataKey="value">
+                      {BI_PAYER_MIX.map((e, i) => <Cell key={i} fill={e.color} fillOpacity={0.85}/>)}
+                    </Pie>
+                    <Tooltip contentStyle={BI_TT} formatter={(v:unknown) => [typeof v === 'number' ? `${v}%` : String(v ?? ''), '']}/>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div>
+                <div style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:C.text3, marginBottom:24 }}>Revenue by payer</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+                  {BI_PAYER_MIX.map(p => (
+                    <div key={p.name} style={{ display:'flex', alignItems:'center', gap:16 }}>
+                      <span style={{ width:10, height:10, borderRadius:2, background:p.color, flexShrink:0 }}/>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                          <span style={{ fontFamily:'var(--mono)', fontSize:12, color:C.text }}>{p.name}</span>
+                          <span style={{ fontFamily:'var(--mono)', fontSize:12, color:p.color, fontWeight:600 }}>{p.value}%</span>
+                        </div>
+                        <div style={{ height:2, background:'rgba(255,255,255,0.06)', borderRadius:1, overflow:'hidden' }}>
+                          <div style={{ height:'100%', width:`${p.value}%`, background:p.color, borderRadius:1 }}/>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
         </section>
 
         {/* ── CTA ── */}
