@@ -3,12 +3,28 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 const C = {
-  bg: '#0C0D0F', surface: '#13151A', surface2: '#1C1F26',
-  border: 'rgba(255,255,255,0.07)', accent: '#2D72D2', accentDim: 'rgba(45,114,210,0.12)',
-  text: '#EDEEF0', text2: '#9A9B9D', text3: '#5C5E62',
-  green: '#3DCC91', greenDim: 'rgba(61,204,145,0.12)',
-  red: '#FF6B6B', redDim: 'rgba(255,107,107,0.15)',
-  amber: '#FFC940', amberDim: 'rgba(255,201,64,0.12)',
+  bg:         '#060708',
+  surface:    '#0D0F13',
+  surface2:   '#131619',
+  border:     'rgba(255,255,255,0.06)',
+  borderMid:  'rgba(255,255,255,0.11)',
+  accent:     '#2B6BE0',
+  accentDim:  'rgba(43,107,224,0.10)',
+  accentLine: 'rgba(43,107,224,0.35)',
+  text:       '#D8DADF',
+  text2:      '#7A7D85',
+  text3:      '#44474D',
+  green:      '#2ECC8A',
+  greenDim:   'rgba(46,204,138,0.10)',
+  greenLine:  'rgba(46,204,138,0.30)',
+  amber:      '#E8AA2A',
+  amberDim:   'rgba(232,170,42,0.10)',
+  amberLine:  'rgba(232,170,42,0.30)',
+  red:        '#E05252',
+  redDim:     'rgba(224,82,82,0.10)',
+  redLine:    'rgba(224,82,82,0.30)',
+  mono:       "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
+  sans:       "'Inter', -apple-system, sans-serif",
 };
 
 type OS = 'ios' | 'android' | 'unknown';
@@ -22,19 +38,19 @@ function detectOS(): OS {
 }
 
 const IOS_STEPS = [
-  { icon: '🌐', text: 'Open this page in Safari (not Chrome)' },
-  { icon: '□↑', text: 'Tap the Share button at the bottom of the screen', mono: true },
-  { icon: '＋', text: 'Tap "Add to Home Screen"' },
-  { icon: '✓',  text: 'Tap "Add" in the top-right corner' },
-  { icon: '🔔', text: 'Open the app and allow notifications when prompted' },
+  'Open this page in Safari — not Chrome or other browsers',
+  'Tap the Share button at the bottom of the screen',
+  'Select "Add to Home Screen" from the share sheet',
+  'Tap "Add" in the top-right corner to confirm',
+  'Open the installed app and allow notifications when prompted',
 ];
 
 const ANDROID_STEPS = [
-  { icon: '🌐', text: 'Open this page in Chrome' },
-  { icon: '⋮',  text: 'Tap the three-dot menu in the top-right corner', mono: true },
-  { icon: '＋', text: 'Tap "Add to Home screen" or "Install app"' },
-  { icon: '✓',  text: 'Tap "Install" to confirm' },
-  { icon: '🔔', text: 'Open the app and allow notifications when prompted' },
+  'Open this page in Chrome',
+  'Tap the three-dot menu in the top-right corner',
+  'Select "Add to Home screen" or "Install app"',
+  'Tap "Install" to confirm',
+  'Open the installed app and allow notifications when prompted',
 ];
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -65,13 +81,26 @@ interface InAppAlert {
   confidence: number;
 }
 
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontFamily: C.mono, fontSize: 10, fontWeight: 600, letterSpacing: '0.10em', color: C.text3, textTransform: 'uppercase', marginBottom: 6 }}>
+      {children}
+    </div>
+  );
+}
+
+function Divider() {
+  return <div style={{ height: 1, background: C.border, margin: '0' }} />;
+}
+
 export default function MobilePage() {
-  const [os, setOs] = useState<OS>('unknown');
-  const [tab, setTab] = useState<'ios' | 'android'>('ios');
-  const [mounted, setMounted] = useState(false);
+  const [os, setOs]               = useState<OS>('unknown');
+  const [tab, setTab]             = useState<'ios' | 'android'>('ios');
+  const [mounted, setMounted]     = useState(false);
   const [notifAvailable, setNotifAvailable] = useState(false);
   const [notifStatus, setNotifStatus] = useState<'unknown' | 'granted' | 'denied' | 'subscribing'>('unknown');
   const [inAppAlert, setInAppAlert] = useState<InAppAlert | null>(null);
+  const [copied, setCopied]       = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -106,11 +135,9 @@ export default function MobilePage() {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') { setNotifStatus('denied'); return; }
     try {
-      // Unsubscribe from any stale subscription first
       const reg = await navigator.serviceWorker.ready;
       const existing = await reg.pushManager.getSubscription();
       if (existing) await existing.unsubscribe();
-
       const sub = await subscribeToPush();
       if (sub) {
         await fetch('/api/push/subscribe', {
@@ -133,237 +160,258 @@ export default function MobilePage() {
     });
   }
 
+  function copyLink() {
+    navigator.clipboard?.writeText('https://ambientprototype.vercel.app/mobile');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   const steps = tab === 'ios' ? IOS_STEPS : ANDROID_STEPS;
 
   return (
-    <div style={{
-      minHeight: '100vh', background: C.bg, color: C.text,
-      fontFamily: "'Inter', -apple-system, sans-serif",
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', padding: '40px 20px',
-    }}>
-      <style>{`* { box-sizing: border-box; } @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
+    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: C.sans }}>
+      <style>{`
+        * { box-sizing: border-box; }
+        @keyframes slideDown { from { transform: translateY(-110%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+      `}</style>
 
-      {/* In-app alert banner — shown when app is open and foreground */}
+      {/* In-app alert banner */}
       {inAppAlert && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
-          background: inAppAlert.severity === 'critical' ? '#1a0a0a' : '#1a1400',
-          borderBottom: `3px solid ${inAppAlert.severity === 'critical' ? C.red : C.amber}`,
-          padding: '14px 20px',
+          background: inAppAlert.severity === 'critical' ? '#110808' : '#110D03',
+          borderBottom: `2px solid ${inAppAlert.severity === 'critical' ? C.red : C.amber}`,
+          padding: '12px 16px 14px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-          animation: 'slideDown 0.25s ease',
-          boxShadow: `0 4px 24px ${inAppAlert.severity === 'critical' ? 'rgba(255,107,107,0.25)' : 'rgba(255,201,64,0.2)'}`,
+          animation: 'slideDown 0.2s ease',
+          boxShadow: `0 8px 32px ${inAppAlert.severity === 'critical' ? 'rgba(224,82,82,0.2)' : 'rgba(232,170,42,0.15)'}`,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-              background: inAppAlert.severity === 'critical' ? C.redDim : C.amberDim,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18,
-            }}>⚡</div>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: inAppAlert.severity === 'critical' ? C.red : C.amber, textTransform: 'uppercase', marginBottom: 2 }}>
-                {inAppAlert.severity === 'critical' ? 'Fall Detected' : 'Fall Alert'}
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Room {inAppAlert.room} · {inAppAlert.patient}</div>
-              <div style={{ fontSize: 11, color: C.text2 }}>{inAppAlert.confidence}% confidence</div>
+          <div>
+            <div style={{ fontFamily: C.mono, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: inAppAlert.severity === 'critical' ? C.red : C.amber, marginBottom: 4 }}>
+              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: inAppAlert.severity === 'critical' ? C.red : C.amber, marginRight: 6, verticalAlign: 'middle', animation: 'pulse 1s infinite' }} />
+              {inAppAlert.severity === 'critical' ? 'FALL DETECTED' : 'FALL ALERT'}
             </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: '-0.01em' }}>Room {inAppAlert.room} &mdash; {inAppAlert.patient}</div>
+            <div style={{ fontFamily: C.mono, fontSize: 11, color: C.text2, marginTop: 2 }}>{inAppAlert.confidence}% CONFIDENCE</div>
           </div>
-          <button onClick={() => setInAppAlert(null)} style={{
-            background: 'transparent', border: 'none', color: C.text3,
-            fontSize: 20, cursor: 'pointer', padding: '4px 8px', flexShrink: 0,
-          }}>×</button>
+          <button onClick={() => setInAppAlert(null)} style={{ background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 4, color: C.text2, fontSize: 13, cursor: 'pointer', padding: '6px 10px', fontFamily: C.mono, flexShrink: 0 }}>
+            DISMISS
+          </button>
         </div>
       )}
 
-      <div style={{ width: '100%', maxWidth: 440 }}>
+      <div style={{ maxWidth: 440, margin: '0 auto', padding: '48px 20px 40px' }}>
 
-        {/* Logo / wordmark */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
-            background: `linear-gradient(135deg, ${C.accent}, #8B6BE8)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 26, boxShadow: '0 8px 32px rgba(45,114,210,0.35)',
-          }}>⚡</div>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Ambient Intelligence</div>
-          <div style={{ fontSize: 14, color: C.text2, marginTop: 6 }}>Nurse Fall Alert App</div>
+        {/* Header */}
+        <div style={{ marginBottom: 40 }}>
+          <div style={{ fontFamily: C.mono, fontSize: 10, color: C.text3, letterSpacing: '0.12em', marginBottom: 10 }}>
+            AMBIENT INTELLIGENCE // MOBILE CLIENT
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.text }}>
+            Fall Alert<br />Notification Setup
+          </div>
+          <div style={{ height: 2, width: 32, background: C.accent, marginTop: 16 }} />
         </div>
 
-        {/* OS detected banner */}
+        {/* OS detected status strip */}
         {os !== 'unknown' && (
           <div style={{
-            background: C.greenDim, border: `1px solid ${C.green}33`, borderRadius: 10,
-            padding: '10px 16px', marginBottom: 24, textAlign: 'center',
-            fontSize: 13, color: C.green, fontWeight: 600,
+            background: C.surface, border: `1px solid ${C.border}`,
+            borderLeft: `3px solid ${C.green}`,
+            padding: '10px 14px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', gap: 10,
           }}>
-            {os === 'ios' ? '📱 iPhone detected — follow the steps below' : '🤖 Android detected — follow the steps below'}
+            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: C.green, flexShrink: 0 }} />
+            <span style={{ fontFamily: C.mono, fontSize: 11, color: C.green, letterSpacing: '0.06em' }}>
+              {os === 'ios' ? 'iPHONE / iPAD DETECTED' : 'ANDROID DETECTED'}
+            </span>
+            <span style={{ fontFamily: C.mono, fontSize: 11, color: C.text3, marginLeft: 'auto' }}>
+              {os.toUpperCase()}
+            </span>
           </div>
         )}
 
-        {/* Notification section — only rendered client-side after mount */}
+        {/* Notification status block */}
         {mounted && (
-          <>
+          <div style={{ marginBottom: 28 }}>
             {notifStatus === 'granted' && (
-              <div style={{
-                background: C.greenDim, border: `1px solid ${C.green}33`, borderRadius: 12,
-                padding: '16px', marginBottom: 24, textAlign: 'center',
-              }}>
-                <div style={{ fontSize: 13, color: C.green, fontWeight: 700, marginBottom: 12 }}>
-                  ✓ Notifications enabled
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.green}` }}>
+                <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <Label>Notification Status</Label>
+                    <div style={{ fontFamily: C.mono, fontSize: 13, color: C.green, fontWeight: 700 }}>
+                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: C.green, marginRight: 7, verticalAlign: 'middle' }} />
+                      ACTIVE
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: C.mono, fontSize: 10, color: C.text3 }}>SUBSCRIBED</div>
                 </div>
-                <button onClick={sendTestPush} style={{
-                  background: 'transparent', border: `1px solid ${C.green}55`, borderRadius: 8,
-                  color: C.green, fontSize: 12, fontWeight: 600, padding: '8px 20px', cursor: 'pointer', width: '100%',
-                }}>
-                  Send test notification to this device
-                </button>
+                <Divider />
+                <div style={{ padding: '12px 16px' }}>
+                  <button onClick={sendTestPush} style={{
+                    background: 'transparent', border: `1px solid ${C.borderMid}`,
+                    color: C.text2, fontFamily: C.mono, fontSize: 11, fontWeight: 600,
+                    letterSpacing: '0.06em', padding: '10px 0', cursor: 'pointer', width: '100%',
+                  }}>
+                    RUN TEST ALERT
+                  </button>
+                </div>
               </div>
             )}
 
             {notifStatus === 'denied' && (
-              <div style={{
-                background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.3)',
-                borderRadius: 12, padding: '14px 16px', marginBottom: 24, textAlign: 'center',
-              }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#FF6B6B', marginBottom: 4 }}>Notifications blocked</div>
-                <div style={{ fontSize: 12, color: C.text2 }}>
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.red}`, padding: '16px' }}>
+                <Label>Notification Status</Label>
+                <div style={{ fontFamily: C.mono, fontSize: 13, color: C.red, fontWeight: 700, marginBottom: 10 }}>
+                  <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: C.red, marginRight: 7, verticalAlign: 'middle' }} />
+                  BLOCKED
+                </div>
+                <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.5 }}>
                   {os === 'ios'
-                    ? 'Go to Settings → Ambient → Notifications and turn on Allow Notifications.'
-                    : 'Go to Settings → Apps → Chrome → Notifications and allow.'}
+                    ? 'Settings → Ambient Intelligence → Notifications → Allow Notifications'
+                    : 'Settings → Apps → Chrome → Notifications → Allow'}
                 </div>
               </div>
             )}
 
             {notifStatus === 'unknown' && !notifAvailable && (
-              <div style={{
-                background: C.amberDim, border: `1px solid ${C.amber}33`,
-                borderRadius: 12, padding: '14px 16px', marginBottom: 24, textAlign: 'center',
-              }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.amber, marginBottom: 4 }}>Install first</div>
-                <div style={{ fontSize: 12, color: C.text2 }}>
-                  Push notifications require the app to be installed to your home screen. Follow the steps below, then return here.
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.amber}`, padding: '16px' }}>
+                <Label>Notification Status</Label>
+                <div style={{ fontFamily: C.mono, fontSize: 13, color: C.amber, fontWeight: 700, marginBottom: 10 }}>
+                  <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: C.amber, marginRight: 7, verticalAlign: 'middle' }} />
+                  PENDING INSTALL
+                </div>
+                <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.5 }}>
+                  Push notifications require the app installed to your home screen. Complete the steps below, then return here.
                 </div>
               </div>
             )}
 
             {notifStatus === 'unknown' && notifAvailable && (
-              <div style={{
-                background: C.accentDim, border: `1px solid ${C.accent}44`,
-                borderRadius: 12, padding: '20px 16px', marginBottom: 24, textAlign: 'center',
-              }}>
-                <div style={{ fontSize: 13, color: C.text2, marginBottom: 14 }}>
-                  Tap below to receive fall alerts on this device.
+              <div style={{ background: C.surface, border: `1px solid ${C.accentLine}` }}>
+                <div style={{ padding: '16px' }}>
+                  <Label>Notification Status</Label>
+                  <div style={{ fontFamily: C.mono, fontSize: 13, color: C.accent, fontWeight: 700, marginBottom: 4 }}>
+                    <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: C.accent, marginRight: 7, verticalAlign: 'middle', animation: 'pulse 2s infinite' }} />
+                    AUTHORIZATION REQUIRED
+                  </div>
+                  <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.5, marginTop: 8 }}>
+                    Tap below to register this device for fall alert notifications.
+                  </div>
                 </div>
-                <button onClick={enableNotifications} style={{
-                  background: C.accent, border: 'none', borderRadius: 10,
-                  color: '#fff', fontSize: 15, fontWeight: 700, padding: '14px 32px',
-                  cursor: 'pointer', width: '100%',
-                }}>
-                  Enable Fall Alert Notifications
-                </button>
+                <Divider />
+                <div style={{ padding: '12px 16px' }}>
+                  <button onClick={enableNotifications} style={{
+                    background: C.accent, border: 'none',
+                    color: '#fff', fontFamily: C.mono, fontSize: 12, fontWeight: 700,
+                    letterSpacing: '0.08em', padding: '14px 0', cursor: 'pointer', width: '100%',
+                  }}>
+                    ENABLE FALL ALERT NOTIFICATIONS
+                  </button>
+                </div>
               </div>
             )}
 
             {notifStatus === 'subscribing' && (
-              <div style={{
-                background: C.accentDim, border: `1px solid ${C.accent}44`,
-                borderRadius: 12, padding: '14px 16px', marginBottom: 24, textAlign: 'center',
-                fontSize: 13, color: C.accent,
-              }}>
-                Enabling notifications…
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`, padding: '16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: C.accent, animation: 'pulse 0.8s infinite' }} />
+                <span style={{ fontFamily: C.mono, fontSize: 12, color: C.accent, letterSpacing: '0.06em' }}>REGISTERING DEVICE…</span>
               </div>
             )}
-          </>
+          </div>
         )}
 
-        {/* Tab switcher */}
-        <div style={{
-          display: 'flex', background: C.surface, border: `1px solid ${C.border}`,
-          borderRadius: 12, padding: 4, marginBottom: 24, gap: 4,
-        }}>
-          {(['ios', 'android'] as const).map(t => (
+        {/* Platform selector */}
+        <div style={{ marginBottom: 2 }}>
+          <Label>Platform</Label>
+        </div>
+        <div style={{ display: 'flex', border: `1px solid ${C.border}`, marginBottom: 1 }}>
+          {(['ios', 'android'] as const).map((t, i) => (
             <button key={t} onClick={() => setTab(t)} style={{
-              flex: 1, background: tab === t ? C.surface2 : 'transparent',
-              border: `1px solid ${tab === t ? C.border : 'transparent'}`,
-              borderRadius: 9, color: tab === t ? C.text : C.text2,
-              fontSize: 13, fontWeight: tab === t ? 700 : 400,
-              padding: '10px 0', cursor: 'pointer', transition: 'all 0.15s',
-            }}>{t === 'ios' ? '📱  iPhone · iPad' : '🤖  Android'}</button>
+              flex: 1,
+              background: tab === t ? C.surface2 : 'transparent',
+              borderLeft: i > 0 ? `1px solid ${C.border}` : 'none',
+              borderTop: 'none', borderRight: 'none', borderBottom: tab === t ? `2px solid ${C.accent}` : '2px solid transparent',
+              color: tab === t ? C.text : C.text2,
+              fontFamily: C.mono, fontSize: 11, fontWeight: tab === t ? 700 : 400,
+              letterSpacing: '0.08em',
+              padding: '11px 0', cursor: 'pointer',
+            }}>{t === 'ios' ? 'iPHONE / iPAD' : 'ANDROID'}</button>
           ))}
         </div>
 
         {/* Steps */}
-        <div style={{
-          background: C.surface, border: `1px solid ${C.border}`,
-          borderRadius: 16, padding: '20px 20px', marginBottom: 20,
-        }}>
-          {steps.map((s, i) => (
-            <div key={i} style={{
-              display: 'flex', gap: 14, alignItems: 'flex-start',
-              paddingBottom: i < steps.length - 1 ? 18 : 0,
-              marginBottom: i < steps.length - 1 ? 18 : 0,
-              borderBottom: i < steps.length - 1 ? `1px solid ${C.border}` : 'none',
-            }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                background: C.accentDim, border: `1px solid ${C.accent}33`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: s.mono ? 15 : 18, fontWeight: 700, color: C.accent,
-                fontFamily: s.mono ? 'monospace' : 'inherit',
-              }}>{s.icon}</div>
-              <div style={{ paddingTop: 8 }}>
-                <div style={{ fontSize: 12, color: C.text3, marginBottom: 2 }}>Step {i + 1}</div>
-                <div style={{ fontSize: 14, color: C.text, lineHeight: 1.45 }}>{s.text}</div>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, marginBottom: 20 }}>
+          {steps.map((text, i) => (
+            <div key={i}>
+              {i > 0 && <Divider />}
+              <div style={{ display: 'flex', gap: 16, padding: '16px' }}>
+                <div style={{
+                  fontFamily: C.mono, fontSize: 13, fontWeight: 800,
+                  color: C.accent, minWidth: 24, paddingTop: 1, flexShrink: 0,
+                }}>
+                  {String(i + 1).padStart(2, '0')}
+                </div>
+                <div style={{ fontSize: 14, color: C.text, lineHeight: 1.5 }}>{text}</div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Tips */}
-        <div style={{
-          background: C.amberDim, border: `1px solid ${C.amber}33`,
-          borderRadius: 12, padding: '14px 16px', marginBottom: 32,
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, marginBottom: 8, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Important</div>
-          <ul style={{ margin: 0, padding: '0 0 0 14px', fontSize: 13, color: C.text2, lineHeight: 1.8 }}>
-            <li>You <strong style={{ color: C.text }}>must allow notifications</strong> to receive fall alerts</li>
-            <li>Alerts arrive even when the app is closed or screen is locked</li>
-            <li>Tap "Respond" on any alert to open directly to that room</li>
-          </ul>
+        {/* Requirements */}
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, marginBottom: 28 }}>
+          <div style={{ padding: '12px 16px 10px', borderBottom: `1px solid ${C.border}` }}>
+            <Label>Requirements</Label>
+          </div>
+          {[
+            { label: 'Notifications', value: 'Must be allowed when prompted' },
+            { label: 'Background delivery', value: 'Alerts fire when app is closed or screen locked' },
+            { label: 'Alert response', value: 'Tap any alert to open the room directly' },
+          ].map((r, i) => (
+            <div key={i}>
+              {i > 0 && <Divider />}
+              <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ fontFamily: C.mono, fontSize: 11, color: C.amber, letterSpacing: '0.06em', flexShrink: 0, paddingTop: 1 }}>{r.label.toUpperCase()}</div>
+                <div style={{ fontSize: 12, color: C.text2, textAlign: 'right', lineHeight: 1.4 }}>{r.value}</div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* URL copy box */}
-        <div style={{
-          background: C.surface, border: `1px solid ${C.border}`,
-          borderRadius: 10, padding: '12px 16px', marginBottom: 32,
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
-        }}>
-          <span style={{ fontSize: 12, color: C.text2, fontFamily: 'monospace', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            ambientprototype.vercel.app/mobile
-          </span>
-          <button
-            onClick={() => navigator.clipboard?.writeText('https://ambientprototype.vercel.app/mobile')}
-            style={{
-              background: C.accentDim, border: `1px solid ${C.accent}44`, borderRadius: 7,
-              color: C.accent, fontSize: 11, fontWeight: 700, padding: '5px 12px', cursor: 'pointer', flexShrink: 0,
-            }}
-          >Copy link</button>
+        {/* URL */}
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, marginBottom: 36 }}>
+          <div style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}` }}>
+            <Label>Share this link</Label>
+          </div>
+          <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontFamily: C.mono, fontSize: 11, color: C.text2, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              ambientprototype.vercel.app/mobile
+            </span>
+            <button onClick={copyLink} style={{
+              background: 'transparent', border: `1px solid ${C.borderMid}`,
+              color: copied ? C.green : C.text2,
+              fontFamily: C.mono, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+              padding: '6px 12px', cursor: 'pointer', flexShrink: 0,
+              transition: 'color 0.2s',
+            }}>
+              {copied ? 'COPIED' : 'COPY'}
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
-        <div style={{ textAlign: 'center' }}>
-          <Link href="/mobilelab" style={{ fontSize: 12, color: C.text3, textDecoration: 'none', borderBottom: `1px solid ${C.border}` }}>
-            Mobile Lab (design tools)
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 24 }}>
+          <Link href="/mobilelab" style={{ fontFamily: C.mono, fontSize: 10, color: C.text3, textDecoration: 'none', letterSpacing: '0.08em' }}>
+            MOBILE LAB
           </Link>
-          <span style={{ color: C.text3, margin: '0 10px' }}>·</span>
-          <Link href="/control" style={{ fontSize: 12, color: C.text3, textDecoration: 'none', borderBottom: `1px solid ${C.border}` }}>
-            View Control Center
+          <span style={{ fontFamily: C.mono, fontSize: 10, color: C.text3 }}>//</span>
+          <Link href="/control" style={{ fontFamily: C.mono, fontSize: 10, color: C.text3, textDecoration: 'none', letterSpacing: '0.08em' }}>
+            CONTROL CENTER
           </Link>
         </div>
+
       </div>
     </div>
   );
 }
-
