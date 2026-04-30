@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 
 // ── Module groups ──
@@ -384,6 +384,86 @@ function SprintOverview() {
   );
 }
 
+// ── Control Nav ───────────────────────────────────────────────────────────────
+
+function ControlNav() {
+  const [now, setNow] = React.useState(new Date());
+  const [pulse, setPulse] = React.useState(true);
+  const [bars, setBars] = React.useState(() =>
+    Array.from({ length: 16 }, (_, i) => 0.15 + Math.sin(i * 0.7) * 0.3 + Math.random() * 0.4)
+  );
+
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    const p = setInterval(() => setPulse(v => !v), 900);
+    const b = setInterval(() =>
+      setBars(prev => prev.map(v => Math.max(0.08, Math.min(1, v + (Math.random() - 0.46) * 0.35)))),
+      110
+    );
+    return () => { clearInterval(t); clearInterval(p); clearInterval(b); };
+  }, []);
+
+  const cst = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  const hh = String(cst.getHours()).padStart(2, '0');
+  const mm = String(cst.getMinutes()).padStart(2, '0');
+  const ss = String(cst.getSeconds()).padStart(2, '0');
+
+  const leftStats = [
+    { label: 'Alerts', value: '4',      color: '#FF6B6B', dot: true },
+    { label: 'Rooms',  value: '42',     color: '#3DCC91', dot: false },
+    { label: 'Uptime', value: '99.97%', color: '#2D72D2', dot: false },
+  ];
+  const rightStats = [
+    { label: 'Sprint 18', value: '35%',     color: '#FFC940' },
+    { label: 'Pipeline',  value: 'NOMINAL', color: '#3DCC91' },
+  ];
+
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:0 }}>
+      {leftStats.map(s => (
+        <div key={s.label} style={{ display:'flex', alignItems:'center', gap:8, padding:'0 16px', borderRight:'1px solid rgba(255,255,255,0.07)' }}>
+          {s.dot && (
+            <span style={{ width:5, height:5, borderRadius:'50%', background:s.color,
+              boxShadow: pulse ? `0 0 7px ${s.color}` : 'none', transition:'box-shadow 0.4s ease', flexShrink:0 }} />
+          )}
+          <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:'rgba(255,255,255,0.28)', letterSpacing:'0.1em', textTransform:'uppercase', marginRight:2 }}>{s.label}</span>
+          <span style={{ fontFamily:'var(--mono)', fontSize:11, color:s.color, fontWeight:600, letterSpacing:'0.04em' }}>{s.value}</span>
+        </div>
+      ))}
+
+      {/* Live radar signal visualizer */}
+      <div style={{ padding:'0 18px', borderRight:'1px solid rgba(255,255,255,0.07)', display:'flex', alignItems:'center', gap:6 }}>
+        <span style={{ fontFamily:'var(--mono)', fontSize:8, color:'rgba(255,255,255,0.2)', letterSpacing:'0.14em', textTransform:'uppercase', marginRight:6 }}>IWR6843</span>
+        <div style={{ display:'flex', alignItems:'flex-end', gap:2, height:22 }}>
+          {bars.map((h, i) => (
+            <div key={i} style={{
+              width: 3,
+              height: `${Math.round(h * 22)}px`,
+              background: h > 0.72 ? '#FF6B6B' : h > 0.42 ? '#2D72D2' : 'rgba(45,114,210,0.32)',
+              borderRadius: 1,
+              transition: 'height 0.09s ease, background 0.2s ease',
+              boxShadow: h > 0.72 ? '0 0 4px rgba(255,107,107,0.6)' : 'none',
+            }} />
+          ))}
+        </div>
+        <span style={{ fontFamily:'var(--mono)', fontSize:8, color:'rgba(61,204,145,0.6)', letterSpacing:'0.1em', marginLeft:6 }}>LIVE</span>
+      </div>
+
+      {rightStats.map(s => (
+        <div key={s.label} style={{ display:'flex', alignItems:'center', gap:8, padding:'0 16px', borderRight:'1px solid rgba(255,255,255,0.07)' }}>
+          <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:'rgba(255,255,255,0.28)', letterSpacing:'0.1em', textTransform:'uppercase', marginRight:2 }}>{s.label}</span>
+          <span style={{ fontFamily:'var(--mono)', fontSize:11, color:s.color, fontWeight:600, letterSpacing:'0.04em' }}>{s.value}</span>
+        </div>
+      ))}
+
+      <div style={{ padding:'0 18px', display:'flex', alignItems:'center', gap:6 }}>
+        <span style={{ fontFamily:'var(--mono)', fontSize:9.5, color:'rgba(255,255,255,0.28)', letterSpacing:'0.1em', textTransform:'uppercase' }}>CST</span>
+        <span style={{ fontFamily:'var(--mono)', fontSize:13, color:'rgba(255,255,255,0.7)', letterSpacing:'0.08em', fontVariantNumeric:'tabular-nums' }}>{hh}:{mm}:{ss}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ControlCenter() {
@@ -408,11 +488,11 @@ export default function ControlCenter() {
 
         {/* ── Nav ── */}
         <nav style={{
-          position:'sticky', top:0, zIndex:100,
+          position:'fixed', top:0, left:0, right:0, zIndex:100,
           display:'flex', alignItems:'center', justifyContent:'space-between',
           padding:'0 48px', height:60,
           borderBottom:`1px solid ${C.border}`,
-          background:'rgba(12,13,15,0.92)',
+          background:'rgba(12,13,15,0.88)',
           backdropFilter:'blur(12px)',
         }}>
           <Link href="/" style={{ textDecoration:'none', color:C.text }}>
@@ -420,23 +500,17 @@ export default function ControlCenter() {
               Ambient Intelligence
             </span>
           </Link>
-          <div style={{ display:'flex', alignItems:'center', gap:28 }}>
-            {[['Engineering','/engineering'],['BOM','/bom'],['Gap','/gapanalysis'],['SaMD','/samd'],['Cloud','/cloud'],['Data','/datascience'],['Brand','/brand']].map(([label,href]) => (
-              <Link key={href} href={href} className="cc-nav-link" style={{ textDecoration:'none', color:C.text2, fontFamily:'var(--mono)', fontSize:11, letterSpacing:'0.1em', textTransform:'uppercase' }}>
-                {label}
-              </Link>
-            ))}
-          </div>
+          <ControlNav />
           <Link href="/" style={{ textDecoration:'none' }}>
-            <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.14em', textTransform:'uppercase', color:C.text3, padding:'5px 12px' }}>
-              ← Back
+            <span style={{ fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.14em', textTransform:'uppercase', color:C.accent, border:`1px solid ${C.accentDim}`, padding:'5px 12px', borderRadius:2 }}>
+              ← Home
             </span>
           </Link>
         </nav>
 
         {/* ── Header ── */}
         <div style={{
-          padding:'64px 48px 56px', borderBottom:`1px solid ${C.border}`,
+          padding:'124px 48px 56px', borderBottom:`1px solid ${C.border}`,
           position:'relative', overflow:'hidden',
           backgroundImage:`linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px)`,
           backgroundSize:'64px 64px',
