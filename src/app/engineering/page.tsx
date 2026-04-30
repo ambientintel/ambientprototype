@@ -317,7 +317,7 @@ export default function EngineeringPage() {
         <Link href="/" style={{ textDecoration:"none", color:"inherit" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, padding:"0 6px" }}>
             <div style={{ fontFamily:"var(--serif)", fontWeight:400, fontSize:18, letterSpacing:"-0.01em" }}>
-              Ambient <em style={{ fontStyle:"italic", color:"var(--text-2)", fontWeight:300 }}>Demo</em>
+              Ambient <em style={{ fontStyle:"italic", color:"var(--text-2)", fontWeight:300 }}>Intelligence</em>
             </div>
           </div>
         </Link>
@@ -966,3 +966,4 @@ function BacklogTable({ issues, onSelect }: { issues: Issue[]; onSelect: (i: Iss
     </div>
   );
 }
+
