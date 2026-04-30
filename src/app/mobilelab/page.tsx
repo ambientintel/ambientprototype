@@ -478,6 +478,31 @@ export default function MobileLab() {
 
   const activeAlertCount = alerts.filter(a => a.status === 'active').length;
 
+  // Listen for push alerts forwarded by the service worker when this page is in foreground
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type !== 'PUSH_ALERT') return;
+      const d = e.data.payload ?? {};
+      const sev: AlertSeverity = d.severity === 'critical' ? 'critical' : 'warning';
+      const newAlert: FallAlert = {
+        id:         `sw${Date.now()}`,
+        room:       d.room ?? '—',
+        patient:    d.patient ?? 'Unknown',
+        floor:      d.floor ?? '—',
+        severity:   sev,
+        status:     'active',
+        time:       new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        confidence: d.confidence ?? 0,
+        sensor:     d.sensor ?? '—',
+      };
+      setAlerts(prev => [newAlert, ...prev]);
+      setToast({ id: newAlert.id, room: newAlert.room, patient: newAlert.patient, severity: sev, confidence: newAlert.confidence, time: newAlert.time });
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
+
   const toggle = (label: string, val: boolean, set: (v: boolean) => void) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
       <span style={{ fontSize: 13, color: C.text2 }}>{label}</span>
