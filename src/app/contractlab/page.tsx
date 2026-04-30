@@ -939,8 +939,20 @@ export default function ContractLab() {
             return (
               <button key={cat} onClick={() => {
                 setCatFilter(cat);
-                const first = docs.find(d => cat === "all" ? true : d.category === cat);
-                if (first) setSelectedId(first.id);
+                if (cat === "all") {
+                  const first = docs[0];
+                  if (first) setSelectedId(first.id);
+                } else {
+                  // Seed docs have deterministic IDs; also check custom uploads
+                  const seedId = `seed-${cat}`;
+                  const hasSeed = docs.some(d => d.id === seedId);
+                  if (hasSeed) {
+                    setSelectedId(seedId);
+                  } else {
+                    const first = docs.find(d => d.category === cat);
+                    if (first) setSelectedId(first.id);
+                  }
+                }
               }}
                 style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "5px 8px", marginBottom: 1, background: catFilter === cat ? surf3 : "transparent", border: "none", borderRadius: 3, cursor: "pointer", textAlign: "left" }}>
                 {meta && <span style={{ width: 8, height: 8, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />}
