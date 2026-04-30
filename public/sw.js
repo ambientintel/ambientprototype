@@ -1,4 +1,4 @@
-const CACHE = 'ambient-v4';
+const CACHE = 'ambient-v5';
 const PRECACHE = ['/', '/mobile', '/mobilelab'];
 
 self.addEventListener('install', e => {
@@ -48,7 +48,14 @@ self.addEventListener('push', e => {
     data:  { url: '/mobilelab' },
   };
 
-  e.waitUntil(self.registration.showNotification(title, options));
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      // Broadcast to all open PWA windows so they can show an in-app banner
+      list.forEach(client => client.postMessage({ type: 'PUSH_ALERT', payload: data }));
+      // Always show the OS notification (covers lock screen + background)
+      return self.registration.showNotification(title, options);
+    })
+  );
 });
 
 self.addEventListener('notificationclick', e => {
