@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 
 const HERO_MODULE = {
-  href: '/dashboard/room/MOH301',
+  href: '/dashboard/overview',
   tag: 'Operations',
   label: 'Nurse Dashboard',
   description: 'Real-time resident activity monitoring, fall-detection alerts, and AI-generated clinical summaries across all floors. The operational core of the Ambient Intelligence platform.',
