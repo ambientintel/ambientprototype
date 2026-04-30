@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 declare global {
   // eslint-disable-next-line no-var
-  var __ambientPending: Map<string, { code: string; name: string; email: string; role: string; expires: number }> | undefined;
+  var __ambientPending: Map<string, { code: string; name: string; email: string; role: string; createdAt: number }> | undefined;
 }
 
 function getStore() {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No pending verification for this email. Please register again." }, { status: 404 });
   }
 
-  if (entry.expires < Date.now()) {
+  if (Date.now() - entry.createdAt > 15 * 60 * 1000) {
     store.delete(email.toLowerCase());
     return NextResponse.json({ error: "Code has expired. Please register again." }, { status: 410 });
   }
