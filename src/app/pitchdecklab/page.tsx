@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 
 type DeckType = "seed" | "series_a" | "series_b" | "product_demo" | "sales" | "partnership" | "investor_update" | "board";
 type DeckStatus = "draft" | "ready" | "exported";
@@ -213,7 +213,7 @@ export default function PitchDeckLab() {
     }));
   }
 
-  function updateDeckMeta(deckId: string, field: keyof PitchDeck, value: string) {
+  function updateDeckMeta(deckId: string, field: "title" | "company" | "tagline", value: string) {
     setDecks(prev => prev.map(d => d.id !== deckId ? d : { ...d, [field]: value, updated: new Date().toISOString() }));
   }
 
