@@ -1,1194 +1,1340 @@
 "use client";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
-type DocCategory = "nda" | "termsheet" | "employment" | "consulting" | "service" | "partnership" | "licensing" | "contractor" | "loi";
-type SignerStatus = "pending" | "viewed" | "signed" | "declined";
-type DocStatus = "draft" | "sent" | "completed" | "declined";
-type SignMode = "draw" | "type";
-type RightTab = "sign" | "share" | "export";
-type StatusFilter = "all" | "draft" | "sent" | "completed";
+// ── Types ────────────────────────────────────────────────────────────────────
+type DocCategory =
+  | "nda" | "termsheet" | "employment" | "consulting"
+  | "service" | "partnership" | "licensing" | "contractor"
+  | "loi" | "custom";
+
+type SignerStatus = "pending" | "signed" | "declined";
+type DocStatus    = "draft" | "review" | "signed" | "archived";
+type SignMode     = "draw" | "type";
+type RightTab     = "signers" | "activity" | "details";
+type StatusFilter = "all" | DocStatus;
 
 interface Signer {
-  id: string; name: string; email: string; role: string;
-  status: SignerStatus; color: string; signedAt?: string; signature?: string;
+  id: string;
+  name: string;
+  email: string;
+  status: SignerStatus;
+  signedAt?: string;
 }
+
 interface ContractDoc {
-  id: string; title: string; category: DocCategory; status: DocStatus;
-  created: string; updated: string; signers: Signer[]; content: string;
+  id: string;
+  name: string;
+  category: DocCategory;
+  status: DocStatus;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  signers: Signer[];
+  githubPath?: string;
+  githubSha?: string;
 }
 
-const SIGNER_COLORS = ["#4C6EF5","#12B886","#F59F00","#F76707","#15AABF","#E64980"];
-
-const CAT_META: Record<DocCategory,{label:string;short:string;color:string}> = {
-  nda:         {label:"Non-Disclosure Agreement", short:"NDA",         color:"#4C6EF5"},
-  termsheet:   {label:"Term Sheet",               short:"Term Sheet",  color:"#12B886"},
-  employment:  {label:"Employment Agreement",     short:"Employment",  color:"#F59F00"},
-  consulting:  {label:"Consulting Agreement",     short:"Consulting",  color:"#F76707"},
-  service:     {label:"Service Agreement",        short:"Service",     color:"#15AABF"},
-  partnership: {label:"Partnership Agreement",    short:"Partnership", color:"#E64980"},
-  licensing:   {label:"License Agreement",        short:"License",     color:"#748FFC"},
-  contractor:  {label:"Contractor Agreement",     short:"Contractor",  color:"#A9E34B"},
-  loi:         {label:"Letter of Intent",         short:"LOI",         color:"#FF6B6B"},
+// ── Category metadata ────────────────────────────────────────────────────────
+const CAT_META: Record<DocCategory, { label: string; color: string; icon: string }> = {
+  nda:         { label: "NDA",            color: "#4C90F0", icon: "🔒" },
+  termsheet:   { label: "Term Sheet",     color: "#2ECC71", icon: "📊" },
+  employment:  { label: "Employment",     color: "#F0B429", icon: "👤" },
+  consulting:  { label: "Consulting",     color: "#A78BFA", icon: "💼" },
+  service:     { label: "Service Agmt",   color: "#34D399", icon: "⚙️" },
+  partnership: { label: "Partnership",    color: "#F97316", icon: "🤝" },
+  licensing:   { label: "Licensing",      color: "#60A5FA", icon: "📄" },
+  contractor:  { label: "1099 Contractor",color: "#94A3B8", icon: "🔧" },
+  loi:         { label: "LOI",            color: "#EC4899", icon: "✉️" },
+  custom:      { label: "My Documents",   color: "#E2E8F0", icon: "📁" },
 };
 
-const STATUS_META: Record<DocStatus,{color:string;bg:string;label:string}> = {
-  draft:     {color:"#9AA0A6", bg:"rgba(154,160,166,0.12)", label:"Draft"},
-  sent:      {color:"#F59F00", bg:"rgba(245,159,0,0.12)",   label:"Sent"},
-  completed: {color:"#12B886", bg:"rgba(18,184,134,0.12)",  label:"Completed"},
-  declined:  {color:"#FF6B6B", bg:"rgba(255,107,107,0.12)", label:"Declined"},
+// ── Templates ────────────────────────────────────────────────────────────────
+const TEMPLATES: Record<Exclude<DocCategory, "custom">, string> = {
+
+nda: `MUTUAL NON-DISCLOSURE AGREEMENT
+(Based on Y Combinator Standard NDA)
+
+This Mutual Non-Disclosure Agreement ("Agreement") is entered into as of [DATE] between [PARTY A], a [STATE] [ENTITY TYPE] ("Company A"), and [PARTY B], a [STATE] [ENTITY TYPE] ("Company B") (each a "Party," collectively the "Parties").
+
+1. PURPOSE
+The Parties wish to explore a potential business relationship (the "Purpose") and may disclose to each other certain confidential and proprietary information.
+
+2. DEFINITION OF CONFIDENTIAL INFORMATION
+"Confidential Information" means any information disclosed by either Party to the other Party, either directly or indirectly, in writing, orally, or by inspection of tangible objects, that is designated as "Confidential," "Proprietary," or similar designation, or that reasonably should be understood to be confidential given the nature of the information and the circumstances of disclosure. Confidential Information does not include information that: (a) was publicly known prior to disclosure; (b) becomes publicly known through no wrongful act; (c) was rightfully received from a third party without restriction; (d) was independently developed without use of Confidential Information; or (e) is required to be disclosed by law or court order.
+
+3. NON-USE AND NON-DISCLOSURE
+Each Party agrees not to use any Confidential Information of the other Party for any purpose except to evaluate and engage in discussions concerning the Purpose. Each Party agrees not to disclose any Confidential Information of the other Party to third parties or to employees other than those with a need to know and who are bound by confidentiality obligations no less protective than this Agreement.
+
+4. RETURN OF CONFIDENTIAL INFORMATION
+All documents and other tangible objects containing or representing Confidential Information shall be promptly returned or destroyed upon request.
+
+5. NO LICENSE
+Nothing herein grants either Party any rights in the Confidential Information of the other Party except as expressly set forth herein.
+
+6. TERM
+This Agreement shall remain in effect for two (2) years from the date first written above. Obligations as to Confidential Information that constitutes a trade secret shall continue until such information no longer qualifies as a trade secret.
+
+7. GENERAL
+This Agreement shall be governed by the laws of the State of Delaware. This Agreement constitutes the entire agreement between the Parties concerning its subject matter and supersedes all prior agreements. This Agreement may be modified only by a written amendment signed by both Parties.
+
+IN WITNESS WHEREOF, the Parties have executed this Agreement as of the date first written above.
+
+[PARTY A]                           [PARTY B]
+
+By: ___________________________     By: ___________________________
+Name:                               Name:
+Title:                              Title:
+Date:                               Date:`,
+
+termsheet: `SERIES A PREFERRED STOCK TERM SHEET
+(Based on NVCA Model Term Sheet)
+
+[COMPANY NAME] (the "Company")
+Summary of Terms for Series A Preferred Stock Financing
+
+Date: [DATE]
+Investors: [LEAD INVESTOR] and [CO-INVESTORS]
+Amount Raised: $[AMOUNT]
+
+═══════════════════════════════════════════════
+TERMS OF SERIES A PREFERRED STOCK
+═══════════════════════════════════════════════
+
+OFFERING TERMS
+
+Securities Offered:     Series A Preferred Stock ("Series A Preferred")
+Pre-Money Valuation:    $[PRE-MONEY VALUATION]
+Investment Amount:      $[INVESTMENT AMOUNT]
+Price Per Share:        $[PRICE] (the "Original Issue Price"), based on a
+                        pre-money valuation of $[PRE-MONEY] on a fully-
+                        diluted basis including an employee option pool
+                        representing [15-20]% of the post-financing shares.
+Capitalization:         See attached Capitalization Table.
+
+─────────────────────────────────────────────
+CHARTER
+─────────────────────────────────────────────
+
+Dividends:              [8]% non-cumulative dividends, payable when and if
+                        declared by the Board. Dividends on Series A
+                        Preferred accrue prior to any dividends on Common.
+
+Liquidation Preference: In the event of any liquidation, dissolution or
+                        winding up of the Company, or Deemed Liquidation
+                        Event, the holders of Series A Preferred shall
+                        receive in preference to Common Stock an amount
+                        per share equal to [1x] the Original Issue Price
+                        plus any declared but unpaid dividends.
+                        [Non-participating preferred.]
+
+Conversion:             Each share of Series A Preferred is convertible
+                        into one share of Common Stock at any time at
+                        the option of the holder, subject to anti-dilution
+                        adjustment. Mandatory conversion upon (i) IPO at
+                        price ≥ [3x] Original Issue Price with proceeds
+                        ≥ $[50M], or (ii) vote of [majority/supermajority]
+                        of Series A Preferred.
+
+Anti-dilution:          Weighted average anti-dilution protection, subject
+                        to standard exceptions (employee options, strategic
+                        partners, equipment leasing, etc.). Formula:
+                        NCP = OCP × (OS + OD) / (OS + ND), where NCP =
+                        New Conversion Price, OCP = Old Conversion Price,
+                        OS = Outstanding Shares (fully diluted), OD =
+                        Dollar Amount of New Issue / OCP, ND = Shares
+                        Actually Issued.
+
+Voting:                 Series A Preferred votes as-converted with Common.
+                        Protective provisions require consent of [majority]
+                        of Series A Preferred for: (i) adverse change to
+                        rights of Series A; (ii) creation of senior/pari
+                        passu securities; (iii) authorization of merger,
+                        acquisition, or sale of substantially all assets;
+                        (iv) liquidation or winding up; (v) increase or
+                        decrease authorized Series A; (vi) any action that
+                        results in payment of dividends.
+
+─────────────────────────────────────────────
+INVESTOR RIGHTS AGREEMENT
+─────────────────────────────────────────────
+
+Information Rights:     Audited annual financials within 120 days of
+                        fiscal year end; unaudited monthly financials
+                        within 30 days of month end; annual budget 30 days
+                        before fiscal year end. Rights terminate upon IPO.
+
+Pro-Rata Rights:        Right to participate in future equity financings
+                        up to pro-rata share based on fully diluted
+                        ownership. Terminates upon IPO.
+
+Registration Rights:    Two S-1 demand registrations after IPO lock-up.
+                        Unlimited piggyback rights. One S-3 shelf demand
+                        per year. Underwriter cutback in underwritten
+                        offerings. Company pays registration expenses.
+
+─────────────────────────────────────────────
+RIGHT OF FIRST REFUSAL / CO-SALE AGREEMENT
+─────────────────────────────────────────────
+
+Right of First Refusal: Company, then investors (pro-rata), have right of
+                        first refusal on founder share transfers. Standard
+                        ROFR notice/exercise periods.
+
+Co-Sale Right:          If founders propose to sell shares, Series A
+                        investors have right to participate in such sale
+                        pro-rata.
+
+─────────────────────────────────────────────
+VOTING AGREEMENT
+─────────────────────────────────────────────
+
+Board Composition:      [5] member board: [2] Common designees (founders),
+                        [1] Series A designee ([LEAD INVESTOR DESIGNEE]),
+                        [1] independent mutually agreed, [1] CEO.
+
+Drag-Along:             If a majority of Series A Preferred and a majority
+                        of Common (voting separately) approve a transaction,
+                        all other shareholders will vote in favor.
+
+─────────────────────────────────────────────
+OTHER TERMS
+─────────────────────────────────────────────
+
+Employee Pool:          [15-20]% post-financing option pool in place prior
+                        to close.
+
+Vesting:                All employee/founder equity subject to 4-year
+                        vesting, 1-year cliff. Single trigger acceleration
+                        for involuntary termination following acquisition.
+
+Expenses:               Company pays reasonable legal fees up to $[35,000].
+Exclusivity:            30-day no-shop from date of signed term sheet.
+Governing Law:          Delaware.
+
+[LEAD INVESTOR]                     [COMPANY]
+
+By: ___________________________     By: ___________________________
+Name:                               Name:
+Title:                              Title:`,
+
+employment: `OFFER LETTER
+(Y Combinator-Style Startup Offer Letter)
+
+[DATE]
+
+[CANDIDATE NAME]
+[ADDRESS]
+
+Dear [CANDIDATE NAME],
+
+[COMPANY NAME], Inc. (the "Company") is pleased to offer you employment on the following terms:
+
+POSITION AND START DATE
+You will serve as [TITLE], reporting to [MANAGER TITLE]. Your anticipated start date is [START DATE]. This is a full-time position based at [LOCATION / REMOTE].
+
+COMPENSATION
+Base Salary: $[AMOUNT] per year, payable in accordance with the Company's standard payroll practices.
+Bonus: You will be eligible for an annual discretionary bonus targeted at [X]% of base salary, based on individual and company performance.
+Benefits: You will be eligible to participate in the Company's standard benefit plans, including health, dental, and vision insurance, 401(k), and [X] days PTO, subject to the terms of those plans.
+
+EQUITY
+Subject to approval by the Company's Board of Directors, you will be granted an option to purchase [NUMBER] shares of the Company's Common Stock at a per share exercise price equal to the fair market value on the date of grant (as determined by a 409A valuation). The option will be subject to the terms of the Company's [YEAR] Equity Incentive Plan and your option agreement.
+
+Vesting Schedule: 25% of the shares vest on the one-year anniversary of your vesting commencement date (the "Cliff"); the remaining 75% vest monthly over the following 36 months, for a total 4-year vesting period. Vesting is contingent on continued employment.
+
+Early Exercise: [The option will include an early exercise right, allowing you to exercise prior to vesting subject to a right of repurchase by the Company.]
+
+[DOUBLE TRIGGER ACCELERATION: In the event of a Change of Control of the Company and your Involuntary Termination within 12 months following such Change of Control, 100% of your then-unvested shares shall immediately vest ("Double Trigger Acceleration").]
+
+AT-WILL EMPLOYMENT
+Your employment with the Company is at-will, meaning either you or the Company may terminate the employment relationship at any time and for any reason, with or without cause or notice.
+
+CONFIDENTIALITY AND INVENTION ASSIGNMENT
+As a condition of employment, you must sign and comply with the Company's standard Confidential Information and Invention Assignment Agreement ("CIIA"), a copy of which is enclosed. You represent that you are not subject to any prior agreement that would restrict your ability to perform your duties for the Company, and that you will not use or disclose any proprietary information of any former employer.
+
+CONDITIONS OF EMPLOYMENT
+This offer is contingent upon: (i) your execution of the CIIA; (ii) satisfactory completion of a background check; (iii) your eligibility to work in the United States (I-9 verification); and (iv) Board of Directors approval of your equity grant.
+
+ENTIRE AGREEMENT
+This letter, together with the CIIA and any equity documents, forms the complete and exclusive statement of your employment terms, superseding any prior representations. This agreement is governed by California law.
+
+Please sign and return this letter by [DEADLINE]. We look forward to you joining the team.
+
+Sincerely,
+
+___________________________
+[CEO NAME], CEO
+[COMPANY NAME], Inc.
+
+I accept this offer of employment:
+
+___________________________     _______________
+[CANDIDATE NAME]                Date`,
+
+consulting: `CONSULTING AGREEMENT
+
+This Consulting Agreement (the "Agreement") is entered into as of [DATE] between [COMPANY NAME], Inc., a Delaware corporation (the "Company"), and [CONSULTANT NAME / ENTITY] ("Consultant").
+
+1. SERVICES
+Consultant agrees to perform consulting services as described in Exhibit A (the "Services"). Consultant may perform the Services at any time and place of Consultant's choosing, and using equipment, tools, and materials of Consultant's choosing, provided the Services are completed by any agreed deadlines. The Company shall not control the manner or means by which Consultant performs the Services.
+
+2. COMPENSATION
+The Company shall pay Consultant $[RATE] per [hour/month/project]. Consultant shall submit invoices [weekly/monthly], and the Company shall pay within [Net-30] days. The Company shall reimburse Consultant for pre-approved, reasonable expenses.
+
+3. INDEPENDENT CONTRACTOR STATUS
+Consultant is an independent contractor and is not an employee, agent, partner, or joint venturer of the Company. Consultant is solely responsible for all taxes, withholdings, and other statutory or contractual obligations of any sort, including worker's compensation. Consultant is not entitled to any employee benefits.
+
+4. INTELLECTUAL PROPERTY
+Consultant agrees that any work product, inventions, or deliverables created by Consultant under this Agreement (the "Work Product") shall be considered "work made for hire" to the maximum extent permitted by law. To the extent any Work Product is not deemed work for hire, Consultant hereby irrevocably assigns to the Company all right, title, and interest in and to such Work Product, including all intellectual property rights therein.
+
+5. CONFIDENTIALITY
+Consultant agrees to keep all Company Confidential Information strictly confidential and not to disclose it to any third party without the Company's prior written consent. "Confidential Information" means all non-public information of the Company. This obligation survives termination of this Agreement.
+
+6. REPRESENTATIONS AND WARRANTIES
+Consultant represents that: (a) Consultant has full authority to enter into this Agreement; (b) performance of the Services will not violate any other agreement; (c) the Work Product will not infringe any third-party intellectual property rights; and (d) Consultant is not debarred, suspended, or excluded from any government contract.
+
+7. TERM AND TERMINATION
+This Agreement commences on the date above and continues until [END DATE / "completion of the Services"], unless terminated earlier. Either party may terminate this Agreement upon [30] days' written notice. The Company may terminate immediately for Consultant's material breach. Sections 4, 5, 7, and 8 survive termination.
+
+8. LIMITATION OF LIABILITY
+NEITHER PARTY SHALL BE LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES. THE COMPANY'S TOTAL LIABILITY SHALL NOT EXCEED THE FEES PAID IN THE THREE MONTHS PRECEDING THE CLAIM.
+
+9. GOVERNING LAW
+This Agreement is governed by the laws of the State of Delaware.
+
+COMPANY                             CONSULTANT
+
+By: ___________________________     By: ___________________________
+Name:                               Name:
+Title:                              Date:
+Date:
+
+EXHIBIT A — SCOPE OF SERVICES
+[Describe specific deliverables, timelines, and acceptance criteria]`,
+
+service: `MASTER SERVICES AGREEMENT
+(SaaS / Technology Services)
+
+This Master Services Agreement ("MSA") is entered into as of [DATE] between [VENDOR NAME], Inc. ("Vendor") and [CUSTOMER NAME] ("Customer").
+
+1. SERVICES AND ORDER FORMS
+Vendor will provide the services described in one or more Order Forms referencing this MSA (each an "Order Form"). Each Order Form is incorporated herein by reference. In the event of a conflict, the Order Form prevails.
+
+2. SUBSCRIPTIONS AND ACCESS
+Subject to payment of all fees, Vendor grants Customer a limited, non-exclusive, non-transferable right to access and use the Vendor platform and services ("Platform") during the Subscription Term solely for Customer's internal business purposes. Customer may not sublicense, resell, or permit unauthorized access to the Platform.
+
+3. FEES AND PAYMENT
+Customer shall pay the fees set forth in each Order Form. Fees are due [Net-30] days from invoice. Overdue amounts accrue interest at 1.5% per month. Vendor may suspend access on [15] days' notice for non-payment. All fees are non-refundable except as expressly stated herein.
+
+4. SERVICE LEVEL AGREEMENT (SLA)
+Vendor shall use commercially reasonable efforts to ensure Platform availability of at least 99.9% measured monthly, excluding Scheduled Maintenance. "Downtime" means unavailability exceeding 5 consecutive minutes.
+
+  SLA Credit Schedule:
+  ─────────────────────────────────────────
+  Monthly Uptime %      Credit (of MRR)
+  ─────────────────────────────────────────
+  99.0% – 99.9%         10%
+  95.0% – 99.0%         25%
+  Below 95.0%           50%
+  ─────────────────────────────────────────
+
+  Credits are Customer's sole remedy for SLA failures. Credits expire if not claimed within [60] days. Scheduled Maintenance: Vendor will provide [72] hours' notice for maintenance windows expected to exceed [30] minutes.
+
+5. DATA AND PRIVACY
+Customer owns all Customer Data. Vendor processes Customer Data solely to provide the Services and as set forth in the Data Processing Addendum ("DPA"), incorporated herein. Vendor shall maintain reasonable security measures including encryption at rest and in transit, SOC 2 Type II certification, and annual penetration testing.
+
+6. CONFIDENTIALITY
+Each party agrees to keep the other's Confidential Information confidential using at least the same degree of care it uses for its own confidential information (but no less than reasonable care), and not to disclose it except to employees and contractors with a need to know. Obligations survive [3] years post-termination, or indefinitely for trade secrets.
+
+7. INTELLECTUAL PROPERTY
+Vendor retains all rights in the Platform and any Vendor IP. Customer retains all rights in Customer Data and Customer IP. Feedback and suggestions provided by Customer to Vendor may be used by Vendor without restriction.
+
+8. WARRANTIES
+Each party warrants it has the authority to enter this Agreement. Vendor warrants the Platform will perform materially as described in the applicable documentation. EXCEPT AS EXPRESSLY SET FORTH HEREIN, ALL WARRANTIES ARE DISCLAIMED.
+
+9. INDEMNIFICATION
+Each party shall indemnify the other against third-party claims arising from its gross negligence or willful misconduct. Vendor shall additionally indemnify Customer against claims that the Platform infringes a third-party IP right.
+
+10. LIMITATION OF LIABILITY
+NEITHER PARTY SHALL BE LIABLE FOR INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES. EACH PARTY'S TOTAL AGGREGATE LIABILITY SHALL NOT EXCEED THE FEES PAID IN THE TWELVE MONTHS PRECEDING THE CLAIM.
+
+11. TERM AND TERMINATION
+This MSA commences on the Effective Date and continues until all Order Forms expire or are terminated. Either party may terminate for material breach upon [30] days' notice and failure to cure.
+
+12. GENERAL
+Governing Law: Delaware. Entire Agreement. Amendments in writing. No waiver. Severability.
+
+VENDOR                              CUSTOMER
+
+By: ___________________________     By: ___________________________
+Name:                               Name:
+Title:                              Title:
+Date:                               Date:`,
+
+partnership: `PARTNERSHIP AGREEMENT
+(Strategic Partnership / Joint Go-to-Market)
+
+This Strategic Partnership Agreement ("Agreement") is entered into as of [DATE] between [COMPANY A], Inc. ("Partner A") and [COMPANY B], Inc. ("Partner B") (collectively the "Parties").
+
+1. PURPOSE
+The Parties desire to establish a strategic partnership to [describe purpose: e.g., jointly market, integrate, or co-develop products/services] (the "Partnership").
+
+2. RESPONSIBILITIES
+Partner A shall: [List specific obligations, e.g., provide API access, co-marketing budget, dedicated technical resources]
+Partner B shall: [List specific obligations, e.g., integrate Partner A product, provide customer introductions, joint sales activities]
+
+3. REVENUE SHARING
+[Option A – Referral Fee]: Partner A shall pay Partner B a referral fee of [X]% of net revenue collected from customers referred by Partner B, for a period of [12] months from first conversion.
+[Option B – Revenue Share]: Net revenue from the Partnership shall be split [X]% to Partner A and [Y]% to Partner B, payable [quarterly], based on mutually agreed attribution methodology.
+Payments are due within [30] days of the end of each quarter. Each Party shall maintain records sufficient to verify revenue calculations and provide the other Party the right to audit upon [30] days' notice.
+
+4. INTELLECTUAL PROPERTY
+Each Party retains ownership of its pre-existing IP. Any jointly developed IP ("Joint IP") shall be jointly owned, with each Party having the right to exploit Joint IP without accounting to the other, unless otherwise agreed in writing.
+
+5. BRANDING AND MARKETING
+Each Party grants the other a limited, non-exclusive license to use its trademarks and logos solely in connection with Partnership marketing activities approved in advance by the licensor. Each Party shall comply with the other's brand guidelines.
+
+6. EXCLUSIVITY
+[Optional] During the Term, neither Party shall enter into a substantially similar partnership with [identify competitors / category], without prior written consent.
+
+7. CONFIDENTIALITY
+The Parties shall keep all Partnership terms and shared information confidential. Standard NDA provisions apply for a period of [3] years post-termination.
+
+8. TERM AND TERMINATION
+Initial Term: [12] months, automatically renewing for successive [12]-month periods unless either Party provides [60] days' written notice of non-renewal. Either Party may terminate immediately upon the other's material breach that remains uncured after [30] days' notice.
+
+9. LIMITATION OF LIABILITY
+NEITHER PARTY SHALL BE LIABLE FOR INDIRECT OR CONSEQUENTIAL DAMAGES. TOTAL LIABILITY SHALL NOT EXCEED AMOUNTS PAID IN THE PRECEDING [12] MONTHS.
+
+10. GOVERNING LAW
+This Agreement is governed by the laws of the State of Delaware.
+
+PARTNER A                           PARTNER B
+
+By: ___________________________     By: ___________________________
+Name:                               Name:
+Title:                              Title:
+Date:                               Date:`,
+
+licensing: `INTELLECTUAL PROPERTY LICENSE AGREEMENT
+
+This Intellectual Property License Agreement ("Agreement") is entered into as of [DATE] between [LICENSOR NAME], Inc. ("Licensor") and [LICENSEE NAME] ("Licensee").
+
+1. GRANT OF LICENSE
+Subject to the terms and conditions of this Agreement and payment of all fees, Licensor hereby grants to Licensee a [non-exclusive / exclusive], [non-transferable / transferable], [non-sublicensable / sublicensable] license to use the Licensor's [describe: software, patents, trademarks, copyrighted content, technology] (the "Licensed IP") solely for [describe permitted use] in [territory] during the License Term.
+
+2. LICENSE FEES AND ROYALTIES
+Upfront License Fee: $[AMOUNT] due upon execution.
+Royalties: [X]% of net revenue attributable to products or services incorporating the Licensed IP, payable [quarterly], within [30] days of quarter-end. Licensee shall provide quarterly royalty reports.
+Minimum Annual Royalty: $[AMOUNT] per year, regardless of actual royalties earned, commencing in Year [2].
+Audit Rights: Licensor may audit Licensee's royalty records upon [30] days' notice, no more than once per year. If audit reveals underpayment of more than [5]%, Licensee shall reimburse audit costs.
+
+3. INTELLECTUAL PROPERTY OWNERSHIP
+Licensor retains all right, title, and interest in and to the Licensed IP. Nothing herein transfers ownership of the Licensed IP to Licensee. Licensee shall not challenge the validity or enforceability of the Licensed IP.
+
+4. SUBLICENSING
+[If sublicensing permitted]: Licensee may sublicense the Licensed IP to [describe permitted sublicensees], provided each sublicense is in writing, no less protective than this Agreement, and Licensee remains liable for any sublicensee's breach.
+
+5. IMPROVEMENTS
+[Licensor owns all improvements]: Any improvements, modifications, or derivative works of the Licensed IP created by or for Licensee ("Improvements") shall be owned by Licensor, and Licensee hereby assigns all rights thereto to Licensor.
+[Licensee retains improvements]: Licensee retains ownership of Improvements. Licensee hereby grants Licensor a perpetual, irrevocable, royalty-free license to use any Improvements.
+
+6. CONFIDENTIALITY
+Licensee shall keep the Licensed IP and all related technical documentation confidential using at least the same degree of care as its own confidential information.
+
+7. WARRANTIES AND DISCLAIMER
+Licensor warrants that it has the right to grant the license herein and that, to its knowledge, use of the Licensed IP as licensed herein does not infringe any third-party rights. EXCEPT AS EXPRESSLY STATED, ALL WARRANTIES ARE DISCLAIMED.
+
+8. INDEMNIFICATION
+Licensor shall indemnify Licensee against third-party claims that the Licensed IP, as used within the scope of this license, infringes any patent, copyright, or trademark.
+
+9. TERM AND TERMINATION
+License Term: [X] years from the Effective Date. Licensor may terminate immediately if Licensee (a) materially breaches and fails to cure within [30] days; (b) challenges the Licensed IP; or (c) becomes insolvent.
+
+10. GOVERNING LAW
+This Agreement is governed by the laws of the State of Delaware.
+
+LICENSOR                            LICENSEE
+
+By: ___________________________     By: ___________________________
+Name:                               Name:
+Title:                              Title:
+Date:                               Date:`,
+
+contractor: `INDEPENDENT CONTRACTOR AGREEMENT
+(IRS Section 530 / 1099 Compliant)
+
+This Independent Contractor Agreement ("Agreement") is entered into as of [DATE] between [COMPANY NAME], Inc. ("Company") and [CONTRACTOR NAME / ENTITY] ("Contractor").
+
+1. INDEPENDENT CONTRACTOR RELATIONSHIP
+Contractor is and shall at all times be an independent contractor and not an employee, partner, agent, or joint venturer of the Company. The Company shall not have the right to control the manner, means, or method by which Contractor performs services. Contractor retains the right to perform services for other clients during the Term, provided such work does not create a conflict of interest or breach any confidentiality obligation.
+
+BEHAVIORAL CONTROL: Company provides the desired result, not step-by-step instructions. Contractor uses its own training, tools, and judgment.
+FINANCIAL CONTROL: Contractor invoices for completed work; is not reimbursed for ordinary business expenses without written pre-approval; bears risk of profit and loss.
+TYPE OF RELATIONSHIP: No employee benefits are provided. This is a project-based engagement; no expectation of ongoing work.
+
+2. SERVICES
+Contractor shall perform the services described in Exhibit A (the "Services"). Deliverables, timelines, and acceptance criteria are specified in Exhibit A. Contractor may engage subcontractors to assist, provided Contractor remains responsible for deliverable quality and subcontractors are bound by confidentiality obligations no less protective than this Agreement.
+
+3. COMPENSATION
+Company shall pay Contractor $[RATE] per [hour/project milestone]. Contractor shall submit invoices [bi-weekly/monthly], and Company shall pay within [Net-30] days. Company shall issue IRS Form 1099-NEC for payments totaling $600 or more in a calendar year. Contractor is solely responsible for all federal, state, and local taxes, including self-employment tax (currently 15.3% on net self-employment income up to the Social Security wage base).
+
+4. EXPENSES
+Company shall reimburse only expenses expressly pre-approved in writing. Contractor shall submit receipts within [30] days of incurring any approved expense.
+
+5. INTELLECTUAL PROPERTY AND WORK PRODUCT
+All work product, deliverables, inventions, and materials created by Contractor in the course of performing Services (the "Work Product") shall, to the maximum extent permitted by applicable law, constitute works made for hire for Company. To the extent any Work Product does not qualify as work made for hire, Contractor hereby irrevocably assigns to Company all right, title, and interest therein, including all intellectual property rights worldwide, in perpetuity.
+
+Contractor represents that the Work Product will not infringe any third-party intellectual property rights. Contractor shall not incorporate any open-source software subject to a copyleft or "viral" license into the Work Product without prior written approval.
+
+6. CONFIDENTIALITY
+Contractor shall keep all Company Confidential Information strictly confidential and shall not use it for any purpose other than performing the Services. This obligation continues for [2] years post-termination and indefinitely for trade secrets.
+
+7. NO SOLICITATION
+During the Term and for [12] months thereafter, Contractor shall not directly solicit Company employees or contractors for other engagements.
+
+8. TERM AND TERMINATION
+This Agreement commences on the date above and continues until [DATE / completion of Services described in Exhibit A]. Either party may terminate upon [14] days' written notice. Company may terminate immediately for Contractor's material breach or failure to deliver Work Product meeting the specifications in Exhibit A. Upon termination, Contractor shall deliver all Work Product (whether completed or in progress) and return all Company property.
+
+9. REPRESENTATIONS AND WARRANTIES
+Contractor represents: (a) it has full legal authority to enter this Agreement; (b) performance will not violate any other agreement; (c) no prior IP encumbers the Work Product; (d) Contractor is legally authorized to work in the United States; and (e) Contractor carries appropriate business liability insurance.
+
+10. LIMITATION OF LIABILITY
+NEITHER PARTY SHALL BE LIABLE FOR INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES. COMPANY'S TOTAL LIABILITY SHALL NOT EXCEED FEES PAID IN THE [3] MONTHS PRECEDING THE CLAIM.
+
+11. GOVERNING LAW
+This Agreement is governed by the laws of the State of [DELAWARE / CALIFORNIA].
+
+COMPANY                             CONTRACTOR
+
+By: ___________________________     Signature: ___________________________
+Name:                               Name:
+Title:                              EIN / SSN: ___-__-____ (for 1099)
+Date:                               Date:
+
+EXHIBIT A — SCOPE OF WORK
+Project Title:
+Deliverables:
+Timeline / Milestones:
+Acceptance Criteria:`,
+
+loi: `LETTER OF INTENT
+(Acquisition / Strategic Transaction)
+
+[DATE]
+
+[TARGET COMPANY NAME]
+Attn: [CEO NAME]
+[ADDRESS]
+
+Dear [CEO NAME]:
+
+This Letter of Intent ("LOI") sets forth the principal terms under which [ACQUIRER NAME], Inc. or its designated affiliate ("Acquirer") proposes to acquire [TARGET COMPANY NAME] ("Company") (the "Transaction"). This LOI is intended to facilitate further negotiations and is subject to the execution of a definitive agreement.
+
+─────────────────────────────────────────────────
+SECTION I — NON-BINDING TERMS
+─────────────────────────────────────────────────
+(The following terms are non-binding and subject to due diligence and definitive documentation)
+
+1. STRUCTURE OF TRANSACTION
+The Transaction will be structured as a [merger / stock acquisition / asset acquisition] pursuant to which Acquirer will acquire [100% / ___%] of the outstanding equity interests (or all or substantially all assets) of the Company.
+
+2. PURCHASE PRICE
+Total enterprise value of approximately $[AMOUNT] (the "Purchase Price"), subject to adjustment for:
+  (a) Cash and cash equivalents at closing
+  (b) Indebtedness and transaction expenses
+  (c) Net working capital adjustment relative to a target of $[NWC TARGET]
+  (d) A customary indemnification escrow of [10]% of Purchase Price held for [18] months
+
+3. EARNOUT
+[Optional] Up to $[EARNOUT AMOUNT] in additional consideration contingent upon achievement of the following milestones:
+  Year 1 Target: $[REVENUE/METRIC] → $[PAYMENT]
+  Year 2 Target: $[REVENUE/METRIC] → $[PAYMENT]
+  Earnout metrics will be calculated in accordance with GAAP, consistently applied.
+
+4. CONSIDERATION MIX
+  Cash at Closing:   $[AMOUNT] ([___]% of Purchase Price)
+  Stock Consideration: [___] shares of Acquirer common stock (valued at $[PRICE] per share, subject to registration rights)
+  Earnout:           Up to $[EARNOUT AMOUNT] as described above
+
+5. KEY EMPLOYEE RETENTION
+Key employees identified in Exhibit A will be offered employment agreements with retention packages totaling $[AMOUNT], to vest over [2-4] years from closing.
+
+6. DUE DILIGENCE
+Acquirer will conduct customary due diligence covering financial, legal, technical, and commercial matters. Target shall provide access to books, records, management, facilities, and systems. Estimated diligence period: [30-45] days.
+
+7. CONDITIONS TO CLOSING
+  (a) Negotiation and execution of definitive Transaction documents
+  (b) Satisfactory completion of due diligence
+  (c) Required regulatory approvals (including HSR Act filing if applicable)
+  (d) Third-party consents as required
+  (e) No material adverse change in the business
+
+8. REPRESENTATIONS, WARRANTIES, AND INDEMNIFICATION
+The definitive agreement will contain customary representations, warranties, and indemnification provisions, including survival periods of [18] months and a [10]% deductible basket on a [tipping / non-tipping] basis.
+
+─────────────────────────────────────────────────
+SECTION II — BINDING TERMS
+─────────────────────────────────────────────────
+(The following provisions are legally binding upon execution)
+
+9. EXCLUSIVITY
+During the period beginning on the date hereof and ending [45] days thereafter (the "Exclusivity Period"), the Company, its shareholders, officers, directors, and representatives shall not, directly or indirectly, solicit, initiate, encourage, or enter into discussions with any other party regarding any acquisition, merger, sale of assets, or similar transaction. The Exclusivity Period may be extended by mutual written agreement.
+
+10. CONFIDENTIALITY
+Each party shall keep the terms of this LOI and all information shared in connection with the Transaction strictly confidential, except as required by law.
+
+11. NO SHOP / NO HIRE
+During the Exclusivity Period, neither party shall solicit the other party's employees or customers.
+
+12. COSTS AND EXPENSES
+Each party shall bear its own costs and expenses related to this LOI and the Transaction, unless otherwise agreed in writing.
+
+13. TERMINATION
+Either party may terminate this LOI upon [5] days' written notice if a definitive agreement has not been executed by [OUTSIDE DATE].
+
+14. GOVERNING LAW
+This LOI shall be governed by the laws of the State of Delaware.
+
+This LOI does not constitute a binding agreement to consummate the Transaction, except with respect to Sections 9–14. Either party may walk away from the Transaction prior to execution of a definitive agreement, without liability, except with respect to the binding provisions.
+
+Sincerely,
+
+___________________________
+[AUTHORIZED SIGNATORY]
+[ACQUIRER NAME], Inc.
+
+AGREED AND ACCEPTED:
+
+___________________________     _______________
+[CEO / AUTHORIZED SIGNATORY]    Date
+[TARGET COMPANY NAME]`,
 };
 
-const SIGNER_STATUS: Record<SignerStatus,{color:string;label:string}> = {
-  pending:  {color:"#9AA0A6", label:"Pending"},
-  viewed:   {color:"#F59F00", label:"Viewed"},
-  signed:   {color:"#12B886", label:"Signed"},
-  declined: {color:"#FF6B6B", label:"Declined"},
-};
-
-const TEMPLATES: Record<DocCategory,string> = {
-nda:`# MUTUAL NON-DISCLOSURE AGREEMENT
-
-**Effective Date:** [DATE]
-**Between:** [PARTY A NAME], a [STATE] [ENTITY TYPE] ("Disclosing Party")
-**And:** [PARTY B NAME], a [STATE] [ENTITY TYPE] ("Receiving Party")
-
----
-
-## 1. Purpose
-
-The parties wish to explore a potential business relationship (the "Purpose"). Each party may disclose Confidential Information to the other in connection with the Purpose.
-
-## 2. Definition of Confidential Information
-
-"Confidential Information" means any information disclosed by either party, directly or indirectly, in writing, orally, or by inspection of tangible objects, that is designated as "Confidential" or that reasonably should be understood to be confidential given the nature of the information and the circumstances of disclosure.
-
-## 3. Obligations of Receiving Party
-
-The Receiving Party agrees to:
-
-(a) Hold all Confidential Information in strict confidence using at least the same degree of care it uses to protect its own confidential information, but no less than reasonable care;
-
-(b) Not disclose any Confidential Information to any third parties without prior written consent of the Disclosing Party;
-
-(c) Use Confidential Information solely for the Purpose described herein;
-
-(d) Limit access to Confidential Information to employees or contractors who need to know for the Purpose and are bound by confidentiality obligations no less restrictive than this Agreement.
-
-## 4. Exclusions
-
-Obligations do not apply to information that: (a) is or becomes publicly known through no breach of this Agreement; (b) was rightfully known before disclosure; (c) is independently developed without use of Confidential Information; (d) is required to be disclosed by applicable law or court order, provided the Receiving Party gives prompt written notice.
-
-## 5. Term
-
-This Agreement shall remain in effect for **two (2) years** from the Effective Date, unless earlier terminated by mutual written agreement.
-
-## 6. Return or Destruction
-
-Upon written request or termination, the Receiving Party shall promptly return or destroy all Confidential Information and certify such return or destruction in writing.
-
-## 7. Injunctive Relief
-
-The parties acknowledge that breach would cause irreparable harm for which monetary damages would be inadequate. The Disclosing Party shall be entitled to seek equitable relief without posting bond or other security.
-
-## 8. Governing Law
-
-This Agreement is governed by the laws of the State of **[STATE]**, without regard to conflict of law principles. Disputes shall be resolved in the courts of [COUNTY], [STATE].
-
----
-
-**IN WITNESS WHEREOF**, the parties have executed this Agreement as of the Effective Date.
-
-**[PARTY A NAME]**
-
-Signature: ___________________________ Date: ____________
-Name: ______________________________ Title: ____________
-
-**[PARTY B NAME]**
-
-Signature: ___________________________ Date: ____________
-Name: ______________________________ Title: ____________`,
-
-termsheet:`# TERM SHEET
-
-**Date:** [DATE]
-**Company:** [COMPANY NAME] (the "Company")
-**Investor:** [INVESTOR NAME] (the "Investor")
-
-*This term sheet is non-binding except where expressly indicated as binding below.*
-
----
-
-## Investment Summary
-
-| Term | Detail |
-|------|--------|
-| Investment Amount | $[AMOUNT] |
-| Pre-Money Valuation | $[VALUATION] |
-| Security Type | Series [A/B] Preferred Stock |
-| Price Per Share | $[PRICE] |
-| Post-Money Valuation | $[POST-MONEY] |
-| Closing Date | [DATE] |
-
----
-
-## 1. Type and Amount
-
-The Company will issue and sell [SHARES] shares of Series [X] Preferred Stock at $[PRICE] per share for aggregate proceeds of $[AMOUNT].
-
-## 2. Dividends
-
-Non-cumulative dividends at [8]% per annum when and as declared by the Board.
-
-## 3. Liquidation Preference
-
-[1x] the Original Issue Price plus declared but unpaid dividends, in preference to common stockholders upon any liquidation or winding-up event.
-
-## 4. Conversion
-
-Convertible at the holder's option, at any time, into [1] share of Common Stock per Preferred share, subject to standard adjustments for splits, dividends, and recapitalizations.
-
-## 5. Anti-Dilution
-
-Weighted-average anti-dilution protection. No anti-dilution protection for issuances at or above the then-current conversion price.
-
-## 6. Board Composition
-
-[5] directors: [2] designated by Investor, [2] elected by common stockholders, and [1] independent director mutually agreed upon by both groups.
-
-## 7. Information Rights
-
-Audited annual financials within 120 days of fiscal year end; unaudited quarterly financials within 45 days of each quarter end.
-
-## 8. Pro Rata Rights
-
-Investor has the right to participate in subsequent equity financings on a pro-rata basis to maintain ownership percentage.
-
-## 9. Exclusivity *[BINDING]*
-
-For [30] days following execution of this term sheet, the Company shall not solicit, encourage, or entertain alternative acquisition, merger, or financing proposals from third parties.
-
-## 10. Expenses
-
-The Company shall pay reasonable legal fees and expenses of the Investor's counsel, up to $[25,000], at closing.
-
----
-
-**[COMPANY NAME]**
-By: _______________________ Name: _____________ Title: _____________ Date: _________
-
-**[INVESTOR NAME]**
-By: _______________________ Name: _____________ Title: _____________ Date: _________`,
-
-employment:`# EMPLOYMENT AGREEMENT
-
-**Effective Date:** [START DATE]
-**Employer:** [COMPANY NAME], a [STATE] [ENTITY TYPE] ("Company")
-**Employee:** [EMPLOYEE FULL NAME] ("Employee")
-
----
-
-## 1. Position and Duties
-
-The Company employs Employee in the position of **[JOB TITLE]**, reporting to [MANAGER TITLE]. Employee shall devote Employee's full business time and attention to performing all duties associated with this position and such other duties as reasonably assigned.
-
-## 2. Start Date
-
-Employment commences on **[START DATE]**.
-
-## 3. Compensation
-
-**Base Salary:** $[ANNUAL SALARY] per year, payable in accordance with the Company's standard payroll schedule (currently [bi-weekly / semi-monthly]).
-
-**Annual Bonus:** Employee is eligible for a discretionary performance bonus of up to [X]% of base salary, based on achievement of individual and Company performance goals as determined by the Board.
-
-**Equity Grant:** Subject to Board approval, Employee will be granted an option to purchase [SHARES] shares of Common Stock under the Company's [Year] Equity Incentive Plan, at an exercise price equal to the fair market value per share on the grant date. Shares vest over four (4) years, with a one (1)-year cliff.
-
-## 4. Benefits
-
-Employee shall be eligible for:
-
-(a) Health, dental, and vision insurance (Company pays [80]% of Employee premiums);
-(b) [15] days of paid vacation per year, accruing monthly, increasing to [20] days after three years;
-(c) [10] days of paid sick leave per year;
-(d) 401(k) plan with Company match of [4]% of eligible compensation;
-(e) $[2,500] annual professional development and learning stipend.
-
-## 5. At-Will Employment
-
-Employee's employment with the Company is at-will. Either party may terminate the employment relationship at any time, with or without cause or prior notice, subject to Section 6.
-
-## 6. Termination and Severance
-
-(a) **Termination for Cause by Company:** Immediate termination; no severance.
-(b) **Termination without Cause by Company:** [4] weeks written notice, or equivalent base salary in lieu thereof.
-(c) **Resignation by Employee:** [2] weeks written notice.
-
-## 7. Confidentiality and IP Assignment
-
-As a condition of employment, Employee agrees to execute the Company's standard Confidential Information and Invention Assignment Agreement ("CIIA").
-
-## 8. Non-Solicitation
-
-During the term of employment and for [12] months following termination, Employee shall not directly or indirectly solicit or induce any Company employee to leave the Company, or solicit any Company customer or client.
-
-## 9. Governing Law
-
-This Agreement is governed by the laws of **[STATE]**.
-
----
-
-**[COMPANY NAME]**
-
-By: _________________________ Name: _________________ Title: _____________ Date: _________
-
-**Employee Acknowledgment and Agreement:**
-
-Signature: _____________________ Printed Name: [EMPLOYEE FULL NAME] Date: _________`,
-
-consulting:`# CONSULTING AGREEMENT
-
-**Effective Date:** [DATE]
-**Client:** [CLIENT NAME], a [STATE] [ENTITY TYPE] ("Client")
-**Consultant:** [CONSULTANT NAME / COMPANY] ("Consultant")
-
----
-
-## 1. Services
-
-Consultant agrees to provide the consulting services described in the **Statement of Work** attached hereto as **Exhibit A** (the "Services"). The Services and all deliverables, milestones, and acceptance criteria are set forth in Exhibit A.
-
-## 2. Term
-
-This Agreement commences on **[START DATE]** and continues through **[END DATE]**, unless earlier terminated pursuant to Section 8.
-
-## 3. Compensation and Payment
-
-**Rate:** $[RATE] per [hour / day / project milestone]
-**Invoicing:** Consultant shall submit invoices [weekly / monthly] to [BILLING CONTACT / EMAIL]
-**Payment Terms:** Net [30] days from Client's receipt of undisputed invoice
-**Late Payment:** Overdue balances accrue interest at 1.5% per month (18% per annum)
-
-## 4. Expenses
-
-Reasonable, pre-approved, documented business expenses will be reimbursed by Client within [15] days of submission with supporting receipts.
-
-## 5. Independent Contractor Relationship
-
-Consultant is an independent contractor. Nothing in this Agreement creates an employer-employee, agency, joint venture, or partnership relationship. Consultant has no authority to bind Client to any obligation.
-
-## 6. Intellectual Property
-
-All work product, inventions, discoveries, developments, and deliverables created by Consultant in connection with the Services shall be deemed "work made for hire" and shall be owned exclusively by Client. To the extent any work product is not deemed work for hire by operation of law, Consultant hereby irrevocably assigns all rights, title, and interest thereto to Client.
-
-## 7. Confidentiality
-
-Consultant acknowledges that in the course of performing Services, Consultant may have access to Client's Confidential Information. Consultant agrees to: (a) hold all Confidential Information in strict confidence; (b) not disclose Confidential Information to any third party; (c) use Confidential Information solely to perform the Services.
-
-## 8. Termination
-
-Either party may terminate this Agreement upon [14] days written notice to the other party. Client may terminate immediately upon written notice for Consultant's material breach.
-
-## 9. Limitation of Liability
-
-IN NO EVENT SHALL EITHER PARTY BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES. EACH PARTY'S TOTAL LIABILITY SHALL NOT EXCEED FEES PAID IN THE [3] MONTHS PRECEDING THE CLAIM.
-
----
-
-**CLIENT:**
-By: _________________________ Name: _________________ Title: _____________ Date: _________
-
-**CONSULTANT:**
-By: _________________________ Name: _________________ Date: _________`,
-
-service:`# SERVICE AGREEMENT
-
-**Agreement Date:** [DATE]
-**Service Provider:** [PROVIDER NAME] ("Provider")
-**Client:** [CLIENT NAME] ("Client")
-
----
-
-## 1. Services
-
-Provider shall perform the professional services described in the **Statement of Work ("SOW")** attached as **Exhibit A**. Any changes to the SOW require a mutually executed Change Order per Section 5.
-
-## 2. Term
-
-This Agreement is effective as of **[START DATE]** and continues through **[END DATE]**, with automatic renewal for successive [12]-month terms unless either party provides [60] days written notice of non-renewal prior to the then-current term's expiration.
-
-## 3. Fees and Payment
-
-**Service Fee:** $[AMOUNT] per [month / quarter / project]
-**Invoicing:** Monthly in advance, issued on the 1st of each month
-**Payment Due:** Within [30] days of invoice receipt
-**Late Payment:** 1.5% per month on balances outstanding beyond a [10]-day grace period
-**Disputed Invoices:** Client must notify Provider in writing within [10] days of receipt
-
-## 4. Service Levels
-
-Provider shall meet the service levels set forth in **Exhibit B (SLA)**. Failure to meet applicable SLAs entitles Client to service credits as specified in Exhibit B, as Client's sole and exclusive remedy for SLA failures.
-
-## 5. Change Orders
-
-Any modification to the scope, timeline, or fees requires a written Change Order signed by authorized representatives of both parties prior to implementation.
-
-## 6. Intellectual Property
-
-Pre-existing IP owned by either party remains the property of that party. Client-specific deliverables created and paid for under this Agreement shall be owned by Client upon receipt of full payment.
-
-## 7. Termination
-
-(a) **For Cause:** Either party may terminate upon [30] days written notice if a material breach remains uncured.
-(b) **For Convenience:** Client may terminate upon [60] days written notice; Client shall pay fees through the effective termination date.
-(c) **Data Return:** Provider shall deliver all Client data within [10] business days of any termination.
-
-## 8. Limitation of Liability
-
-Provider's aggregate liability under this Agreement shall not exceed fees paid by Client in the [3] months immediately preceding the event giving rise to liability.
-
----
-
-**PROVIDER:** _________________________ Date: _________
-
-**CLIENT:** ___________________________ Date: _________`,
-
-partnership:`# GENERAL PARTNERSHIP AGREEMENT
-
-**Effective Date:** [DATE]
-**Partners:**
-1. [PARTNER 1 NAME], an individual residing at [ADDRESS] ("Partner 1")
-2. [PARTNER 2 NAME], an individual residing at [ADDRESS] ("Partner 2")
-
----
-
-## 1. Formation
-
-The Partners hereby form a general partnership (the "Partnership") under and pursuant to the laws of the State of **[STATE]**.
-
-## 2. Business Name
-
-The Partnership shall conduct business under the name **[BUSINESS NAME]**.
-
-## 3. Principal Place of Business
-
-The Partnership's principal place of business shall be located at **[ADDRESS]**.
-
-## 4. Purpose
-
-The Partnership is formed for the purpose of: **[DESCRIBE BUSINESS PURPOSE AND ACTIVITIES]**, and any other lawful activities mutually agreed upon by the Partners.
-
-## 5. Capital Contributions
-
-| Partner | Initial Contribution | Ownership Percentage |
-|---------|---------------------|---------------------|
-| Partner 1 | $[AMOUNT] | [X]% |
-| Partner 2 | $[AMOUNT] | [Y]% |
-
-Additional capital contributions shall require unanimous written consent of all Partners.
-
-## 6. Profits and Losses
-
-Partnership profits and losses shall be allocated among the Partners in proportion to their respective Ownership Percentages as set forth above.
-
-## 7. Management and Decision-Making
-
-Each Partner shall have equal management rights. The following decisions require unanimous written consent of all Partners: (a) amendments to this Agreement; (b) admission of new partners; (c) individual transactions exceeding $[THRESHOLD]; (d) sale of all or substantially all Partnership assets; (e) dissolution of the Partnership.
-
-## 8. Partner Compensation
-
-Partners may receive a management salary of $[AMOUNT] per year, subject to unanimous approval. Distributions from available cash flow shall be made [quarterly] in proportion to Ownership Percentages.
-
-## 9. Books, Records, and Accounting
-
-The Partnership shall maintain complete and accurate books and records. Books shall be maintained on a [cash / accrual] basis with a fiscal year ending December 31. Each Partner shall have access to all Partnership books and records.
-
-## 10. Partner Withdrawal and Buyout
-
-A withdrawing Partner shall provide [90] days written notice. Remaining Partners shall have the right of first refusal to purchase the withdrawing Partner's interest at fair market value as determined by a mutually agreed independent appraiser.
-
-## 11. Dissolution
-
-The Partnership shall be dissolved upon: (a) unanimous written consent of all Partners; (b) death, incapacity, or withdrawal of a Partner without succession; (c) judicial decree of dissolution.
-
----
-
-**PARTNER 1:**
-Signature: _____________________ Name: [PARTNER 1 NAME] Date: _________
-
-**PARTNER 2:**
-Signature: _____________________ Name: [PARTNER 2 NAME] Date: _________`,
-
-licensing:`# SOFTWARE LICENSE AGREEMENT
-
-**Effective Date:** [DATE]
-**Licensor:** [LICENSOR NAME], a [STATE] [ENTITY TYPE] ("Licensor")
-**Licensee:** [LICENSEE NAME], a [STATE] [ENTITY TYPE] ("Licensee")
-
----
-
-## 1. Grant of License
-
-Subject to the terms and conditions of this Agreement, Licensor hereby grants to Licensee a **[non-exclusive / exclusive]**, non-transferable, non-sublicensable license to install and use the software product known as **[SOFTWARE NAME]**, including all associated documentation (collectively, the "Software"), solely for **[PERMITTED USE / PURPOSE]** during the Term.
-
-## 2. License Restrictions
-
-Licensee shall NOT, directly or indirectly:
-
-(a) Sublicense, sell, resell, rent, lease, transfer, assign, or otherwise dispose of the Software or any rights therein;
-(b) Reverse engineer, decompile, disassemble, or attempt to derive the source code of the Software;
-(c) Modify, translate, adapt, or create derivative works based on the Software;
-(d) Remove, obscure, or alter any proprietary rights notices or labels on the Software;
-(e) Use the Software to develop a competing product or service;
-(f) Use the Software in any manner that violates applicable laws or regulations.
-
-## 3. License Fees
-
-**Annual License Fee:** $[AMOUNT] per [user seat / deployment / organization]
-**Payment:** Due annually in advance, non-refundable
-
-## 4. Term and Renewal
-
-This Agreement is effective for an initial term of **[1] year** and shall automatically renew for successive [1]-year terms unless either party provides [30] days written notice of non-renewal prior to the expiration of the then-current term.
-
-## 5. Ownership
-
-The Software and all copies thereof, including all intellectual property rights therein, are and shall remain the exclusive property of Licensor. No title or ownership rights are transferred to Licensee under this Agreement.
-
-## 6. Updates and Support
-
-Licensor shall provide [Standard / Premium] support as described in the Support Addendum attached hereto. Major version upgrades may require additional licensing fees.
-
-## 7. Disclaimer of Warranties
-
-THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NONINFRINGEMENT.
-
-## 8. Termination
-
-Either party may terminate this Agreement upon [30] days written notice if the other party materially breaches this Agreement and fails to cure such breach within such notice period. Upon termination, Licensee must immediately uninstall and destroy all copies of the Software.
-
----
-
-**LICENSOR:**
-By: _________________________ Name: _________________ Title: _____________ Date: _________
-
-**LICENSEE:**
-By: _________________________ Name: _________________ Title: _____________ Date: _________`,
-
-contractor:`# INDEPENDENT CONTRACTOR AGREEMENT
-
-**Date:** [DATE]
-**Company:** [COMPANY NAME], a [STATE] [ENTITY TYPE] ("Company")
-**Contractor:** [CONTRACTOR NAME / ENTITY] ("Contractor")
-
----
-
-## 1. Services
-
-Contractor agrees to provide the services described in **Schedule A** attached hereto (the "Services"). Contractor shall perform the Services in a professional and workmanlike manner consistent with industry standards.
-
-## 2. Compensation
-
-**Rate:** $[AMOUNT] per [hour / project / milestone]
-**Invoicing:** Contractor shall submit invoices [bi-weekly / monthly] to [CONTACT / EMAIL]
-**Payment:** Company shall pay undisputed invoices within [15] business days of receipt
-
-## 3. Independent Contractor Status
-
-Contractor's relationship with Company is that of an independent contractor. Nothing in this Agreement shall be construed to create an employer-employee, agency, joint venture, or partnership relationship. Contractor shall have no authority to bind Company to any obligation, contract, or commitment.
-
-## 4. No Employee Benefits
-
-As an independent contractor, Contractor is NOT entitled to and shall not receive any employee benefits from Company, including but not limited to: health, dental, or vision insurance; vacation, sick, or holiday pay; workers' compensation; retirement benefits; or participation in any Company employee benefit plan or program.
-
-## 5. Taxes and Withholding
-
-Contractor is solely responsible for all applicable federal, state, and local taxes, including self-employment taxes, arising from compensation received under this Agreement. Company will not withhold any taxes from amounts paid to Contractor. Company shall issue IRS Form 1099-NEC for all payments as required by applicable law.
-
-## 6. Work Product and Intellectual Property
-
-All work product, deliverables, inventions, and developments created by Contractor in connection with the Services shall constitute "work made for hire" owned exclusively by Company. To the extent any work product does not qualify as work for hire, Contractor hereby irrevocably assigns all rights, title, and interest therein to Company.
-
-## 7. Confidentiality
-
-Contractor acknowledges access to Company Confidential Information and agrees to: (a) maintain strict confidentiality; (b) not disclose to any third party; (c) use solely to perform the Services; (d) return or destroy upon request.
-
-## 8. Non-Solicitation
-
-For a period of [6] months following termination of this Agreement, Contractor shall not directly or indirectly solicit, hire, or engage any Company employee, contractor, or customer with whom Contractor had contact during the engagement.
-
-## 9. Term and Termination
-
-Either party may terminate this Agreement upon [7] days written notice. Company may terminate immediately for Contractor's material breach.
-
----
-
-**COMPANY:**
-By: _________________________ Name: _________________ Title: _____________ Date: _________
-
-**CONTRACTOR:**
-Signature: _____________________ Name: _________________ Date: _________`,
-
-loi:`# LETTER OF INTENT
-
-**Date:** [DATE]
-**To:** [TARGET COMPANY NAME]
-**From:** [ACQUIRER / SENDER NAME]
-**Re:** Proposed [Acquisition / Investment / Transaction] — [DEAL DESCRIPTION]
-
----
-
-Dear [RECIPIENT NAME],
-
-This Letter of Intent ("LOI") sets forth the principal terms and conditions under which **[ACQUIRER]** ("Buyer") proposes to acquire **[TARGET]** ("Seller"). This LOI is intended to facilitate the negotiation of a definitive agreement and is non-binding except where expressly stated otherwise below.
-
----
-
-## 1. Transaction Structure
-
-Buyer proposes to acquire [100% / XX%] of the outstanding equity interests of Seller through a [stock purchase / asset purchase / merger] (the "Transaction").
-
-## 2. Consideration
-
-**Total Purchase Price:** $[AMOUNT]
-
-- $[AMOUNT] in cash at closing ([X]% of total);
-- $[AMOUNT] in seller notes, payable over [X] years at [X]% interest per annum; and
-- $[AMOUNT] in earnout consideration, contingent on [REVENUE / EBITDA / other] targets over [X] years post-closing.
-
-## 3. Conditions to Closing
-
-The Transaction is conditioned upon: (a) satisfactory completion of legal, financial, tax, and operational due diligence; (b) negotiation and execution of a definitive purchase agreement and all ancillary transaction documents; (c) receipt of all required third-party and regulatory consents and approvals; and (d) no material adverse change in Seller's business, assets, financial condition, or results of operations.
-
-## 4. Representations and Warranties
-
-Seller will provide customary representations and warranties in the definitive agreement. Indemnification for breaches shall be capped at [X]% of the purchase price and shall survive for [12] months post-closing.
-
-## 5. Due Diligence
-
-Buyer requires **[45] calendar days** following execution of this LOI to complete its due diligence review. Seller shall provide Buyer and its advisors with reasonable access to books, records, facilities, and key personnel.
-
-## 6. Exclusivity *[BINDING]*
-
-For **[45] calendar days** following execution of this LOI, Seller and its representatives shall not, directly or indirectly, solicit, initiate, encourage, facilitate, or participate in discussions or negotiations with any other party regarding any acquisition, merger, recapitalization, or similar transaction involving Seller.
-
-## 7. Confidentiality *[BINDING]*
-
-Each party shall keep strictly confidential the existence and contents of this LOI and all related discussions, negotiations, and due diligence materials. The parties' existing Confidentiality Agreement, dated [DATE], is hereby incorporated by reference.
-
-## 8. Transaction Expenses
-
-Each party shall bear its own legal fees, advisory fees, and other transaction expenses. [If applicable: A break-up fee of $[AMOUNT] shall be payable by [party] if [condition].]
-
-## 9. Non-Binding Nature
-
-Except for Sections 6 (Exclusivity), 7 (Confidentiality), and 8 (Transaction Expenses), which are intended to be legally binding, **this LOI does not constitute a legally binding obligation** on either party and is subject to the negotiation, execution, and delivery of a mutually acceptable definitive agreement.
-
----
-
-Please execute this LOI where indicated below to confirm your agreement with the foregoing.
-
-**[ACQUIRER / SENDER]:**
-By: _________________________ Name: _________________ Title: _____________ Date: _________
-
-**ACCEPTED AND AGREED:**
-By: _________________________ Name: _________________ Title: _____________ Date: _________`,
-};
-
-const CAT_GROUPS = [
-  {label:"Agreements",   cats:["nda","service","consulting","licensing"] as DocCategory[]},
-  {label:"Corporate",    cats:["termsheet","partnership","loi"] as DocCategory[]},
-  {label:"Employment",   cats:["employment","contractor"] as DocCategory[]},
-];
-
-const DEMO_DOCS: ContractDoc[] = [
-  {
-    id:"doc-001", title:"Acme Corp — Mutual NDA", category:"nda", status:"sent",
-    created:"Apr 25, 2026", updated:"Apr 28, 2026",
-    signers:[
-      {id:"s1",name:"Brian Bradley",email:"bribradley@gmail.com",role:"Disclosing Party",status:"signed",color:"#4C6EF5",signedAt:"Apr 28, 2026"},
-      {id:"s2",name:"Sarah Chen",email:"sarah@acme.com",role:"Receiving Party",status:"pending",color:"#12B886"},
-    ],
-    content:TEMPLATES.nda,
-  },
-  {
-    id:"doc-002", title:"Series A Term Sheet", category:"termsheet", status:"draft",
-    created:"Apr 27, 2026", updated:"Apr 30, 2026",
-    signers:[], content:TEMPLATES.termsheet,
-  },
-  {
-    id:"doc-003", title:"Senior Engineer Offer Letter", category:"employment", status:"completed",
-    created:"Apr 20, 2026", updated:"Apr 22, 2026",
-    signers:[
-      {id:"s3",name:"Brian Bradley",email:"bribradley@gmail.com",role:"Employer",status:"signed",color:"#4C6EF5",signedAt:"Apr 22, 2026",signature:"Brian Bradley"},
-      {id:"s4",name:"Alex Rivera",email:"alex@example.com",role:"Employee",status:"signed",color:"#F59F00",signedAt:"Apr 22, 2026",signature:"Alex Rivera"},
-    ],
-    content:TEMPLATES.employment,
-  },
-  {
-    id:"doc-004", title:"Design Agency Consulting Agreement", category:"consulting", status:"draft",
-    created:"Apr 29, 2026", updated:"Apr 30, 2026",
-    signers:[], content:TEMPLATES.consulting,
-  },
-];
-
-// ── Markdown renderer — white paper aesthetic ──────────────────────────────
-function renderDoc(content: string) {
-  return content.split("\n").map((line, i) => {
-    if (line.startsWith("# "))
-      return <h1 key={i} style={{fontFamily:"var(--serif)",fontSize:19,fontWeight:400,letterSpacing:"-0.01em",textAlign:"center",color:"#111827",margin:"0 0 36px",lineHeight:1.3}}>{line.slice(2)}</h1>;
-    if (line.startsWith("## "))
-      return <h2 key={i} style={{fontFamily:"var(--sans)",fontSize:9.5,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"#6B7280",margin:"36px 0 14px",paddingBottom:8,borderBottom:"1px solid #E5E7EB"}}>{line.slice(3)}</h2>;
-    if (line.startsWith("---"))
-      return <hr key={i} style={{border:"none",borderTop:"1px solid #E5E7EB",margin:"28px 0"}}/>;
-    if (line.startsWith("| "))
-      return <div key={i} style={{fontFamily:"var(--mono)",fontSize:11.5,color:"#374151",marginBottom:2,lineHeight:1.7,borderBottom:"1px solid #F3F4F6",paddingBottom:2}}>{line}</div>;
-    if (/^\(([a-d])\)/.test(line))
-      return <div key={i} style={{fontFamily:"var(--serif)",fontSize:13.5,color:"#374151",marginBottom:6,paddingLeft:20,lineHeight:1.75}}>{line}</div>;
-    if (line.startsWith("- "))
-      return <div key={i} style={{fontFamily:"var(--serif)",fontSize:13.5,color:"#374151",marginBottom:5,paddingLeft:16,lineHeight:1.75,display:"flex",gap:10}}><span style={{color:"#9CA3AF",flexShrink:0}}>—</span><span>{line.slice(2)}</span></div>;
-    if (line.trim()==="") return <div key={i} style={{height:10}}/>;
-    const bold = line.split(/(\*\*[^*]+\*\*)/).map((p,j)=>
-      p.startsWith("**")&&p.endsWith("**")
-        ? <strong key={j} style={{color:"#111827",fontWeight:600}}>{p.slice(2,-2)}</strong>
-        : p.startsWith("*")&&p.endsWith("*")&&p.length>2
-          ? <em key={j} style={{color:"#4B5563"}}>{p.slice(1,-1)}</em>
-          : p
-    );
-    return <p key={i} style={{fontFamily:"var(--serif)",fontSize:13.5,color:"#374151",lineHeight:1.8,margin:"0 0 6px"}}>{bold}</p>;
-  });
+// ── Seed docs ────────────────────────────────────────────────────────────────
+function makeSeed(): ContractDoc[] {
+  const now = new Date().toISOString();
+  return (Object.keys(TEMPLATES) as Exclude<DocCategory, "custom">[]).map((cat) => ({
+    id: `seed-${cat}`,
+    name: CAT_META[cat].label,
+    category: cat,
+    status: "draft" as DocStatus,
+    content: TEMPLATES[cat],
+    createdAt: now,
+    updatedAt: now,
+    signers: [],
+  }));
 }
 
-export default function ContractLabPage() {
-  const [docs, setDocs] = useState<ContractDoc[]>(DEMO_DOCS);
-  const [selectedId, setSelectedId] = useState("doc-001");
-  const [rightTab, setRightTab] = useState<RightTab>("sign");
-  const [showRight, setShowRight] = useState(true);
-  const [catFilter, setCatFilter] = useState<DocCategory|"all">("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [search, setSearch] = useState("");
-  const [showSigModal, setShowSigModal] = useState(false);
-  const [sigMode, setSigMode] = useState<SignMode>("draw");
-  const [typedSig, setTypedSig] = useState("");
-  const [activeSigner, setActiveSigner] = useState<string|null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasDrawing, setHasDrawing] = useState(false);
-  const [showNewDoc, setShowNewDoc] = useState(false);
-  const [newDocCat, setNewDocCat] = useState<DocCategory>("nda");
-  const [newDocTitle, setNewDocTitle] = useState("");
-  const [newSignerName, setNewSignerName] = useState("");
-  const [newSignerEmail, setNewSignerEmail] = useState("");
-  const [newSignerRole, setNewSignerRole] = useState("");
-  const [emailSubject, setEmailSubject] = useState("");
-  const [emailMsg, setEmailMsg] = useState("");
-  const [emailSent, setEmailSent] = useState(false);
-  const [exportMsg, setExportMsg] = useState("");
+function load(): ContractDoc[] {
+  if (typeof window === "undefined") return makeSeed();
+  try {
+    const s = localStorage.getItem("contractlab-docs-v4");
+    return s ? JSON.parse(s) : makeSeed();
+  } catch { return makeSeed(); }
+}
+
+function save(docs: ContractDoc[]) {
+  try { localStorage.setItem("contractlab-docs-v4", JSON.stringify(docs)); } catch {}
+}
+
+// ── Status colours ───────────────────────────────────────────────────────────
+const STATUS_COLOR: Record<DocStatus, string> = {
+  draft:    "#94A3B8",
+  review:   "#F0B429",
+  signed:   "#2ECC71",
+  archived: "#64748B",
+};
+
+// ── Component ────────────────────────────────────────────────────────────────
+export default function ContractLab() {
+  const [docs, setDocs]               = useState<ContractDoc[]>([]);
+  const [selectedId, setSelectedId]   = useState<string>("");
+  const [catFilter, setCatFilter]     = useState<DocCategory | "all">("all");
+  const [statusFilter, setStatus]     = useState<StatusFilter>("all");
+  const [rightTab, setRightTab]       = useState<RightTab>("signers");
+  const [showRight, setShowRight]     = useState(true);
+  const [showSigModal, setShowSig]    = useState(false);
+  const [showNewDoc, setShowNewDoc]   = useState(false);
+  const [showUpload, setShowUpload]   = useState(false);
+  const [sigMode, setSigMode]         = useState<SignMode>("draw");
+  const [typedSig, setTypedSig]       = useState("");
+  const [signerName, setSignerName]   = useState("");
+  const [signerEmail, setSignerEmail] = useState("");
+  const [emailTo, setEmailTo]         = useState("");
+  const [editMode, setEditMode]       = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [savingToGH, setSavingToGH]   = useState(false);
+  const [ghStatus, setGhStatus]       = useState("");
+  const [ghConfigured, setGhConfigured] = useState(true);
+
+  // Upload modal state
+  const [uploadTab, setUploadTab]     = useState<"computer" | "github">("computer");
+  const [uploadName, setUploadName]   = useState("");
+  const [uploadContent, setUploadContent] = useState("");
+  const [uploadGHUrl, setUploadGHUrl] = useState("");
+  const [uploadLoading, setUploadLoading] = useState(false);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing   = useRef(false);
 
-  const selected = docs.find(d=>d.id===selectedId) ?? docs[0];
+  // Load docs + fetch GitHub-saved docs
+  useEffect(() => {
+    const local = load();
+    setDocs(local);
+    if (local.length) setSelectedId(local[0].id);
 
-  useEffect(()=>{try{const s=localStorage.getItem("cl_docs_v2");if(s)setDocs(JSON.parse(s));}catch{}},[]);
-  useEffect(()=>{try{localStorage.setItem("cl_docs_v2",JSON.stringify(docs));}catch{};},[docs]);
-  useEffect(()=>{
-    if(selected){setEmailSubject(`Signature required: ${selected.title}`);setEmailMsg(`Hi,\n\nPlease review and sign the following document:\n\n"${selected.title}"\n\nThank you.`);}
-  },[selectedId]);
+    // Fetch GitHub-stored custom docs
+    fetch("/api/contracts")
+      .then(r => r.json())
+      .then((data: { files?: { name: string; path: string; sha: string; content: string }[]; configured?: boolean }) => {
+        if (data.configured === false) { setGhConfigured(false); return; }
+        if (!data.files?.length) return;
+        setDocs(prev => {
+          const next = [...prev];
+          for (const f of data.files!) {
+            const existing = next.find(d => d.githubPath === f.path);
+            if (existing) {
+              existing.content = f.content;
+              existing.githubSha = f.sha;
+            } else {
+              next.push({
+                id: `gh-${f.name}`,
+                name: f.name.replace(/\.(md|txt)$/, ""),
+                category: "custom",
+                status: "draft",
+                content: f.content,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                signers: [],
+                githubPath: f.path,
+                githubSha: f.sha,
+              });
+            }
+          }
+          save(next);
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, []);
 
-  const startDraw = useCallback((e:React.MouseEvent<HTMLCanvasElement>)=>{
-    const c=canvasRef.current;if(!c)return;
-    const ctx=c.getContext("2d");if(!ctx)return;
-    setIsDrawing(true);setHasDrawing(true);
-    const r=c.getBoundingClientRect();
-    ctx.beginPath();ctx.moveTo(e.clientX-r.left,e.clientY-r.top);
-  },[]);
-  const draw = useCallback((e:React.MouseEvent<HTMLCanvasElement>)=>{
-    if(!isDrawing)return;
-    const c=canvasRef.current;if(!c)return;
-    const ctx=c.getContext("2d");if(!ctx)return;
-    const r=c.getBoundingClientRect();
-    ctx.lineTo(e.clientX-r.left,e.clientY-r.top);
-    ctx.strokeStyle="#111827";ctx.lineWidth=1.8;ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();
-  },[isDrawing]);
-  const endDraw = useCallback(()=>setIsDrawing(false),[]);
-  const clearCanvas = ()=>{
-    const c=canvasRef.current;if(!c)return;
-    c.getContext("2d")?.clearRect(0,0,c.width,c.height);
-    setHasDrawing(false);
-  };
+  const selected = docs.find(d => d.id === selectedId);
 
-  const applySignature = ()=>{
-    if(!activeSigner||!selected)return;
-    const sigValue=sigMode==="draw"?(canvasRef.current?.toDataURL()||""):typedSig;
-    setDocs(prev=>prev.map(d=>d.id!==selected.id?d:{
-      ...d,
-      signers:d.signers.map(s=>s.id!==activeSigner?s:{...s,status:"signed" as SignerStatus,signature:sigValue,signedAt:"Apr 30, 2026"}),
-      status:d.signers.filter(s=>s.id!==activeSigner).every(s=>s.status==="signed")?"completed":"sent" as DocStatus,
-    }));
-    setShowSigModal(false);setActiveSigner(null);setHasDrawing(false);setTypedSig("");
-  };
-
-  const addSigner = ()=>{
-    if(!newSignerName||!newSignerEmail||!selected)return;
-    const idx=selected.signers.length;
-    setDocs(prev=>prev.map(d=>d.id!==selected.id?d:{
-      ...d,signers:[...d.signers,{id:`s-${Date.now()}`,name:newSignerName,email:newSignerEmail,role:newSignerRole||"Signer",status:"pending",color:SIGNER_COLORS[idx%SIGNER_COLORS.length]}],
-    }));
-    setNewSignerName("");setNewSignerEmail("");setNewSignerRole("");
-  };
-
-  const removeSigner=(sid:string)=>{if(!selected)return;setDocs(prev=>prev.map(d=>d.id!==selected.id?d:{...d,signers:d.signers.filter(s=>s.id!==sid)}));};
-
-  const sendForSigning=()=>{
-    if(!selected||selected.signers.length===0)return;
-    setDocs(prev=>prev.map(d=>d.id!==selected.id?d:{...d,status:"sent"}));
-    setEmailSent(true);setTimeout(()=>setEmailSent(false),3500);
-  };
-
-  const createDoc=()=>{
-    if(!newDocTitle)return;
-    const doc:ContractDoc={id:`doc-${Date.now()}`,title:newDocTitle,category:newDocCat,status:"draft",created:"Apr 30, 2026",updated:"Apr 30, 2026",signers:[],content:TEMPLATES[newDocCat]};
-    setDocs(prev=>[...prev,doc]);setSelectedId(doc.id);setShowNewDoc(false);setNewDocTitle("");
-  };
-
-  const deleteDoc=(id:string)=>{setDocs(prev=>prev.filter(d=>d.id!==id));if(selectedId===id){const r=docs.filter(d=>d.id!==id);if(r.length)setSelectedId(r[0].id);}};
-
-  const flash=(msg:string)=>{setExportMsg(msg);setTimeout(()=>setExportMsg(""),3500);};
-  const exportMd=()=>{if(!selected)return;const b=new Blob([selected.content],{type:"text/markdown"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`${selected.title}.md`;a.click();flash("Markdown downloaded");};
-  const exportTxt=()=>{if(!selected)return;const b=new Blob([selected.content.replace(/#{1,6}\s/g,"").replace(/\*\*/g,"")],{type:"text/plain"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`${selected.title}.txt`;a.click();flash("Plain text downloaded");};
-  const exportPdf=()=>{window.print();flash("Print dialog opened");};
-  const exportGoogleDocs=()=>{window.open("https://docs.google.com/document/create","_blank");flash("Opened Google Docs");};
-
-  const filteredDocs=docs.filter(d=>{
-    const mc=catFilter==="all"||d.category===catFilter;
-    const ms=statusFilter==="all"||d.status===statusFilter;
-    const mq=!search||d.title.toLowerCase().includes(search.toLowerCase());
-    return mc&&ms&&mq;
+  const visible = docs.filter(d => {
+    if (catFilter !== "all" && d.category !== catFilter) return false;
+    if (statusFilter !== "all" && d.status !== statusFilter) return false;
+    return true;
   });
 
-  const tmeta=CAT_META[selected?.category??"nda"];
-  const smeta=STATUS_META[selected?.status??"draft"];
-  const canSign=sigMode==="draw"?hasDrawing:typedSig.trim().length>0;
-  const signedCount=selected?.signers.filter(s=>s.status==="signed").length??0;
+  function updateDoc(id: string, patch: Partial<ContractDoc>) {
+    setDocs(prev => {
+      const next = prev.map(d => d.id === id ? { ...d, ...patch, updatedAt: new Date().toISOString() } : d);
+      save(next);
+      return next;
+    });
+  }
 
-  const inp:React.CSSProperties={width:"100%",padding:"8px 11px",borderRadius:6,background:"var(--surface-2)",border:"1px solid var(--line-strong)",color:"var(--text)",fontSize:12,fontFamily:"var(--sans)",outline:"none",boxSizing:"border-box"};
+  function addDoc(doc: ContractDoc) {
+    setDocs(prev => { const next = [doc, ...prev]; save(next); return next; });
+    setSelectedId(doc.id);
+  }
+
+  function deleteDoc(id: string) {
+    setDocs(prev => { const next = prev.filter(d => d.id !== id); save(next); return next; });
+    setSelectedId(docs.find(d => d.id !== id)?.id ?? "");
+  }
+
+  // ── Signature canvas ─────────────────────────────────────────────────────
+  function startDraw(e: React.MouseEvent<HTMLCanvasElement>) {
+    drawing.current = true;
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    const r = canvasRef.current!.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - r.left, e.clientY - r.top);
+  }
+  function doDraw(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (!drawing.current) return;
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    const r = canvasRef.current!.getBoundingClientRect();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#E2E8F0";
+    ctx.lineTo(e.clientX - r.left, e.clientY - r.top);
+    ctx.stroke();
+  }
+  function stopDraw() { drawing.current = false; }
+  function clearCanvas() {
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx || !canvasRef.current) return;
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+  }
+
+  function applySignature() {
+    if (!selected) return;
+    const newSigner: Signer = {
+      id: Date.now().toString(),
+      name: signerName || "Unknown",
+      email: signerEmail || "",
+      status: "signed",
+      signedAt: new Date().toISOString(),
+    };
+    updateDoc(selected.id, {
+      signers: [...selected.signers, newSigner],
+      status: "signed",
+    });
+    setShowSig(false);
+    setSignerName("");
+    setSignerEmail("");
+    clearCanvas();
+    setTypedSig("");
+  }
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  function exportPDF() { window.print(); }
+
+  function exportMD() {
+    if (!selected) return;
+    const blob = new Blob([selected.content], { type: "text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${selected.name}.md`;
+    a.click();
+  }
+
+  function exportTXT() {
+    if (!selected) return;
+    const blob = new Blob([selected.content], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${selected.name}.txt`;
+    a.click();
+  }
+
+  // ── Save to GitHub ────────────────────────────────────────────────────────
+  async function saveToGitHub() {
+    if (!selected) return;
+    setSavingToGH(true);
+    setGhStatus("");
+    try {
+      const filename = selected.name.replace(/[^a-zA-Z0-9_-]/g, "_") + ".md";
+      const res = await fetch("/api/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename, content: selected.content, sha: selected.githubSha }),
+      });
+      const data = await res.json() as { sha?: string; path?: string; error?: string };
+      if (data.error) { setGhStatus(`Error: ${data.error}`); return; }
+      updateDoc(selected.id, { githubSha: data.sha, githubPath: data.path });
+      setGhStatus("Saved to GitHub");
+    } catch (e) {
+      setGhStatus("Network error");
+    } finally {
+      setSavingToGH(false);
+      setTimeout(() => setGhStatus(""), 3000);
+    }
+  }
+
+  // ── Upload handlers ───────────────────────────────────────────────────────
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!uploadName) setUploadName(file.name.replace(/\.(md|txt)$/, ""));
+    const reader = new FileReader();
+    reader.onload = ev => setUploadContent(ev.target?.result as string ?? "");
+    reader.readAsText(file);
+  }
+
+  async function fetchGHUrl() {
+    if (!uploadGHUrl) return;
+    setUploadLoading(true);
+    try {
+      let url = uploadGHUrl;
+      if (url.includes("github.com") && !url.includes("raw.githubusercontent.com")) {
+        url = url
+          .replace("github.com", "raw.githubusercontent.com")
+          .replace("/blob/", "/");
+      }
+      const r = await fetch(url);
+      const text = await r.text();
+      setUploadContent(text);
+      if (!uploadName) {
+        const parts = url.split("/");
+        setUploadName(parts[parts.length - 1].replace(/\.(md|txt)$/, ""));
+      }
+    } catch {
+      alert("Failed to fetch file. Make sure the URL is a public raw GitHub URL.");
+    } finally {
+      setUploadLoading(false);
+    }
+  }
+
+  function confirmUpload() {
+    if (!uploadName || !uploadContent) return;
+    const doc: ContractDoc = {
+      id: `custom-${Date.now()}`,
+      name: uploadName,
+      category: "custom",
+      status: "draft",
+      content: uploadContent,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      signers: [],
+    };
+    addDoc(doc);
+    setShowUpload(false);
+    setUploadName("");
+    setUploadContent("");
+    setUploadGHUrl("");
+    setUploadTab("computer");
+    setCatFilter("custom");
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  const bg        = "#1C2127";
+  const surf1     = "#252A31";
+  const surf2     = "#2F343C";
+  const surf3     = "#383E47";
+  const line      = "rgba(255,255,255,0.08)";
+  const lineStr   = "rgba(255,255,255,0.14)";
+  const text1     = "#E2E8F0";
+  const text2     = "#94A3B8";
+  const text3     = "#64748B";
+  const accent    = "#2D72D2";
+  const mono      = "'JetBrains Mono', 'SF Mono', monospace";
+  const serif     = "'Newsreader', 'Georgia', serif";
+  const sans      = "'Inter Tight', 'Inter', system-ui, sans-serif";
 
   return (
-    <div style={{display:"flex",flexDirection:"column",height:"100vh",background:"var(--bg)",color:"var(--text)",fontFamily:"var(--sans)",overflow:"hidden"}}>
+    <div style={{ display: "flex", height: "100vh", background: bg, color: text1, fontFamily: sans, overflow: "hidden" }}>
 
-      {/* ── Top bar ── */}
-      <header style={{display:"flex",alignItems:"center",gap:0,height:48,borderBottom:"1px solid var(--line)",background:"var(--surface-1)",flexShrink:0,zIndex:10}}>
-        {/* Brand */}
-        <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 20px",height:"100%",borderRight:"1px solid var(--line)"}}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <rect x="1" y="1" width="16" height="16" rx="3" stroke="var(--accent)" strokeWidth="1.3"/>
-            <path d="M5 6h8M5 9h8M5 12h5" stroke="var(--accent)" strokeWidth="1.3" strokeLinecap="round"/>
-          </svg>
-          <span style={{fontFamily:"var(--sans)",fontSize:13,fontWeight:600,letterSpacing:"-0.01em"}}>ContractLab</span>
+      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+      <aside style={{ width: 228, background: surf1, borderRight: `1px solid ${line}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        <div style={{ padding: "20px 16px 12px", borderBottom: `1px solid ${line}` }}>
+          <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.12em", color: text3, textTransform: "uppercase", marginBottom: 8 }}>CONTRACT LAB</div>
+          <button
+            onClick={() => setShowNewDoc(true)}
+            style={{ width: "100%", padding: "7px 0", background: accent, color: "#fff", border: "none", borderRadius: 4, fontFamily: mono, fontSize: 11, letterSpacing: "0.06em", cursor: "pointer" }}
+          >+ NEW DOCUMENT</button>
         </div>
-        {/* Breadcrumb */}
-        <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 16px",fontFamily:"var(--mono)",fontSize:11,color:"var(--text-4)",letterSpacing:"0.03em"}}>
-          <span>Documents</span>
-          {selected&&<><span style={{opacity:0.4}}>/</span><span style={{color:"var(--text-3)"}}>{selected.title}</span></>}
-        </div>
-        <div style={{flex:1}}/>
-        {/* Status pill */}
-        {selected&&(
-          <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:4,background:smeta.bg,border:`1px solid ${smeta.color}30`,marginRight:12}}>
-            <span style={{width:5,height:5,borderRadius:"50%",background:smeta.color,flexShrink:0}}/>
-            <span style={{fontFamily:"var(--mono)",fontSize:10.5,color:smeta.color,fontWeight:500,letterSpacing:"0.04em"}}>{smeta.label.toUpperCase()}</span>
-          </div>
-        )}
-        {/* Signer avatars */}
-        {selected?.signers.length>0&&(
-          <div style={{display:"flex",alignItems:"center",gap:4,marginRight:12}}>
-            {selected.signers.map(s=>(
-              <div key={s.id} title={`${s.name} — ${SIGNER_STATUS[s.status].label}`}
-                style={{width:26,height:26,borderRadius:"50%",background:`${s.color}22`,border:`1.5px solid ${s.status==="signed"?s.color:"var(--line-strong)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:s.color,cursor:"default",fontFamily:"var(--sans)"}}>
-                {s.name.charAt(0)}
-              </div>
-            ))}
-            <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--text-4)",marginLeft:4}}>{signedCount}/{selected.signers.length}</span>
-          </div>
-        )}
-        <button onClick={()=>setShowNewDoc(true)} style={{display:"flex",alignItems:"center",gap:7,height:"100%",padding:"0 18px",background:"var(--accent)",border:"none",borderLeft:"1px solid rgba(255,255,255,0.1)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"var(--sans)",letterSpacing:"-0.01em"}}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-          New Document
-        </button>
-      </header>
 
-      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-
-        {/* ── Left sidebar ── */}
-        <aside style={{width:228,background:"var(--surface-1)",borderRight:"1px solid var(--line)",display:"flex",flexDirection:"column",flexShrink:0,overflow:"hidden"}}>
-          {/* Search */}
-          <div style={{padding:"12px 12px 0"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,background:"var(--surface-2)",border:"1px solid var(--line-strong)",borderRadius:6,padding:"7px 10px"}}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{flexShrink:0,color:"var(--text-4)"}}>
-                <circle cx="5.5" cy="5.5" r="3.5" stroke="currentColor" strokeWidth="1.2"/>
-                <path d="M8.5 8.5L11 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              </svg>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
-                style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:12,color:"var(--text)",fontFamily:"var(--sans)"}}/>
-            </div>
-          </div>
-          {/* Status filters */}
-          <div style={{display:"flex",gap:3,padding:"10px 12px 8px",flexWrap:"wrap"}}>
-            {(["all","draft","sent","completed"] as StatusFilter[]).map(sf=>(
-              <button key={sf} onClick={()=>setStatusFilter(sf)}
-                style={{padding:"3px 8px",borderRadius:3,background:statusFilter===sf?"var(--accent)":"transparent",border:`1px solid ${statusFilter===sf?"var(--accent)":"var(--line-strong)"}`,color:statusFilter===sf?"#fff":"var(--text-3)",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em",textTransform:"uppercase"}}>
-                {sf==="all"?"All":sf}
-              </button>
-            ))}
-          </div>
-          {/* Category nav */}
-          <div style={{overflowY:"auto",flex:1,padding:"4px 8px 6px"}}>
-            <button onClick={()=>setCatFilter("all")}
-              style={{width:"100%",textAlign:"left",padding:"6px 8px",borderRadius:5,background:catFilter==="all"?"rgba(45,114,210,0.12)":"transparent",border:"none",color:catFilter==="all"?"var(--accent)":"var(--text-3)",fontSize:11.5,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,fontFamily:"var(--sans)"}}>
-              <span style={{fontWeight:catFilter==="all"?600:400}}>All Documents</span>
-              <span style={{fontFamily:"var(--mono)",fontSize:10,opacity:0.6}}>{docs.length}</span>
+        {/* Status filter */}
+        <div style={{ padding: "8px 12px 4px", borderBottom: `1px solid ${line}` }}>
+          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.1em", color: text3, textTransform: "uppercase", marginBottom: 6 }}>STATUS</div>
+          {(["all","draft","review","signed","archived"] as StatusFilter[]).map(s => (
+            <button key={s} onClick={() => setStatus(s)}
+              style={{ display: "block", width: "100%", textAlign: "left", padding: "4px 8px", marginBottom: 1, background: statusFilter === s ? surf3 : "transparent", border: "none", borderRadius: 3, color: statusFilter === s ? text1 : text2, fontFamily: mono, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer" }}>
+              {s}
             </button>
-            {CAT_GROUPS.map(g=>(
-              <div key={g.label}>
-                <div style={{padding:"10px 8px 4px",fontFamily:"var(--mono)",fontSize:9.5,fontWeight:600,letterSpacing:"0.1em",color:"var(--text-4)",textTransform:"uppercase"}}>{g.label}</div>
-                {g.cats.map(cat=>{
-                  const m=CAT_META[cat];const cnt=docs.filter(d=>d.category===cat).length;
-                  return (
-                    <button key={cat} onClick={()=>setCatFilter(cat)}
-                      style={{width:"100%",textAlign:"left",padding:"5px 8px",borderRadius:5,background:catFilter===cat?"rgba(45,114,210,0.12)":"transparent",border:"none",color:catFilter===cat?"var(--accent)":"var(--text-2)",fontSize:11.5,cursor:"pointer",display:"flex",alignItems:"center",gap:8,marginBottom:1,fontFamily:"var(--sans)"}}>
-                      <span style={{width:6,height:6,borderRadius:1,background:m.color,flexShrink:0,opacity:0.8}}/>
-                      <span style={{flex:1,fontWeight:catFilter===cat?600:400}}>{m.label}</span>
-                      {cnt>0&&<span style={{fontFamily:"var(--mono)",fontSize:9.5,opacity:0.45}}>{cnt}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+          ))}
+        </div>
+
+        {/* Category nav */}
+        <nav style={{ flex: 1, overflowY: "auto", padding: "8px 8px" }}>
+          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.1em", color: text3, textTransform: "uppercase", marginBottom: 6, padding: "0 4px" }}>CATEGORIES</div>
+          {(["all", ...Object.keys(CAT_META)] as (DocCategory | "all")[]).map(cat => {
+            const meta = cat === "all" ? null : CAT_META[cat];
+            const count = cat === "all" ? docs.length : docs.filter(d => d.category === cat).length;
+            return (
+              <button key={cat} onClick={() => setCatFilter(cat)}
+                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "5px 8px", marginBottom: 1, background: catFilter === cat ? surf3 : "transparent", border: "none", borderRadius: 3, cursor: "pointer", textAlign: "left" }}>
+                {meta && <span style={{ width: 8, height: 8, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />}
+                <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.05em", color: catFilter === cat ? text1 : text2, flex: 1, textTransform: "uppercase" }}>
+                  {cat === "all" ? "ALL" : meta!.label}
+                </span>
+                <span style={{ fontFamily: mono, fontSize: 9, color: text3 }}>{count}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Upload button */}
+        <div style={{ padding: "10px 12px", borderTop: `1px solid ${line}` }}>
+          <button onClick={() => setShowUpload(true)}
+            style={{ width: "100%", padding: "6px 0", background: surf3, color: text2, border: `1px solid ${lineStr}`, borderRadius: 4, fontFamily: mono, fontSize: 10, letterSpacing: "0.06em", cursor: "pointer" }}>
+            ↑ UPLOAD DOCUMENT
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Doc list ────────────────────────────────────────────────────── */}
+      <div style={{ width: 260, background: surf1, borderRight: `1px solid ${line}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        <div style={{ padding: "14px 16px 10px", borderBottom: `1px solid ${line}` }}>
+          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.1em", color: text3, textTransform: "uppercase" }}>
+            {visible.length} DOCUMENT{visible.length !== 1 ? "S" : ""}
           </div>
-          {/* Document list */}
-          <div style={{borderTop:"1px solid var(--line)",overflowY:"auto",maxHeight:300,padding:"6px 8px 8px"}}>
-            <div style={{padding:"4px 8px 6px",fontFamily:"var(--mono)",fontSize:9.5,fontWeight:600,letterSpacing:"0.1em",color:"var(--text-4)",textTransform:"uppercase"}}>Recent</div>
-            {filteredDocs.map(doc=>{
-              const sm=STATUS_META[doc.status];const cm=CAT_META[doc.category];
-              const active=doc.id===selectedId;
-              return (
-                <div key={doc.id} style={{position:"relative",marginBottom:2}}>
-                  <button onClick={()=>setSelectedId(doc.id)}
-                    style={{width:"100%",textAlign:"left",padding:"8px 26px 8px 8px",borderRadius:6,background:active?"var(--surface-2)":"transparent",border:active?"1px solid var(--line-strong)":"1px solid transparent",color:"var(--text)",fontSize:12,cursor:"pointer",fontFamily:"var(--sans)"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                      <span style={{width:6,height:6,borderRadius:1,background:cm.color,flexShrink:0}}/>
-                      <span style={{fontSize:11,fontWeight:active?600:400,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{doc.title}</span>
-                    </div>
-                    <div style={{display:"flex",alignItems:"center",gap:5,paddingLeft:12}}>
-                      <span style={{fontFamily:"var(--mono)",fontSize:9.5,color:sm.color}}>{sm.label}</span>
-                      <span style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",marginLeft:"auto"}}>{doc.updated}</span>
-                    </div>
-                  </button>
-                  <button onClick={()=>deleteDoc(doc.id)} title="Delete"
-                    style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",background:"transparent",border:"none",color:"var(--text-4)",fontSize:13,cursor:"pointer",padding:"2px 5px",opacity:0,transition:"opacity 0.15s"}}
-                    onMouseEnter={e=>(e.currentTarget.style.opacity="1")} onMouseLeave={e=>(e.currentTarget.style.opacity="0")}>×</button>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {visible.map(doc => {
+            const meta = CAT_META[doc.category];
+            const isActive = doc.id === selectedId;
+            return (
+              <div key={doc.id} onClick={() => { setSelectedId(doc.id); setEditMode(false); }}
+                style={{ padding: "12px 16px", borderBottom: `1px solid ${line}`, cursor: "pointer", background: isActive ? surf2 : "transparent", borderLeft: isActive ? `2px solid ${meta.color}` : "2px solid transparent" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
+                  <span style={{ fontFamily: mono, fontSize: 9, color: meta.color, letterSpacing: "0.08em", textTransform: "uppercase" }}>{meta.label}</span>
                 </div>
-              );
-            })}
-            {filteredDocs.length===0&&<div style={{padding:"12px 8px",fontSize:11,color:"var(--text-4)",textAlign:"center",fontFamily:"var(--mono)"}}>No documents</div>}
+                <div style={{ fontFamily: sans, fontSize: 13, color: isActive ? text1 : text2, fontWeight: 500, marginBottom: 3, lineHeight: 1.3 }}>{doc.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "1px 6px", borderRadius: 10, background: `${STATUS_COLOR[doc.status]}18` }}>
+                    <span style={{ width: 4, height: 4, borderRadius: "50%", background: STATUS_COLOR[doc.status] }} />
+                    <span style={{ fontFamily: mono, fontSize: 8, color: STATUS_COLOR[doc.status], letterSpacing: "0.06em", textTransform: "uppercase" }}>{doc.status}</span>
+                  </span>
+                  {doc.githubPath && <span style={{ fontFamily: mono, fontSize: 8, color: text3 }}>⎇ GH</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Main ────────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {selected ? (
+          <>
+            {/* Toolbar */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderBottom: `1px solid ${line}`, background: surf1, flexShrink: 0 }}>
+              <span style={{ fontFamily: mono, fontSize: 9, color: CAT_META[selected.category].color, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                {CAT_META[selected.category].label}
+              </span>
+              <span style={{ color: text3, fontSize: 12 }}>›</span>
+              <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 600, color: text1, flex: 1 }}>{selected.name}</span>
+
+              {/* Status selector */}
+              <select value={selected.status} onChange={e => updateDoc(selected.id, { status: e.target.value as DocStatus })}
+                style={{ background: surf2, border: `1px solid ${lineStr}`, color: text2, padding: "4px 8px", borderRadius: 4, fontFamily: mono, fontSize: 10, cursor: "pointer" }}>
+                {(["draft","review","signed","archived"] as DocStatus[]).map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+              </select>
+
+              <button onClick={() => { setEditMode(!editMode); if (!editMode) setEditContent(selected.content); }}
+                style={{ padding: "4px 12px", background: editMode ? accent : surf3, color: editMode ? "#fff" : text2, border: `1px solid ${lineStr}`, borderRadius: 4, fontFamily: mono, fontSize: 10, cursor: "pointer", letterSpacing: "0.05em" }}>
+                {editMode ? "EDITING" : "EDIT"}
+              </button>
+              {editMode && (
+                <button onClick={() => { updateDoc(selected.id, { content: editContent }); setEditMode(false); }}
+                  style={{ padding: "4px 12px", background: "#2ECC71", color: "#fff", border: "none", borderRadius: 4, fontFamily: mono, fontSize: 10, cursor: "pointer", letterSpacing: "0.05em" }}>
+                  SAVE
+                </button>
+              )}
+              <button onClick={() => setShowSig(true)}
+                style={{ padding: "4px 12px", background: surf3, color: text2, border: `1px solid ${lineStr}`, borderRadius: 4, fontFamily: mono, fontSize: 10, cursor: "pointer", letterSpacing: "0.05em" }}>
+                ✍ SIGN
+              </button>
+              <button onClick={() => setShowRight(!showRight)}
+                style={{ padding: "4px 10px", background: showRight ? surf3 : "transparent", color: text2, border: `1px solid ${lineStr}`, borderRadius: 4, fontFamily: mono, fontSize: 10, cursor: "pointer" }}>
+                ⊞
+              </button>
+            </div>
+
+            {/* Document */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "32px 40px", background: bg }} className="print-area">
+              <div style={{ maxWidth: 760, margin: "0 auto", background: "#fff", borderRadius: 4, overflow: "hidden", boxShadow: "0 4px 32px rgba(0,0,0,0.4)" }}>
+                <div style={{ height: 5, background: CAT_META[selected.category].color }} />
+                <div style={{ padding: "40px 52px 52px" }}>
+                  {editMode ? (
+                    <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
+                      style={{ width: "100%", minHeight: 600, fontFamily: mono, fontSize: 12, lineHeight: 1.7, border: "1px solid #E2E8F0", borderRadius: 4, padding: 12, color: "#1C2127", resize: "vertical", outline: "none" }} />
+                  ) : (
+                    <pre style={{ fontFamily: serif, fontSize: 14, lineHeight: 1.8, color: "#1A202C", whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0 }}>
+                      {selected.content}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Export bar */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderTop: `1px solid ${line}`, background: surf1, flexShrink: 0 }}>
+              <span style={{ fontFamily: mono, fontSize: 9, color: text3, letterSpacing: "0.1em", textTransform: "uppercase", marginRight: 8 }}>EXPORT</span>
+              <button onClick={exportPDF} style={exportBtn(surf2, lineStr, text2, mono)}>PDF</button>
+              <button onClick={exportMD}  style={exportBtn(surf2, lineStr, text2, mono)}>.MD</button>
+              <button onClick={exportTXT} style={exportBtn(surf2, lineStr, text2, mono)}>TXT</button>
+              <div style={{ flex: 1 }} />
+              {ghStatus && <span style={{ fontFamily: mono, fontSize: 10, color: "#2ECC71" }}>{ghStatus}</span>}
+              {!ghConfigured && <span style={{ fontFamily: mono, fontSize: 9, color: "#F0B429" }}>Set GITHUB_TOKEN in Vercel to enable cloud save</span>}
+              <button onClick={saveToGitHub} disabled={savingToGH}
+                style={{ ...exportBtn(surf2, lineStr, text2, mono), opacity: savingToGH ? 0.5 : 1 }}>
+                {savingToGH ? "SAVING…" : "⎇ SAVE TO GITHUB"}
+              </button>
+              <button onClick={() => {
+                if (emailTo && selected) {
+                  const subject = encodeURIComponent(`Document: ${selected.name}`);
+                  const body = encodeURIComponent(selected.content.substring(0, 2000));
+                  window.open(`mailto:${emailTo}?subject=${subject}&body=${body}`);
+                }
+              }} style={exportBtn(surf2, lineStr, text2, mono)}>✉ SEND</button>
+              <input value={emailTo} onChange={e => setEmailTo(e.target.value)} placeholder="recipient@email.com"
+                style={{ background: surf2, border: `1px solid ${lineStr}`, color: text2, padding: "4px 10px", borderRadius: 4, fontFamily: mono, fontSize: 10, width: 180, outline: "none" }} />
+              <button onClick={() => deleteDoc(selected.id)}
+                style={{ ...exportBtn(surf2, lineStr, "#EF4444", mono), marginLeft: 8 }}>✕ DELETE</button>
+            </div>
+          </>
+        ) : (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: text3, fontFamily: mono, fontSize: 12, letterSpacing: "0.08em" }}>
+            NO DOCUMENT SELECTED
           </div>
-        </aside>
-
-        {/* ── Document area ── */}
-        <main style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0,background:"#F0F2F5"}}>
-          {selected?(
-            <>
-              {/* Document toolbar */}
-              <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 20px",height:44,background:"var(--surface-1)",borderBottom:"1px solid var(--line)",flexShrink:0}}>
-                <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--text-3)",letterSpacing:"0.06em",textTransform:"uppercase"}}>{tmeta.short}</span>
-                <span style={{color:"var(--line-strong)"}}>·</span>
-                <span style={{fontSize:12,fontWeight:500,color:"var(--text-2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selected.title}</span>
-                <div style={{flex:1}}/>
-                <button onClick={()=>setShowRight(v=>!v)}
-                  style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",borderRadius:5,background:showRight?"rgba(45,114,210,0.12)":"transparent",border:`1px solid ${showRight?"rgba(45,114,210,0.3)":"var(--line-strong)"}`,color:showRight?"var(--accent)":"var(--text-3)",fontSize:10.5,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em",textTransform:"uppercase",fontWeight:600}}>
-                  {showRight?"Hide Panel":"Show Panel"}
-                </button>
-              </div>
-              {/* Paper document */}
-              <div id="doc-print-area" style={{flex:1,overflowY:"auto",padding:"40px 48px"}}>
-                <div style={{maxWidth:660,margin:"0 auto",background:"#FFFFFF",borderRadius:3,padding:"72px 80px",boxShadow:"0 1px 3px rgba(0,0,0,0.08),0 8px 32px rgba(0,0,0,0.1),0 24px 64px rgba(0,0,0,0.06)",position:"relative"}}>
-                  {/* Document top rule */}
-                  <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg, ${tmeta.color}, ${tmeta.color}88)`,borderRadius:"3px 3px 0 0"}}/>
-                  {/* Category badge */}
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:40}}>
-                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,letterSpacing:"0.12em",textTransform:"uppercase",color:tmeta.color,fontWeight:600}}>{tmeta.label}</div>
-                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"#9CA3AF",letterSpacing:"0.06em"}}>Updated {selected.updated}</div>
-                  </div>
-                  {renderDoc(selected.content)}
-                  {/* Signatures section */}
-                  {selected.signers.some(s=>s.status==="signed"&&s.signature)&&(
-                    <div style={{marginTop:52,paddingTop:32,borderTop:"2px solid #111827"}}>
-                      <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"#6B7280",marginBottom:20,letterSpacing:"0.1em",textTransform:"uppercase",fontWeight:600}}>Electronic Signatures</div>
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(180px, 1fr))",gap:16}}>
-                        {selected.signers.filter(s=>s.status==="signed"&&s.signature).map(s=>(
-                          <div key={s.id} style={{borderTop:`2px solid ${s.color}`,paddingTop:14}}>
-                            {s.signature?.startsWith("data:")
-                              ? <img src={s.signature} style={{height:36,marginBottom:8,display:"block"}} alt="sig"/>
-                              : <div style={{fontFamily:"Georgia,serif",fontSize:22,fontStyle:"italic",color:"#111827",marginBottom:8,lineHeight:1.2}}>{s.signature}</div>
-                            }
-                            <div style={{fontFamily:"var(--mono)",fontSize:10,color:"#374151",fontWeight:600}}>{s.name}</div>
-                            <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"#9CA3AF",marginTop:2}}>{s.role}</div>
-                            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#D1D5DB",marginTop:3}}>Signed {s.signedAt}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {/* Export bar */}
-              <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 20px",borderTop:"1px solid var(--line)",background:"var(--surface-1)",flexShrink:0}}>
-                <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--text-4)",letterSpacing:"0.06em",textTransform:"uppercase",marginRight:4}}>Export</span>
-                {[{l:"PDF",a:exportPdf},{l:"Google Docs",a:exportGoogleDocs},{l:"Markdown",a:exportMd},{l:"Plain Text",a:exportTxt}].map(o=>(
-                  <button key={o.l} onClick={o.a}
-                    style={{padding:"5px 11px",borderRadius:4,background:"var(--surface-2)",border:"1px solid var(--line-strong)",color:"var(--text-3)",fontSize:11,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.03em",transition:"color 0.15s,border-color 0.15s"}}
-                    onMouseEnter={e=>{e.currentTarget.style.color="var(--text)";e.currentTarget.style.borderColor="rgba(255,255,255,0.25)";}}
-                    onMouseLeave={e=>{e.currentTarget.style.color="var(--text-3)";e.currentTarget.style.borderColor="var(--line-strong)";}}>
-                    {o.l}
-                  </button>
-                ))}
-                {exportMsg&&<span style={{fontFamily:"var(--mono)",fontSize:10.5,color:"#12B886",marginLeft:8}}>✓ {exportMsg}</span>}
-              </div>
-            </>
-          ):(
-            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text-4)",fontSize:13,fontFamily:"var(--mono)"}}>Select a document</div>
-          )}
-        </main>
-
-        {/* ── Right panel ── */}
-        {showRight&&selected&&(
-          <aside style={{width:288,background:"var(--surface-1)",borderLeft:"1px solid var(--line)",display:"flex",flexDirection:"column",flexShrink:0}}>
-            <div style={{display:"flex",borderBottom:"1px solid var(--line)"}}>
-              {(["sign","share","export"] as RightTab[]).map(tab=>(
-                <button key={tab} onClick={()=>setRightTab(tab)}
-                  style={{flex:1,padding:"12px 0",background:"transparent",border:"none",borderBottom:rightTab===tab?"2px solid var(--accent)":"2px solid transparent",color:rightTab===tab?"var(--accent)":"var(--text-4)",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.07em",textTransform:"uppercase",transition:"color 0.15s"}}>
-                  {tab==="sign"?"Signatures":tab==="share"?"Send":"Export"}
-                </button>
-              ))}
-            </div>
-            <div style={{flex:1,overflowY:"auto",padding:18}}>
-
-              {/* Signatures tab */}
-              {rightTab==="sign"&&(
-                <div>
-                  {selected.signers.length===0&&(
-                    <div style={{padding:"20px 0 16px",fontFamily:"var(--mono)",fontSize:10.5,color:"var(--text-4)",textAlign:"center",lineHeight:1.7}}>No signers added yet.<br/>Add signers below to begin.</div>
-                  )}
-                  {selected.signers.map(signer=>(
-                    <div key={signer.id} style={{background:"var(--surface-2)",borderRadius:6,padding:"10px 12px",marginBottom:8,borderLeft:`2px solid ${signer.color}`}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                        <div style={{width:26,height:26,borderRadius:"50%",background:`${signer.color}20`,border:`1.5px solid ${signer.color}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:signer.color,flexShrink:0,fontFamily:"var(--sans)"}}>{signer.name.charAt(0)}</div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:12,fontWeight:600,fontFamily:"var(--sans)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{signer.name}</div>
-                          <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{signer.email}</div>
-                        </div>
-                        <button onClick={()=>removeSigner(signer.id)} style={{background:"transparent",border:"none",color:"var(--text-4)",fontSize:14,cursor:"pointer",padding:"2px 4px",flexShrink:0}}>×</button>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{width:4,height:4,borderRadius:"50%",background:SIGNER_STATUS[signer.status].color}}/>
-                          <span style={{fontFamily:"var(--mono)",fontSize:9.5,color:SIGNER_STATUS[signer.status].color,letterSpacing:"0.04em"}}>{SIGNER_STATUS[signer.status].label.toUpperCase()}</span>
-                          {signer.signedAt&&<span style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--text-4)"}}>· {signer.signedAt}</span>}
-                        </div>
-                        {signer.status!=="signed"&&(
-                          <button onClick={()=>{setActiveSigner(signer.id);setShowSigModal(true);}}
-                            style={{padding:"3px 10px",borderRadius:3,background:"var(--accent)",border:"none",color:"#fff",fontSize:10,cursor:"pointer",fontWeight:700,fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
-                            SIGN
-                          </button>
-                        )}
-                      </div>
-                      {signer.role&&<div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",marginTop:6,paddingTop:6,borderTop:"1px solid var(--line)"}}>{signer.role}</div>}
-                    </div>
-                  ))}
-                  <div style={{background:"var(--surface-2)",borderRadius:6,padding:12,border:"1px dashed var(--line-strong)",marginTop:8}}>
-                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.08em"}}>Add Signer</div>
-                    {[{val:newSignerName,set:setNewSignerName,ph:"Full name"},{val:newSignerEmail,set:setNewSignerEmail,ph:"Email address"},{val:newSignerRole,set:setNewSignerRole,ph:"Role (e.g. Buyer, Employee)"}].map(({val,set,ph})=>(
-                      <input key={ph} value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{...inp,marginBottom:6}}/>
-                    ))}
-                    <button onClick={addSigner} disabled={!newSignerName||!newSignerEmail}
-                      style={{width:"100%",padding:"8px",borderRadius:5,background:newSignerName&&newSignerEmail?"var(--accent)":"var(--surface-3)",border:"none",color:newSignerName&&newSignerEmail?"#fff":"var(--text-4)",fontSize:11,fontWeight:700,cursor:newSignerName&&newSignerEmail?"pointer":"default",fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
-                      ADD SIGNER
-                    </button>
-                  </div>
-                  {selected.signers.some(s=>s.signedAt)&&(
-                    <div style={{marginTop:20}}>
-                      <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.08em"}}>Audit Trail</div>
-                      {selected.signers.filter(s=>s.signedAt).map(s=>(
-                        <div key={s.id} style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
-                          <div style={{width:1,background:s.color,alignSelf:"stretch",flexShrink:0,marginLeft:4}}/>
-                          <div><div style={{fontSize:11,fontFamily:"var(--sans)",color:"var(--text-2)"}}>{s.name} <span style={{color:"var(--text-4)"}}>signed</span></div><div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",marginTop:2}}>{s.signedAt}</div></div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Share tab */}
-              {rightTab==="share"&&(
-                <div>
-                  <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.08em"}}>Recipients</div>
-                  {selected.signers.length>0?selected.signers.map(s=>(
-                    <div key={s.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"var(--surface-2)",borderRadius:5,marginBottom:4,borderLeft:`2px solid ${s.color}`}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:11.5,fontWeight:600,fontFamily:"var(--sans)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
-                        <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.email}</div>
-                      </div>
-                      <span style={{fontFamily:"var(--mono)",fontSize:9,color:SIGNER_STATUS[s.status].color,letterSpacing:"0.04em"}}>{SIGNER_STATUS[s.status].label.toUpperCase()}</span>
-                    </div>
-                  )):(
-                    <div style={{padding:"12px",background:"var(--surface-2)",borderRadius:5,fontFamily:"var(--mono)",fontSize:10,color:"var(--text-4)",textAlign:"center"}}>Add signers first</div>
-                  )}
-                  <div style={{marginTop:16,marginBottom:8}}>
-                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Subject</div>
-                    <input value={emailSubject} onChange={e=>setEmailSubject(e.target.value)} style={inp}/>
-                  </div>
-                  <div style={{marginBottom:16}}>
-                    <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Message</div>
-                    <textarea value={emailMsg} onChange={e=>setEmailMsg(e.target.value)} rows={4}
-                      style={{...inp,resize:"vertical",fontFamily:"var(--sans)",lineHeight:1.5}}/>
-                  </div>
-                  <button onClick={sendForSigning} disabled={selected.signers.length===0}
-                    style={{width:"100%",padding:"10px",borderRadius:5,background:selected.signers.length>0?"var(--accent)":"var(--surface-2)",border:"none",color:selected.signers.length>0?"#fff":"var(--text-4)",fontSize:11,fontWeight:700,cursor:selected.signers.length>0?"pointer":"default",fontFamily:"var(--mono)",letterSpacing:"0.05em",marginBottom:8}}>
-                    {emailSent?"✓ SENT FOR SIGNING":"SEND FOR SIGNING"}
-                  </button>
-                  <button onClick={()=>{const e=selected.signers.map(s=>s.email).join(",");window.open(`mailto:${e}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMsg)}`);}}
-                    style={{width:"100%",padding:"8px",borderRadius:5,background:"transparent",border:"1px solid var(--line-strong)",color:"var(--text-3)",fontSize:11,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
-                    OPEN EMAIL CLIENT
-                  </button>
-                  {emailSent&&<div style={{marginTop:12,padding:"10px 12px",borderRadius:5,background:"rgba(18,184,134,0.1)",border:"1px solid rgba(18,184,134,0.3)",fontFamily:"var(--mono)",fontSize:10.5,color:"#12B886"}}>✓ Sent to {selected.signers.length} recipient{selected.signers.length>1?"s":""}</div>}
-                </div>
-              )}
-
-              {/* Export tab */}
-              {rightTab==="export"&&(
-                <div>
-                  {[
-                    {l:"PDF Document",     d:"Print dialog → Save as PDF",icon:"PDF",  c:"#FF6B6B",a:exportPdf},
-                    {l:"Google Docs",      d:"Opens new doc to paste into",icon:"G",    c:"#4285F4",a:exportGoogleDocs},
-                    {l:"Markdown",         d:"Raw .md source file",        icon:"MD",  c:"var(--accent)",a:exportMd},
-                    {l:"Plain Text",       d:"Unformatted .txt file",       icon:"TXT", c:"var(--text-3)",a:exportTxt},
-                  ].map(o=>(
-                    <button key={o.l} onClick={o.a}
-                      style={{width:"100%",textAlign:"left",padding:"12px 14px",borderRadius:6,background:"var(--surface-2)",border:"1px solid var(--line-strong)",color:"var(--text)",fontSize:12,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,transition:"border-color 0.15s"}}
-                      onMouseEnter={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,0.2)")}
-                      onMouseLeave={e=>(e.currentTarget.style.borderColor="var(--line-strong)")}>
-                      <div style={{width:32,height:32,borderRadius:5,background:`${o.c}15`,border:`1px solid ${o.c}30`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--mono)",fontSize:9,color:o.c,fontWeight:700,flexShrink:0,letterSpacing:"0.03em"}}>{o.icon}</div>
-                      <div><div style={{fontWeight:600,fontSize:12,marginBottom:2}}>{o.l}</div><div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)"}}>{o.d}</div></div>
-                    </button>
-                  ))}
-                  {exportMsg&&<div style={{marginTop:4,padding:"10px 12px",borderRadius:5,background:"rgba(18,184,134,0.1)",border:"1px solid rgba(18,184,134,0.3)",fontFamily:"var(--mono)",fontSize:10.5,color:"#12B886"}}>✓ {exportMsg}</div>}
-                </div>
-              )}
-            </div>
-          </aside>
         )}
       </div>
 
-      {/* ── Signature modal ── */}
-      {showSigModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,backdropFilter:"blur(4px)"}}>
-          <div style={{background:"var(--surface-1)",borderRadius:10,padding:28,width:480,border:"1px solid var(--line-strong)",boxShadow:"0 32px 96px rgba(0,0,0,0.7)"}}>
-            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:22}}>
-              <div>
-                <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>Electronic Signature</div>
-                <div style={{fontSize:16,fontWeight:700,fontFamily:"var(--sans)"}}>{activeSigner&&selected?.signers.find(s=>s.id===activeSigner)?.name}</div>
-                <div style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--text-4)",marginTop:3}}>{activeSigner&&selected?.signers.find(s=>s.id===activeSigner)?.role}</div>
-              </div>
-              <button onClick={()=>setShowSigModal(false)} style={{background:"transparent",border:"none",color:"var(--text-4)",fontSize:20,cursor:"pointer",padding:"4px 8px",lineHeight:1}}>×</button>
-            </div>
-            {/* Mode toggle */}
-            <div style={{display:"flex",gap:0,marginBottom:16,background:"var(--surface-2)",borderRadius:5,padding:2}}>
-              {(["draw","type"] as SignMode[]).map(m=>(
-                <button key={m} onClick={()=>setSigMode(m)}
-                  style={{flex:1,padding:"7px",borderRadius:4,background:sigMode===m?"var(--surface-3)":"transparent",border:sigMode===m?"1px solid var(--line-strong)":"1px solid transparent",color:sigMode===m?"var(--text)":"var(--text-3)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.05em",textTransform:"uppercase"}}>
-                  {m==="draw"?"Draw":"Type"}
+      {/* ── Right panel ─────────────────────────────────────────────────── */}
+      {showRight && selected && (
+        <aside style={{ width: 288, background: surf1, borderLeft: `1px solid ${line}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+          <div style={{ display: "flex", borderBottom: `1px solid ${line}` }}>
+            {(["signers","activity","details"] as RightTab[]).map(t => (
+              <button key={t} onClick={() => setRightTab(t)}
+                style={{ flex: 1, padding: "10px 0", background: "transparent", border: "none", borderBottom: rightTab === t ? `2px solid ${accent}` : "2px solid transparent", color: rightTab === t ? text1 : text3, fontFamily: mono, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+            {rightTab === "signers" && (
+              <>
+                {selected.signers.length === 0 && (
+                  <div style={{ fontFamily: mono, fontSize: 10, color: text3, textAlign: "center", marginTop: 32 }}>NO SIGNERS YET</div>
+                )}
+                {selected.signers.map(s => (
+                  <div key={s.id} style={{ padding: "10px 12px", background: surf2, borderRadius: 6, marginBottom: 8, border: `1px solid ${line}` }}>
+                    <div style={{ fontFamily: sans, fontSize: 13, fontWeight: 600, color: text1, marginBottom: 2 }}>{s.name}</div>
+                    <div style={{ fontFamily: mono, fontSize: 10, color: text3, marginBottom: 6 }}>{s.email}</div>
+                    <span style={{ padding: "2px 8px", borderRadius: 10, background: s.status === "signed" ? "#2ECC7120" : "#94A3B820", fontFamily: mono, fontSize: 9, color: s.status === "signed" ? "#2ECC71" : text3, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      {s.status}
+                    </span>
+                    {s.signedAt && <div style={{ fontFamily: mono, fontSize: 9, color: text3, marginTop: 4 }}>{new Date(s.signedAt).toLocaleDateString()}</div>}
+                  </div>
+                ))}
+                <button onClick={() => setShowSig(true)}
+                  style={{ width: "100%", padding: "8px 0", background: surf2, color: text2, border: `1px solid ${lineStr}`, borderRadius: 4, fontFamily: mono, fontSize: 10, cursor: "pointer", marginTop: 8 }}>
+                  + ADD SIGNATURE
                 </button>
-              ))}
-            </div>
-            {sigMode==="draw"?(
+              </>
+            )}
+            {rightTab === "activity" && (
               <div>
-                <canvas ref={canvasRef} width={424} height={160}
-                  onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-                  style={{width:"100%",height:160,borderRadius:6,background:"#fafaf8",border:"1px solid #e5e7eb",cursor:"crosshair",display:"block"}}/>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
-                  <span style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)"}}>Draw your signature above</span>
-                  <button onClick={clearCanvas} style={{padding:"3px 10px",borderRadius:4,background:"transparent",border:"1px solid var(--line-strong)",color:"var(--text-3)",fontSize:10,cursor:"pointer",fontFamily:"var(--mono)"}}>Clear</button>
+                <div style={{ padding: "8px 0", borderBottom: `1px solid ${line}` }}>
+                  <div style={{ fontFamily: mono, fontSize: 9, color: text3, marginBottom: 2 }}>CREATED</div>
+                  <div style={{ fontFamily: sans, fontSize: 12, color: text2 }}>{new Date(selected.createdAt).toLocaleDateString()}</div>
                 </div>
-              </div>
-            ):(
-              <div>
-                <input value={typedSig} onChange={e=>setTypedSig(e.target.value)} placeholder="Type your full name"
-                  style={{width:"100%",padding:"16px 20px",borderRadius:6,background:"#fafaf8",border:"1px solid #e5e7eb",color:"#111827",fontSize:28,fontFamily:"Georgia,'Times New Roman',serif",fontStyle:"italic",boxSizing:"border-box",outline:"none"}}/>
-                <div style={{fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",marginTop:8}}>Typed name will appear as your signature</div>
+                <div style={{ padding: "8px 0", borderBottom: `1px solid ${line}` }}>
+                  <div style={{ fontFamily: mono, fontSize: 9, color: text3, marginBottom: 2 }}>LAST UPDATED</div>
+                  <div style={{ fontFamily: sans, fontSize: 12, color: text2 }}>{new Date(selected.updatedAt).toLocaleDateString()}</div>
+                </div>
+                {selected.githubPath && (
+                  <div style={{ padding: "8px 0" }}>
+                    <div style={{ fontFamily: mono, fontSize: 9, color: text3, marginBottom: 2 }}>GITHUB PATH</div>
+                    <div style={{ fontFamily: mono, fontSize: 10, color: text2, wordBreak: "break-all" }}>{selected.githubPath}</div>
+                  </div>
+                )}
               </div>
             )}
-            <div style={{display:"flex",gap:10,marginTop:20}}>
-              <button onClick={()=>setShowSigModal(false)} style={{flex:1,padding:"10px",borderRadius:6,background:"transparent",border:"1px solid var(--line-strong)",color:"var(--text-2)",fontSize:11,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em",fontWeight:600}}>CANCEL</button>
-              <button onClick={applySignature} disabled={!canSign}
-                style={{flex:2,padding:"10px",borderRadius:6,background:canSign?"var(--accent)":"var(--surface-3)",border:"none",color:canSign?"#fff":"var(--text-4)",fontSize:11,fontWeight:700,cursor:canSign?"pointer":"default",fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
-                APPLY SIGNATURE
-              </button>
-            </div>
-            <div style={{marginTop:14,padding:"10px 12px",borderRadius:5,background:"rgba(45,114,210,0.06)",border:"1px solid rgba(45,114,210,0.15)",fontFamily:"var(--mono)",fontSize:9.5,color:"var(--text-4)",lineHeight:1.6,letterSpacing:"0.01em"}}>
-              By applying your signature you agree it has the same legal effect as a handwritten signature under applicable electronic signature law.
-            </div>
+            {rightTab === "details" && (
+              <div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontFamily: mono, fontSize: 9, color: text3, marginBottom: 6, textTransform: "uppercase" }}>NAME</div>
+                  <input defaultValue={selected.name}
+                    onBlur={e => updateDoc(selected.id, { name: e.target.value })}
+                    style={{ width: "100%", background: surf2, border: `1px solid ${lineStr}`, color: text1, padding: "6px 10px", borderRadius: 4, fontFamily: sans, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <div style={{ fontFamily: mono, fontSize: 9, color: text3, marginBottom: 6, textTransform: "uppercase" }}>CATEGORY</div>
+                  <select value={selected.category} onChange={e => updateDoc(selected.id, { category: e.target.value as DocCategory })}
+                    style={{ width: "100%", background: surf2, border: `1px solid ${lineStr}`, color: text2, padding: "6px 10px", borderRadius: 4, fontFamily: mono, fontSize: 11, cursor: "pointer" }}>
+                    {Object.entries(CAT_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        </aside>
       )}
 
-      {/* ── New document modal ── */}
-      {showNewDoc&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,backdropFilter:"blur(4px)"}}>
-          <div style={{background:"var(--surface-1)",borderRadius:10,padding:28,width:560,border:"1px solid var(--line-strong)",boxShadow:"0 32px 96px rgba(0,0,0,0.7)",maxHeight:"90vh",overflowY:"auto"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
-              <div>
-                <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>New Document</div>
-                <div style={{fontSize:16,fontWeight:700,fontFamily:"var(--sans)"}}>Choose a Template</div>
-              </div>
-              <button onClick={()=>setShowNewDoc(false)} style={{background:"transparent",border:"none",color:"var(--text-4)",fontSize:20,cursor:"pointer",padding:"4px 8px",lineHeight:1}}>×</button>
-            </div>
-            <div style={{marginBottom:18}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.08em"}}>Document Title</div>
-              <input value={newDocTitle} onChange={e=>setNewDocTitle(e.target.value)} placeholder="e.g., Acme Corp — Mutual NDA" style={{...inp,fontSize:13,padding:"10px 12px"}}/>
-            </div>
-            <div style={{marginBottom:24}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:9.5,fontWeight:700,color:"var(--text-4)",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.08em"}}>Template</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-                {(Object.entries(CAT_META) as [DocCategory,typeof CAT_META[DocCategory]][]).map(([cat,m])=>(
-                  <button key={cat} onClick={()=>setNewDocCat(cat)}
-                    style={{padding:"12px 10px",borderRadius:6,background:newDocCat===cat?"rgba(45,114,210,0.12)":"var(--surface-2)",border:newDocCat===cat?`1px solid var(--accent)`:"1px solid var(--line-strong)",color:newDocCat===cat?"var(--accent)":"var(--text-2)",fontSize:11,cursor:"pointer",textAlign:"left",transition:"all 0.15s",position:"relative",overflow:"hidden"}}>
-                    <div style={{width:3,height:"100%",position:"absolute",left:0,top:0,background:m.color,borderRadius:"6px 0 0 6px"}}/>
-                    <div style={{fontFamily:"var(--mono)",fontSize:9,color:m.color,marginBottom:5,letterSpacing:"0.06em",paddingLeft:8}}>{m.short.toUpperCase()}</div>
-                    <div style={{fontWeight:600,fontSize:11,lineHeight:1.3,paddingLeft:8,fontFamily:"var(--sans)"}}>{m.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setShowNewDoc(false)} style={{flex:1,padding:"10px",borderRadius:6,background:"transparent",border:"1px solid var(--line-strong)",color:"var(--text-2)",fontSize:11,cursor:"pointer",fontFamily:"var(--mono)",letterSpacing:"0.04em",fontWeight:600}}>CANCEL</button>
-              <button onClick={createDoc} disabled={!newDocTitle}
-                style={{flex:2,padding:"10px",borderRadius:6,background:newDocTitle?"var(--accent)":"var(--surface-3)",border:"none",color:newDocTitle?"#fff":"var(--text-4)",fontSize:11,fontWeight:700,cursor:newDocTitle?"pointer":"default",fontFamily:"var(--mono)",letterSpacing:"0.04em"}}>
-                CREATE DOCUMENT
+      {/* ── New Doc Modal ────────────────────────────────────────────────── */}
+      {showNewDoc && <Modal onClose={() => setShowNewDoc(false)} title="NEW DOCUMENT" surf1={surf1} surf2={surf2} line={line} lineStr={lineStr} text1={text1} text2={text2} text3={text3} mono={mono} sans={sans} accent={accent}>
+        <NewDocForm onAdd={(doc) => { addDoc(doc); setShowNewDoc(false); }}
+          surf2={surf2} line={line} lineStr={lineStr} text1={text1} text2={text2} text3={text3} mono={mono} sans={sans} accent={accent} />
+      </Modal>}
+
+      {/* ── Upload Modal ─────────────────────────────────────────────────── */}
+      {showUpload && <Modal onClose={() => setShowUpload(false)} title="UPLOAD DOCUMENT" surf1={surf1} surf2={surf2} line={line} lineStr={lineStr} text1={text1} text2={text2} text3={text3} mono={mono} sans={sans} accent={accent}>
+        <div>
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: 0, marginBottom: 16, borderBottom: `1px solid ${lineStr}` }}>
+            {(["computer","github"] as ("computer"|"github")[]).map(t => (
+              <button key={t} onClick={() => setUploadTab(t)}
+                style={{ padding: "8px 18px", background: "transparent", border: "none", borderBottom: uploadTab === t ? `2px solid ${accent}` : "2px solid transparent", color: uploadTab === t ? text1 : text3, fontFamily: mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
+                {t === "computer" ? "FROM COMPUTER" : "FROM GITHUB"}
               </button>
-            </div>
+            ))}
           </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontFamily: mono, fontSize: 9, color: text3, textTransform: "uppercase", display: "block", marginBottom: 4 }}>DOCUMENT NAME</label>
+            <input value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="e.g., Series A NDA"
+              style={{ width: "100%", background: surf2, border: `1px solid ${lineStr}`, color: text1, padding: "7px 10px", borderRadius: 4, fontFamily: sans, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+          </div>
+
+          {uploadTab === "computer" ? (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontFamily: mono, fontSize: 9, color: text3, textTransform: "uppercase", display: "block", marginBottom: 4 }}>SELECT FILE (.md or .txt)</label>
+              <input type="file" accept=".md,.txt" onChange={handleFileUpload}
+                style={{ fontFamily: mono, fontSize: 10, color: text2, background: surf2, border: `1px solid ${lineStr}`, borderRadius: 4, padding: "6px 10px", width: "100%", boxSizing: "border-box", cursor: "pointer" }} />
+            </div>
+          ) : (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontFamily: mono, fontSize: 9, color: text3, textTransform: "uppercase", display: "block", marginBottom: 4 }}>GITHUB URL (raw or blob)</label>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input value={uploadGHUrl} onChange={e => setUploadGHUrl(e.target.value)}
+                  placeholder="https://github.com/org/repo/blob/main/contracts/nda.md"
+                  style={{ flex: 1, background: surf2, border: `1px solid ${lineStr}`, color: text1, padding: "7px 10px", borderRadius: 4, fontFamily: mono, fontSize: 10, outline: "none" }} />
+                <button onClick={fetchGHUrl} disabled={uploadLoading}
+                  style={{ padding: "7px 14px", background: accent, color: "#fff", border: "none", borderRadius: 4, fontFamily: mono, fontSize: 10, cursor: "pointer", opacity: uploadLoading ? 0.5 : 1 }}>
+                  {uploadLoading ? "…" : "FETCH"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {uploadContent && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontFamily: mono, fontSize: 9, color: "#2ECC71", marginBottom: 4 }}>✓ CONTENT LOADED ({uploadContent.length} chars)</div>
+              <pre style={{ background: surf2, border: `1px solid ${lineStr}`, borderRadius: 4, padding: "8px 10px", fontFamily: mono, fontSize: 10, color: text3, maxHeight: 100, overflowY: "auto", margin: 0, whiteSpace: "pre-wrap" }}>
+                {uploadContent.substring(0, 300)}{uploadContent.length > 300 ? "…" : ""}
+              </pre>
+            </div>
+          )}
+
+          <button onClick={confirmUpload} disabled={!uploadName || !uploadContent}
+            style={{ width: "100%", padding: "10px 0", background: !uploadName || !uploadContent ? surf2 : accent, color: !uploadName || !uploadContent ? text3 : "#fff", border: "none", borderRadius: 4, fontFamily: mono, fontSize: 11, letterSpacing: "0.06em", cursor: !uploadName || !uploadContent ? "default" : "pointer" }}>
+            ADD TO MY DOCUMENTS
+          </button>
         </div>
-      )}
+      </Modal>}
+
+      {/* ── Signature Modal ──────────────────────────────────────────────── */}
+      {showSigModal && <Modal onClose={() => setShowSig(false)} title="ADD SIGNATURE" surf1={surf1} surf2={surf2} line={line} lineStr={lineStr} text1={text1} text2={text2} text3={text3} mono={mono} sans={sans} accent={accent}>
+        <div>
+          <div style={{ marginBottom: 12 }}>
+            <input value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="Full Name"
+              style={{ width: "100%", background: surf2, border: `1px solid ${lineStr}`, color: text1, padding: "7px 10px", borderRadius: 4, fontFamily: sans, fontSize: 13, outline: "none", boxSizing: "border-box", marginBottom: 8 }} />
+            <input value={signerEmail} onChange={e => setSignerEmail(e.target.value)} placeholder="Email Address"
+              style={{ width: "100%", background: surf2, border: `1px solid ${lineStr}`, color: text1, padding: "7px 10px", borderRadius: 4, fontFamily: sans, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+          </div>
+          <div style={{ display: "flex", gap: 0, marginBottom: 12, borderBottom: `1px solid ${lineStr}` }}>
+            {(["draw","type"] as SignMode[]).map(m => (
+              <button key={m} onClick={() => setSigMode(m)}
+                style={{ padding: "7px 20px", background: "transparent", border: "none", borderBottom: sigMode === m ? `2px solid ${accent}` : "2px solid transparent", color: sigMode === m ? text1 : text3, fontFamily: mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
+                {m === "draw" ? "DRAW" : "TYPE"}
+              </button>
+            ))}
+          </div>
+          {sigMode === "draw" ? (
+            <div style={{ marginBottom: 16 }}>
+              <canvas ref={canvasRef} width={380} height={120} onMouseDown={startDraw} onMouseMove={doDraw} onMouseUp={stopDraw} onMouseLeave={stopDraw}
+                style={{ background: surf2, border: `1px solid ${lineStr}`, borderRadius: 4, cursor: "crosshair", display: "block" }} />
+              <button onClick={clearCanvas} style={{ marginTop: 6, fontFamily: mono, fontSize: 9, color: text3, background: "transparent", border: "none", cursor: "pointer", letterSpacing: "0.06em" }}>CLEAR</button>
+            </div>
+          ) : (
+            <input value={typedSig} onChange={e => setTypedSig(e.target.value)} placeholder="Type your signature"
+              style={{ width: "100%", fontFamily: serif, fontSize: 24, background: surf2, border: `1px solid ${lineStr}`, color: text1, padding: "12px 14px", borderRadius: 4, outline: "none", boxSizing: "border-box", marginBottom: 16 }} />
+          )}
+          <button onClick={applySignature}
+            style={{ width: "100%", padding: "10px 0", background: accent, color: "#fff", border: "none", borderRadius: 4, fontFamily: mono, fontSize: 11, letterSpacing: "0.06em", cursor: "pointer" }}>
+            APPLY SIGNATURE
+          </button>
+        </div>
+      </Modal>}
 
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;1,400&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
         @media print {
           body > * { display: none !important; }
-          #doc-print-area { display: block !important; position: fixed; inset: 0; overflow: auto; background: white !important; }
-          #doc-print-area > div { box-shadow: none !important; max-width: 100% !important; padding: 48px !important; }
+          .print-area { display: block !important; position: fixed; inset: 0; overflow: auto; background: #fff; }
         }
-        *::-webkit-scrollbar { width: 3px; height: 3px; }
-        *::-webkit-scrollbar-track { background: transparent; }
-        *::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
-        input::placeholder, textarea::placeholder { color: var(--text-4) !important; font-family: var(--sans); }
       `}</style>
+    </div>
+  );
+}
+
+// ── Helper components ────────────────────────────────────────────────────────
+function exportBtn(bg: string, border: string, color: string, mono: string): React.CSSProperties {
+  return { padding: "4px 12px", background: bg, color, border: `1px solid ${border}`, borderRadius: 4, fontFamily: mono, fontSize: 10, cursor: "pointer", letterSpacing: "0.05em" };
+}
+
+interface ModalProps {
+  onClose: () => void; title: string; children: React.ReactNode;
+  surf1: string; surf2: string; line: string; lineStr: string;
+  text1: string; text2: string; text3: string; mono: string; sans: string; accent: string;
+}
+function Modal({ onClose, title, children, surf1, line, lineStr, text1, text3, mono }: ModalProps) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={onClose}>
+      <div style={{ background: surf1, border: `1px solid ${lineStr}`, borderRadius: 8, padding: 24, width: 440, maxHeight: "85vh", overflowY: "auto" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <span style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", color: text1, textTransform: "uppercase" }}>{title}</span>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: text3, fontSize: 18, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+interface NewDocFormProps {
+  onAdd: (doc: ContractDoc) => void;
+  surf2: string; line: string; lineStr: string;
+  text1: string; text2: string; text3: string; mono: string; sans: string; accent: string;
+}
+function NewDocForm({ onAdd, surf2, lineStr, text1, text3, mono, sans, accent }: NewDocFormProps) {
+  const [name, setName]       = useState("");
+  const [cat, setCat]         = useState<DocCategory>("nda");
+  const [useTemplate, setUT]  = useState(true);
+
+  function create() {
+    if (!name) return;
+    const content = useTemplate && cat !== "custom" ? TEMPLATES[cat as Exclude<DocCategory,"custom">] : "";
+    const doc: ContractDoc = {
+      id: Date.now().toString(),
+      name,
+      category: cat,
+      status: "draft",
+      content,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      signers: [],
+    };
+    onAdd(doc);
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ fontFamily: mono, fontSize: 9, color: text3, textTransform: "uppercase", display: "block", marginBottom: 4 }}>DOCUMENT NAME</label>
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Acme Corp NDA"
+          style={{ width: "100%", background: surf2, border: `1px solid ${lineStr}`, color: text1, padding: "7px 10px", borderRadius: 4, fontFamily: sans, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ fontFamily: mono, fontSize: 9, color: text3, textTransform: "uppercase", display: "block", marginBottom: 4 }}>CATEGORY</label>
+        <select value={cat} onChange={e => setCat(e.target.value as DocCategory)}
+          style={{ width: "100%", background: surf2, border: `1px solid ${lineStr}`, color: text1, padding: "7px 10px", borderRadius: 4, fontFamily: mono, fontSize: 11, cursor: "pointer" }}>
+          {Object.entries(CAT_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+      </div>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, cursor: "pointer" }}>
+        <input type="checkbox" checked={useTemplate} onChange={e => setUT(e.target.checked)} />
+        <span style={{ fontFamily: mono, fontSize: 10, color: text3, textTransform: "uppercase" }}>USE TEMPLATE</span>
+      </label>
+      <button onClick={create} disabled={!name}
+        style={{ width: "100%", padding: "10px 0", background: name ? accent : surf2, color: name ? "#fff" : text3, border: "none", borderRadius: 4, fontFamily: mono, fontSize: 11, letterSpacing: "0.06em", cursor: name ? "pointer" : "default" }}>
+        CREATE DOCUMENT
+      </button>
     </div>
   );
 }
