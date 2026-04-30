@@ -832,116 +832,132 @@ export default function MobileLab() {
         </div>
       </div>
 
-      {/* Nurse install instructions — full width */}
+      {/* Deployment protocol — Palantir-style */}
       <div style={{
-        borderTop: `1px solid ${C.border}`, background: C.surface,
-        padding: '28px 32px',
+        borderTop: `1px solid rgba(255,255,255,0.06)`,
+        background: '#080A0D',
+        padding: '32px 32px 28px',
+        fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
       }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' }}>Installing on your phone</div>
-              <div style={{ fontSize: 12, color: C.text2, marginTop: 3 }}>Add Ambient to your home screen to receive fall alerts — no App Store required.</div>
-            </div>
-            <div style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-              background: C.greenDim, color: C.green, border: `1px solid ${C.green}33`,
-              borderRadius: 6, padding: '5px 12px',
-            }}>Free · No download</div>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-            {/* iPhone */}
-            <div style={{
-              background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8, background: C.accentDim,
-                  border: `1px solid ${C.accent}33`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 16,
-                }}>📱</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>iPhone · iPad</div>
-                  <div style={{ fontSize: 11, color: C.text2 }}>Safari required</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
-                  { step: '1', text: 'Open Safari and visit this page' },
-                  { step: '2', text: 'Tap the Share button (□↑) at the bottom' },
-                  { step: '3', text: 'Tap "Add to Home Screen"' },
-                  { step: '4', text: 'Tap "Add" to confirm' },
-                  { step: '5', text: 'Open from home screen and allow notifications' },
-                ].map(s => (
-                  <div key={s.step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                      background: C.accentDim, border: `1px solid ${C.accent}44`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 10, fontWeight: 700, color: C.accent,
-                    }}>{s.step}</div>
-                    <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.5, paddingTop: 2 }}>{s.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Android */}
-            <div style={{
-              background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8, background: C.greenDim,
-                  border: `1px solid ${C.green}33`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 16,
-                }}>🤖</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>Android</div>
-                  <div style={{ fontSize: 11, color: C.text2 }}>Chrome required</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
-                  { step: '1', text: 'Open Chrome and visit this page' },
-                  { step: '2', text: 'Tap the three-dot menu (⋮) top-right' },
-                  { step: '3', text: 'Tap "Add to Home screen" or "Install app"' },
-                  { step: '4', text: 'Tap "Install" to confirm' },
-                  { step: '5', text: 'Open from home screen and allow notifications' },
-                ].map(s => (
-                  <div key={s.step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                      background: C.greenDim, border: `1px solid ${C.green}44`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 10, fontWeight: 700, color: C.green,
-                    }}>{s.step}</div>
-                    <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.5, paddingTop: 2 }}>{s.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* After-install tips */}
+          {/* Header bar */}
           <div style={{
-            marginTop: 16, background: C.amberDim, border: `1px solid ${C.amber}33`,
-            borderRadius: 12, padding: '14px 20px',
-            display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 14, marginBottom: 24,
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, minWidth: 100, paddingTop: 1 }}>After installing</div>
-            {[
-              'Allow notifications when the app asks — required for fall alerts',
-              'Alerts arrive even when the app is closed or your screen is locked',
-              'Tap "Respond" on any notification to open directly to that room',
-              'Keep the app on your first home screen for fastest access',
-            ].map((tip, i) => (
-              <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', minWidth: 180, flex: 1 }}>
-                <span style={{ color: C.amber, fontSize: 14, lineHeight: 1, flexShrink: 0 }}>·</span>
-                <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{tip}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 6, height: 6, background: C.green, borderRadius: '50%', boxShadow: `0 0 6px ${C.green}` }} />
+              <span style={{ fontSize: 11, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
+                DEPLOYMENT PROTOCOL
+              </span>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>/ NURSE DEVICE SETUP</span>
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em' }}>
+              PWA · NO APP STORE · PUSH-ENABLED
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, background: 'rgba(255,255,255,0.05)' }}>
+
+            {/* Step block — iPhone */}
+            <div style={{ background: '#080A0D', padding: '20px 20px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+                <span style={{ fontSize: 10, color: C.accent, letterSpacing: '0.12em', textTransform: 'uppercase' }}>TARGET</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>iPhone / iPad</span>
+                <span style={{ marginLeft: 'auto', fontSize: 9, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>SAFARI</span>
               </div>
-            ))}
+              {[
+                ['01', 'Open Safari — not Chrome'],
+                ['02', 'Navigate to ambientprototype.vercel.app/mobile'],
+                ['03', 'Tap Share (□↑) at bottom of screen'],
+                ['04', 'Select "Add to Home Screen"'],
+                ['05', 'Tap "Add" to confirm installation'],
+                ['06', 'Launch from home screen icon'],
+                ['07', 'Tap "Enable Notifications" — allow when prompted'],
+              ].map(([n, t]) => (
+                <div key={n} style={{ display: 'flex', gap: 12, marginBottom: 10, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 9, color: C.accent, letterSpacing: '0.06em', flexShrink: 0, paddingTop: 1, minWidth: 16 }}>{n}</span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Step block — Android */}
+            <div style={{ background: '#080A0D', padding: '20px 20px 24px', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+                <span style={{ fontSize: 10, color: C.green, letterSpacing: '0.12em', textTransform: 'uppercase' }}>TARGET</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>Android</span>
+                <span style={{ marginLeft: 'auto', fontSize: 9, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>CHROME</span>
+              </div>
+              {[
+                ['01', 'Open Chrome browser'],
+                ['02', 'Navigate to ambientprototype.vercel.app/mobile'],
+                ['03', 'Tap ⋮ menu — top-right corner'],
+                ['04', 'Select "Add to Home screen" or "Install app"'],
+                ['05', 'Tap "Install" to confirm'],
+                ['06', 'Launch from home screen icon'],
+                ['07', 'Tap "Enable Notifications" — allow when prompted'],
+              ].map(([n, t]) => (
+                <div key={n} style={{ display: 'flex', gap: 12, marginBottom: 10, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 9, color: C.green, letterSpacing: '0.06em', flexShrink: 0, paddingTop: 1, minWidth: 16 }}>{n}</span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Requirements / alerts config */}
+            <div style={{ background: '#080A0D', padding: '20px 20px 24px', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+                <span style={{ fontSize: 10, color: C.amber, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Requirements</span>
+              </div>
+              {[
+                { label: 'iOS version',       value: '16.4 or later',       ok: true },
+                { label: 'Android version',   value: '8.0 or later',        ok: true },
+                { label: 'Notifications',     value: 'Must be allowed',      ok: true },
+                { label: 'Launch mode',       value: 'Home screen only',     ok: true },
+                { label: 'Push delivery',     value: 'APNs / FCM',          ok: true },
+                { label: 'App Store',         value: 'Not required',         ok: true },
+              ].map(r => (
+                <div key={r.label} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)',
+                }}>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>{r.label}</span>
+                  <span style={{ fontSize: 10, color: r.ok ? C.green : C.red, fontWeight: 700, letterSpacing: '0.04em' }}>{r.value}</span>
+                </div>
+              ))}
+
+              <div style={{ marginTop: 18, padding: '12px', background: 'rgba(255,201,64,0.06)', border: '1px solid rgba(255,201,64,0.15)' }}>
+                <div style={{ fontSize: 9, color: C.amber, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Critical</div>
+                {[
+                  'Notifications must be allowed at OS level',
+                  'Always launch from the home screen icon',
+                  'Check Settings → [App] → Notifications if alerts are missing',
+                ].map((t, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5 }}>
+                    <span style={{ color: C.amber, fontSize: 10, flexShrink: 0 }}>›</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer status bar */}
+          <div style={{
+            borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 1,
+            padding: '10px 0 0',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.08em' }}>
+              AMBIENT INTELLIGENCE · NURSE MOBILE DEPLOYMENT GUIDE
+            </span>
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.06em' }}>
+              ambientprototype.vercel.app/mobile
+            </span>
           </div>
         </div>
       </div>
