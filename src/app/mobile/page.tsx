@@ -7,6 +7,7 @@ const C = {
   border: 'rgba(255,255,255,0.07)', accent: '#2D72D2', accentDim: 'rgba(45,114,210,0.12)',
   text: '#EDEEF0', text2: '#9A9B9D', text3: '#5C5E62',
   green: '#3DCC91', greenDim: 'rgba(61,204,145,0.12)',
+  red: '#FF6B6B', redDim: 'rgba(255,107,107,0.15)',
   amber: '#FFC940', amberDim: 'rgba(255,201,64,0.12)',
 };
 
@@ -365,3 +366,4 @@ export default function MobilePage() {
     </div>
   );
 }
+
