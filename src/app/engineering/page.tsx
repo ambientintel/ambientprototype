@@ -774,10 +774,42 @@ export default function EngineeringPage() {
                       </span>
                     )}
                     <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", flexShrink:0 }}>Archived {item.updated}</span>
-                    <button onClick={() => setHistory(h => h.filter((_, i) => i !== idx))}
-                      style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:14, lineHeight:1, padding:"0 2px", transition:"color 0.12s" }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "#FF6B6B")}
-                      onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>✕</button>
+                    <button
+                      onClick={() => setHistory(h => h.filter((_, i) => i !== idx))}
+                      onMouseEnter={e => {
+                        const b = e.currentTarget;
+                        b.style.opacity = "1";
+                        b.style.background = "rgba(255,107,107,0.12)";
+                        b.style.borderColor = "rgba(255,107,107,0.28)";
+                        b.style.color = "#FF6B6B";
+                        b.style.transform = "scale(1.1)";
+                      }}
+                      onMouseLeave={e => {
+                        const b = e.currentTarget;
+                        b.style.opacity = "0.4";
+                        b.style.background = "transparent";
+                        b.style.borderColor = "transparent";
+                        b.style.color = "var(--text-4)";
+                        b.style.transform = "scale(1)";
+                      }}
+                      onMouseDown={e => (e.currentTarget.style.transform = "scale(0.88)")}
+                      onMouseUp={e => (e.currentTarget.style.transform = "scale(1.1)")}
+                      style={{
+                        flexShrink: 0,
+                        width: 26, height: 26,
+                        borderRadius: "50%",
+                        border: "1px solid transparent",
+                        background: "transparent",
+                        cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "var(--text-4)",
+                        opacity: 0.4,
+                        transition: "all 0.16s ease",
+                      }}>
+                      <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+                        <path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/>
+                      </svg>
+                    </button>
                   </div>
                 );
               })}
