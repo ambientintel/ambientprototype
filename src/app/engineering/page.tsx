@@ -965,9 +965,19 @@ export default function EngineeringPage() {
                           <div style={{ fontSize:14, fontWeight:600, color:"var(--text)", lineHeight:1.2 }}>{name}</div>
                           {disc && <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:1 }}>{disc.name}</div>}
                         </div>
-                        <div style={{ marginLeft:"auto", textAlign:"right" }}>
-                          <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-2)", fontWeight:600 }}>{myDone}/{myIssues.length} done</div>
-                          <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)" }}>{myDonePts}/{myPts} pts</div>
+                        <div style={{ marginLeft:"auto", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+                          <div style={{ textAlign:"right" }}>
+                            <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-2)", fontWeight:600 }}>{myDone}/{myIssues.length} done</div>
+                            <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)" }}>{myDonePts}/{myPts} pts</div>
+                          </div>
+                          <button
+                            onClick={e => { e.stopPropagation(); if (confirm(`Remove ${name} from the team?`)) setTeam(prev => prev.filter(tm => tm.name !== name)); }}
+                            title="Remove engineer"
+                            style={{ fontFamily:"var(--mono)", fontSize:8, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"var(--text-4)", background:"none", border:"1px solid transparent", borderRadius:4, padding:"2px 6px", cursor:"pointer", transition:"all 0.14s ease" }}
+                            onMouseEnter={e => { e.currentTarget.style.color="#FF6B6B"; e.currentTarget.style.borderColor="rgba(255,107,107,0.3)"; e.currentTarget.style.background="rgba(255,107,107,0.08)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.color="var(--text-4)"; e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="none"; }}>
+                            Remove
+                          </button>
                         </div>
                       </div>
                       {/* Mini progress bar */}
@@ -1153,12 +1163,8 @@ export default function EngineeringPage() {
               </div>
               <div style={s.formRow}>
                 <label style={s.formLabel}>Discipline</label>
-                <select value={newEng.discipline} onChange={e => setNewEng(p => ({ ...p, discipline: e.target.value }))} style={s.formSelect}>
-                  <option value="">— None —</option>
-                  {DISCIPLINES.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
-                  {/* show any custom disciplines already in team */}
-                  {Array.from(new Set(team.map(t => t.discipline).filter(Boolean))).filter(d => !DISCIPLINES.find(dd => dd.name === d)).map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
+                <input value={newEng.discipline} onChange={e => setNewEng(p => ({ ...p, discipline: e.target.value }))}
+                  style={s.formInput} placeholder="e.g. Software, Electrical…"/>
               </div>
               <div style={s.formRow}>
                 <label style={s.formLabel}>Color</label>
