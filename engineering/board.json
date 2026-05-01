@@ -23,7 +23,11 @@
   },
   "completedTasks": {},
   "history": [],
-  "weekStatus": {},
+  "weekStatus": {
+    "Brian": {
+      "Thu": "yes"
+    }
+  },
   "team": [
     {
       "name": "Gavin",
