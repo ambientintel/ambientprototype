@@ -971,24 +971,14 @@ export default function EngineeringPage() {
                             <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-2)", fontWeight:600 }}>{myDone}/{myIssues.length} done</div>
                             <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)" }}>{myDonePts}/{myPts} pts</div>
                           </div>
-                          <div style={{ display:"flex", gap:5 }}>
-                            <button
-                              onClick={e => { e.stopPropagation(); setEditEng({ original:name, name, color:t.color, discipline:t.discipline||"" }); }}
-                              title="Edit engineer"
-                              style={{ fontFamily:"var(--mono)", fontSize:8, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"var(--text-4)", background:"none", border:"1px solid transparent", borderRadius:4, padding:"2px 6px", cursor:"pointer", transition:"all 0.14s ease" }}
-                              onMouseEnter={e => { e.currentTarget.style.color=t.color; e.currentTarget.style.borderColor=t.color+"44"; e.currentTarget.style.background=t.color+"10"; }}
-                              onMouseLeave={e => { e.currentTarget.style.color="var(--text-4)"; e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="none"; }}>
-                              Edit
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); if (confirm(`Remove ${name} from the team?`)) setTeam(prev => prev.filter(tm => tm.name !== name)); }}
-                              title="Remove engineer"
-                              style={{ fontFamily:"var(--mono)", fontSize:8, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"var(--text-4)", background:"none", border:"1px solid transparent", borderRadius:4, padding:"2px 6px", cursor:"pointer", transition:"all 0.14s ease" }}
-                              onMouseEnter={e => { e.currentTarget.style.color="#FF6B6B"; e.currentTarget.style.borderColor="rgba(255,107,107,0.3)"; e.currentTarget.style.background="rgba(255,107,107,0.08)"; }}
-                              onMouseLeave={e => { e.currentTarget.style.color="var(--text-4)"; e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="none"; }}>
-                              Remove
-                            </button>
-                          </div>
+                          <button
+                            onClick={e => { e.stopPropagation(); setEditEng({ original:name, name, color:t.color, discipline:t.discipline||"" }); }}
+                            title="Edit engineer"
+                            style={{ fontFamily:"var(--mono)", fontSize:8, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"var(--text-4)", background:"none", border:"1px solid transparent", borderRadius:4, padding:"2px 6px", cursor:"pointer", transition:"all 0.14s ease" }}
+                            onMouseEnter={e => { e.currentTarget.style.color=t.color; e.currentTarget.style.borderColor=t.color+"44"; e.currentTarget.style.background=t.color+"10"; }}
+                            onMouseLeave={e => { e.currentTarget.style.color="var(--text-4)"; e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="none"; }}>
+                            Edit
+                          </button>
                         </div>
                       </div>
                       {/* Mini progress bar */}
@@ -1138,6 +1128,23 @@ export default function EngineeringPage() {
                       {tasks.length === 0 && done.length === 0 && (
                         <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.1em", textAlign:"center", padding:"8px 0" }}>NO PERSONAL TASKS</div>
                       )}
+                    </div>
+
+                    {/* ── Card footer: Remove ── */}
+                    <div style={{ borderTop:"1px solid var(--line)", padding:"10px 14px", display:"flex", justifyContent:"flex-end" }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); if (confirm(`Remove ${name} from the team?`)) setTeam(prev => prev.filter(tm => tm.name !== name)); }}
+                        title="Remove engineer"
+                        onMouseEnter={e => { const b = e.currentTarget; b.style.background="rgba(255,107,107,0.12)"; b.style.borderColor="rgba(255,107,107,0.5)"; b.style.color="#FF6B6B"; b.style.boxShadow="0 4px 16px rgba(255,107,107,0.25)"; b.style.transform="translateY(-1px)"; }}
+                        onMouseLeave={e => { const b = e.currentTarget; b.style.background="transparent"; b.style.borderColor="rgba(255,107,107,0.2)"; b.style.color="rgba(255,107,107,0.45)"; b.style.boxShadow="none"; b.style.transform="translateY(0)"; }}
+                        onMouseDown={e => { e.currentTarget.style.transform="scale(0.95)"; e.currentTarget.style.boxShadow="none"; }}
+                        onMouseUp={e => { e.currentTarget.style.transform="translateY(-1px)"; }}
+                        style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 14px", borderRadius:7, border:"1px solid rgba(255,107,107,0.2)", background:"transparent", color:"rgba(255,107,107,0.45)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.1em", textTransform:"uppercase" as const, transition:"all 0.16s ease" }}>
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"/>
+                        </svg>
+                        Remove
+                      </button>
                     </div>
                   </div>
                 );
