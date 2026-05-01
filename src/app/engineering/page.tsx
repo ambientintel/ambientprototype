@@ -145,6 +145,8 @@ export default function EngineeringPage() {
   const [newEng, setNewEng] = useState({ name:"", color:"#A78BFA", discipline:"" });
   const [editEng, setEditEng] = useState<{original:string; name:string; color:string; discipline:string}|null>(null);
   const [subsystems, setSubsystems] = useState<Subsystem[]>(DEFAULT_SUBSYSTEMS);
+  const [showAddSub, setShowAddSub] = useState(false);
+  const [newSub, setNewSub] = useState({ name:"", color:"#A78BFA", progress:0, status:"" });
   const [dragEngIdx, setDragEngIdx] = useState<number|null>(null);
   const [dragOverEngIdx, setDragOverEngIdx] = useState<number|null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -1271,6 +1273,16 @@ export default function EngineeringPage() {
         {/* ── Subsystems View ── */}
         {view === "subsystems" && (
           <div style={{ ...s.content, flex:1 }}>
+            {/* Header row */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+              <div style={{ fontFamily:"var(--serif)", fontWeight:300, fontSize:22, letterSpacing:"-0.01em" }}>Subsystems <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>overview</em></div>
+              <button onClick={() => { setNewSub({ name:"", color:"#A78BFA", progress:0, status:"" }); setShowAddSub(true); }}
+                style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", borderRadius:7, border:"1px solid var(--line-strong)", background:"var(--surface-2)", color:"var(--text-2)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:10.5, letterSpacing:"0.08em", textTransform:"uppercase", transition:"all 0.14s" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-3)"; e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--text-2)"; }}>
+                <span style={{ fontSize:14, lineHeight:1 }}>+</span> Add Subsystem
+              </button>
+            </div>
             {/* Overall progress */}
             <div style={{ background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:14, padding:"22px 28px", marginBottom:32 }}>
               <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
@@ -1300,6 +1312,7 @@ export default function EngineeringPage() {
                   onUpdate={(progress, status) =>
                     setSubsystems(prev => prev.map(s => s.id === sub.id ? { ...s, progress, status } : s))
                   }
+                  onRemove={() => setSubsystems(prev => prev.filter(s => s.id !== sub.id))}
                 />
               ))}
             </div>
@@ -1411,6 +1424,59 @@ export default function EngineeringPage() {
                 setTeam(prev => prev.map(tm => tm.name === editEng.original ? { ...tm, name:n, initial, color:editEng.color, discipline:editEng.discipline||undefined } : tm));
                 setEditEng(null);
               }} style={{ ...s.btnPrimary, opacity: editEng.name.trim() ? 1 : 0.4 }}>Save Changes</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Add Subsystem Modal ── */}
+      {showAddSub && (
+        <>
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(4px)", zIndex:70 }} onClick={() => setShowAddSub(false)}/>
+          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:71, width:400, background:"var(--surface-1)", border:"1px solid var(--line-strong)", borderRadius:14, padding:"28px 28px 24px", display:"flex", flexDirection:"column", gap:20, boxShadow:"0 20px 60px rgba(0,0,0,0.45)" }}>
+            <div>
+              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)", marginBottom:6 }}>Subsystems / New</div>
+              <h2 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:22, letterSpacing:"-0.02em" }}>Add <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>subsystem</em></h2>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Name</label>
+                <input autoFocus value={newSub.name} onChange={e => setNewSub(p => ({ ...p, name: e.target.value }))}
+                  style={s.formInput} placeholder="e.g. Firmware, Cloud API…"/>
+              </div>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Status note</label>
+                <input value={newSub.status} onChange={e => setNewSub(p => ({ ...p, status: e.target.value }))}
+                  style={s.formInput} placeholder="e.g. In development…"/>
+              </div>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Progress</label>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flex:1 }}>
+                  <input type="range" min={0} max={100} value={newSub.progress}
+                    onChange={e => setNewSub(p => ({ ...p, progress: Number(e.target.value) }))}
+                    style={{ flex:1, accentColor: newSub.color }}/>
+                  <span style={{ fontFamily:"var(--mono)", fontSize:12, color:"var(--text-2)", minWidth:36, textAlign:"right" }}>{newSub.progress}%</span>
+                </div>
+              </div>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Color</label>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {["#00B4D8","#F472B6","#FB923C","#818CF8","#34D399","#22D3EE","#A78BFA","#FCD34D","#F87171","#4ADE80","#38BDF8","#E879F9"].map(c => (
+                    <button key={c} onClick={() => setNewSub(p => ({ ...p, color: c }))}
+                      style={{ width:24, height:24, borderRadius:"50%", background:c, border: newSub.color === c ? "2px solid white" : "2px solid transparent", cursor:"pointer", boxShadow: newSub.color === c ? `0 0 0 2px ${c}` : "none", transition:"all 0.14s ease" }}/>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => setShowAddSub(false)} style={{ ...s.btn }}>Cancel</button>
+              <button onClick={() => {
+                const n = newSub.name.trim();
+                if (!n) return;
+                const id = n.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") + "-" + Date.now();
+                setSubsystems(prev => [...prev, { id, name: n, color: newSub.color, progress: newSub.progress, status: newSub.status.trim() }]);
+                setShowAddSub(false);
+              }} style={{ ...s.btnPrimary, opacity: newSub.name.trim() ? 1 : 0.4 }}>Add Subsystem</button>
             </div>
           </div>
         </>
@@ -1697,7 +1763,7 @@ export default function EngineeringPage() {
 }
 
 // ── SubsystemCard ─────────────────────────────────────────────────────────
-function SubsystemCard({ sub, onUpdate }: { sub: Subsystem; onUpdate: (progress: number, status: string) => void }) {
+function SubsystemCard({ sub, onUpdate, onRemove }: { sub: Subsystem; onUpdate: (progress: number, status: string) => void; onRemove: () => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ progress: sub.progress, status: sub.status });
 
@@ -1719,7 +1785,11 @@ function SubsystemCard({ sub, onUpdate }: { sub: Subsystem; onUpdate: (progress:
         {/* Header */}
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
           <span style={{ width:9, height:9, borderRadius:2, background:sub.color, flexShrink:0 }}/>
-          <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-2)" }}>{sub.name}</span>
+          <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-2)", flex:1 }}>{sub.name}</span>
+          <button onClick={onRemove} title="Remove subsystem"
+            style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:14, lineHeight:1, padding:"2px 4px", borderRadius:4, transition:"color 0.14s" }}
+            onMouseEnter={e => { e.currentTarget.style.color = "#FF6B6B"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-4)"; }}>×</button>
         </div>
 
         {/* Progress bar */}
