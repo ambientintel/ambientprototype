@@ -1651,9 +1651,17 @@ function ShotClock() {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:14, padding:"10px 0 8px", borderTop:"1px solid var(--line)" }}>
       {/* Label */}
-      <div style={{ display:"flex", flexDirection:"column" as const, flexShrink:0 }}>
-        <span style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase" as const, letterSpacing:"0.14em", color:"var(--text-4)", lineHeight:1.2 }}>Shot Clock</span>
-        <span style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", letterSpacing:"0.08em", opacity:0.6 }}>{label}</span>
+      <div style={{ display:"flex", flexDirection:"column" as const, gap:2, flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <rect x="0" y="0" width="3" height="3" fill={urgency} opacity="0.9"/>
+            <rect x="5" y="0" width="3" height="3" fill={urgency} opacity="0.45"/>
+            <rect x="0" y="5" width="3" height="3" fill={urgency} opacity="0.45"/>
+            <rect x="5" y="5" width="3" height="3" fill={urgency} opacity="0.2"/>
+          </svg>
+          <span style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase" as const, letterSpacing:"0.22em", color:"var(--text-2)", fontWeight:600, lineHeight:1 }}>Shot Clock</span>
+        </div>
+        <span style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", letterSpacing:"0.1em", paddingLeft:13 }}>{label}</span>
       </div>
 
       {/* Countdown */}
