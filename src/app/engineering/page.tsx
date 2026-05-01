@@ -1648,53 +1648,66 @@ function ShotClock() {
   // label: time of day
   const label = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
 
+  const segments = 40;
+  const filled   = Math.round((pct / 100) * segments);
+
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"10px 0 8px", borderTop:"1px solid var(--line)" }}>
-      {/* Label */}
-      <div style={{ display:"flex", flexDirection:"column" as const, gap:2, flexShrink:0 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+    <div style={{
+      margin:"4px 0 2px",
+      background:"rgba(0,0,0,0.28)",
+      border:`1px solid ${urgency}28`,
+      borderRadius:8,
+      padding:"14px 20px",
+      display:"flex", alignItems:"center", gap:24,
+      boxShadow:`inset 0 1px 0 rgba(255,255,255,0.04), 0 0 24px ${urgency}0C`,
+      transition:"border-color 0.6s ease, box-shadow 0.6s ease",
+    }}>
+
+      {/* Left: label + time */}
+      <div style={{ display:"flex", flexDirection:"column" as const, gap:4, flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
           <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-            <rect x="0" y="0" width="3" height="3" fill={urgency} opacity="0.9"/>
+            <rect x="0" y="0" width="3" height="3" fill={urgency}/>
             <rect x="5" y="0" width="3" height="3" fill={urgency} opacity="0.45"/>
             <rect x="0" y="5" width="3" height="3" fill={urgency} opacity="0.45"/>
-            <rect x="5" y="5" width="3" height="3" fill={urgency} opacity="0.2"/>
+            <rect x="5" y="5" width="3" height="3" fill={urgency} opacity="0.18"/>
           </svg>
-          <span style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase" as const, letterSpacing:"0.22em", color:"var(--text-2)", fontWeight:600, lineHeight:1 }}>Shot Clock</span>
+          <span style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase" as const, letterSpacing:"0.24em", color:"var(--text-3)", fontWeight:600 }}>Shot Clock</span>
         </div>
-        <span style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", letterSpacing:"0.1em", paddingLeft:13 }}>{label}</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.08em", paddingLeft:14, opacity:0.7 }}>{label} → noon</span>
       </div>
 
-      {/* Countdown */}
-      <div style={{ display:"flex", alignItems:"baseline", gap:4, flexShrink:0 }}>
-        <span style={{ fontFamily:"var(--mono)", fontSize:22, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1, transition:"color 0.6s ease" }}>{pad(hrs)}</span>
-        <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)" }}>h</span>
-        <span style={{ fontFamily:"var(--mono)", fontSize:22, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(mins)}</span>
-        <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)" }}>m</span>
-        <span style={{ fontFamily:"var(--mono)", fontSize:22, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(secs)}</span>
-        <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)" }}>s</span>
+      {/* Center: large countdown */}
+      <div style={{ display:"flex", alignItems:"baseline", gap:2, flexShrink:0 }}>
+        {[{v:pad(hrs),u:"h"},{v:pad(mins),u:"m"},{v:pad(secs),u:"s"}].map(({v,u},i) => (
+          <span key={u} style={{ display:"flex", alignItems:"baseline", gap:1, marginLeft: i>0 ? 6 : 0 }}>
+            <span style={{ fontFamily:"var(--mono)", fontSize:32, fontWeight:700, color:urgency, letterSpacing:"-0.02em", lineHeight:1, textShadow:`0 0 20px ${urgency}66`, transition:"color 0.6s, text-shadow 0.6s" }}>{v}</span>
+            <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)", letterSpacing:"0.06em", marginBottom:2 }}>{u}</span>
+          </span>
+        ))}
       </div>
 
-      {/* Progress bar */}
-      <div style={{ flex:1, height:4, borderRadius:4, background:"var(--surface-2)", overflow:"hidden", position:"relative" }}>
-        <div style={{
-          position:"absolute", left:0, top:0, bottom:0,
-          width:`${pct}%`,
-          background: `linear-gradient(90deg, #3DCC91, ${urgency})`,
-          borderRadius:4,
-          transition:"width 1s linear, background 0.6s ease",
-          boxShadow: `0 0 8px ${urgency}55`,
-        }}/>
+      {/* Right: segmented bar + pct */}
+      <div style={{ flex:1, display:"flex", flexDirection:"column" as const, gap:6, minWidth:0 }}>
+        {/* Segmented progress */}
+        <div style={{ display:"flex", gap:2, alignItems:"center" }}>
+          {Array.from({ length: segments }, (_, i) => (
+            <div key={i} style={{
+              flex:1, height:6, borderRadius:1,
+              background: i < filled ? urgency : "rgba(255,255,255,0.06)",
+              boxShadow: i < filled ? `0 0 6px ${urgency}55` : "none",
+              transition:"background 0.4s ease, box-shadow 0.4s ease",
+            }}/>
+          ))}
+        </div>
+        {/* Labels row */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.08em" }}>00:00</span>
+          <span style={{ fontFamily:"var(--mono)", fontSize:9, color:urgency, letterSpacing:"0.1em", fontWeight:600, transition:"color 0.6s" }}>{Math.round(pct)}% elapsed</span>
+          <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.08em" }}>12:00</span>
+        </div>
       </div>
 
-      {/* Pct elapsed */}
-      <div style={{ fontFamily:"var(--mono)", fontSize:10, color:urgency, whiteSpace:"nowrap", flexShrink:0, transition:"color 0.6s ease" }}>
-        {Math.round(pct)}% elapsed
-      </div>
-
-      {/* Target */}
-      <div style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", whiteSpace:"nowrap", flexShrink:0, opacity:0.7 }}>
-        → noon
-      </div>
     </div>
   );
 }
