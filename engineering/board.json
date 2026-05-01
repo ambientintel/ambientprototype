@@ -33,11 +33,14 @@
   ],
   "personalTasks": {
     "Brian": [
-      "Mobile alert app",
       "Website for pilot study"
     ]
   },
-  "completedTasks": {},
+  "completedTasks": {
+    "Brian": [
+      "Mobile alert app"
+    ]
+  },
   "history": [],
   "weekStatus": {
     "Brian": {
