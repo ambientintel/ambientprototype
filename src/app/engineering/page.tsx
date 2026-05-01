@@ -599,13 +599,13 @@ export default function EngineeringPage() {
                       <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, color:barColor, flexShrink:0 }}>{sub.progress}%</span>
                     </div>
                     {/* Progress bar */}
-                    <div style={{ height:10, borderRadius:6, background:"var(--surface-2)", overflow:"hidden" }}>
-                      <div style={{ height:"100%", width:`${sub.progress}%`, background:barColor, borderRadius:6, transition:"width 0.3s", boxShadow:`0 0 6px ${barColor}66` }}/>
+                    <div style={{ height:4, borderRadius:2, background:"var(--surface-2)", overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${sub.progress}%`, background:barColor, borderRadius:2, transition:"width 0.3s" }}/>
                     </div>
                     {/* Slider */}
                     <input type="range" min={0} max={100} value={sub.progress}
                       onChange={e => setSubsystems(prev => prev.map(s => s.id === sub.id ? { ...s, progress: Number(e.target.value) } : s))}
-                      style={{ width:"100%", accentColor: sub.color, cursor:"pointer", margin:0 }}/>
+                      style={{ width:"100%", accentColor:"var(--text-3)", cursor:"pointer", margin:0 }}/>
                   </div>
                 );
               })}
