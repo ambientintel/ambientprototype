@@ -1,59 +1,6 @@
 {
   "issues": [
     {
-      "id": "ENG-128",
-      "type": "story",
-      "title": "Export resident report as PDF — weekly summary",
-      "priority": "medium",
-      "points": 5,
-      "assignee": "Hanna",
-      "assigneeInitial": "H",
-      "assigneeColor": "#F472B6",
-      "labels": [
-        "reports",
-        "pdf"
-      ],
-      "column": "review",
-      "description": "Generate a one-page weekly summary PDF per resident: fall count, avg walk score, alert history. Triggered manually from the Reports tab.",
-      "created": "Apr 10",
-      "updated": "Apr 28"
-    },
-    {
-      "id": "ENG-129",
-      "type": "bug",
-      "title": "Analytics chart renders blank on Safari 17",
-      "priority": "high",
-      "points": 3,
-      "assignee": "Aki",
-      "assigneeInitial": "A",
-      "assigneeColor": "#34D399",
-      "labels": [
-        "frontend",
-        "safari"
-      ],
-      "column": "review",
-      "description": "The SVG path gradient in analytics breaks on Safari 17 due to a linearGradient scoping bug. Fix: move gradientUnits to userSpaceOnUse.",
-      "created": "Apr 11",
-      "updated": "Apr 29"
-    },
-    {
-      "id": "ENG-131",
-      "type": "task",
-      "title": "Add Datadog APM spans to ingestion pipeline",
-      "priority": "low",
-      "points": 3,
-      "assignee": "Gavin",
-      "assigneeInitial": "G",
-      "assigneeColor": "#00B4D8",
-      "labels": [
-        "observability"
-      ],
-      "column": "review",
-      "description": "Instrument the sensor-to-event pipeline with Datadog APM. Key spans: ingest, dedup, enrich, persist, notify.",
-      "created": "Apr 13",
-      "updated": "Apr 27"
-    },
-    {
       "id": "ENG-120",
       "type": "epic",
       "title": "v1.2 Auth — role-based access (admin / nurse / viewer)",
