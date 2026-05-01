@@ -21,6 +21,7 @@ interface Issue {
   description: string;
   created: string;
   updated: string;
+  blockedBy?: string[]; // issue IDs that must be done first
 }
 
 // ── Data ───────────────────────────────────────────────────────────────────
@@ -105,6 +106,7 @@ export default function EngineeringPage() {
   const [colInputs, setColInputs] = useState<Record<string, string>>({});
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<Column | null>(null);
+  const [depSearch, setDepSearch] = useState("");
   const [history, setHistory] = useState<Issue[]>([]);
   const colCounter = useRef(200);
 
@@ -320,6 +322,26 @@ export default function EngineeringPage() {
   function deleteIssue(id: string) {
     setIssues(prev => prev.filter(i => i.id !== id));
     if (selected?.id === id) setSelected(null);
+  }
+
+  function updateIssue(id: string, patch: Partial<Issue>) {
+    setIssues(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+    if (selected?.id === id) setSelected(prev => prev ? { ...prev, ...patch } : null);
+  }
+
+  function addDep(fromId: string, blockerId: string) {
+    const cur = issues.find(i => i.id === fromId);
+    if (!cur) return;
+    const already = cur.blockedBy ?? [];
+    if (already.includes(blockerId)) return;
+    updateIssue(fromId, { blockedBy: [...already, blockerId] });
+    setDepSearch("");
+  }
+
+  function removeDep(fromId: string, blockerId: string) {
+    const cur = issues.find(i => i.id === fromId);
+    if (!cur) return;
+    updateIssue(fromId, { blockedBy: (cur.blockedBy ?? []).filter(id => id !== blockerId) });
   }
 
   function archiveIssue(id: string) {
@@ -814,6 +836,8 @@ export default function EngineeringPage() {
                       {colIssues.map(issue => (
                         <IssueCard key={issue.id} issue={issue}
                           colIndex={colIdx}
+                          isBlocked={(issue.blockedBy ?? []).some(bid => issues.find(i => i.id === bid)?.column !== "done")}
+                          isBlocking={issues.some(i => (i.blockedBy ?? []).includes(issue.id) && issue.column !== "done")}
                           onSelect={() => setSelected(issue)}
                           onMoveBack={() => moveIssueStep(issue.id, -1)}
                           onMoveForward={() => moveIssueStep(issue.id, 1)}
@@ -1370,11 +1394,98 @@ export default function EngineeringPage() {
 
               {/* Description */}
               {selected.description && (
-                <div>
+                <div style={{ marginBottom:28 }}>
                   <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-4)", marginBottom:10 }}>Description</div>
                   <p style={{ margin:0, fontSize:13.5, color:"var(--text-2)", lineHeight:1.6 }}>{selected.description}</p>
                 </div>
               )}
+
+              {/* Dependencies */}
+              {(() => {
+                const blockers   = (selected.blockedBy ?? []).map(id => issues.find(i => i.id === id)).filter(Boolean) as Issue[];
+                const blocking   = issues.filter(i => (i.blockedBy ?? []).includes(selected.id));
+                const allBlocked = blockers.some(b => b.column !== "done");
+                const depResults = depSearch.trim().length > 1
+                  ? issues.filter(i => i.id !== selected.id && !(selected.blockedBy ?? []).includes(i.id) && (i.id.toLowerCase().includes(depSearch.toLowerCase()) || i.title.toLowerCase().includes(depSearch.toLowerCase()))).slice(0,5)
+                  : [];
+                return (
+                  <div style={{ borderTop:"1px solid var(--line)", paddingTop:20 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--text-4)" strokeWidth="1.6" strokeLinecap="round"><path d="M10 3h3v3M6 13H3v-3M13 3l-5 5M3 13l5-5"/></svg>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-4)" }}>Dependencies</span>
+                      {allBlocked && <span style={{ fontFamily:"var(--mono)", fontSize:8.5, background:"rgba(255,107,107,0.15)", color:"#FF6B6B", border:"1px solid rgba(255,107,107,0.3)", borderRadius:3, padding:"2px 7px", letterSpacing:"0.08em" }}>BLOCKED</span>}
+                    </div>
+
+                    {/* Blocked by list */}
+                    {blockers.length > 0 && (
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>Blocked by</div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                          {blockers.map(b => {
+                            const done = b.column === "done";
+                            const t = team.find(tm => tm.name === b.assignee);
+                            return (
+                              <div key={b.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:6, background: done ? "rgba(61,204,145,0.06)" : "rgba(255,107,107,0.06)", border:`1px solid ${done ? "rgba(61,204,145,0.2)" : "rgba(255,107,107,0.2)"}` }}>
+                                <span style={{ width:6, height:6, borderRadius:"50%", background: done ? "#3DCC91" : "#FF6B6B", flexShrink:0 }}/>
+                                <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", flexShrink:0 }}>{b.id}</span>
+                                <span style={{ fontSize:12, color:"var(--text-2)", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{b.title}</span>
+                                {t && <span style={{ width:18, height:18, borderRadius:"50%", background:t.color+"33", color:t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:8, fontWeight:700, flexShrink:0 }}>{t.initial}</span>}
+                                <span style={{ fontFamily:"var(--mono)", fontSize:9, color: done ? "#3DCC91" : "#FF6B6B", flexShrink:0 }}>{done ? "Done" : b.column === "inprogress" ? "In Progress" : b.column === "review" ? "Review" : "To Do"}</span>
+                                <button onClick={() => removeDep(selected.id, b.id)}
+                                  style={{ flexShrink:0, width:18, height:18, borderRadius:"50%", border:"none", background:"transparent", cursor:"pointer", color:"var(--text-4)", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.14s" }}
+                                  onMouseEnter={e => { e.currentTarget.style.background="rgba(255,107,107,0.15)"; e.currentTarget.style.color="#FF6B6B"; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="var(--text-4)"; }}>
+                                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Blocking list */}
+                    {blocking.length > 0 && (
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>Blocking</div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                          {blocking.map(b => (
+                            <div key={b.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 10px", borderRadius:6, background:"var(--surface-2)", border:"1px solid var(--line)" }}>
+                              <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", flexShrink:0 }}>{b.id}</span>
+                              <span style={{ fontSize:12, color:"var(--text-2)", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{b.title}</span>
+                              <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)" }}>{b.assignee}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Add dependency search */}
+                    <div style={{ position:"relative" }}>
+                      <input value={depSearch} onChange={e => setDepSearch(e.target.value)}
+                        placeholder="Search to add dependency…"
+                        style={{ ...s.formInput, width:"100%", fontSize:12, padding:"8px 12px", boxSizing:"border-box" as const }}/>
+                      {depResults.length > 0 && (
+                        <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:10, background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:6, marginTop:4, overflow:"hidden", boxShadow:"0 8px 24px rgba(0,0,0,0.3)" }}>
+                          {depResults.map(r => {
+                            const t = team.find(tm => tm.name === r.assignee);
+                            return (
+                              <div key={r.id} onClick={() => addDep(selected.id, r.id)}
+                                style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 12px", cursor:"pointer", transition:"background 0.12s", borderBottom:"1px solid var(--line)" }}
+                                onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-2)")}
+                                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                                <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", flexShrink:0 }}>{r.id}</span>
+                                <span style={{ fontSize:12, color:"var(--text)", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.title}</span>
+                                {t && <span style={{ width:18, height:18, borderRadius:"50%", background:t.color+"33", color:t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:8, fontWeight:700, flexShrink:0 }}>{t.initial}</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </>
@@ -1505,9 +1616,11 @@ export default function EngineeringPage() {
 }
 
 // ── IssueCard ──────────────────────────────────────────────────────────────
-function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArchive, onClear, onDragStart, onDragEnd, isDragging }: {
+function IssueCard({ issue, colIndex, isBlocked, isBlocking, onSelect, onMoveBack, onMoveForward, onArchive, onClear, onDragStart, onDragEnd, isDragging }: {
   issue: Issue;
   colIndex: number;
+  isBlocked: boolean;
+  isBlocking: boolean;
   onSelect: () => void;
   onMoveBack: () => void;
   onMoveForward: () => void;
@@ -1571,6 +1684,20 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
           {issue.labels.slice(0,2).map(l => (
             <span key={l} style={{ fontFamily:"var(--mono)", fontSize:9, padding:"2px 6px", borderRadius:3, background:"var(--surface-2)", color:"var(--text-4)" }}>{l}</span>
           ))}
+        </div>
+      )}
+      {(isBlocked || isBlocking) && (
+        <div style={{ display:"flex", gap:4, marginTop:7 }}>
+          {isBlocked && (
+            <span style={{ fontFamily:"var(--mono)", fontSize:8.5, padding:"2px 7px", borderRadius:3, background:"#FF6B6B18", color:"#FF6B6B", border:"1px solid #FF6B6B33", letterSpacing:"0.12em", textTransform:"uppercase", fontWeight:700 }}>
+              ⊘ Blocked
+            </span>
+          )}
+          {isBlocking && (
+            <span style={{ fontFamily:"var(--mono)", fontSize:8.5, padding:"2px 7px", borderRadius:3, background:"#FFC94018", color:"#FFC940", border:"1px solid #FFC94033", letterSpacing:"0.12em", textTransform:"uppercase", fontWeight:700 }}>
+              ◈ Blocking
+            </span>
+          )}
         </div>
       )}
       {/* Move buttons */}
