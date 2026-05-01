@@ -1414,20 +1414,23 @@ function ShotClock() {
     return () => clearInterval(t);
   }, []);
 
-  const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay   = new Date(startOfDay); endOfDay.setDate(endOfDay.getDate() + 1);
+  // Count down to next noon (12:00 PM)
+  const nextNoon = new Date(now);
+  nextNoon.setHours(12, 0, 0, 0);
+  if (now >= nextNoon) nextNoon.setDate(nextNoon.getDate() + 1);
+  const prevNoon = new Date(nextNoon); prevNoon.setDate(prevNoon.getDate() - 1);
 
-  const total     = 86400000; // 24h in ms
-  const elapsed   = now.getTime() - startOfDay.getTime();
-  const remaining = endOfDay.getTime() - now.getTime();
+  const total     = 86400000; // 24h cycle noon-to-noon
+  const elapsed   = now.getTime() - prevNoon.getTime();
+  const remaining = nextNoon.getTime() - now.getTime();
   const pct       = Math.min(100, (elapsed / total) * 100);
 
   const hrs  = Math.floor(remaining / 3600000);
   const mins = Math.floor((remaining % 3600000) / 60000);
   const secs = Math.floor((remaining % 60000) / 1000);
 
-  // urgency ramps up in final 4h and final 1h
-  const urgency = remaining < 3600000 ? "#FF6B6B" : remaining < 4 * 3600000 ? "#FFC940" : "#3DCC91";
+  // urgency ramps in final 2h and final 30min
+  const urgency = remaining < 1800000 ? "#FF6B6B" : remaining < 2 * 3600000 ? "#FFC940" : "#3DCC91";
 
   const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -1469,9 +1472,9 @@ function ShotClock() {
         {Math.round(pct)}% elapsed
       </div>
 
-      {/* Noon prompt note */}
+      {/* Target */}
       <div style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", whiteSpace:"nowrap", flexShrink:0, opacity:0.7 }}>
-        Prompt at noon
+        → noon
       </div>
     </div>
   );
