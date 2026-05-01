@@ -1,24 +1,5 @@
 {
-  "issues": [
-    {
-      "id": "ENG-127",
-      "type": "task",
-      "title": "Upgrade Next.js 14 → 15 and resolve breaking changes",
-      "priority": "medium",
-      "points": 5,
-      "assignee": "Paulo",
-      "assigneeInitial": "P",
-      "assigneeColor": "#FB923C",
-      "labels": [
-        "infra",
-        "upgrade"
-      ],
-      "column": "done",
-      "description": "Updated Next.js, fixed async params usage, migrated cookies() calls to the new API surface.",
-      "created": "Apr 8",
-      "updated": "Apr 23"
-    }
-  ],
+  "issues": [],
   "personalTasks": {},
   "completedTasks": {},
   "history": [],
