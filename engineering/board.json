@@ -119,7 +119,7 @@
       "id": "api",
       "name": "API",
       "color": "#818CF8",
-      "progress": 60,
+      "progress": 6,
       "status": "FastAPI + Cognito live"
     },
     {
