@@ -40,6 +40,12 @@
       "initial": "A",
       "color": "#22D3EE",
       "discipline": "Cloud Cybersecurity"
+    },
+    {
+      "name": "Brian",
+      "initial": "B",
+      "color": "#22D3EE",
+      "discipline": "Biomedical"
     }
   ]
 }
