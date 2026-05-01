@@ -1,24 +1,6 @@
 {
   "issues": [
     {
-      "id": "ENG-142",
-      "type": "story",
-      "title": "Sensor fusion: merge radar + PIR confidence scores",
-      "priority": "high",
-      "points": 8,
-      "assignee": "Gavin",
-      "assigneeInitial": "G",
-      "assigneeColor": "#00B4D8",
-      "labels": [
-        "ml",
-        "sensors"
-      ],
-      "column": "todo",
-      "description": "Combine radar motion confidence with PIR interrupt signals to produce a unified presence score per room. Output should feed the alert engine.",
-      "created": "Apr 22",
-      "updated": "Apr 27"
-    },
-    {
       "id": "ENG-143",
       "type": "task",
       "title": "Add pagination to /api/events endpoint",
