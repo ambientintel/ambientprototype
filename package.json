@@ -17,6 +17,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",
+    "@workos-inc/authkit-nextjs": "^0.13.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
