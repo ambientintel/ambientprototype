@@ -68,12 +68,12 @@ const TYPE_META: Record<IssueType, { color: string; symbol: string }> = {
 };
 
 const TEAM = [
-  { name:"Gavin",  initial:"G", color:"#00B4D8" },
-  { name:"Hanna",  initial:"H", color:"#F472B6" },
-  { name:"Paulo",  initial:"P", color:"#FB923C" },
-  { name:"Isaac",  initial:"I", color:"#818CF8" },
-  { name:"Aki",    initial:"A", color:"#34D399" },
-  { name:"Abdul",  initial:"A", color:"#22D3EE" },
+  { name:"Gavin",  initial:"G", color:"#00B4D8", discipline:"Electrical" },
+  { name:"Hanna",  initial:"H", color:"#F472B6", discipline:"Electrical" },
+  { name:"Paulo",  initial:"P", color:"#FB923C", discipline:"Electrical" },
+  { name:"Isaac",  initial:"I", color:"#818CF8", discipline:"Software" },
+  { name:"Aki",    initial:"A", color:"#34D399", discipline:"Software" },
+  { name:"Abdul",  initial:"A", color:"#22D3EE", discipline:"Cloud Cybersecurity" },
 ];
 
 const DISCIPLINES = [
@@ -120,9 +120,9 @@ export default function EngineeringPage() {
   const [weekStatus, setWeekStatus] = useState<Record<string, Record<string, "yes"|"no"|null>>>({});
   const [showPrompt, setShowPrompt] = useState(false);
   const [promptName, setPromptName] = useState<string|null>(null);
-  const [team, setTeam] = useState<{name:string; initial:string; color:string}[]>(TEAM);
+  const [team, setTeam] = useState<{name:string; initial:string; color:string; discipline?:string}[]>(TEAM);
   const [showAddEng, setShowAddEng] = useState(false);
-  const [newEng, setNewEng] = useState({ name:"", color:"#A78BFA" });
+  const [newEng, setNewEng] = useState({ name:"", color:"#A78BFA", discipline:"" });
   const drawerRef = useRef<HTMLDivElement>(null);
 
   const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
@@ -148,7 +148,7 @@ export default function EngineeringPage() {
   // ── Load: API first → localStorage fallback → INITIAL_ISSUES ─────────────
   useEffect(() => {
     (async () => {
-      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string}[] };
+      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[] };
       let loaded: BoardData | null = null;
       try {
         const res  = await fetch("/api/engineering");
@@ -218,7 +218,7 @@ export default function EngineeringPage() {
       if (!apiEnabledRef.current || saveTimerRef.current) return;
       try {
         const res  = await fetch("/api/engineering");
-        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string}[] }; sha: string | null };
+        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[] }; sha: string | null };
         if (data.sha && data.sha !== boardShaRef.current && data.board) {
           isMountingRef.current = true;
           setIssues(data.board.issues       ?? INITIAL_ISSUES);
@@ -468,24 +468,30 @@ export default function EngineeringPage() {
         {/* Disciplines */}
         <div>
           <div style={s.navLabel}>Disciplines</div>
-          {DISCIPLINES.map(d => (
-            <div key={d.name}>
-              <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 8px 3px", marginBottom:2 }}>
-                <span style={{ width:6, height:6, borderRadius:2, background:d.color, flexShrink:0 }}/>
-                <span style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.1em", color:d.color }}>{d.name}</span>
-              </div>
-              {d.members.map(name => {
-                const t = team.find(tm => tm.name === name)!;
-                return (
-                  <div key={name} style={{ ...s.navItem, paddingLeft:20, cursor:"pointer" }}
-                    onClick={() => setFilterAssignee(filterAssignee === name ? "all" : name)}>
+          {(() => {
+            const discMap: Record<string, {color:string; members:typeof team}> = {};
+            team.forEach(t => {
+              const dName = t.discipline || "Other";
+              const dColor = DISCIPLINES.find(d => d.name === dName)?.color ?? "var(--text-3)";
+              if (!discMap[dName]) discMap[dName] = { color: dColor, members: [] };
+              discMap[dName].members.push(t);
+            });
+            return Object.entries(discMap).map(([dName, { color, members }]) => (
+              <div key={dName}>
+                <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 8px 3px", marginBottom:2 }}>
+                  <span style={{ width:6, height:6, borderRadius:2, background:color, flexShrink:0 }}/>
+                  <span style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.1em", color }}>{dName}</span>
+                </div>
+                {members.map(t => (
+                  <div key={t.name} style={{ ...s.navItem, paddingLeft:20, cursor:"pointer" }}
+                    onClick={() => setFilterAssignee(filterAssignee === t.name ? "all" : t.name)}>
                     <div style={{ ...s.avatar, background: t.color + "33", color: t.color, width:18, height:18, fontSize:8 }}>{t.initial}</div>
-                    <span style={{ flex:1, fontSize:12.5 }}>{name}</span>
+                    <span style={{ flex:1, fontSize:12.5 }}>{t.name}</span>
                   </div>
-                );
-              })}
-            </div>
-          ))}
+                ))}
+              </div>
+            ));
+          })()}
         </div>
 
         {/* Footer */}
@@ -580,7 +586,7 @@ export default function EngineeringPage() {
               <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:12 }}>
                 {team.map(t => {
                   const name = t.name;
-                  const disc = DISCIPLINES.find(d => d.members.includes(name));
+                  const disc = DISCIPLINES.find(d => d.name === t.discipline);
                   const tasks = personalTasks[name] || [];
                   const inputVal = personalInputs[name] || "";
                   const selectedCol: Column = engineerColSelect[name] || "todo";
@@ -1117,7 +1123,7 @@ export default function EngineeringPage() {
               })}
 
               {/* ── Add Engineer card ── */}
-              <button onClick={() => { setNewEng({ name:"", color:"#A78BFA" }); setShowAddEng(true); }}
+              <button onClick={() => { setNewEng({ name:"", color:"#A78BFA", discipline:"" }); setShowAddEng(true); }}
                 style={{ background:"var(--surface-1)", border:"1px dashed var(--line)", borderRadius:12, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, padding:"32px 20px", cursor:"pointer", transition:"all 0.18s ease", color:"var(--text-4)", minHeight:160 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.background = "var(--surface-2)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-4)"; e.currentTarget.style.background = "var(--surface-1)"; }}>
@@ -1142,8 +1148,17 @@ export default function EngineeringPage() {
               <div style={s.formRow}>
                 <label style={s.formLabel}>Name</label>
                 <input autoFocus value={newEng.name} onChange={e => setNewEng(p => ({ ...p, name: e.target.value }))}
-                  onKeyDown={e => { if (e.key === "Enter") { const n = newEng.name.trim(); if (!n) return; const initial = n.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); setTeam(prev => [...prev, { name:n, initial, color:newEng.color }]); setShowAddEng(false); }}}
+                  onKeyDown={e => { if (e.key === "Enter") { const n = newEng.name.trim(); if (!n) return; const initial = n.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); setTeam(prev => [...prev, { name:n, initial, color:newEng.color, discipline:newEng.discipline||undefined }]); setShowAddEng(false); }}}
                   style={s.formInput} placeholder="Full name"/>
+              </div>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Discipline</label>
+                <select value={newEng.discipline} onChange={e => setNewEng(p => ({ ...p, discipline: e.target.value }))} style={s.formSelect}>
+                  <option value="">— None —</option>
+                  {DISCIPLINES.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+                  {/* show any custom disciplines already in team */}
+                  {Array.from(new Set(team.map(t => t.discipline).filter(Boolean))).filter(d => !DISCIPLINES.find(dd => dd.name === d)).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
               </div>
               <div style={s.formRow}>
                 <label style={s.formLabel}>Color</label>
@@ -1170,7 +1185,7 @@ export default function EngineeringPage() {
                 const n = newEng.name.trim();
                 if (!n) return;
                 const initial = n.split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase();
-                setTeam(prev => [...prev, { name:n, initial, color:newEng.color }]);
+                setTeam(prev => [...prev, { name:n, initial, color:newEng.color, discipline:newEng.discipline||undefined }]);
                 setShowAddEng(false);
               }} style={{ ...s.btnPrimary, opacity: newEng.name.trim() ? 1 : 0.4 }}>Add Engineer</button>
             </div>
