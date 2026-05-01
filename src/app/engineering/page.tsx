@@ -592,26 +592,33 @@ export default function EngineeringPage() {
           <ShotClock/>
 
           {/* ── Subsystems strip ── */}
-          <div style={{ display:"flex", gap:8, padding:"10px 0 2px", flexWrap:"wrap" }}>
-            {subsystems.map(sub => {
-              const barColor = sub.progress >= 75 ? "#3DCC91" : sub.progress >= 40 ? sub.color : "#FF6B6B";
-              return (
-                <div key={sub.id}
-                  onClick={() => setView("subsystems")}
-                  style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", borderRadius:8, background:"var(--surface-1)", border:`1px solid var(--line)`, cursor:"pointer", transition:"all 0.15s", minWidth:0, flex:"1 1 120px" }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = sub.color + "55"; e.currentTarget.style.background = sub.color + "0C"; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "var(--surface-1)"; }}>
-                  <span style={{ width:7, height:7, borderRadius:2, background:sub.color, flexShrink:0 }}/>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-3)", marginBottom:4, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{sub.name}</div>
-                    <div style={{ height:3, borderRadius:3, background:"var(--surface-2)", overflow:"hidden" }}>
-                      <div style={{ height:"100%", width:`${sub.progress}%`, background:barColor, borderRadius:3, transition:"width 0.5s" }}/>
+          <div style={{ padding:"10px 0 4px" }}>
+            <div style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:8 }}>Subsystems</div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {subsystems.map(sub => {
+                const barColor = sub.progress >= 75 ? "#3DCC91" : sub.progress >= 40 ? sub.color : "#FF6B6B";
+                return (
+                  <div key={sub.id} style={{ display:"flex", flexDirection:"column", gap:5, padding:"8px 12px 10px", borderRadius:8, background:"var(--surface-1)", border:`1px solid var(--line)`, transition:"border-color 0.15s", minWidth:0, flex:"1 1 110px" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = sub.color + "55"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; }}>
+                    {/* Label + percentage */}
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ width:6, height:6, borderRadius:2, background:sub.color, flexShrink:0 }}/>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-3)", flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{sub.name}</span>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, color:barColor, flexShrink:0 }}>{sub.progress}%</span>
                     </div>
+                    {/* Progress bar */}
+                    <div style={{ height:3, borderRadius:3, background:"var(--surface-2)", overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${sub.progress}%`, background:barColor, borderRadius:3, transition:"width 0.3s" }}/>
+                    </div>
+                    {/* Slider */}
+                    <input type="range" min={0} max={100} value={sub.progress}
+                      onChange={e => setSubsystems(prev => prev.map(s => s.id === sub.id ? { ...s, progress: Number(e.target.value) } : s))}
+                      style={{ width:"100%", accentColor: sub.color, cursor:"pointer", margin:0 }}/>
                   </div>
-                  <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, color:barColor, flexShrink:0 }}>{sub.progress}%</span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           {/* View tabs */}
