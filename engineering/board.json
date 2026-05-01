@@ -1,23 +1,6 @@
 {
   "issues": [
     {
-      "id": "ENG-124",
-      "type": "story",
-      "title": "Floor map — drag-to-reorder room cards",
-      "priority": "low",
-      "points": 5,
-      "assignee": "Hanna",
-      "assigneeInitial": "H",
-      "assigneeColor": "#F472B6",
-      "labels": [
-        "frontend"
-      ],
-      "column": "done",
-      "description": "Nurse staff can reorder floor map rooms to match physical layout. Order persisted per-user in localStorage.",
-      "created": "Apr 5",
-      "updated": "Apr 26"
-    },
-    {
       "id": "ENG-127",
       "type": "task",
       "title": "Upgrade Next.js 14 → 15 and resolve breaking changes",
