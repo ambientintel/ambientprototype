@@ -119,39 +119,84 @@ export default function EngineeringPage() {
   const [engineerColSelect, setEngineerColSelect] = useState<Record<string, Column>>({});
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  // Load from localStorage on mount
+  const [loading, setLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
+  const boardShaRef   = useRef<string | null>(null);
+  const saveTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountingRef = useRef(true);
+
+  // ── Load board state from GitHub on mount ─────────────────────────────────
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("eng_personal_tasks");
-      const savedDone = localStorage.getItem("eng_completed_tasks");
-      const savedHistory = localStorage.getItem("eng_history");
-      const savedIssues = localStorage.getItem("eng_issues");
-      if (saved) setPersonalTasks(JSON.parse(saved));
-      if (savedDone) setCompletedTasks(JSON.parse(savedDone));
-      if (savedHistory) setHistory(JSON.parse(savedHistory));
-      if (savedIssues) setIssues(JSON.parse(savedIssues));
-    } catch {}
+    (async () => {
+      try {
+        const res  = await fetch("/api/engineering");
+        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[] }; sha: string | null; configured: boolean };
+        if (data.board) {
+          setIssues(data.board.issues       ?? INITIAL_ISSUES);
+          setPersonalTasks(data.board.personalTasks   ?? {});
+          setCompletedTasks(data.board.completedTasks ?? {});
+          setHistory(data.board.history     ?? []);
+          boardShaRef.current = data.sha;
+        }
+      } catch {}
+      setLoading(false);
+      isMountingRef.current = false;
+    })();
   }, []);
 
-  // Persist issues (so deletes/moves survive refresh)
+  // ── Auto-save debounced whenever board state changes ──────────────────────
   useEffect(() => {
-    try { localStorage.setItem("eng_issues", JSON.stringify(issues)); } catch {}
-  }, [issues]);
+    if (isMountingRef.current || loading) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setSyncStatus("saving");
+    saveTimerRef.current = setTimeout(async () => {
+      const board = { issues, personalTasks, completedTasks, history };
+      try {
+        const res  = await fetch("/api/engineering", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ board, sha: boardShaRef.current }),
+        });
+        const data = await res.json() as { sha?: string; error?: string };
+        if (res.status === 409) {
+          // SHA conflict — re-fetch current SHA and let the next keystroke retry
+          setSyncStatus("conflict");
+          const latest = await fetch("/api/engineering");
+          const ld = await latest.json() as { sha: string | null };
+          boardShaRef.current = ld.sha;
+          return;
+        }
+        if (!res.ok) { setSyncStatus("error"); return; }
+        boardShaRef.current = data.sha ?? boardShaRef.current;
+        setSyncStatus("saved");
+        setTimeout(() => setSyncStatus("idle"), 2000);
+      } catch { setSyncStatus("error"); }
+    }, 1000);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [issues, personalTasks, completedTasks, history, loading]);
 
-  // Persist active tasks
+  // ── Poll for remote changes every 30s ─────────────────────────────────────
   useEffect(() => {
-    try { localStorage.setItem("eng_personal_tasks", JSON.stringify(personalTasks)); } catch {}
-  }, [personalTasks]);
-
-  // Persist completed tasks
-  useEffect(() => {
-    try { localStorage.setItem("eng_completed_tasks", JSON.stringify(completedTasks)); } catch {}
-  }, [completedTasks]);
-
-  // Persist history
-  useEffect(() => {
-    try { localStorage.setItem("eng_history", JSON.stringify(history)); } catch {}
-  }, [history]);
+    if (loading) return;
+    const id = setInterval(async () => {
+      if (saveTimerRef.current) return; // skip poll if a save is pending
+      try {
+        const res  = await fetch("/api/engineering");
+        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[] }; sha: string | null };
+        if (data.sha && data.sha !== boardShaRef.current && data.board) {
+          isMountingRef.current = true;
+          setIssues(data.board.issues       ?? INITIAL_ISSUES);
+          setPersonalTasks(data.board.personalTasks   ?? {});
+          setCompletedTasks(data.board.completedTasks ?? {});
+          setHistory(data.board.history     ?? []);
+          boardShaRef.current = data.sha;
+          setSyncStatus("saved");
+          setTimeout(() => { isMountingRef.current = false; setSyncStatus("idle"); }, 100);
+        }
+      } catch {}
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [loading]);
 
   // addPersonalTask is inlined per-engineer inside the map to guarantee fresh closure
 
@@ -310,6 +355,16 @@ export default function EngineeringPage() {
     progress:   { height:4, borderRadius:4, background:"var(--surface-2)", overflow:"hidden", flex:1 },
   };
 
+  if (loading) return (
+    <div style={{ ...s.page, alignItems:"center", justifyContent:"center" }}>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
+        <div style={{ width:32, height:32, border:"2px solid var(--line)", borderTopColor:"var(--accent)", borderRadius:"50%", animation:"spin 0.7s linear infinite" }}/>
+        <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)", letterSpacing:"0.12em", textTransform:"uppercase" }}>Loading board…</div>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
   return (
     <div style={s.page}>
       {/* ── Sidebar ── */}
@@ -390,7 +445,15 @@ export default function EngineeringPage() {
                 Sprint <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>{weekNum} · Board</em>
               </h1>
             </div>
-            <div style={{ display:"flex", gap:8 }}>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              {syncStatus !== "idle" && (
+                <span style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.08em", color: syncStatus === "error" ? "#FF6B6B" : syncStatus === "conflict" ? "#FFC940" : "#3DCC91", display:"flex", alignItems:"center", gap:5 }}>
+                  {syncStatus === "saving"   && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940", animation:"pulse 1s infinite" }}/> Saving…</>}
+                  {syncStatus === "saved"    && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#3DCC91" }}/> Synced</>}
+                  {syncStatus === "error"    && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FF6B6B" }}/> Save error</>}
+                  {syncStatus === "conflict" && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940" }}/> Conflict — retrying</>}
+                </span>
+              )}
               <button style={s.btn} onClick={() => setShowCreate(true)}>
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
                 Create Issue
