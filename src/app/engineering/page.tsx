@@ -94,7 +94,7 @@ interface NewIssueForm {
 // ── Component ──────────────────────────────────────────────────────────────
 export default function EngineeringPage() {
   const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
-  const [view, setView] = useState<"board" | "backlog">("board");
+  const [view, setView] = useState<"board" | "backlog" | "people">("board");
   const [search, setSearch] = useState("");
   const [filterAssignee, setFilterAssignee] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -328,6 +328,7 @@ export default function EngineeringPage() {
           {[
             { label:"Board",    icon:<path d="M2.5 2.5h4v11h-4zM9.5 2.5h4v6h-4zM9.5 11.5h4v2h-4z" strokeLinejoin="round"/>, v:"board" as const },
             { label:"Backlog",  icon:<><rect x="2.5" y="3" width="11" height="1.5" rx=".75"/><rect x="2.5" y="6.5" width="11" height="1.5" rx=".75"/><rect x="2.5" y="10" width="11" height="1.5" rx=".75"/></>, v:"backlog" as const },
+            { label:"People",   icon:<><circle cx="5" cy="5.5" r="2.5"/><circle cx="11" cy="5.5" r="2.5"/><path d="M1 13c0-2.2 1.8-4 4-4s4 1.8 4 4M7 13c0-2.2 1.8-4 4-4s4 1.8 4 4" strokeLinecap="round"/></>, v:"people" as const },
           ].map(({ label, icon, v }) => (
             <div key={label} style={{ ...s.navItem, background: view === v ? "var(--surface-2)" : "transparent", color: view === v ? "var(--text)" : "var(--text-2)" }} onClick={() => setView(v)}>
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>
@@ -409,9 +410,9 @@ export default function EngineeringPage() {
 
           {/* View tabs */}
           <div style={{ display:"flex", gap:0, borderBottom:"none", marginTop:-4 }}>
-            {(["board","backlog"] as const).map(v => (
+            {(["board","backlog","people"] as const).map(v => (
               <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", cursor:"pointer", padding:"8px 16px 12px", fontSize:13, fontFamily:"var(--sans)", color: view===v ? "var(--text)" : "var(--text-3)", borderBottom: view===v ? "2px solid var(--accent)" : "2px solid transparent", transition:"color 0.15s", textTransform:"capitalize" }}>
-                {v === "board" ? "Board" : "Backlog"}
+                {v === "board" ? "Board" : v === "backlog" ? "Backlog" : "People"}
               </button>
             ))}
           </div>
@@ -703,6 +704,186 @@ export default function EngineeringPage() {
                 <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)" }}>Apr 21 – May 2 · {issues.length} issues</span>
               </div>
               <BacklogTable issues={filtered} onSelect={setSelected}/>
+            </div>
+          </div>
+        )}
+
+        {/* ── People View ── */}
+        {view === "people" && (
+          <div style={{ ...s.content, flex:1 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:20, minWidth:900 }}>
+              {DISCIPLINES.flatMap(d => d.members).map(name => {
+                const t    = TEAM.find(tm => tm.name === name)!;
+                const disc = DISCIPLINES.find(d => d.members.includes(name))!;
+                const myIssues = issues.filter(i => i.assignee === name);
+                const myDone   = myIssues.filter(i => i.column === "done").length;
+                const myPts    = myIssues.reduce((a, i) => a + i.points, 0);
+                const myDonePts = myIssues.filter(i => i.column === "done").reduce((a, i) => a + i.points, 0);
+                const tasks    = personalTasks[name] || [];
+                const done     = completedTasks[name] || [];
+                const inputVal = personalInputs[name] || "";
+                const selectedCol: Column = engineerColSelect[name] || "todo";
+
+                const handleAdd = () => {
+                  const val = inputVal.trim();
+                  if (!val) return;
+                  const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
+                  const id = `ENG-L${Date.now()}`;
+                  setIssues(prev => [...prev, {
+                    id, type:"task" as IssueType, title:val, priority:"medium" as Priority, points:1,
+                    assignee:name, assigneeInitial:t.initial, assigneeColor:t.color,
+                    labels:[], column:selectedCol, description:"", created:today, updated:today,
+                  }]);
+                  setPersonalTasks(p => ({ ...p, [name]: [...(p[name] || []), val] }));
+                  setPersonalInputs(p => ({ ...p, [name]: "" }));
+                };
+
+                return (
+                  <div key={name} style={{ background:"var(--surface-1)", border:`1px solid ${t.color}28`, borderRadius:12, overflow:"hidden", display:"flex", flexDirection:"column" }}>
+                    {/* Header */}
+                    <div style={{ padding:"16px 18px 12px", borderBottom:"1px solid var(--line)", background:`linear-gradient(135deg, ${t.color}0A 0%, transparent 60%)` }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                        <span style={{ width:34, height:34, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:13, fontWeight:700, flexShrink:0, border:`1.5px solid ${t.color}50` }}>{t.initial}</span>
+                        <div>
+                          <div style={{ fontSize:14, fontWeight:600, color:"var(--text)", lineHeight:1.2 }}>{name}</div>
+                          <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:1 }}>{disc.name}</div>
+                        </div>
+                        <div style={{ marginLeft:"auto", textAlign:"right" }}>
+                          <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-2)", fontWeight:600 }}>{myDone}/{myIssues.length} done</div>
+                          <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)" }}>{myDonePts}/{myPts} pts</div>
+                        </div>
+                      </div>
+                      {/* Mini progress bar */}
+                      <div style={{ height:3, background:"var(--surface-2)", borderRadius:2, overflow:"hidden" }}>
+                        <div style={{ height:"100%", width:`${myIssues.length ? (myDone/myIssues.length)*100 : 0}%`, background:t.color, borderRadius:2, transition:"width 0.4s" }}/>
+                      </div>
+                    </div>
+
+                    {/* Mini kanban columns */}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:0, borderBottom:"1px solid var(--line)" }}>
+                      {COLUMNS.map((col, ci) => {
+                        const colIssues = myIssues.filter(i => i.column === col.id);
+                        return (
+                          <div key={col.id} style={{ borderRight: ci < 3 ? "1px solid var(--line)" : "none", padding:"10px 8px", display:"flex", flexDirection:"column", gap:5, minHeight:80 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:4, marginBottom:3 }}>
+                              <span style={{ width:5, height:5, borderRadius:1, background:col.color, flexShrink:0 }}/>
+                              <span style={{ fontFamily:"var(--mono)", fontSize:8.5, color:col.color, textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600, lineHeight:1 }}>{col.label}</span>
+                              {colIssues.length > 0 && <span style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", marginLeft:"auto" }}>{colIssues.length}</span>}
+                            </div>
+                            {colIssues.length === 0 && (
+                              <div style={{ fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)", textAlign:"center", paddingTop:8, letterSpacing:"0.08em" }}>—</div>
+                            )}
+                            {colIssues.map(issue => {
+                              const tm = TYPE_META[issue.type];
+                              const pm = PRIORITY_META[issue.priority];
+                              return (
+                                <div key={issue.id} onClick={() => setSelected(issue)}
+                                  style={{ background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"7px 8px", cursor:"pointer", transition:"border-color 0.12s, box-shadow 0.12s" }}
+                                  onMouseEnter={e => { e.currentTarget.style.borderColor = t.color + "66"; e.currentTarget.style.boxShadow = `0 2px 8px ${t.color}18`; }}
+                                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.boxShadow = "none"; }}>
+                                  <div style={{ display:"flex", alignItems:"flex-start", gap:4, marginBottom:5 }}>
+                                    <span style={{ fontFamily:"var(--mono)", fontSize:9, color:tm.color, fontWeight:700, flexShrink:0, lineHeight:1.4 }}>{tm.symbol}</span>
+                                    <span style={{ fontSize:11, lineHeight:1.4, color:"var(--text)", flex:1 }}>{issue.title}</span>
+                                  </div>
+                                  <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                    <span style={{ fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)" }}>{issue.id}</span>
+                                    {issue.priority !== "low" && <span style={{ width:5, height:5, borderRadius:"50%", background:pm.color, flexShrink:0, marginLeft:"auto" }}/>}
+                                    <span style={{ fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)", background:"var(--surface-1)", padding:"1px 5px", borderRadius:3 }}>{issue.points}pt</span>
+                                  </div>
+                                  {/* Move buttons */}
+                                  <div style={{ display:"flex", gap:3, marginTop:6 }}>
+                                    <button onClick={e => { e.stopPropagation(); moveIssueStep(issue.id, -1); }}
+                                      disabled={ci === 0}
+                                      style={{ flex:1, padding:"3px 0", borderRadius:4, border:"1px solid var(--line)", background:"transparent", color: ci > 0 ? "var(--text-3)" : "var(--text-4)", cursor: ci > 0 ? "pointer" : "default", fontFamily:"var(--mono)", fontSize:8, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                      ‹
+                                    </button>
+                                    <button onClick={e => { e.stopPropagation(); moveIssueStep(issue.id, 1); }}
+                                      disabled={ci === 3}
+                                      style={{ flex:1, padding:"3px 0", borderRadius:4, border:"1px solid var(--line)", background:"transparent", color: ci < 3 ? "var(--text-3)" : "var(--text-4)", cursor: ci < 3 ? "pointer" : "default", fontFamily:"var(--mono)", fontSize:8, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                      ›
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Personal tasks */}
+                    <div style={{ padding:"10px 12px", flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
+                        <span style={{ fontFamily:"var(--mono)", fontSize:8.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-4)" }}>Personal tasks</span>
+                        {tasks.length > 0 && <span style={{ fontFamily:"var(--mono)", fontSize:8.5, color:t.color }}>{tasks.length}</span>}
+                        {done.length > 0 && <span style={{ fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)" }}>· {done.length} done</span>}
+                      </div>
+
+                      {/* Quick add row */}
+                      <div style={{ display:"flex", gap:3, alignItems:"center" }}>
+                        <input
+                          value={inputVal}
+                          onChange={e => setPersonalInputs(p => ({ ...p, [name]: e.target.value }))}
+                          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
+                          placeholder="Add task…"
+                          style={{ flex:1, background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:5, padding:"5px 8px", fontSize:11, color:"var(--text)", fontFamily:"var(--sans)", outline:"none" }}
+                        />
+                        <div style={{ display:"flex", gap:2 }}>
+                          {COLUMNS.map(col => {
+                            const active = selectedCol === col.id;
+                            return (
+                              <button key={col.id} onClick={() => setEngineerColSelect(p => ({ ...p, [name]: col.id }))}
+                                title={col.label}
+                                style={{ width:18, height:18, borderRadius:3, border:`1px solid ${active ? col.color : "var(--line)"}`, background: active ? col.color + "22" : "transparent", cursor:"pointer", flexShrink:0 }}>
+                                <span style={{ width:6, height:6, borderRadius:1, background: active ? col.color : "var(--text-4)", display:"block", margin:"auto" }}/>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button onClick={handleAdd}
+                          style={{ width:24, height:24, borderRadius:4, border:"none", background:t.color, color:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
+                        </button>
+                      </div>
+
+                      {/* Active tasks */}
+                      {tasks.map((task, idx) => (
+                        <div key={idx} style={{ display:"flex", alignItems:"center", gap:6, background:"var(--surface-2)", borderRadius:5, padding:"6px 8px", border:"1px solid var(--line)" }}>
+                          <button onClick={() => completePersonalTask(name, idx)}
+                            style={{ width:14, height:14, borderRadius:3, border:`1.5px solid ${t.color}55`, background:"transparent", cursor:"pointer", flexShrink:0, transition:"background 0.12s" }}
+                            onMouseEnter={e => (e.currentTarget.style.background = t.color + "33")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}/>
+                          <span style={{ flex:1, fontSize:11.5, color:"var(--text-2)", lineHeight:1.4 }}>{task}</span>
+                          <button onClick={() => removePersonalTask(name, idx)}
+                            style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:12, lineHeight:1, padding:"0 2px", transition:"color 0.12s" }}
+                            onMouseEnter={e => (e.currentTarget.style.color = "var(--text-2)")}
+                            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>✕</button>
+                        </div>
+                      ))}
+
+                      {/* Completed tasks */}
+                      {done.length > 0 && (
+                        <div style={{ display:"flex", flexDirection:"column", gap:3, opacity:0.65 }}>
+                          {done.map((task, idx) => (
+                            <div key={idx} style={{ display:"flex", alignItems:"center", gap:6, borderRadius:5, padding:"5px 8px" }}>
+                              <span style={{ width:14, height:14, borderRadius:3, border:"1.5px solid var(--text-4)", background:"var(--surface-3)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                                <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="var(--text-3)" strokeWidth="1.8"><path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              </span>
+                              <span style={{ flex:1, fontSize:11, color:"var(--text-4)", textDecoration:"line-through", lineHeight:1.4 }}>{task}</span>
+                              <button onClick={() => removeCompletedTask(name, idx)}
+                                style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:12, lineHeight:1, padding:"0 2px" }}>✕</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {tasks.length === 0 && done.length === 0 && (
+                        <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.1em", textAlign:"center", padding:"8px 0" }}>NO PERSONAL TASKS</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
