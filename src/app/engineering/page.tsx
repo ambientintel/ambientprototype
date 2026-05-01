@@ -1705,14 +1705,40 @@ function ShotClock() {
           </div>
           {/* Leading-edge cursor */}
           {pct > 1 && pct < 99 && (
-            <div style={{
-              position:"absolute", top:-3, bottom:-3, borderRadius:2,
-              left:`calc(${pct}% - 1px)`, width:2,
-              background:"#fff",
-              boxShadow:`0 0 8px 2px ${urgency}, 0 0 20px 4px ${urgency}55`,
-              transition:"left 1s linear",
-              zIndex:3,
-            }}/>
+            <>
+              <style>{`
+                @keyframes scPulse {
+                  0%,100% { opacity:1; box-shadow:0 0 6px 2px var(--sc-clr), 0 0 14px 4px var(--sc-dim); transform:scaleY(1); }
+                  50%      { opacity:0.55; box-shadow:0 0 18px 8px var(--sc-clr), 0 0 48px 18px var(--sc-dim); transform:scaleY(1.6); }
+                }
+                @keyframes scBloom {
+                  0%,100% { opacity:0; transform:scaleX(1); }
+                  40%,60% { opacity:1; transform:scaleX(3.5); }
+                }
+              `}</style>
+              {/* Bloom halo — expands outward on each pulse */}
+              <div style={{
+                position:"absolute", top:-6, bottom:-6, borderRadius:3,
+                left:`calc(${pct}% - 2px)`, width:4,
+                background:urgency,
+                opacity:0, transformOrigin:"center",
+                animation:"scBloom 1.4s ease-in-out infinite",
+                transition:"left 1s linear",
+                zIndex:2,
+              } as React.CSSProperties}/>
+              {/* Core cursor */}
+              <div style={{
+                position:"absolute", top:-4, bottom:-4, borderRadius:2,
+                left:`calc(${pct}% - 1px)`, width:2,
+                background:"#fff",
+                transformOrigin:"center",
+                animation:"scPulse 1.4s ease-in-out infinite",
+                transition:"left 1s linear",
+                zIndex:4,
+                ["--sc-clr" as string]: urgency,
+                ["--sc-dim" as string]: urgency + "44",
+              } as React.CSSProperties}/>
+            </>
           )}
         </div>
         {/* Labels */}
