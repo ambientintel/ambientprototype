@@ -1,23 +1,6 @@
 {
   "issues": [
     {
-      "id": "ENG-122",
-      "type": "bug",
-      "title": "Login redirect loop when session token expires mid-nav",
-      "priority": "critical",
-      "points": 3,
-      "assignee": "Isaac",
-      "assigneeInitial": "I",
-      "assigneeColor": "#818CF8",
-      "labels": [
-        "auth"
-      ],
-      "column": "done",
-      "description": "Expired token during a client-side navigation caused an infinite redirect. Fixed with token refresh interception in middleware.",
-      "created": "Apr 3",
-      "updated": "Apr 24"
-    },
-    {
       "id": "ENG-124",
       "type": "story",
       "title": "Floor map — drag-to-reorder room cards",
