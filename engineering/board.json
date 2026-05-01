@@ -1,24 +1,6 @@
 {
   "issues": [
     {
-      "id": "ENG-120",
-      "type": "epic",
-      "title": "v1.2 Auth — role-based access (admin / nurse / viewer)",
-      "priority": "high",
-      "points": 21,
-      "assignee": "Abdul",
-      "assigneeInitial": "A",
-      "assigneeColor": "#22D3EE",
-      "labels": [
-        "auth",
-        "epic"
-      ],
-      "column": "done",
-      "description": "Full RBAC rollout: three roles, JWT claims, middleware enforcement on all protected routes.",
-      "created": "Apr 1",
-      "updated": "Apr 25"
-    },
-    {
       "id": "ENG-122",
       "type": "bug",
       "title": "Login redirect loop when session token expires mid-nav",
