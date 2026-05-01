@@ -105,7 +105,7 @@
       "id": "firmware",
       "name": "Firmware",
       "color": "#00B4D8",
-      "progress": 50,
+      "progress": 0,
       "status": "IWR6843AOP driver stable"
     },
     {
