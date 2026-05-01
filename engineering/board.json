@@ -1,0 +1,328 @@
+{
+  "issues": [
+    {
+      "id": "ENG-142",
+      "type": "story",
+      "title": "Sensor fusion: merge radar + PIR confidence scores",
+      "priority": "high",
+      "points": 8,
+      "assignee": "Gavin",
+      "assigneeInitial": "G",
+      "assigneeColor": "#00B4D8",
+      "labels": [
+        "ml",
+        "sensors"
+      ],
+      "column": "todo",
+      "description": "Combine radar motion confidence with PIR interrupt signals to produce a unified presence score per room. Output should feed the alert engine.",
+      "created": "Apr 22",
+      "updated": "Apr 27"
+    },
+    {
+      "id": "ENG-143",
+      "type": "task",
+      "title": "Add pagination to /api/events endpoint",
+      "priority": "medium",
+      "points": 3,
+      "assignee": "Isaac",
+      "assigneeInitial": "I",
+      "assigneeColor": "#818CF8",
+      "labels": [
+        "api"
+      ],
+      "column": "todo",
+      "description": "The events endpoint returns all records unbounded. Add cursor-based pagination with a default page size of 50.",
+      "created": "Apr 23",
+      "updated": "Apr 26"
+    },
+    {
+      "id": "ENG-144",
+      "type": "bug",
+      "title": "Fall alert fires twice when sensor resets mid-event",
+      "priority": "critical",
+      "points": 5,
+      "assignee": "Abdul",
+      "assigneeInitial": "A",
+      "assigneeColor": "#22D3EE",
+      "labels": [
+        "alerts",
+        "sensors"
+      ],
+      "column": "todo",
+      "description": "Repro: sensor hard-reset during a fall event causes a duplicate alert within 800ms. Root cause suspected in event dedup window.",
+      "created": "Apr 24",
+      "updated": "Apr 28"
+    },
+    {
+      "id": "ENG-145",
+      "type": "story",
+      "title": "Resident activity heatmap — hourly breakdown view",
+      "priority": "medium",
+      "points": 5,
+      "assignee": "Aki",
+      "assigneeInitial": "A",
+      "assigneeColor": "#34D399",
+      "labels": [
+        "frontend",
+        "viz"
+      ],
+      "column": "todo",
+      "description": "Build a 24-hour heatmap grid per resident showing movement intensity by hour. Should match the palette used in the floor map.",
+      "created": "Apr 21",
+      "updated": "Apr 25"
+    },
+    {
+      "id": "ENG-146",
+      "type": "task",
+      "title": "Migrate sensor config from YAML to DB-backed admin panel",
+      "priority": "low",
+      "points": 8,
+      "assignee": "Hanna",
+      "assigneeInitial": "H",
+      "assigneeColor": "#F472B6",
+      "labels": [
+        "infra",
+        "admin"
+      ],
+      "column": "todo",
+      "description": "Replace static sensor-config.yaml with a DB table. Admin UI should allow field staff to update thresholds without a deploy.",
+      "created": "Apr 22",
+      "updated": "Apr 22"
+    },
+    {
+      "id": "ENG-133",
+      "type": "story",
+      "title": "Real-time WebSocket feed for live floor events",
+      "priority": "high",
+      "points": 13,
+      "assignee": "Isaac",
+      "assigneeInitial": "I",
+      "assigneeColor": "#818CF8",
+      "labels": [
+        "api",
+        "realtime"
+      ],
+      "column": "inprogress",
+      "description": "Establish a WS channel that pushes new events to connected dashboard clients within 500ms of sensor ingestion. Backpressure strategy TBD.",
+      "created": "Apr 14",
+      "updated": "Apr 28"
+    },
+    {
+      "id": "ENG-137",
+      "type": "bug",
+      "title": "Room quiet badge disappears after browser refresh",
+      "priority": "high",
+      "points": 2,
+      "assignee": "Aki",
+      "assigneeInitial": "A",
+      "assigneeColor": "#34D399",
+      "labels": [
+        "frontend"
+      ],
+      "column": "inprogress",
+      "description": "Quiet status derived from client-side timer; on refresh the initial state is unknown until the next WS message arrives.",
+      "created": "Apr 18",
+      "updated": "Apr 29"
+    },
+    {
+      "id": "ENG-138",
+      "type": "story",
+      "title": "Night-mode alert suppression rules (10 PM – 6 AM)",
+      "priority": "medium",
+      "points": 5,
+      "assignee": "Paulo",
+      "assigneeInitial": "P",
+      "assigneeColor": "#FB923C",
+      "labels": [
+        "alerts"
+      ],
+      "column": "inprogress",
+      "description": "Between configurable night hours, suppress non-critical motion alerts to avoid waking staff for expected nighttime movement.",
+      "created": "Apr 19",
+      "updated": "Apr 27"
+    },
+    {
+      "id": "ENG-139",
+      "type": "task",
+      "title": "Write runbook: on-call response for fall alerts",
+      "priority": "medium",
+      "points": 2,
+      "assignee": "Abdul",
+      "assigneeInitial": "A",
+      "assigneeColor": "#22D3EE",
+      "labels": [
+        "docs",
+        "oncall"
+      ],
+      "column": "inprogress",
+      "description": "Document escalation steps, expected response SLA, and who to page for confirmed fall events vs. sensor anomalies.",
+      "created": "Apr 20",
+      "updated": "Apr 26"
+    },
+    {
+      "id": "ENG-128",
+      "type": "story",
+      "title": "Export resident report as PDF — weekly summary",
+      "priority": "medium",
+      "points": 5,
+      "assignee": "Hanna",
+      "assigneeInitial": "H",
+      "assigneeColor": "#F472B6",
+      "labels": [
+        "reports",
+        "pdf"
+      ],
+      "column": "review",
+      "description": "Generate a one-page weekly summary PDF per resident: fall count, avg walk score, alert history. Triggered manually from the Reports tab.",
+      "created": "Apr 10",
+      "updated": "Apr 28"
+    },
+    {
+      "id": "ENG-129",
+      "type": "bug",
+      "title": "Analytics chart renders blank on Safari 17",
+      "priority": "high",
+      "points": 3,
+      "assignee": "Aki",
+      "assigneeInitial": "A",
+      "assigneeColor": "#34D399",
+      "labels": [
+        "frontend",
+        "safari"
+      ],
+      "column": "review",
+      "description": "The SVG path gradient in analytics breaks on Safari 17 due to a linearGradient scoping bug. Fix: move gradientUnits to userSpaceOnUse.",
+      "created": "Apr 11",
+      "updated": "Apr 29"
+    },
+    {
+      "id": "ENG-131",
+      "type": "task",
+      "title": "Add Datadog APM spans to ingestion pipeline",
+      "priority": "low",
+      "points": 3,
+      "assignee": "Gavin",
+      "assigneeInitial": "G",
+      "assigneeColor": "#00B4D8",
+      "labels": [
+        "observability"
+      ],
+      "column": "review",
+      "description": "Instrument the sensor-to-event pipeline with Datadog APM. Key spans: ingest, dedup, enrich, persist, notify.",
+      "created": "Apr 13",
+      "updated": "Apr 27"
+    },
+    {
+      "id": "ENG-120",
+      "type": "epic",
+      "title": "v1.2 Auth — role-based access (admin / nurse / viewer)",
+      "priority": "high",
+      "points": 21,
+      "assignee": "Abdul",
+      "assigneeInitial": "A",
+      "assigneeColor": "#22D3EE",
+      "labels": [
+        "auth",
+        "epic"
+      ],
+      "column": "done",
+      "description": "Full RBAC rollout: three roles, JWT claims, middleware enforcement on all protected routes.",
+      "created": "Apr 1",
+      "updated": "Apr 25"
+    },
+    {
+      "id": "ENG-122",
+      "type": "bug",
+      "title": "Login redirect loop when session token expires mid-nav",
+      "priority": "critical",
+      "points": 3,
+      "assignee": "Isaac",
+      "assigneeInitial": "I",
+      "assigneeColor": "#818CF8",
+      "labels": [
+        "auth"
+      ],
+      "column": "done",
+      "description": "Expired token during a client-side navigation caused an infinite redirect. Fixed with token refresh interception in middleware.",
+      "created": "Apr 3",
+      "updated": "Apr 24"
+    },
+    {
+      "id": "ENG-124",
+      "type": "story",
+      "title": "Floor map — drag-to-reorder room cards",
+      "priority": "low",
+      "points": 5,
+      "assignee": "Hanna",
+      "assigneeInitial": "H",
+      "assigneeColor": "#F472B6",
+      "labels": [
+        "frontend"
+      ],
+      "column": "done",
+      "description": "Nurse staff can reorder floor map rooms to match physical layout. Order persisted per-user in localStorage.",
+      "created": "Apr 5",
+      "updated": "Apr 26"
+    },
+    {
+      "id": "ENG-127",
+      "type": "task",
+      "title": "Upgrade Next.js 14 → 15 and resolve breaking changes",
+      "priority": "medium",
+      "points": 5,
+      "assignee": "Paulo",
+      "assigneeInitial": "P",
+      "assigneeColor": "#FB923C",
+      "labels": [
+        "infra",
+        "upgrade"
+      ],
+      "column": "done",
+      "description": "Updated Next.js, fixed async params usage, migrated cookies() calls to the new API surface.",
+      "created": "Apr 8",
+      "updated": "Apr 23"
+    }
+  ],
+  "personalTasks": {},
+  "completedTasks": {},
+  "history": [],
+  "weekStatus": {},
+  "team": [
+    {
+      "name": "Gavin",
+      "initial": "G",
+      "color": "#00B4D8",
+      "discipline": "Electrical"
+    },
+    {
+      "name": "Hanna",
+      "initial": "H",
+      "color": "#F472B6",
+      "discipline": "Electrical"
+    },
+    {
+      "name": "Paulo",
+      "initial": "P",
+      "color": "#FB923C",
+      "discipline": "Electrical"
+    },
+    {
+      "name": "Isaac",
+      "initial": "I",
+      "color": "#818CF8",
+      "discipline": "Software"
+    },
+    {
+      "name": "Aki",
+      "initial": "A",
+      "color": "#34D399",
+      "discipline": "Software"
+    },
+    {
+      "name": "Abdul",
+      "initial": "A",
+      "color": "#22D3EE",
+      "discipline": "Cloud Cybersecurity"
+    }
+  ]
+}
