@@ -117,7 +117,14 @@ export default function EngineeringPage() {
   const [completedTasks, setCompletedTasks] = useState<Record<string, string[]>>({});
   const [personalInputs, setPersonalInputs] = useState<Record<string, string>>({});
   const [engineerColSelect, setEngineerColSelect] = useState<Record<string, Column>>({});
+  const [weekStatus, setWeekStatus] = useState<Record<string, Record<string, "yes"|"no"|null>>>({});
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [promptName, setPromptName] = useState<string|null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
+
+  const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
+  const todayIdx = Math.min(4, Math.max(0, new Date().getDay() - 1));
+  const todayKey = new Date().toISOString().slice(0, 10);
 
   const [loading, setLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
@@ -138,7 +145,7 @@ export default function EngineeringPage() {
   // ── Load: API first → localStorage fallback → INITIAL_ISSUES ─────────────
   useEffect(() => {
     (async () => {
-      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[] };
+      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>> };
       let loaded: BoardData | null = null;
       try {
         const res  = await fetch("/api/engineering");
@@ -149,14 +156,17 @@ export default function EngineeringPage() {
           boardShaRef.current = data.sha;
         }
       } catch {}
-      // Fall back to localStorage if API gave nothing
       if (!loaded) loaded = lsLoad();
       if (loaded) {
         setIssues(loaded.issues       ?? INITIAL_ISSUES);
         setPersonalTasks(loaded.personalTasks   ?? {});
         setCompletedTasks(loaded.completedTasks ?? {});
         setHistory(loaded.history     ?? []);
+        setWeekStatus(loaded.weekStatus ?? {});
       }
+      // Show daily prompt if not yet answered today
+      const todayKeyLocal = new Date().toISOString().slice(0, 10);
+      if (!localStorage.getItem(`eng_prompt_${todayKeyLocal}`)) setShowPrompt(true);
       setLoading(false);
       isMountingRef.current = false;
     })();
@@ -169,7 +179,7 @@ export default function EngineeringPage() {
     setSyncStatus("saving");
     saveTimerRef.current = setTimeout(async () => {
       saveTimerRef.current = null;
-      const board = { issues, personalTasks, completedTasks, history };
+      const board = { issues, personalTasks, completedTasks, history, weekStatus };
       // Always persist locally first — instant, no network
       lsSave(board);
       if (!apiEnabledRef.current) { setSyncStatus("saved"); setTimeout(() => setSyncStatus("idle"), 1500); return; }
@@ -194,7 +204,7 @@ export default function EngineeringPage() {
       } catch { setSyncStatus("error"); }
     }, 800);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [issues, personalTasks, completedTasks, history, loading]);
+  }, [issues, personalTasks, completedTasks, history, weekStatus, loading]);
 
   // ── Poll for remote changes every 30s (only when API is configured) ────────
   useEffect(() => {
@@ -203,13 +213,14 @@ export default function EngineeringPage() {
       if (!apiEnabledRef.current || saveTimerRef.current) return;
       try {
         const res  = await fetch("/api/engineering");
-        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[] }; sha: string | null };
+        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>> }; sha: string | null };
         if (data.sha && data.sha !== boardShaRef.current && data.board) {
           isMountingRef.current = true;
           setIssues(data.board.issues       ?? INITIAL_ISSUES);
           setPersonalTasks(data.board.personalTasks   ?? {});
           setCompletedTasks(data.board.completedTasks ?? {});
           setHistory(data.board.history     ?? []);
+          setWeekStatus(data.board.weekStatus ?? {});
           boardShaRef.current = data.sha;
           lsSave(data.board);
           setSyncStatus("saved");
@@ -377,6 +388,23 @@ export default function EngineeringPage() {
     progress:   { height:4, borderRadius:4, background:"var(--surface-2)", overflow:"hidden", flex:1 },
   };
 
+  // ── Shot Clock values ──────────────────────────────────────────────────────
+  const SPRINT_START = new Date("2026-04-21T05:00:00Z");
+  const SPRINT_END   = new Date("2026-05-02T22:00:00Z");
+
+  // ── Week status helpers ────────────────────────────────────────────────────
+  function setDayStatus(name: string, day: string, val: "yes"|"no"|null) {
+    setWeekStatus(p => ({ ...p, [name]: { ...(p[name] ?? {}), [day]: val } }));
+  }
+  function answerPrompt(val: "yes"|"no") {
+    if (!promptName) return;
+    const todayDay = DAYS[todayIdx];
+    setDayStatus(promptName, todayDay, val);
+    localStorage.setItem(`eng_prompt_${todayKey}`, val);
+    setShowPrompt(false);
+    setPromptName(null);
+  }
+
   if (loading) return (
     <div style={{ ...s.page, alignItems:"center", justifyContent:"center" }}>
       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
@@ -493,6 +521,9 @@ export default function EngineeringPage() {
             </div>
           </div>
 
+          {/* ── Shot Clock ── */}
+          <ShotClock start={SPRINT_START} end={SPRINT_END}/>
+
           {/* View tabs */}
           <div style={{ display:"flex", gap:0, borderBottom:"none", marginTop:-4 }}>
             {(["board","backlog","people"] as const).map(v => (
@@ -532,7 +563,7 @@ export default function EngineeringPage() {
             {/* ── Engineer personal lanes ── */}
             <div style={{ marginBottom:32 }}>
               <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:12 }}>Engineer Lanes</div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:12 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:12 }}>
                 {DISCIPLINES.flatMap(d => d.members).map(name => {
                   const t = TEAM.find(tm => tm.name === name)!;
                   const disc = DISCIPLINES.find(d => d.members.includes(name))!;
@@ -559,9 +590,27 @@ export default function EngineeringPage() {
                       {/* Column header */}
                       <div style={{ display:"flex", alignItems:"center", gap:7, padding:"0 2px" }}>
                         <span style={{ width:22, height:22, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:10, fontWeight:700, flexShrink:0 }}>{t.initial}</span>
-                        <div>
+                        <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ fontSize:12.5, fontWeight:500, color:"var(--text)", lineHeight:1.2 }}>{name}</div>
                           <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em" }}>{disc.name}</div>
+                        </div>
+                        {/* Week status dots */}
+                        <div style={{ display:"flex", gap:3, alignItems:"center", flexShrink:0 }}>
+                          {DAYS.map((day, di) => {
+                            const st = weekStatus[name]?.[day] ?? null;
+                            const isToday = di === todayIdx;
+                            const dotColor = st === "yes" ? "#3DCC91" : st === "no" ? "#FF6B6B" : isToday ? t.color + "55" : "var(--line)";
+                            return (
+                              <button key={day} title={`${day}: ${st ?? "no response"}`}
+                                onClick={() => { const next = st === null ? "yes" : st === "yes" ? "no" : null; setDayStatus(name, day, next); }}
+                                style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2, background:"none", border:"none", cursor:"pointer", padding:"1px", borderRadius:3, transition:"transform 0.13s" }}
+                                onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.2)")}
+                                onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>
+                                <span style={{ fontFamily:"var(--mono)", fontSize:7, color: isToday ? t.color : "var(--text-4)", fontWeight: isToday ? 700 : 400, lineHeight:1 }}>{day[0]}</span>
+                                <span style={{ width:6, height:6, borderRadius:"50%", background: dotColor, boxShadow: st === "yes" ? `0 0 5px ${dotColor}` : st === "no" ? `0 0 5px ${dotColor}` : "none", transition:"all 0.18s ease", display:"block" }}/>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -1126,6 +1175,74 @@ export default function EngineeringPage() {
         </>
       )}
 
+      {/* ── Daily Prompt Modal ── */}
+      {showPrompt && (
+        <>
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(6px)", zIndex:80 }} onClick={() => setShowPrompt(false)}/>
+          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:81, width:460, background:"var(--surface-1)", border:"1px solid var(--line-strong)", borderRadius:16, padding:"36px 36px 28px", display:"flex", flexDirection:"column", gap:24, boxShadow:"0 24px 64px rgba(0,0,0,0.5)" }}>
+            {!promptName ? (
+              <>
+                <div>
+                  <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)", marginBottom:8 }}>Daily Check-In · {DAYS[todayIdx]}</div>
+                  <h2 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:24, letterSpacing:"-0.02em" }}>Who are <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>you?</em></h2>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
+                  {TEAM.map(t => (
+                    <button key={t.name} onClick={() => setPromptName(t.name)}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = t.color + "88"; e.currentTarget.style.background = t.color + "14"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${t.color}25`; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderRadius:8, border:"1px solid var(--line)", background:"var(--surface-2)", cursor:"pointer", transition:"all 0.16s ease" }}>
+                      <span style={{ width:30, height:30, borderRadius:"50%", background: t.color + "30", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:12, fontWeight:700, flexShrink:0, border:`1.5px solid ${t.color}50` }}>{t.initial}</span>
+                      <span style={{ fontSize:13, fontWeight:500, color:"var(--text)" }}>{t.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setShowPrompt(false)} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", letterSpacing:"0.1em", textTransform:"uppercase", textAlign:"center", transition:"color 0.15s" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--text-2)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>
+                  Skip for today
+                </button>
+              </>
+            ) : (
+              <>
+                {(() => { const t = TEAM.find(tm => tm.name === promptName)!; return (
+                  <>
+                    <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                      <span style={{ width:44, height:44, borderRadius:"50%", background: t.color + "30", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:16, fontWeight:700, border:`2px solid ${t.color}55`, flexShrink:0 }}>{t.initial}</span>
+                      <div>
+                        <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)", marginBottom:4 }}>{DAYS[todayIdx]} · Daily Check-In</div>
+                        <h2 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:22, letterSpacing:"-0.02em" }}>{t.name}, are you <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>on target?</em></h2>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:12 }}>
+                      <button onClick={() => answerPrompt("yes")}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(61,204,145,0.2)"; e.currentTarget.style.borderColor = "#3DCC91"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(61,204,145,0.3)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(61,204,145,0.08)"; e.currentTarget.style.borderColor = "rgba(61,204,145,0.4)"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+                        onMouseDown={e => (e.currentTarget.style.transform = "scale(0.96)")}
+                        onMouseUp={e => (e.currentTarget.style.transform = "translateY(-2px)")}
+                        style={{ flex:1, padding:"16px 0", borderRadius:10, border:"1px solid rgba(61,204,145,0.4)", background:"rgba(61,204,145,0.08)", cursor:"pointer", fontFamily:"var(--sans)", fontSize:15, fontWeight:600, color:"#3DCC91", letterSpacing:"0.01em", transition:"all 0.16s ease" }}>
+                        Yes ✓
+                      </button>
+                      <button onClick={() => answerPrompt("no")}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,107,107,0.2)"; e.currentTarget.style.borderColor = "#FF6B6B"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(255,107,107,0.3)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,107,107,0.08)"; e.currentTarget.style.borderColor = "rgba(255,107,107,0.4)"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+                        onMouseDown={e => (e.currentTarget.style.transform = "scale(0.96)")}
+                        onMouseUp={e => (e.currentTarget.style.transform = "translateY(-2px)")}
+                        style={{ flex:1, padding:"16px 0", borderRadius:10, border:"1px solid rgba(255,107,107,0.4)", background:"rgba(255,107,107,0.08)", cursor:"pointer", fontFamily:"var(--sans)", fontSize:15, fontWeight:600, color:"#FF6B6B", letterSpacing:"0.01em", transition:"all 0.16s ease" }}>
+                        Not yet
+                      </button>
+                    </div>
+                    <button onClick={() => setPromptName(null)} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", letterSpacing:"0.1em", textTransform:"uppercase", textAlign:"center", transition:"color 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "var(--text-2)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>
+                      ← Back
+                    </button>
+                  </>
+                ); })()}
+              </>
+            )}
+          </div>
+        </>
+      )}
+
       {/* ── Create issue modal ── */}
       {showCreate && (
         <>
@@ -1275,6 +1392,79 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── ShotClock ─────────────────────────────────────────────────────────────
+function ShotClock({ start, end }: { start: Date; end: Date }) {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const total     = end.getTime() - start.getTime();
+  const elapsed   = Math.max(0, now.getTime() - start.getTime());
+  const remaining = Math.max(0, end.getTime() - now.getTime());
+  const pct       = Math.min(100, (elapsed / total) * 100);
+
+  const days = Math.floor(remaining / 86400000);
+  const hrs  = Math.floor((remaining % 86400000) / 3600000);
+  const mins = Math.floor((remaining % 3600000) / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+
+  const urgency = remaining < 2 * 86400000 ? "#FF6B6B" : remaining < 4 * 86400000 ? "#FFC940" : "#3DCC91";
+  const expired = remaining === 0;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"10px 0 8px", borderTop:"1px solid var(--line)" }}>
+      {/* Label */}
+      <div style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase" as const, letterSpacing:"0.14em", color:"var(--text-4)", whiteSpace:"nowrap", flexShrink:0 }}>
+        Shot Clock
+      </div>
+
+      {/* Countdown */}
+      <div style={{ display:"flex", alignItems:"baseline", gap:4, flexShrink:0 }}>
+        {expired ? (
+          <span style={{ fontFamily:"var(--mono)", fontSize:13, color:"#FF6B6B", letterSpacing:"0.06em" }}>SPRINT ENDED</span>
+        ) : (
+          <>
+            <span style={{ fontFamily:"var(--mono)", fontSize:20, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1, transition:"color 0.6s ease" }}>{days}</span>
+            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>d</span>
+            <span style={{ fontFamily:"var(--mono)", fontSize:20, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(hrs)}</span>
+            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>h</span>
+            <span style={{ fontFamily:"var(--mono)", fontSize:20, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(mins)}</span>
+            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>m</span>
+            <span style={{ fontFamily:"var(--mono)", fontSize:20, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(secs)}</span>
+            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>s</span>
+          </>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ flex:1, height:4, borderRadius:4, background:"var(--surface-2)", overflow:"hidden", position:"relative" }}>
+        <div style={{
+          position:"absolute", left:0, top:0, bottom:0,
+          width:`${pct}%`,
+          background: `linear-gradient(90deg, #3DCC91, ${urgency})`,
+          borderRadius:4,
+          transition:"width 1s linear, background 0.6s ease",
+          boxShadow: `0 0 8px ${urgency}66`,
+        }}/>
+      </div>
+
+      {/* Pct */}
+      <div style={{ fontFamily:"var(--mono)", fontSize:10, color:urgency, whiteSpace:"nowrap", flexShrink:0, transition:"color 0.6s ease" }}>
+        {Math.round(pct)}%
+      </div>
+
+      {/* Sprint dates */}
+      <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", whiteSpace:"nowrap", flexShrink:0 }}>
+        Apr 21 → May 2
+      </div>
     </div>
   );
 }
