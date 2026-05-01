@@ -123,6 +123,7 @@ export default function EngineeringPage() {
   const [team, setTeam] = useState<{name:string; initial:string; color:string; discipline?:string}[]>(TEAM);
   const [showAddEng, setShowAddEng] = useState(false);
   const [newEng, setNewEng] = useState({ name:"", color:"#A78BFA", discipline:"" });
+  const [editEng, setEditEng] = useState<{original:string; name:string; color:string; discipline:string}|null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
@@ -970,14 +971,24 @@ export default function EngineeringPage() {
                             <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-2)", fontWeight:600 }}>{myDone}/{myIssues.length} done</div>
                             <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)" }}>{myDonePts}/{myPts} pts</div>
                           </div>
-                          <button
-                            onClick={e => { e.stopPropagation(); if (confirm(`Remove ${name} from the team?`)) setTeam(prev => prev.filter(tm => tm.name !== name)); }}
-                            title="Remove engineer"
-                            style={{ fontFamily:"var(--mono)", fontSize:8, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"var(--text-4)", background:"none", border:"1px solid transparent", borderRadius:4, padding:"2px 6px", cursor:"pointer", transition:"all 0.14s ease" }}
-                            onMouseEnter={e => { e.currentTarget.style.color="#FF6B6B"; e.currentTarget.style.borderColor="rgba(255,107,107,0.3)"; e.currentTarget.style.background="rgba(255,107,107,0.08)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.color="var(--text-4)"; e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="none"; }}>
-                            Remove
-                          </button>
+                          <div style={{ display:"flex", gap:5 }}>
+                            <button
+                              onClick={e => { e.stopPropagation(); setEditEng({ original:name, name, color:t.color, discipline:t.discipline||"" }); }}
+                              title="Edit engineer"
+                              style={{ fontFamily:"var(--mono)", fontSize:8, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"var(--text-4)", background:"none", border:"1px solid transparent", borderRadius:4, padding:"2px 6px", cursor:"pointer", transition:"all 0.14s ease" }}
+                              onMouseEnter={e => { e.currentTarget.style.color=t.color; e.currentTarget.style.borderColor=t.color+"44"; e.currentTarget.style.background=t.color+"10"; }}
+                              onMouseLeave={e => { e.currentTarget.style.color="var(--text-4)"; e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="none"; }}>
+                              Edit
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); if (confirm(`Remove ${name} from the team?`)) setTeam(prev => prev.filter(tm => tm.name !== name)); }}
+                              title="Remove engineer"
+                              style={{ fontFamily:"var(--mono)", fontSize:8, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"var(--text-4)", background:"none", border:"1px solid transparent", borderRadius:4, padding:"2px 6px", cursor:"pointer", transition:"all 0.14s ease" }}
+                              onMouseEnter={e => { e.currentTarget.style.color="#FF6B6B"; e.currentTarget.style.borderColor="rgba(255,107,107,0.3)"; e.currentTarget.style.background="rgba(255,107,107,0.08)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.color="var(--text-4)"; e.currentTarget.style.borderColor="transparent"; e.currentTarget.style.background="none"; }}>
+                              Remove
+                            </button>
+                          </div>
                         </div>
                       </div>
                       {/* Mini progress bar */}
@@ -1194,6 +1205,61 @@ export default function EngineeringPage() {
                 setTeam(prev => [...prev, { name:n, initial, color:newEng.color, discipline:newEng.discipline||undefined }]);
                 setShowAddEng(false);
               }} style={{ ...s.btnPrimary, opacity: newEng.name.trim() ? 1 : 0.4 }}>Add Engineer</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Edit Engineer Modal ── */}
+      {editEng && (
+        <>
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(4px)", zIndex:70 }} onClick={() => setEditEng(null)}/>
+          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:71, width:380, background:"var(--surface-1)", border:"1px solid var(--line-strong)", borderRadius:14, padding:"28px 28px 24px", display:"flex", flexDirection:"column", gap:20, boxShadow:"0 20px 60px rgba(0,0,0,0.45)" }}>
+            <div>
+              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)", marginBottom:6 }}>People / Edit</div>
+              <h2 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:22, letterSpacing:"-0.02em" }}>Edit <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>{editEng.original}</em></h2>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Name</label>
+                <input autoFocus value={editEng.name} onChange={e => setEditEng(p => p ? { ...p, name: e.target.value } : p)}
+                  style={s.formInput} placeholder="Full name"/>
+              </div>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Discipline</label>
+                <input value={editEng.discipline} onChange={e => setEditEng(p => p ? { ...p, discipline: e.target.value } : p)}
+                  style={s.formInput} placeholder="e.g. Software, Electrical…"/>
+              </div>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Color</label>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {["#00B4D8","#F472B6","#FB923C","#818CF8","#34D399","#22D3EE","#A78BFA","#FCD34D","#F87171","#4ADE80","#38BDF8","#E879F9"].map(c => (
+                    <button key={c} onClick={() => setEditEng(p => p ? { ...p, color: c } : p)}
+                      style={{ width:24, height:24, borderRadius:"50%", background:c, border: editEng.color === c ? "2px solid white" : "2px solid transparent", cursor:"pointer", boxShadow: editEng.color === c ? `0 0 0 2px ${c}` : "none", transition:"all 0.14s ease" }}/>
+                  ))}
+                </div>
+              </div>
+              {editEng.name.trim() && (
+                <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:8, background:"var(--surface-2)", border:"1px solid var(--line)" }}>
+                  <span style={{ width:32, height:32, borderRadius:"50%", background: editEng.color + "33", color: editEng.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:12, fontWeight:700, border:`1.5px solid ${editEng.color}50` }}>
+                    {editEng.name.trim().split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase()}
+                  </span>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:500, color:"var(--text)" }}>{editEng.name.trim()}</div>
+                    {editEng.discipline && <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.1em", marginTop:2 }}>{editEng.discipline}</div>}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button onClick={() => setEditEng(null)} style={{ ...s.btn }}>Cancel</button>
+              <button onClick={() => {
+                const n = editEng.name.trim();
+                if (!n) return;
+                const initial = n.split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase();
+                setTeam(prev => prev.map(tm => tm.name === editEng.original ? { ...tm, name:n, initial, color:editEng.color, discipline:editEng.discipline||undefined } : tm));
+                setEditEng(null);
+              }} style={{ ...s.btnPrimary, opacity: editEng.name.trim() ? 1 : 0.4 }}>Save Changes</button>
             </div>
           </div>
         </>
