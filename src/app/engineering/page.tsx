@@ -164,9 +164,10 @@ export default function EngineeringPage() {
         setHistory(loaded.history     ?? []);
         setWeekStatus(loaded.weekStatus ?? {});
       }
-      // Show daily prompt if not yet answered today
+      // Show daily prompt at noon or later if not yet answered today
       const todayKeyLocal = new Date().toISOString().slice(0, 10);
-      if (!localStorage.getItem(`eng_prompt_${todayKeyLocal}`)) setShowPrompt(true);
+      const nowHour = new Date().getHours();
+      if (nowHour >= 12 && !localStorage.getItem(`eng_prompt_${todayKeyLocal}`)) setShowPrompt(true);
       setLoading(false);
       isMountingRef.current = false;
     })();
@@ -388,9 +389,17 @@ export default function EngineeringPage() {
     progress:   { height:4, borderRadius:4, background:"var(--surface-2)", overflow:"hidden", flex:1 },
   };
 
-  // ── Shot Clock values ──────────────────────────────────────────────────────
-  const SPRINT_START = new Date("2026-04-21T05:00:00Z");
-  const SPRINT_END   = new Date("2026-05-02T22:00:00Z");
+  // ── Noon prompt: fire when clock crosses 12:00 ─────────────────────────────
+  useEffect(() => {
+    if (loading) return;
+    const tick = setInterval(() => {
+      const n = new Date();
+      if (n.getHours() >= 12 && !localStorage.getItem(`eng_prompt_${n.toISOString().slice(0,10)}`)) {
+        setShowPrompt(true);
+      }
+    }, 60_000);
+    return () => clearInterval(tick);
+  }, [loading]);
 
   // ── Week status helpers ────────────────────────────────────────────────────
   function setDayStatus(name: string, day: string, val: "yes"|"no"|null) {
@@ -522,7 +531,7 @@ export default function EngineeringPage() {
           </div>
 
           {/* ── Shot Clock ── */}
-          <ShotClock start={SPRINT_START} end={SPRINT_END}/>
+          <ShotClock/>
 
           {/* View tabs */}
           <div style={{ display:"flex", gap:0, borderBottom:"none", marginTop:-4 }}>
@@ -1397,51 +1406,50 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
 }
 
 // ── ShotClock ─────────────────────────────────────────────────────────────
-function ShotClock({ start, end }: { start: Date; end: Date }) {
+// 24-hour daily shot clock — resets at midnight, counts down to end of day
+function ShotClock() {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const total     = end.getTime() - start.getTime();
-  const elapsed   = Math.max(0, now.getTime() - start.getTime());
-  const remaining = Math.max(0, end.getTime() - now.getTime());
+  const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay   = new Date(startOfDay); endOfDay.setDate(endOfDay.getDate() + 1);
+
+  const total     = 86400000; // 24h in ms
+  const elapsed   = now.getTime() - startOfDay.getTime();
+  const remaining = endOfDay.getTime() - now.getTime();
   const pct       = Math.min(100, (elapsed / total) * 100);
 
-  const days = Math.floor(remaining / 86400000);
-  const hrs  = Math.floor((remaining % 86400000) / 3600000);
+  const hrs  = Math.floor(remaining / 3600000);
   const mins = Math.floor((remaining % 3600000) / 60000);
   const secs = Math.floor((remaining % 60000) / 1000);
 
-  const urgency = remaining < 2 * 86400000 ? "#FF6B6B" : remaining < 4 * 86400000 ? "#FFC940" : "#3DCC91";
-  const expired = remaining === 0;
+  // urgency ramps up in final 4h and final 1h
+  const urgency = remaining < 3600000 ? "#FF6B6B" : remaining < 4 * 3600000 ? "#FFC940" : "#3DCC91";
 
   const pad = (n: number) => String(n).padStart(2, "0");
+
+  // label: time of day
+  const label = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
 
   return (
     <div style={{ display:"flex", alignItems:"center", gap:14, padding:"10px 0 8px", borderTop:"1px solid var(--line)" }}>
       {/* Label */}
-      <div style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase" as const, letterSpacing:"0.14em", color:"var(--text-4)", whiteSpace:"nowrap", flexShrink:0 }}>
-        Shot Clock
+      <div style={{ display:"flex", flexDirection:"column" as const, flexShrink:0 }}>
+        <span style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase" as const, letterSpacing:"0.14em", color:"var(--text-4)", lineHeight:1.2 }}>Shot Clock</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", letterSpacing:"0.08em", opacity:0.6 }}>{label}</span>
       </div>
 
       {/* Countdown */}
       <div style={{ display:"flex", alignItems:"baseline", gap:4, flexShrink:0 }}>
-        {expired ? (
-          <span style={{ fontFamily:"var(--mono)", fontSize:13, color:"#FF6B6B", letterSpacing:"0.06em" }}>SPRINT ENDED</span>
-        ) : (
-          <>
-            <span style={{ fontFamily:"var(--mono)", fontSize:20, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1, transition:"color 0.6s ease" }}>{days}</span>
-            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>d</span>
-            <span style={{ fontFamily:"var(--mono)", fontSize:20, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(hrs)}</span>
-            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>h</span>
-            <span style={{ fontFamily:"var(--mono)", fontSize:20, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(mins)}</span>
-            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>m</span>
-            <span style={{ fontFamily:"var(--mono)", fontSize:20, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(secs)}</span>
-            <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>s</span>
-          </>
-        )}
+        <span style={{ fontFamily:"var(--mono)", fontSize:22, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1, transition:"color 0.6s ease" }}>{pad(hrs)}</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)" }}>h</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:22, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(mins)}</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)" }}>m</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:22, fontWeight:700, color:urgency, letterSpacing:"0.04em", lineHeight:1 }}>{pad(secs)}</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)" }}>s</span>
       </div>
 
       {/* Progress bar */}
@@ -1452,18 +1460,18 @@ function ShotClock({ start, end }: { start: Date; end: Date }) {
           background: `linear-gradient(90deg, #3DCC91, ${urgency})`,
           borderRadius:4,
           transition:"width 1s linear, background 0.6s ease",
-          boxShadow: `0 0 8px ${urgency}66`,
+          boxShadow: `0 0 8px ${urgency}55`,
         }}/>
       </div>
 
-      {/* Pct */}
+      {/* Pct elapsed */}
       <div style={{ fontFamily:"var(--mono)", fontSize:10, color:urgency, whiteSpace:"nowrap", flexShrink:0, transition:"color 0.6s ease" }}>
-        {Math.round(pct)}%
+        {Math.round(pct)}% elapsed
       </div>
 
-      {/* Sprint dates */}
-      <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", whiteSpace:"nowrap", flexShrink:0 }}>
-        Apr 21 → May 2
+      {/* Noon prompt note */}
+      <div style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", whiteSpace:"nowrap", flexShrink:0, opacity:0.7 }}>
+        Prompt at noon
       </div>
     </div>
   );
