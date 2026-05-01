@@ -1703,36 +1703,27 @@ function ShotClock() {
             {/* Sheen */}
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 60%)", borderRadius:2 }}/>
           </div>
-          {/* Leading-edge cursor */}
+          {/* Leading-edge cursor + comet tail */}
           {pct > 1 && pct < 99 && (
             <>
-              <style>{`
-                @keyframes scRing {
-                  0%   { transform:translate(-50%,-50%) scale(1,1);   opacity:0.7; }
-                  100% { transform:translate(-50%,-50%) scale(18,4);  opacity:0;   }
-                }
-              `}</style>
-              {/* Sonar rings */}
-              {[0, 0.55, 1.1].map((delay, i) => (
-                <div key={i} style={{
-                  position:"absolute", zIndex:2, pointerEvents:"none",
-                  left:`${pct}%`, top:"50%",
-                  width:4, height:14,
-                  borderRadius:2,
-                  border:`1.5px solid ${urgency}`,
-                  transformOrigin:"center",
-                  animation:`scRing 1.65s ${delay}s ease-out infinite`,
-                  transition:"left 1s linear",
-                }}/>
-              ))}
-              {/* Core — steady white line */}
+              <style>{`@keyframes scBreath { 0%,100%{opacity:.6} 50%{opacity:1} }`}</style>
+              {/* Comet tail — fades left from cursor */}
               <div style={{
-                position:"absolute", top:-3, bottom:-3, borderRadius:1,
+                position:"absolute", top:0, bottom:0, zIndex:3, pointerEvents:"none",
+                right:`${100 - pct}%`,
+                width:`min(${pct * 0.4}%, 80px)`,
+                background:`linear-gradient(90deg, transparent, ${urgency}55 60%, ${urgency}CC)`,
+                transition:"right 1s linear, width 1s linear",
+              }}/>
+              {/* Cursor line */}
+              <div style={{
+                position:"absolute", top:-4, bottom:-4, borderRadius:1,
                 left:`calc(${pct}% - 1px)`, width:2,
                 background:"#fff",
-                boxShadow:`0 0 6px 1px ${urgency}, 0 0 12px 2px ${urgency}55`,
+                boxShadow:`0 0 8px 2px ${urgency}, 0 0 20px 6px ${urgency}44`,
+                animation:"scBreath 2.8s ease-in-out infinite",
                 transition:"left 1s linear",
-                zIndex:4,
+                zIndex:5,
               }}/>
             </>
           )}
