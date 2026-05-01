@@ -1786,10 +1786,10 @@ function SubsystemCard({ sub, onUpdate, onRemove }: { sub: Subsystem; onUpdate: 
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
           <span style={{ width:9, height:9, borderRadius:2, background:sub.color, flexShrink:0 }}/>
           <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-2)", flex:1 }}>{sub.name}</span>
-          <button onClick={onRemove} title="Remove subsystem"
-            style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:14, lineHeight:1, padding:"2px 4px", borderRadius:4, transition:"color 0.14s" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#FF6B6B"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-4)"; }}>×</button>
+          <button onClick={onRemove}
+            style={{ background:"none", border:"1px solid var(--line)", cursor:"pointer", color:"var(--text-3)", fontSize:10, fontFamily:"var(--mono)", letterSpacing:"0.08em", textTransform:"uppercase", padding:"3px 8px", borderRadius:5, transition:"all 0.14s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#FF6B6B55"; e.currentTarget.style.color = "#FF6B6B"; e.currentTarget.style.background = "rgba(255,107,107,0.08)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-3)"; e.currentTarget.style.background = "none"; }}>Remove</button>
         </div>
 
         {/* Progress bar */}
