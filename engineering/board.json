@@ -1,6 +1,26 @@
 {
-  "issues": [],
-  "personalTasks": {},
+  "issues": [
+    {
+      "id": "ENG-L1777607809821",
+      "type": "task",
+      "title": "Mobile alert app",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Brian",
+      "assigneeInitial": "B",
+      "assigneeColor": "#22D3EE",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "Apr 30",
+      "updated": "Apr 30"
+    }
+  ],
+  "personalTasks": {
+    "Brian": [
+      "Mobile alert app"
+    ]
+  },
   "completedTasks": {},
   "history": [],
   "weekStatus": {},
