@@ -762,7 +762,9 @@ export default function EngineeringPage() {
               {history.map((item, idx) => {
                 const tm = TYPE_META[item.type];
                 return (
-                  <div key={`${item.id}-${idx}`} style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 18px", borderBottom: idx < history.length - 1 ? "1px solid var(--line)" : "none" }}>
+                  <div key={`${item.id}-${idx}`} style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 18px", borderBottom: idx < history.length - 1 ? "1px solid var(--line)" : "none" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-2)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                     <span style={{ fontFamily:"var(--mono)", fontSize:11, color:tm.color, fontWeight:700, flexShrink:0 }}>{tm.symbol}</span>
                     <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", flexShrink:0, width:72 }}>{item.id}</span>
                     <span style={{ fontSize:12.5, color:"var(--text-3)", textDecoration:"line-through", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.title}</span>
@@ -772,6 +774,10 @@ export default function EngineeringPage() {
                       </span>
                     )}
                     <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", flexShrink:0 }}>Archived {item.updated}</span>
+                    <button onClick={() => setHistory(h => h.filter((_, i) => i !== idx))}
+                      style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:14, lineHeight:1, padding:"0 2px", transition:"color 0.12s" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "#FF6B6B")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>✕</button>
                   </div>
                 );
               })}
