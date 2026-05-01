@@ -578,8 +578,13 @@ export default function EngineeringPage() {
                           {COLUMNS.map(col => {
                             const active = selectedCol === col.id;
                             return (
-                              <button key={col.id} onClick={() => setEngineerColSelect(p => ({ ...p, [name]: col.id }))}
-                                style={{ flex:1, padding:"4px 2px", borderRadius:4, border:`1px solid ${active ? col.color : "var(--line)"}`, background: active ? col.color + "22" : "var(--surface-2)", color: active ? col.color : "var(--text-4)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:8.5, textTransform:"uppercase", letterSpacing:"0.06em", transition:"all 0.12s", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                              <button key={col.id}
+                                onClick={() => setEngineerColSelect(p => ({ ...p, [name]: col.id }))}
+                                onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = col.color + "88"; e.currentTarget.style.color = col.color; e.currentTarget.style.background = col.color + "18"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = `0 3px 10px ${col.color}30`; } }}
+                                onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-4)"; e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; } }}
+                                onMouseDown={e => { e.currentTarget.style.transform = "translateY(0) scale(0.93)"; }}
+                                onMouseUp={e => { e.currentTarget.style.transform = active ? "translateY(0)" : "translateY(-1px)"; }}
+                                style={{ flex:1, padding:"4px 2px", borderRadius:4, border:`1px solid ${active ? col.color : "var(--line)"}`, background: active ? col.color + "22" : "var(--surface-2)", color: active ? col.color : "var(--text-4)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:8.5, textTransform:"uppercase", letterSpacing:"0.06em", transition:"all 0.15s ease", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", boxShadow: active ? `0 0 8px ${col.color}40` : "none", fontWeight: active ? 700 : 400 }}>
                                 {col.label}
                               </button>
                             );
@@ -975,10 +980,15 @@ export default function EngineeringPage() {
                           {COLUMNS.map(col => {
                             const active = selectedCol === col.id;
                             return (
-                              <button key={col.id} onClick={() => setEngineerColSelect(p => ({ ...p, [name]: col.id }))}
+                              <button key={col.id}
+                                onClick={() => setEngineerColSelect(p => ({ ...p, [name]: col.id }))}
                                 title={col.label}
-                                style={{ width:18, height:18, borderRadius:3, border:`1px solid ${active ? col.color : "var(--line)"}`, background: active ? col.color + "22" : "transparent", cursor:"pointer", flexShrink:0 }}>
-                                <span style={{ width:6, height:6, borderRadius:1, background: active ? col.color : "var(--text-4)", display:"block", margin:"auto" }}/>
+                                onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = col.color + "88"; e.currentTarget.style.background = col.color + "22"; e.currentTarget.style.transform = "scale(1.15)"; e.currentTarget.style.boxShadow = `0 0 8px ${col.color}50`; const dot = e.currentTarget.querySelector("span") as HTMLElement|null; if (dot) dot.style.background = col.color; } }}
+                                onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "transparent"; e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; const dot = e.currentTarget.querySelector("span") as HTMLElement|null; if (dot) dot.style.background = "var(--text-4)"; } }}
+                                onMouseDown={e => { e.currentTarget.style.transform = "scale(0.88)"; }}
+                                onMouseUp={e => { e.currentTarget.style.transform = active ? "scale(1)" : "scale(1.15)"; }}
+                                style={{ width:18, height:18, borderRadius:3, border:`1px solid ${active ? col.color : "var(--line)"}`, background: active ? col.color + "22" : "transparent", cursor:"pointer", flexShrink:0, transition:"all 0.15s ease", boxShadow: active ? `0 0 8px ${col.color}44` : "none" }}>
+                                <span style={{ width:6, height:6, borderRadius:1, background: active ? col.color : "var(--text-4)", display:"block", margin:"auto", transition:"background 0.15s" }}/>
                               </button>
                             );
                           })}
