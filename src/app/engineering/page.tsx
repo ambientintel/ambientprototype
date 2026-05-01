@@ -591,10 +591,33 @@ export default function EngineeringPage() {
           {/* ── Shot Clock ── */}
           <ShotClock/>
 
+          {/* ── Subsystems strip ── */}
+          <div style={{ display:"flex", gap:8, padding:"10px 0 2px", flexWrap:"wrap" }}>
+            {subsystems.map(sub => {
+              const barColor = sub.progress >= 75 ? "#3DCC91" : sub.progress >= 40 ? sub.color : "#FF6B6B";
+              return (
+                <div key={sub.id}
+                  onClick={() => setView("subsystems")}
+                  style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", borderRadius:8, background:"var(--surface-1)", border:`1px solid var(--line)`, cursor:"pointer", transition:"all 0.15s", minWidth:0, flex:"1 1 120px" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = sub.color + "55"; e.currentTarget.style.background = sub.color + "0C"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "var(--surface-1)"; }}>
+                  <span style={{ width:7, height:7, borderRadius:2, background:sub.color, flexShrink:0 }}/>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-3)", marginBottom:4, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{sub.name}</div>
+                    <div style={{ height:3, borderRadius:3, background:"var(--surface-2)", overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${sub.progress}%`, background:barColor, borderRadius:3, transition:"width 0.5s" }}/>
+                    </div>
+                  </div>
+                  <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, color:barColor, flexShrink:0 }}>{sub.progress}%</span>
+                </div>
+              );
+            })}
+          </div>
+
           {/* View tabs */}
           <div style={{ display:"flex", gap:0, borderBottom:"none", marginTop:-4 }}>
             {(["board","backlog","people","subsystems"] as const).map(v => (
-              <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", cursor:"pointer", padding:"8px 16px 12px", fontSize:13, fontFamily:"var(--sans)", color: view===v ? "var(--text)" : "var(--text-3)", borderBottom: view===v ? "2px solid var(--accent)" : "2px solid transparent", transition:"color 0.15s", textTransform:"capitalize" }}>
+              <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", cursor:"pointer", padding:"8px 16px 12px", fontSize:13, fontFamily:"var(--sans)", color: view===v ? "var(--text)" : "var(--text-3)", borderBottom: view===v ? "2px solid var(--accent)" : "2px solid transparent", transition:"color 0.15s", textTransform:"capitalize", display: v === "subsystems" ? "none" : undefined }}>
                 {v === "board" ? "Board" : v === "backlog" ? "Backlog" : v === "people" ? "People" : "Subsystems"}
               </button>
             ))}
