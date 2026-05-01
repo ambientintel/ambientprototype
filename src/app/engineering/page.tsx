@@ -653,7 +653,7 @@ export default function EngineeringPage() {
                         <span style={{ width:22, height:22, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:10, fontWeight:700, flexShrink:0 }}>{t.initial}</span>
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ fontSize:12.5, fontWeight:500, color:"var(--text)", lineHeight:1.2 }}>{name}</div>
-                          {disc && <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em" }}>{disc.name}</div>}
+                          <div style={{ fontFamily:"var(--mono)", fontSize:9, color: disc?.color ?? t.color, textTransform:"uppercase", letterSpacing:"0.1em", minHeight:"1em", opacity: t.discipline?.trim() ? 1 : 0 }}>{t.discipline?.trim() || "·"}</div>
                         </div>
                         {/* Week status dots */}
                         <div style={{ display:"flex", gap:3, alignItems:"center", flexShrink:0 }}>
