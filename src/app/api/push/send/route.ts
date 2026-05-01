@@ -5,7 +5,7 @@ const EC_ID   = process.env.EDGE_CONFIG_ID!;
 const V_TOKEN  = process.env.VERCEL_TOKEN!;
 const TEAM    = 'bribradley-7607s-projects';
 
-webpush.setVapidDetails(
+if (process.env.VAPID_SUBJECT && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) webpush.setVapidDetails(
   process.env.VAPID_SUBJECT!,
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
   process.env.VAPID_PRIVATE_KEY!,
