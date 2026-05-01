@@ -1602,30 +1602,15 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
 }
 
 // ── SectionDivider ────────────────────────────────────────────────────────
-const SD_L = [3,6,2,5,4,7,2,5,3,6,1,4,6,3,5];
-const SD_R = [5,2,6,3,5,1,4,7,3,5,2,6,4,2,6];
-const SD_MAX = 7; const SD_BS = 3; const SD_BG = 1; const SD_CG = 2;
-function PixelBars({ cols }: { cols: number[] }) {
-  const totalH = SD_MAX * SD_BS + (SD_MAX - 1) * SD_BG;
-  return (
-    <div style={{ display:"flex", alignItems:"flex-end", gap:SD_CG, height:totalH, flexShrink:0 }}>
-      {cols.map((h, ci) => (
-        <div key={ci} style={{ display:"flex", flexDirection:"column-reverse" as const, gap:SD_BG }}>
-          {Array.from({ length: h }, (_, bi) => (
-            <div key={bi} style={{ width:SD_BS, height:SD_BS, background:"var(--accent)", borderRadius:0,
-              opacity: 0.2 + (bi / Math.max(h-1,1)) * 0.75 }}/>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
 function SectionDivider({ label }: { label: string }) {
   return (
-    <div style={{ display:"flex", alignItems:"flex-end", gap:20, margin:"44px 0 24px", userSelect:"none" as const }}>
-      <PixelBars cols={SD_L}/>
-      <span style={{ fontFamily:"var(--mono)", fontSize:11, letterSpacing:"0.28em", textTransform:"uppercase" as const, color:"var(--text-2)", fontWeight:500, paddingBottom:1, whiteSpace:"nowrap" as const, flexShrink:0 }}>{label}</span>
-      <PixelBars cols={SD_R}/>
+    <div style={{ display:"flex", alignItems:"center", gap:12, margin:"36px 0 20px",
+      background:"rgba(255,255,255,0.03)", border:"1px solid var(--line)",
+      borderRadius:4, padding:"10px 16px" }}>
+      <span style={{ width:2, height:14, background:"var(--accent)", borderRadius:0, flexShrink:0, display:"block" }}/>
+      <span style={{ fontFamily:"var(--mono)", fontSize:11, letterSpacing:"0.22em",
+        textTransform:"uppercase" as const, color:"var(--text-3)", fontWeight:500,
+        userSelect:"none" as const }}>{label}</span>
     </div>
   );
 }
