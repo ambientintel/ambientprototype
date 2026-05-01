@@ -120,7 +120,7 @@ input { font-family: inherit; color: inherit; }
 
 .topbar {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   padding-bottom: 28px;
   border-bottom: 1px solid var(--line);
