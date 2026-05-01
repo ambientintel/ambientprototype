@@ -29,11 +29,27 @@
       "description": "",
       "created": "May 1",
       "updated": "May 1"
+    },
+    {
+      "id": "ENG-L1777649877346",
+      "type": "task",
+      "title": "Mobile app for pilot study",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Brian",
+      "assigneeInitial": "B",
+      "assigneeColor": "#22D3EE",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 1",
+      "updated": "May 1"
     }
   ],
   "personalTasks": {
     "Brian": [
-      "Website for pilot study"
+      "Website for pilot study",
+      "Mobile app for pilot study"
     ]
   },
   "completedTasks": {
