@@ -167,7 +167,7 @@ export default function EngineeringPage() {
         setCompletedTasks(loaded.completedTasks ?? {});
         setHistory(loaded.history     ?? []);
         setWeekStatus(loaded.weekStatus ?? {});
-        if (loaded.team?.length) setTeam(loaded.team);
+        if (loaded.team?.length) setTeam(loaded.team.map(tm => ({ ...TEAM.find(d => d.name === tm.name), ...tm })));
       }
       // Show daily prompt at noon or later if not yet answered today
       const todayKeyLocal = new Date().toISOString().slice(0, 10);
@@ -227,7 +227,7 @@ export default function EngineeringPage() {
           setCompletedTasks(data.board.completedTasks ?? {});
           setHistory(data.board.history     ?? []);
           setWeekStatus(data.board.weekStatus ?? {});
-          if (data.board.team?.length) setTeam(data.board.team);
+          if (data.board.team?.length) setTeam(data.board.team.map(tm => ({ ...TEAM.find(d => d.name === tm.name), ...tm })));
           boardShaRef.current = data.sha;
           lsSave(data.board);
           setSyncStatus("saved");
@@ -472,8 +472,8 @@ export default function EngineeringPage() {
           {(() => {
             const discMap: Record<string, {color:string; members:typeof team}> = {};
             team.forEach(t => {
-              const dName = t.discipline || "Other";
-              const dColor = DISCIPLINES.find(d => d.name === dName)?.color ?? "var(--text-3)";
+              const dName = t.discipline?.trim() || "Other";
+              const dColor = DISCIPLINES.find(d => d.name === dName)?.color ?? t.color;
               if (!discMap[dName]) discMap[dName] = { color: dColor, members: [] };
               discMap[dName].members.push(t);
             });
