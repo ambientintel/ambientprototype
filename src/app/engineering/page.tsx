@@ -120,6 +120,9 @@ export default function EngineeringPage() {
   const [weekStatus, setWeekStatus] = useState<Record<string, Record<string, "yes"|"no"|null>>>({});
   const [showPrompt, setShowPrompt] = useState(false);
   const [promptName, setPromptName] = useState<string|null>(null);
+  const [team, setTeam] = useState<{name:string; initial:string; color:string}[]>(TEAM);
+  const [showAddEng, setShowAddEng] = useState(false);
+  const [newEng, setNewEng] = useState({ name:"", color:"#A78BFA" });
   const drawerRef = useRef<HTMLDivElement>(null);
 
   const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
@@ -145,7 +148,7 @@ export default function EngineeringPage() {
   // ── Load: API first → localStorage fallback → INITIAL_ISSUES ─────────────
   useEffect(() => {
     (async () => {
-      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>> };
+      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string}[] };
       let loaded: BoardData | null = null;
       try {
         const res  = await fetch("/api/engineering");
@@ -163,6 +166,7 @@ export default function EngineeringPage() {
         setCompletedTasks(loaded.completedTasks ?? {});
         setHistory(loaded.history     ?? []);
         setWeekStatus(loaded.weekStatus ?? {});
+        if (loaded.team?.length) setTeam(loaded.team);
       }
       // Show daily prompt at noon or later if not yet answered today
       const todayKeyLocal = new Date().toISOString().slice(0, 10);
@@ -180,7 +184,7 @@ export default function EngineeringPage() {
     setSyncStatus("saving");
     saveTimerRef.current = setTimeout(async () => {
       saveTimerRef.current = null;
-      const board = { issues, personalTasks, completedTasks, history, weekStatus };
+      const board = { issues, personalTasks, completedTasks, history, weekStatus, team };
       // Always persist locally first — instant, no network
       lsSave(board);
       if (!apiEnabledRef.current) { setSyncStatus("saved"); setTimeout(() => setSyncStatus("idle"), 1500); return; }
@@ -205,7 +209,7 @@ export default function EngineeringPage() {
       } catch { setSyncStatus("error"); }
     }, 800);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [issues, personalTasks, completedTasks, history, weekStatus, loading]);
+  }, [issues, personalTasks, completedTasks, history, weekStatus, team, loading]);
 
   // ── Poll for remote changes every 30s (only when API is configured) ────────
   useEffect(() => {
@@ -214,7 +218,7 @@ export default function EngineeringPage() {
       if (!apiEnabledRef.current || saveTimerRef.current) return;
       try {
         const res  = await fetch("/api/engineering");
-        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>> }; sha: string | null };
+        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string}[] }; sha: string | null };
         if (data.sha && data.sha !== boardShaRef.current && data.board) {
           isMountingRef.current = true;
           setIssues(data.board.issues       ?? INITIAL_ISSUES);
@@ -222,6 +226,7 @@ export default function EngineeringPage() {
           setCompletedTasks(data.board.completedTasks ?? {});
           setHistory(data.board.history     ?? []);
           setWeekStatus(data.board.weekStatus ?? {});
+          if (data.board.team?.length) setTeam(data.board.team);
           boardShaRef.current = data.sha;
           lsSave(data.board);
           setSyncStatus("saved");
@@ -334,7 +339,7 @@ export default function EngineeringPage() {
 
   function createIssue() {
     if (!newForm.title.trim()) return;
-    const t = TEAM.find(t => t.name === newForm.assignee)!;
+    const t = team.find(t => t.name === newForm.assignee)!;
     const next: Issue = {
       id: `ENG-${150 + issues.length - INITIAL_ISSUES.length + 1}`,
       type: newForm.type,
@@ -470,7 +475,7 @@ export default function EngineeringPage() {
                 <span style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.1em", color:d.color }}>{d.name}</span>
               </div>
               {d.members.map(name => {
-                const t = TEAM.find(tm => tm.name === name)!;
+                const t = team.find(tm => tm.name === name)!;
                 return (
                   <div key={name} style={{ ...s.navItem, paddingLeft:20, cursor:"pointer" }}
                     onClick={() => setFilterAssignee(filterAssignee === name ? "all" : name)}>
@@ -551,7 +556,7 @@ export default function EngineeringPage() {
           </div>
           <select style={s.select} value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}>
             <option value="all">All Assignees</option>
-            {TEAM.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+            {team.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
           </select>
           <select style={s.select} value={filterType} onChange={e => setFilterType(e.target.value)}>
             <option value="all">All Types</option>
@@ -573,9 +578,9 @@ export default function EngineeringPage() {
             <div style={{ marginBottom:32 }}>
               <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:12 }}>Engineer Lanes</div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:12 }}>
-                {DISCIPLINES.flatMap(d => d.members).map(name => {
-                  const t = TEAM.find(tm => tm.name === name)!;
-                  const disc = DISCIPLINES.find(d => d.members.includes(name))!;
+                {team.map(t => {
+                  const name = t.name;
+                  const disc = DISCIPLINES.find(d => d.members.includes(name));
                   const tasks = personalTasks[name] || [];
                   const inputVal = personalInputs[name] || "";
                   const selectedCol: Column = engineerColSelect[name] || "todo";
@@ -601,7 +606,7 @@ export default function EngineeringPage() {
                         <span style={{ width:22, height:22, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:10, fontWeight:700, flexShrink:0 }}>{t.initial}</span>
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ fontSize:12.5, fontWeight:500, color:"var(--text)", lineHeight:1.2 }}>{name}</div>
-                          <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em" }}>{disc.name}</div>
+                          {disc && <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em" }}>{disc.name}</div>}
                         </div>
                         {/* Week status dots */}
                         <div style={{ display:"flex", gap:3, alignItems:"center", flexShrink:0 }}>
@@ -737,7 +742,7 @@ export default function EngineeringPage() {
                     </div>
                     <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                       {d.members.map(name => {
-                        const t = TEAM.find(tm => tm.name === name)!;
+                        const t = team.find(tm => tm.name === name)!;
                         const active = filterAssignee === name;
                         return (
                           <button key={name} onClick={() => setFilterAssignee(active ? "all" : name)}
@@ -915,9 +920,9 @@ export default function EngineeringPage() {
         {view === "people" && (
           <div style={{ ...s.content, flex:1 }}>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:20, minWidth:900 }}>
-              {DISCIPLINES.flatMap(d => d.members).map(name => {
-                const t    = TEAM.find(tm => tm.name === name)!;
-                const disc = DISCIPLINES.find(d => d.members.includes(name))!;
+              {team.map(t => {
+                const name = t.name;
+                const disc = DISCIPLINES.find(d => d.members.includes(name));
                 const myIssues = issues.filter(i => i.assignee === name);
                 const myDone   = myIssues.filter(i => i.column === "done").length;
                 const myPts    = myIssues.reduce((a, i) => a + i.points, 0);
@@ -952,7 +957,7 @@ export default function EngineeringPage() {
                         <span style={{ width:34, height:34, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:13, fontWeight:700, flexShrink:0, border:`1.5px solid ${t.color}50` }}>{t.initial}</span>
                         <div>
                           <div style={{ fontSize:14, fontWeight:600, color:"var(--text)", lineHeight:1.2 }}>{name}</div>
-                          <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:1 }}>{disc.name}</div>
+                          {disc && <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:1 }}>{disc.name}</div>}
                         </div>
                         <div style={{ marginLeft:"auto", textAlign:"right" }}>
                           <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-2)", fontWeight:600 }}>{myDone}/{myIssues.length} done</div>
@@ -1110,10 +1115,68 @@ export default function EngineeringPage() {
                   </div>
                 );
               })}
+
+              {/* ── Add Engineer card ── */}
+              <button onClick={() => { setNewEng({ name:"", color:"#A78BFA" }); setShowAddEng(true); }}
+                style={{ background:"var(--surface-1)", border:"1px dashed var(--line)", borderRadius:12, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, padding:"32px 20px", cursor:"pointer", transition:"all 0.18s ease", color:"var(--text-4)", minHeight:160 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.background = "var(--surface-2)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-4)"; e.currentTarget.style.background = "var(--surface-1)"; }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round"/><path d="M19 3v6M16 6h6" strokeLinecap="round"/></svg>
+                <span style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase" }}>Add Engineer</span>
+              </button>
             </div>
           </div>
         )}
       </main>
+
+      {/* ── Add Engineer Modal ── */}
+      {showAddEng && (
+        <>
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(4px)", zIndex:70 }} onClick={() => setShowAddEng(false)}/>
+          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:71, width:380, background:"var(--surface-1)", border:"1px solid var(--line-strong)", borderRadius:14, padding:"28px 28px 24px", display:"flex", flexDirection:"column", gap:20, boxShadow:"0 20px 60px rgba(0,0,0,0.45)" }}>
+            <div>
+              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)", marginBottom:6 }}>People / New</div>
+              <h2 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:22, letterSpacing:"-0.02em" }}>Add <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>engineer</em></h2>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Name</label>
+                <input autoFocus value={newEng.name} onChange={e => setNewEng(p => ({ ...p, name: e.target.value }))}
+                  onKeyDown={e => { if (e.key === "Enter") { const n = newEng.name.trim(); if (!n) return; const initial = n.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); setTeam(prev => [...prev, { name:n, initial, color:newEng.color }]); setShowAddEng(false); }}}
+                  style={s.formInput} placeholder="Full name"/>
+              </div>
+              <div style={s.formRow}>
+                <label style={s.formLabel}>Color</label>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {["#00B4D8","#F472B6","#FB923C","#818CF8","#34D399","#22D3EE","#A78BFA","#FCD34D","#F87171","#4ADE80","#38BDF8","#E879F9"].map(c => (
+                    <button key={c} onClick={() => setNewEng(p => ({ ...p, color: c }))}
+                      style={{ width:24, height:24, borderRadius:"50%", background:c, border: newEng.color === c ? `2px solid white` : "2px solid transparent", cursor:"pointer", boxShadow: newEng.color === c ? `0 0 0 2px ${c}` : "none", transition:"all 0.14s ease" }}/>
+                  ))}
+                </div>
+              </div>
+              {/* Preview */}
+              {newEng.name.trim() && (
+                <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:8, background:"var(--surface-2)", border:"1px solid var(--line)" }}>
+                  <span style={{ width:32, height:32, borderRadius:"50%", background: newEng.color + "33", color: newEng.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:12, fontWeight:700, border:`1.5px solid ${newEng.color}50` }}>
+                    {newEng.name.trim().split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
+                  </span>
+                  <span style={{ fontSize:14, fontWeight:500, color:"var(--text)" }}>{newEng.name.trim()}</span>
+                </div>
+              )}
+            </div>
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button onClick={() => setShowAddEng(false)} style={{ ...s.btn }}>Cancel</button>
+              <button onClick={() => {
+                const n = newEng.name.trim();
+                if (!n) return;
+                const initial = n.split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase();
+                setTeam(prev => [...prev, { name:n, initial, color:newEng.color }]);
+                setShowAddEng(false);
+              }} style={{ ...s.btnPrimary, opacity: newEng.name.trim() ? 1 : 0.4 }}>Add Engineer</button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Issue drawer ── */}
       {selected && (
@@ -1196,7 +1259,7 @@ export default function EngineeringPage() {
                   <h2 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:24, letterSpacing:"-0.02em" }}>Who are <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>you?</em></h2>
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
-                  {TEAM.map(t => (
+                  {team.map(t => (
                     <button key={t.name} onClick={() => setPromptName(t.name)}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = t.color + "88"; e.currentTarget.style.background = t.color + "14"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${t.color}25`; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
@@ -1213,7 +1276,7 @@ export default function EngineeringPage() {
               </>
             ) : (
               <>
-                {(() => { const t = TEAM.find(tm => tm.name === promptName)!; return (
+                {(() => { const t = team.find(tm => tm.name === promptName)!; return (
                   <>
                     <div style={{ display:"flex", alignItems:"center", gap:14 }}>
                       <span style={{ width:44, height:44, borderRadius:"50%", background: t.color + "30", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:16, fontWeight:700, border:`2px solid ${t.color}55`, flexShrink:0 }}>{t.initial}</span>
@@ -1293,7 +1356,7 @@ export default function EngineeringPage() {
               <div style={s.formRow}>
                 <label style={s.formLabel}>Assignee</label>
                 <select style={s.formSelect} value={newForm.assignee} onChange={e => setNewForm(p => ({ ...p, assignee: e.target.value }))}>
-                  {TEAM.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                  {team.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                 </select>
               </div>
             </div>
