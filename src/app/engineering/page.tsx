@@ -124,6 +124,8 @@ export default function EngineeringPage() {
   const [showAddEng, setShowAddEng] = useState(false);
   const [newEng, setNewEng] = useState({ name:"", color:"#A78BFA", discipline:"" });
   const [editEng, setEditEng] = useState<{original:string; name:string; color:string; discipline:string}|null>(null);
+  const [dragEngIdx, setDragEngIdx] = useState<number|null>(null);
+  const [dragOverEngIdx, setDragOverEngIdx] = useState<number|null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
@@ -927,7 +929,7 @@ export default function EngineeringPage() {
         {view === "people" && (
           <div style={{ ...s.content, flex:1 }}>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:20, minWidth:900 }}>
-              {team.map(t => {
+              {team.map((t, engIdx) => {
                 const name = t.name;
                 const disc = DISCIPLINES.find(d => d.members.includes(name));
                 const myIssues = issues.filter(i => i.assignee === name);
@@ -953,13 +955,38 @@ export default function EngineeringPage() {
                   setPersonalInputs(p => ({ ...p, [name]: "" }));
                 };
 
+                const isDragging   = dragEngIdx === engIdx;
+                const isDragTarget = dragOverEngIdx === engIdx && dragEngIdx !== engIdx;
+
                 return (
                   <div key={name}
-                    style={{ background:"var(--surface-1)", border:`1px solid ${t.color}28`, borderRadius:12, overflow:"hidden", display:"flex", flexDirection:"column", transition:"all 0.2s ease" }}
-                    onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = t.color + "70"; el.style.transform = "translateY(-3px)"; el.style.boxShadow = `0 12px 36px ${t.color}22`; }}
-                    onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = t.color + "28"; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; }}>
+                    draggable
+                    onDragStart={e => { setDragEngIdx(engIdx); e.dataTransfer.effectAllowed = "move"; }}
+                    onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverEngIdx(engIdx); }}
+                    onDrop={e => {
+                      e.preventDefault();
+                      if (dragEngIdx === null || dragEngIdx === engIdx) return;
+                      setTeam(prev => {
+                        const next = [...prev];
+                        const [moved] = next.splice(dragEngIdx, 1);
+                        next.splice(engIdx, 0, moved);
+                        return next;
+                      });
+                      setDragEngIdx(null); setDragOverEngIdx(null);
+                    }}
+                    onDragEnd={() => { setDragEngIdx(null); setDragOverEngIdx(null); }}
+                    style={{ background:"var(--surface-1)", border: isDragTarget ? `2px solid ${t.color}` : `1px solid ${t.color}28`, borderRadius:12, overflow:"hidden", display:"flex", flexDirection:"column", transition:"all 0.15s ease", opacity: isDragging ? 0.4 : 1, cursor:"grab", boxShadow: isDragTarget ? `0 0 0 3px ${t.color}33, 0 12px 36px ${t.color}22` : "none" }}
+                    onMouseEnter={e => { if (dragEngIdx !== null) return; const el = e.currentTarget; el.style.borderColor = t.color + "70"; el.style.transform = "translateY(-3px)"; el.style.boxShadow = `0 12px 36px ${t.color}22`; }}
+                    onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = isDragTarget ? t.color : t.color + "28"; el.style.transform = "translateY(0)"; el.style.boxShadow = isDragTarget ? `0 0 0 3px ${t.color}33` : "none"; }}>
                     {/* Header */}
                     <div style={{ padding:"16px 18px 12px", borderBottom:"1px solid var(--line)", background:`linear-gradient(135deg, ${t.color}0A 0%, transparent 60%)` }}>
+                      {/* Drag handle */}
+                      <div style={{ display:"flex", justifyContent:"center", marginBottom:8, opacity: isDragging ? 1 : 0.25, transition:"opacity 0.15s" }}>
+                        <svg width="20" height="10" viewBox="0 0 20 10" fill={t.color}>
+                          <circle cx="4" cy="2.5" r="1.5"/><circle cx="10" cy="2.5" r="1.5"/><circle cx="16" cy="2.5" r="1.5"/>
+                          <circle cx="4" cy="7.5" r="1.5"/><circle cx="10" cy="7.5" r="1.5"/><circle cx="16" cy="7.5" r="1.5"/>
+                        </svg>
+                      </div>
                       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                         <span style={{ width:34, height:34, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:13, fontWeight:700, flexShrink:0, border:`1.5px solid ${t.color}50` }}>{t.initial}</span>
                         <div>
