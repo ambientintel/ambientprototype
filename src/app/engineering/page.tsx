@@ -1602,61 +1602,20 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
 }
 
 // ── SectionDivider ────────────────────────────────────────────────────────
-const DIVIDER_BARS_L = [3,7,5,12,6,10,4,9,3,8,5,11];
-const DIVIDER_BARS_R = [8,4,11,5,9,3,10,6,12,5,7,3];
 function SectionDivider({ label }: { label: string }) {
   return (
     <>
       <style>{`
-        @keyframes sdBar { 0%,100% { transform:scaleY(1); opacity:0.55; } 50% { transform:scaleY(0.35); opacity:0.2; } }
-        @keyframes sdPulse { 0%,100% { box-shadow:0 0 10px var(--accent,#00b4d8)18; } 50% { box-shadow:0 0 22px var(--accent,#00b4d8)30; } }
-        @keyframes sdScan { 0% { left:-40%; } 100% { left:140%; } }
+        @keyframes sdGlow { 0%,100% { opacity:.55; transform:scale(1); } 50% { opacity:1; transform:scale(1.35); } }
       `}</style>
-      <div style={{ display:"flex", alignItems:"center", gap:10, margin:"36px 0 20px" }}>
-
-        {/* Left arm */}
-        <div style={{ flex:1, height:1, position:"relative", overflow:"hidden", background:"linear-gradient(90deg, transparent 0%, var(--accent) 100%)", opacity:0.35 }}>
-          <div style={{ position:"absolute", top:"-1px", left:0, width:"25%", height:"3px", background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)", animation:"sdScan 2.8s ease-in-out infinite" }}/>
+      <div style={{ display:"flex", alignItems:"center", gap:16, margin:"40px 0 22px" }}>
+        <div style={{ flex:1, height:"1px", background:"linear-gradient(90deg, transparent 0%, var(--line) 60%, var(--accent) 100%)", opacity:0.7 }}/>
+        <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+          <span style={{ width:4, height:4, borderRadius:"50%", background:"var(--accent)", display:"block", animation:"sdGlow 3s ease-in-out infinite", boxShadow:"0 0 6px var(--accent)" }}/>
+          <span style={{ fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.26em", textTransform:"uppercase" as const, color:"var(--text-3)", userSelect:"none" as const }}>{label}</span>
+          <span style={{ width:4, height:4, borderRadius:"50%", background:"var(--accent)", display:"block", animation:"sdGlow 3s 1.5s ease-in-out infinite", boxShadow:"0 0 6px var(--accent)" }}/>
         </div>
-
-        {/* Left bars */}
-        <div style={{ display:"flex", gap:2.5, alignItems:"flex-end", height:18, flexShrink:0 }}>
-          {DIVIDER_BARS_L.map((h, i) => (
-            <div key={i} style={{ width:2, borderRadius:1, background:"var(--accent)", transformOrigin:"bottom", height:h,
-              animation:`sdBar ${1.3+i*0.18}s ${i*0.09}s ease-in-out infinite` }}/>
-          ))}
-        </div>
-
-        {/* Center badge */}
-        <div style={{ position:"relative", flexShrink:0, display:"flex", alignItems:"center", gap:8, padding:"5px 16px",
-          background:"var(--surface-1)", border:"1px solid var(--accent)", borderColor:"color-mix(in srgb, var(--accent) 35%, transparent)",
-          borderRadius:5, animation:"sdPulse 3s ease-in-out infinite" }}>
-          {/* Corner accents */}
-          {([["top","left"],["top","right"],["bottom","left"],["bottom","right"]] as const).map(([v,h]) => (
-            <span key={v+h} style={{ position:"absolute", [v]:"-2px", [h]:"-2px", width:7, height:7,
-              borderTop: v==="top" ? "1.5px solid var(--accent)" : "none",
-              borderBottom: v==="bottom" ? "1.5px solid var(--accent)" : "none",
-              borderLeft: h==="left" ? "1.5px solid var(--accent)" : "none",
-              borderRight: h==="right" ? "1.5px solid var(--accent)" : "none",
-              borderRadius: v==="top"&&h==="left"?"2px 0 0 0":v==="top"&&h==="right"?"0 2px 0 0":v==="bottom"&&h==="left"?"0 0 0 2px":"0 0 2px 0",
-            }}/>
-          ))}
-          <span style={{ fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.22em", textTransform:"uppercase" as const, color:"var(--text-2)", userSelect:"none" as const }}>{label}</span>
-        </div>
-
-        {/* Right bars */}
-        <div style={{ display:"flex", gap:2.5, alignItems:"flex-end", height:18, flexShrink:0 }}>
-          {DIVIDER_BARS_R.map((h, i) => (
-            <div key={i} style={{ width:2, borderRadius:1, background:"var(--accent)", transformOrigin:"bottom", height:h,
-              animation:`sdBar ${1.3+i*0.18}s ${i*0.09+0.5}s ease-in-out infinite` }}/>
-          ))}
-        </div>
-
-        {/* Right arm */}
-        <div style={{ flex:1, height:1, position:"relative", overflow:"hidden", background:"linear-gradient(270deg, transparent 0%, var(--accent) 100%)", opacity:0.35 }}>
-          <div style={{ position:"absolute", top:"-1px", left:0, width:"25%", height:"3px", background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)", animation:"sdScan 2.8s 1.4s ease-in-out infinite" }}/>
-        </div>
-
+        <div style={{ flex:1, height:"1px", background:"linear-gradient(270deg, transparent 0%, var(--line) 60%, var(--accent) 100%)", opacity:0.7 }}/>
       </div>
     </>
   );
