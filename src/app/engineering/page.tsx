@@ -583,9 +583,47 @@ export default function EngineeringPage() {
         {view === "board" && (
           <div style={{ ...s.content, flex:1 }}>
 
+            {/* ── Team roster ── */}
+            <SectionDivider label="Team" />
+            <div style={{ marginBottom:8 }}>
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                {(() => {
+                  const discMap: Record<string, {color:string; members:typeof team}> = {};
+                  team.forEach(t => {
+                    const dName = t.discipline?.trim() || "Other";
+                    const dColor = DISCIPLINES.find(d => d.name === dName)?.color ?? t.color;
+                    if (!discMap[dName]) discMap[dName] = { color: dColor, members: [] };
+                    discMap[dName].members.push(t);
+                  });
+                  return Object.entries(discMap).map(([dName, { color, members }]) => (
+                    <div key={dName} style={{ background:"var(--surface-1)", border:`1px solid ${color}28`, borderRadius:10, padding:"12px 16px", display:"flex", flexDirection:"column", gap:9 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <span style={{ width:6, height:6, borderRadius:2, background:color, flexShrink:0 }}/>
+                        <span style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase" as const, letterSpacing:"0.12em", color, fontWeight:600 }}>{dName}</span>
+                      </div>
+                      <div style={{ display:"flex", gap:7, flexWrap:"wrap" as const }}>
+                        {members.map(t => {
+                          const active = filterAssignee === t.name;
+                          return (
+                            <button key={t.name} onClick={() => setFilterAssignee(active ? "all" : t.name)}
+                              style={{ display:"flex", alignItems:"center", gap:7, padding:"5px 10px 5px 6px", borderRadius:6, border:`1px solid ${active ? t.color + "60" : "var(--line)"}`, background: active ? t.color + "18" : "var(--surface-2)", cursor:"pointer", transition:"all 0.15s" }}
+                              onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = t.color + "55"; e.currentTarget.style.background = t.color + "0F"; } }}
+                              onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "var(--surface-2)"; } }}>
+                              <span style={{ width:22, height:22, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:9, fontWeight:700, flexShrink:0 }}>{t.initial}</span>
+                              <span style={{ fontSize:12.5, color: active ? "var(--text)" : "var(--text-2)", fontFamily:"var(--sans)", whiteSpace:"nowrap" as const }}>{t.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+
             {/* ── Engineer personal lanes ── */}
-            <div style={{ marginBottom:32 }}>
-              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:12 }}>Engineer Lanes</div>
+            <SectionDivider label="Engineer Lanes" />
+            <div style={{ marginBottom:8 }}>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:12 }}>
                 {team.map(t => {
                   const name = t.name;
@@ -739,34 +777,8 @@ export default function EngineeringPage() {
               </div>
             </div>
 
-            {/* Team roster */}
-            <div style={{ marginBottom:28 }}>
-              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:12 }}>Team</div>
-              <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-                {DISCIPLINES.map(d => (
-                  <div key={d.name} style={{ background:"var(--surface-1)", border:`1px solid ${d.color}30`, borderRadius:10, padding:"14px 18px", display:"flex", flexDirection:"column", gap:10, minWidth:200 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                      <span style={{ width:7, height:7, borderRadius:2, background:d.color, flexShrink:0 }}/>
-                      <span style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.12em", color:d.color, fontWeight:600 }}>{d.name}</span>
-                    </div>
-                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                      {d.members.map(name => {
-                        const t = team.find(tm => tm.name === name)!;
-                        const active = filterAssignee === name;
-                        return (
-                          <button key={name} onClick={() => setFilterAssignee(active ? "all" : name)}
-                            style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 10px 6px 7px", borderRadius:6, border:`1px solid ${active ? t.color + "60" : "var(--line)"}`, background: active ? t.color + "18" : "var(--surface-2)", cursor:"pointer", transition:"all 0.15s" }}>
-                            <span style={{ width:24, height:24, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:10, fontWeight:700, flexShrink:0 }}>{t.initial}</span>
-                            <span style={{ fontSize:12.5, color: active ? "var(--text)" : "var(--text-2)", fontFamily:"var(--sans)" }}>{name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+            {/* ── Kanban board ── */}
+            <SectionDivider label="Board" />
             <div style={s.board}>
               {COLUMNS.map((col, colIdx) => {
                 const colIssues = byColumn(col.id);
@@ -1585,6 +1597,17 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── SectionDivider ────────────────────────────────────────────────────────
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:14, margin:"28px 0 16px" }}>
+      <div style={{ flex:1, height:1, background:"linear-gradient(90deg, var(--line) 0%, transparent 100%)" }}/>
+      <span style={{ fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.18em", textTransform:"uppercase" as const, color:"var(--text-4)", whiteSpace:"nowrap" as const, userSelect:"none" as const }}>{label}</span>
+      <div style={{ flex:1, height:1, background:"linear-gradient(270deg, var(--line) 0%, transparent 100%)" }}/>
     </div>
   );
 }
