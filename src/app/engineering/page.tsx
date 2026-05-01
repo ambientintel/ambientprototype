@@ -1602,22 +1602,44 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
 }
 
 // ── SectionDivider ────────────────────────────────────────────────────────
+const SD_PIXELS = [
+  { s:5, o:1   },
+  { s:3, o:0.5 },
+  { s:4, o:0.7 },
+  { s:2, o:0.35},
+  { s:3, o:0.5 },
+];
 function SectionDivider({ label }: { label: string }) {
   return (
-    <>
-      <style>{`
-        @keyframes sdGlow { 0%,100% { opacity:.55; transform:scale(1); } 50% { opacity:1; transform:scale(1.35); } }
-      `}</style>
-      <div style={{ display:"flex", alignItems:"center", gap:16, margin:"40px 0 22px" }}>
-        <div style={{ flex:1, height:"1px", background:"linear-gradient(90deg, transparent 0%, var(--line) 60%, var(--accent) 100%)", opacity:0.7 }}/>
-        <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
-          <span style={{ width:4, height:4, borderRadius:"50%", background:"var(--accent)", display:"block", animation:"sdGlow 3s ease-in-out infinite", boxShadow:"0 0 6px var(--accent)" }}/>
-          <span style={{ fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.26em", textTransform:"uppercase" as const, color:"var(--text-3)", userSelect:"none" as const }}>{label}</span>
-          <span style={{ width:4, height:4, borderRadius:"50%", background:"var(--accent)", display:"block", animation:"sdGlow 3s 1.5s ease-in-out infinite", boxShadow:"0 0 6px var(--accent)" }}/>
+    <div style={{ display:"flex", flexDirection:"column" as const, gap:0, margin:"40px 0 22px" }}>
+      {/* Full-width top line */}
+      <div style={{ height:1, background:"linear-gradient(90deg, transparent, var(--accent) 20%, var(--accent) 80%, transparent)", opacity:0.25 }}/>
+      {/* Main row */}
+      <div style={{ display:"flex", alignItems:"center", gap:0, padding:"8px 0" }}>
+        {/* Left pixel cluster */}
+        <div style={{ display:"flex", alignItems:"center", gap:3, marginRight:14, flexShrink:0 }}>
+          {SD_PIXELS.map((p, i) => (
+            <span key={i} style={{ display:"block", width:p.s, height:p.s, background:"var(--accent)", opacity:p.o, borderRadius:0, flexShrink:0 }}/>
+          ))}
         </div>
-        <div style={{ flex:1, height:"1px", background:"linear-gradient(270deg, transparent 0%, var(--line) 60%, var(--accent) 100%)", opacity:0.7 }}/>
+        {/* Left line */}
+        <div style={{ flex:1, height:1, background:"linear-gradient(90deg, var(--line) 0%, var(--accent) 100%)", opacity:0.4 }}/>
+        {/* Label */}
+        <div style={{ flexShrink:0, padding:"0 20px" }}>
+          <span style={{ fontFamily:"var(--mono)", fontSize:11, letterSpacing:"0.28em", textTransform:"uppercase" as const, color:"var(--text-2)", userSelect:"none" as const, fontWeight:500 }}>{label}</span>
+        </div>
+        {/* Right line */}
+        <div style={{ flex:1, height:1, background:"linear-gradient(270deg, var(--line) 0%, var(--accent) 100%)", opacity:0.4 }}/>
+        {/* Right pixel cluster (mirror) */}
+        <div style={{ display:"flex", alignItems:"center", gap:3, marginLeft:14, flexShrink:0 }}>
+          {[...SD_PIXELS].reverse().map((p, i) => (
+            <span key={i} style={{ display:"block", width:p.s, height:p.s, background:"var(--accent)", opacity:p.o, borderRadius:0, flexShrink:0 }}/>
+          ))}
+        </div>
       </div>
-    </>
+      {/* Full-width bottom line */}
+      <div style={{ height:1, background:"linear-gradient(90deg, transparent, var(--accent) 20%, var(--accent) 80%, transparent)", opacity:0.25 }}/>
+    </div>
   );
 }
 
