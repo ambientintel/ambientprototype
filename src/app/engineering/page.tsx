@@ -501,15 +501,6 @@ export default function EngineeringPage() {
               {label}
             </div>
           ))}
-          {[
-            { label:"Reports",  href:"/dashboard/reports",   icon:<><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" strokeLinecap="round"/></> },
-            { label:"Dashboard",href:"/dashboard/overview",  icon:<path d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round"/> },
-          ].map(({ label, href, icon }) => (
-            <Link key={label} href={href} style={{ ...s.navItem }}>
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>
-              {label}
-            </Link>
-          ))}
         </div>
 
         {/* Disciplines */}
