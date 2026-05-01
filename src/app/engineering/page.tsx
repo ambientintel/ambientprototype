@@ -121,30 +121,48 @@ export default function EngineeringPage() {
 
   const [loading, setLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
-  const boardShaRef   = useRef<string | null>(null);
-  const saveTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMountingRef = useRef(true);
+  const boardShaRef    = useRef<string | null>(null);
+  const saveTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountingRef  = useRef(true);
+  const apiEnabledRef  = useRef(false);
 
-  // ── Load board state from GitHub on mount ─────────────────────────────────
+  const LS_KEY = "eng_board_v2";
+
+  function lsLoad() {
+    try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  }
+  function lsSave(board: object) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(board)); } catch {}
+  }
+
+  // ── Load: API first → localStorage fallback → INITIAL_ISSUES ─────────────
   useEffect(() => {
     (async () => {
+      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[] };
+      let loaded: BoardData | null = null;
       try {
         const res  = await fetch("/api/engineering");
-        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[] }; sha: string | null; configured: boolean };
+        const data = await res.json() as { board: BoardData | null; sha: string | null; configured: boolean };
+        if (data.configured) apiEnabledRef.current = true;
         if (data.board) {
-          setIssues(data.board.issues       ?? INITIAL_ISSUES);
-          setPersonalTasks(data.board.personalTasks   ?? {});
-          setCompletedTasks(data.board.completedTasks ?? {});
-          setHistory(data.board.history     ?? []);
+          loaded = data.board;
           boardShaRef.current = data.sha;
         }
       } catch {}
+      // Fall back to localStorage if API gave nothing
+      if (!loaded) loaded = lsLoad();
+      if (loaded) {
+        setIssues(loaded.issues       ?? INITIAL_ISSUES);
+        setPersonalTasks(loaded.personalTasks   ?? {});
+        setCompletedTasks(loaded.completedTasks ?? {});
+        setHistory(loaded.history     ?? []);
+      }
       setLoading(false);
       isMountingRef.current = false;
     })();
   }, []);
 
-  // ── Auto-save debounced whenever board state changes ──────────────────────
+  // ── Auto-save: always localStorage + GitHub when configured ───────────────
   useEffect(() => {
     if (isMountingRef.current || loading) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -152,6 +170,9 @@ export default function EngineeringPage() {
     saveTimerRef.current = setTimeout(async () => {
       saveTimerRef.current = null;
       const board = { issues, personalTasks, completedTasks, history };
+      // Always persist locally first — instant, no network
+      lsSave(board);
+      if (!apiEnabledRef.current) { setSyncStatus("saved"); setTimeout(() => setSyncStatus("idle"), 1500); return; }
       try {
         const res  = await fetch("/api/engineering", {
           method: "PUT",
@@ -171,15 +192,15 @@ export default function EngineeringPage() {
         setSyncStatus("saved");
         setTimeout(() => setSyncStatus("idle"), 2000);
       } catch { setSyncStatus("error"); }
-    }, 1000);
+    }, 800);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [issues, personalTasks, completedTasks, history, loading]);
 
-  // ── Poll for remote changes every 30s ─────────────────────────────────────
+  // ── Poll for remote changes every 30s (only when API is configured) ────────
   useEffect(() => {
     if (loading) return;
     const id = setInterval(async () => {
-      if (saveTimerRef.current) return; // skip poll if a save is pending
+      if (!apiEnabledRef.current || saveTimerRef.current) return;
       try {
         const res  = await fetch("/api/engineering");
         const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[] }; sha: string | null };
@@ -190,6 +211,7 @@ export default function EngineeringPage() {
           setCompletedTasks(data.board.completedTasks ?? {});
           setHistory(data.board.history     ?? []);
           boardShaRef.current = data.sha;
+          lsSave(data.board);
           setSyncStatus("saved");
           setTimeout(() => { isMountingRef.current = false; setSyncStatus("idle"); }, 100);
         }
