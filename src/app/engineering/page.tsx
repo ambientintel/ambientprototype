@@ -1648,9 +1648,6 @@ function ShotClock() {
   // label: time of day
   const label = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
 
-  const segments = 40;
-  const filled   = Math.round((pct / 100) * segments);
-
   return (
     <div style={{
       margin:"4px 0 2px",
@@ -1687,23 +1684,41 @@ function ShotClock() {
         ))}
       </div>
 
-      {/* Right: segmented bar + pct */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column" as const, gap:6, minWidth:0 }}>
-        {/* Segmented progress */}
-        <div style={{ display:"flex", gap:2, alignItems:"center" }}>
-          {Array.from({ length: segments }, (_, i) => (
-            <div key={i} style={{
-              flex:1, height:6, borderRadius:1,
-              background: i < filled ? urgency : "rgba(255,255,255,0.06)",
-              boxShadow: i < filled ? `0 0 6px ${urgency}55` : "none",
-              transition:"background 0.4s ease, box-shadow 0.4s ease",
-            }}/>
+      {/* Right: gradient bar + pct */}
+      <div style={{ flex:1, display:"flex", flexDirection:"column" as const, gap:7, minWidth:0 }}>
+        {/* Track */}
+        <div style={{ position:"relative", height:8, borderRadius:2, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.07)", overflow:"visible" }}>
+          {/* Quarter tick marks */}
+          {[25,50,75].map(t => (
+            <div key={t} style={{ position:"absolute", left:`${t}%`, top:0, bottom:0, width:1, background:"rgba(255,255,255,0.1)", zIndex:2 }}/>
           ))}
+          {/* Filled gradient */}
+          <div style={{
+            position:"absolute", left:0, top:0, bottom:0, borderRadius:2,
+            width:`${pct}%`,
+            background:`linear-gradient(90deg, #3DCC91 0%, ${urgency} 100%)`,
+            transition:"width 1s linear, background 0.6s ease",
+            overflow:"hidden",
+          }}>
+            {/* Sheen */}
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 60%)", borderRadius:2 }}/>
+          </div>
+          {/* Leading-edge cursor */}
+          {pct > 1 && pct < 99 && (
+            <div style={{
+              position:"absolute", top:-3, bottom:-3, borderRadius:2,
+              left:`calc(${pct}% - 1px)`, width:2,
+              background:"#fff",
+              boxShadow:`0 0 8px 2px ${urgency}, 0 0 20px 4px ${urgency}55`,
+              transition:"left 1s linear",
+              zIndex:3,
+            }}/>
+          )}
         </div>
-        {/* Labels row */}
+        {/* Labels */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.08em" }}>00:00</span>
-          <span style={{ fontFamily:"var(--mono)", fontSize:9, color:urgency, letterSpacing:"0.1em", fontWeight:600, transition:"color 0.6s" }}>{Math.round(pct)}% elapsed</span>
+          <span style={{ fontFamily:"var(--mono)", fontSize:9, color:urgency, letterSpacing:"0.12em", fontWeight:600, transition:"color 0.6s" }}>{Math.round(pct)}% elapsed</span>
           <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.08em" }}>12:00</span>
         </div>
       </div>
