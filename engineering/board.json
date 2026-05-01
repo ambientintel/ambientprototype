@@ -92,5 +92,56 @@
       "color": "#22D3EE",
       "discipline": "Biomedical Engineering"
     }
+  ],
+  "subsystems": [
+    {
+      "id": "electrical",
+      "name": "Electrical",
+      "color": "#FB923C",
+      "progress": 35,
+      "status": "PCB rev 2 in fab"
+    },
+    {
+      "id": "firmware",
+      "name": "Firmware",
+      "color": "#00B4D8",
+      "progress": 50,
+      "status": "IWR6843AOP driver stable"
+    },
+    {
+      "id": "device-app",
+      "name": "Device Application",
+      "color": "#34D399",
+      "progress": 45,
+      "status": "Python agent on device"
+    },
+    {
+      "id": "api",
+      "name": "API",
+      "color": "#818CF8",
+      "progress": 60,
+      "status": "FastAPI + Cognito live"
+    },
+    {
+      "id": "cloud-arch",
+      "name": "Cloud Architecture",
+      "color": "#22D3EE",
+      "progress": 55,
+      "status": "Terraform infra deployed"
+    },
+    {
+      "id": "web-app",
+      "name": "Web App",
+      "color": "#7C6EAD",
+      "progress": 70,
+      "status": "Dashboard in review"
+    },
+    {
+      "id": "mobile-app",
+      "name": "Mobile App",
+      "color": "#F472B6",
+      "progress": 10,
+      "status": "Backlog — pilot pending"
+    }
   ]
 }
