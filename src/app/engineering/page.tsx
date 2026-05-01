@@ -402,6 +402,7 @@ export default function EngineeringPage() {
       updated: "Apr 29",
     };
     setIssues(prev => [next, ...prev]);
+    setPersonalTasks(p => ({ ...p, [t.name]: [...(p[t.name] || []), newForm.title.trim()] }));
     setNewForm({ title:"", type:"task", priority:"medium", points:"3", assignee:"Gavin" });
     setShowCreate(false);
   }
