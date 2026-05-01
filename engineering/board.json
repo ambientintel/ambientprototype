@@ -112,7 +112,7 @@
       "id": "device-app",
       "name": "Device Application",
       "color": "#34D399",
-      "progress": 45,
+      "progress": 16,
       "status": "Python agent on device"
     },
     {
