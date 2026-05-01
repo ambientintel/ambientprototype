@@ -597,17 +597,25 @@ export default function EngineeringPage() {
                           <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", textAlign:"center", letterSpacing:"0.08em" }}>EMPTY</div>
                         )}
                         {tasks.map((task, idx) => (
-                          <div key={idx} style={{ display:"flex", alignItems:"flex-start", gap:6, background:"var(--surface-2)", borderRadius:6, padding:"7px 9px", border:"1px solid var(--line)" }}>
+                          <div key={idx}
+                            style={{ display:"flex", alignItems:"center", gap:6, background:"var(--surface-2)", borderRadius:6, padding:"7px 9px", border:"1px solid var(--line)", transition:"all 0.16s ease" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = t.color + "12"; e.currentTarget.style.borderColor = t.color + "55"; e.currentTarget.style.transform = "translateX(2px)"; e.currentTarget.style.boxShadow = `inset 2px 0 0 ${t.color}, 0 2px 10px ${t.color}1A`; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.transform = "translateX(0)"; e.currentTarget.style.boxShadow = "none"; }}>
                             <button onClick={() => completePersonalTask(name, idx)} title="Mark complete"
-                              style={{ flexShrink:0, width:16, height:16, borderRadius:4, border:`1.5px solid ${t.color}66`, background:"transparent", cursor:"pointer", marginTop:1, transition:"background 0.12s, border-color 0.12s", display:"flex", alignItems:"center", justifyContent:"center" }}
-                              onMouseEnter={e => { e.currentTarget.style.background = t.color + "33"; e.currentTarget.style.borderColor = t.color; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = t.color + "66"; }}
-                            />
+                              style={{ flexShrink:0, width:16, height:16, borderRadius:4, border:`1.5px solid ${t.color}55`, background:"transparent", cursor:"pointer", marginTop:0, transition:"all 0.15s ease", display:"flex", alignItems:"center", justifyContent:"center" }}
+                              onMouseEnter={e => { e.currentTarget.style.background = t.color + "28"; e.currentTarget.style.borderColor = t.color; e.currentTarget.style.transform = "scale(1.18)"; e.currentTarget.style.boxShadow = `0 0 7px ${t.color}55`; const s = e.currentTarget.querySelector("svg") as HTMLElement | null; if (s) s.style.opacity = "1"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = t.color + "55"; e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; const s = e.currentTarget.querySelector("svg") as HTMLElement | null; if (s) s.style.opacity = "0"; }}>
+                              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke={t.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity:0, transition:"opacity 0.13s" }}><path d="M1.5 5l2.5 2.5 4.5-4.5"/></svg>
+                            </button>
                             <span style={{ flex:1, fontSize:12, color:"var(--text-2)", lineHeight:1.4 }}>{task}</span>
                             <button onClick={() => removePersonalTask(name, idx)}
-                              style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:13, lineHeight:1, padding:"0 2px", transition:"color 0.12s" }}
-                              onMouseEnter={e => (e.currentTarget.style.color = "var(--text-2)")}
-                              onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>✕</button>
+                              onMouseEnter={e => { const b = e.currentTarget; b.style.opacity="1"; b.style.background="rgba(255,107,107,0.12)"; b.style.borderColor="rgba(255,107,107,0.28)"; b.style.color="#FF6B6B"; b.style.transform="scale(1.1)"; }}
+                              onMouseLeave={e => { const b = e.currentTarget; b.style.opacity="0.35"; b.style.background="transparent"; b.style.borderColor="transparent"; b.style.color="var(--text-4)"; b.style.transform="scale(1)"; }}
+                              onMouseDown={e => (e.currentTarget.style.transform="scale(0.88)")}
+                              onMouseUp={e => (e.currentTarget.style.transform="scale(1.1)")}
+                              style={{ flexShrink:0, width:20, height:20, borderRadius:"50%", border:"1px solid transparent", background:"transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-4)", opacity:0.35, transition:"all 0.16s ease" }}>
+                              <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg>
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -626,13 +634,22 @@ export default function EngineeringPage() {
                                 <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", textAlign:"center", letterSpacing:"0.08em" }}>EMPTY</div>
                               )}
                               {done.map((task, idx) => (
-                                <div key={idx} style={{ display:"flex", alignItems:"flex-start", gap:6, borderRadius:6, padding:"6px 9px" }}>
-                                  <span style={{ flexShrink:0, width:16, height:16, borderRadius:4, border:"1.5px solid var(--text-4)", background:"var(--surface-3)", display:"flex", alignItems:"center", justifyContent:"center", marginTop:1 }}>
-                                    <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="var(--text-3)" strokeWidth="1.8"><path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                <div key={idx}
+                                  style={{ display:"flex", alignItems:"center", gap:6, borderRadius:6, padding:"6px 9px", transition:"background 0.14s ease" }}
+                                  onMouseEnter={e => (e.currentTarget.style.background = t.color + "08")}
+                                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                                  <span style={{ flexShrink:0, width:16, height:16, borderRadius:4, border:`1.5px solid ${t.color}44`, background: t.color + "18", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                    <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke={t.color} strokeWidth="1.8"><path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                   </span>
                                   <span style={{ flex:1, fontSize:12, color:"var(--text-3)", lineHeight:1.4, textDecoration:"line-through" }}>{task}</span>
                                   <button onClick={() => removeCompletedTask(name, idx)}
-                                    style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:13, lineHeight:1, padding:"0 2px" }}>✕</button>
+                                    onMouseEnter={e => { const b = e.currentTarget; b.style.opacity="1"; b.style.background="rgba(255,107,107,0.12)"; b.style.borderColor="rgba(255,107,107,0.28)"; b.style.color="#FF6B6B"; b.style.transform="scale(1.1)"; }}
+                                    onMouseLeave={e => { const b = e.currentTarget; b.style.opacity="0.3"; b.style.background="transparent"; b.style.borderColor="transparent"; b.style.color="var(--text-4)"; b.style.transform="scale(1)"; }}
+                                    onMouseDown={e => (e.currentTarget.style.transform="scale(0.88)")}
+                                    onMouseUp={e => (e.currentTarget.style.transform="scale(1.1)")}
+                                    style={{ flexShrink:0, width:20, height:20, borderRadius:"50%", border:"1px solid transparent", background:"transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-4)", opacity:0.3, transition:"all 0.16s ease" }}>
+                                    <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg>
+                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -862,7 +879,10 @@ export default function EngineeringPage() {
                 };
 
                 return (
-                  <div key={name} style={{ background:"var(--surface-1)", border:`1px solid ${t.color}28`, borderRadius:12, overflow:"hidden", display:"flex", flexDirection:"column" }}>
+                  <div key={name}
+                    style={{ background:"var(--surface-1)", border:`1px solid ${t.color}28`, borderRadius:12, overflow:"hidden", display:"flex", flexDirection:"column", transition:"all 0.2s ease" }}
+                    onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = t.color + "70"; el.style.transform = "translateY(-3px)"; el.style.boxShadow = `0 12px 36px ${t.color}22`; }}
+                    onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = t.color + "28"; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; }}>
                     {/* Header */}
                     <div style={{ padding:"16px 18px 12px", borderBottom:"1px solid var(--line)", background:`linear-gradient(135deg, ${t.color}0A 0%, transparent 60%)` }}>
                       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
@@ -973,14 +993,20 @@ export default function EngineeringPage() {
                       {tasks.map((task, idx) => (
                         <div key={idx} style={{ display:"flex", alignItems:"center", gap:6, background:"var(--surface-2)", borderRadius:5, padding:"6px 8px", border:"1px solid var(--line)" }}>
                           <button onClick={() => completePersonalTask(name, idx)}
-                            style={{ width:14, height:14, borderRadius:3, border:`1.5px solid ${t.color}55`, background:"transparent", cursor:"pointer", flexShrink:0, transition:"background 0.12s" }}
-                            onMouseEnter={e => (e.currentTarget.style.background = t.color + "33")}
-                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}/>
+                            style={{ width:14, height:14, borderRadius:3, border:`1.5px solid ${t.color}55`, background:"transparent", cursor:"pointer", flexShrink:0, transition:"all 0.15s ease", display:"flex", alignItems:"center", justifyContent:"center" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = t.color + "28"; e.currentTarget.style.borderColor = t.color; e.currentTarget.style.transform = "scale(1.18)"; e.currentTarget.style.boxShadow = `0 0 6px ${t.color}55`; const s = e.currentTarget.querySelector("svg") as HTMLElement | null; if (s) s.style.opacity = "1"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = t.color + "55"; e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; const s = e.currentTarget.querySelector("svg") as HTMLElement | null; if (s) s.style.opacity = "0"; }}>
+                            <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke={t.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity:0, transition:"opacity 0.13s" }}><path d="M1.5 5l2.5 2.5 4.5-4.5"/></svg>
+                          </button>
                           <span style={{ flex:1, fontSize:11.5, color:"var(--text-2)", lineHeight:1.4 }}>{task}</span>
                           <button onClick={() => removePersonalTask(name, idx)}
-                            style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:12, lineHeight:1, padding:"0 2px", transition:"color 0.12s" }}
-                            onMouseEnter={e => (e.currentTarget.style.color = "var(--text-2)")}
-                            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}>✕</button>
+                            onMouseEnter={e => { const b = e.currentTarget; b.style.opacity="1"; b.style.background="rgba(255,107,107,0.12)"; b.style.borderColor="rgba(255,107,107,0.28)"; b.style.color="#FF6B6B"; b.style.transform="scale(1.1)"; }}
+                            onMouseLeave={e => { const b = e.currentTarget; b.style.opacity="0.35"; b.style.background="transparent"; b.style.borderColor="transparent"; b.style.color="var(--text-4)"; b.style.transform="scale(1)"; }}
+                            onMouseDown={e => (e.currentTarget.style.transform="scale(0.88)")}
+                            onMouseUp={e => (e.currentTarget.style.transform="scale(1.1)")}
+                            style={{ flexShrink:0, width:20, height:20, borderRadius:"50%", border:"1px solid transparent", background:"transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-4)", opacity:0.35, transition:"all 0.16s ease" }}>
+                            <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg>
+                          </button>
                         </div>
                       ))}
 
@@ -988,13 +1014,22 @@ export default function EngineeringPage() {
                       {done.length > 0 && (
                         <div style={{ display:"flex", flexDirection:"column", gap:3, opacity:0.65 }}>
                           {done.map((task, idx) => (
-                            <div key={idx} style={{ display:"flex", alignItems:"center", gap:6, borderRadius:5, padding:"5px 8px" }}>
-                              <span style={{ width:14, height:14, borderRadius:3, border:"1.5px solid var(--text-4)", background:"var(--surface-3)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                                <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="var(--text-3)" strokeWidth="1.8"><path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            <div key={idx}
+                              style={{ display:"flex", alignItems:"center", gap:6, borderRadius:5, padding:"5px 8px", transition:"background 0.14s ease" }}
+                              onMouseEnter={e => (e.currentTarget.style.background = t.color + "08")}
+                              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                              <span style={{ flexShrink:0, width:14, height:14, borderRadius:3, border:`1.5px solid ${t.color}44`, background: t.color + "18", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke={t.color} strokeWidth="1.8"><path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                               </span>
                               <span style={{ flex:1, fontSize:11, color:"var(--text-4)", textDecoration:"line-through", lineHeight:1.4 }}>{task}</span>
                               <button onClick={() => removeCompletedTask(name, idx)}
-                                style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", fontSize:12, lineHeight:1, padding:"0 2px" }}>✕</button>
+                                onMouseEnter={e => { const b = e.currentTarget; b.style.opacity="1"; b.style.background="rgba(255,107,107,0.12)"; b.style.borderColor="rgba(255,107,107,0.28)"; b.style.color="#FF6B6B"; b.style.transform="scale(1.1)"; }}
+                                onMouseLeave={e => { const b = e.currentTarget; b.style.opacity="0.3"; b.style.background="transparent"; b.style.borderColor="transparent"; b.style.color="var(--text-4)"; b.style.transform="scale(1)"; }}
+                                onMouseDown={e => (e.currentTarget.style.transform="scale(0.88)")}
+                                onMouseUp={e => (e.currentTarget.style.transform="scale(1.1)")}
+                                style={{ flexShrink:0, width:20, height:20, borderRadius:"50%", border:"1px solid transparent", background:"transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-4)", opacity:0.3, transition:"all 0.16s ease" }}>
+                                <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg>
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -1155,6 +1190,8 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
   const tm = TYPE_META[issue.type];
   const canBack    = colIndex > 0;
   const canForward = colIndex < 3;
+  const colShadows = ["rgba(160,160,180,0.18)","rgba(255,201,64,0.22)","rgba(45,114,210,0.22)","rgba(61,204,145,0.22)"];
+  const colShadow  = colShadows[colIndex] ?? "rgba(0,0,0,0.18)";
 
   return (
     <div
@@ -1165,13 +1202,13 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
       onMouseLeave={() => setHovered(false)}
       onClick={onSelect}
       style={{
-        background:"var(--surface-1)",
+        background: hovered ? "var(--surface-2)" : "var(--surface-1)",
         border:`1px solid ${hovered ? "var(--line-strong)" : "var(--line)"}`,
         borderRadius:10, padding:"13px 15px", cursor:"grab",
-        boxShadow: hovered ? "0 4px 16px rgba(0,0,0,0.2)" : "none",
-        transform: isDragging ? "rotate(2deg) scale(0.97)" : hovered ? "translateY(-1px)" : "none",
+        boxShadow: hovered ? `0 6px 24px ${colShadow}` : "none",
+        transform: isDragging ? "rotate(2deg) scale(0.97)" : hovered ? "translateY(-2px)" : "none",
         opacity: isDragging ? 0.5 : 1,
-        transition:"border-color 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.15s",
+        transition:"all 0.18s ease",
       }}>
       <div style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:8 }}>
         <span style={{ fontFamily:"var(--mono)", fontSize:11, color:tm.color, fontWeight:700, marginTop:1, flexShrink:0 }}>{tm.symbol}</span>
