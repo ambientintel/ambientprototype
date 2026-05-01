@@ -1,21 +1,6 @@
 {
   "issues": [
     {
-      "id": "ENG-137",
-      "type": "task",
-      "title": "Test Issue",
-      "priority": "medium",
-      "points": 3,
-      "assignee": "Aki",
-      "assigneeInitial": "A",
-      "assigneeColor": "#34D399",
-      "labels": [],
-      "column": "todo",
-      "description": "",
-      "created": "Apr 29",
-      "updated": "Apr 29"
-    },
-    {
       "id": "ENG-L1777649861762",
       "type": "task",
       "title": "Website for pilot study",
