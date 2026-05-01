@@ -127,7 +127,7 @@
       "id": "cloud-arch",
       "name": "Cloud Architecture",
       "color": "#22D3EE",
-      "progress": 36,
+      "progress": 40,
       "status": "Terraform infra deployed"
     },
     {
