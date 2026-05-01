@@ -584,7 +584,7 @@ export default function EngineeringPage() {
           <div style={{ ...s.content, flex:1 }}>
 
             {/* ── Team roster ── */}
-            <SectionDivider label="Team" />
+            <SectionDivider label="Team" n="01" />
             <div style={{ marginBottom:8 }}>
               <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
                 {(() => {
@@ -622,7 +622,7 @@ export default function EngineeringPage() {
             </div>
 
             {/* ── Engineer personal lanes ── */}
-            <SectionDivider label="Engineer Lanes" />
+            <SectionDivider label="Engineer Lanes" n="02" />
             <div style={{ marginBottom:8 }}>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:12 }}>
                 {team.map(t => {
@@ -778,7 +778,7 @@ export default function EngineeringPage() {
             </div>
 
             {/* ── Kanban board ── */}
-            <SectionDivider label="Board" />
+            <SectionDivider label="Board" n="03" />
             <div style={s.board}>
               {COLUMNS.map((col, colIdx) => {
                 const colIssues = byColumn(col.id);
@@ -1602,15 +1602,16 @@ function IssueCard({ issue, colIndex, onSelect, onMoveBack, onMoveForward, onArc
 }
 
 // ── SectionDivider ────────────────────────────────────────────────────────
-function SectionDivider({ label }: { label: string }) {
+function SectionDivider({ label, n }: { label: string; n?: string }) {
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:12, margin:"36px 0 20px",
-      background:"rgba(255,255,255,0.03)", border:"1px solid var(--line)",
-      borderRadius:4, padding:"10px 16px" }}>
-      <span style={{ width:2, height:14, background:"var(--accent)", borderRadius:0, flexShrink:0, display:"block" }}/>
-      <span style={{ fontFamily:"var(--mono)", fontSize:11, letterSpacing:"0.22em",
-        textTransform:"uppercase" as const, color:"var(--text-3)", fontWeight:500,
-        userSelect:"none" as const }}>{label}</span>
+    <div style={{ margin:"52px 0 22px", display:"flex", flexDirection:"column" as const, gap:6 }}>
+      {n && (
+        <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--accent)", letterSpacing:"0.2em", opacity:0.75, userSelect:"none" as const }}>{n} ——</span>
+      )}
+      <div style={{ display:"flex", alignItems:"center", gap:18 }}>
+        <span style={{ fontFamily:"var(--mono)", fontSize:13, letterSpacing:"0.18em", textTransform:"uppercase" as const, color:"var(--text-2)", fontWeight:500, whiteSpace:"nowrap" as const, userSelect:"none" as const }}>{label}</span>
+        <div style={{ flex:1, height:"1px", background:"var(--line)", opacity:0.5 }}/>
+      </div>
     </div>
   );
 }
