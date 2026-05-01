@@ -10,7 +10,6 @@ export default authkitMiddleware({
       "/landing1",
       "/landing3",
       "/home",
-      "/api/auth/callback",
       "/api/push/(.*)",
     ],
   },
@@ -18,5 +17,5 @@ export default authkitMiddleware({
 });
 
 export const config = {
-  matcher: ["/((?!_next|favicon.ico|icon-.*|manifest\\.json|.*\\..*).*)"],
+  matcher: ["/((?!_next|favicon.ico|icon-.*|manifest\.json|.*\..*).*)"],
 };
