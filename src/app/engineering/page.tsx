@@ -1003,7 +1003,7 @@ export default function EngineeringPage() {
                         <span style={{ width:34, height:34, borderRadius:"50%", background: t.color + "33", color: t.color, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:13, fontWeight:700, flexShrink:0, border:`1.5px solid ${t.color}50` }}>{t.initial}</span>
                         <div>
                           <div style={{ fontSize:14, fontWeight:600, color:"var(--text)", lineHeight:1.2 }}>{name}</div>
-                          {disc && <div style={{ fontFamily:"var(--mono)", fontSize:9, color:disc.color, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:1 }}>{disc.name}</div>}
+                          <div style={{ fontFamily:"var(--mono)", fontSize:9, color: disc?.color ?? t.color, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:1, minHeight:"1em", opacity: t.discipline?.trim() ? 1 : 0 }}>{t.discipline?.trim() || "·"}</div>
                         </div>
                         <div style={{ marginLeft:"auto", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
                           <div style={{ textAlign:"right" }}>
