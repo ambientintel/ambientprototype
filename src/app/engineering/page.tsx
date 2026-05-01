@@ -150,6 +150,7 @@ export default function EngineeringPage() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setSyncStatus("saving");
     saveTimerRef.current = setTimeout(async () => {
+      saveTimerRef.current = null;
       const board = { issues, personalTasks, completedTasks, history };
       try {
         const res  = await fetch("/api/engineering", {
@@ -159,7 +160,6 @@ export default function EngineeringPage() {
         });
         const data = await res.json() as { sha?: string; error?: string };
         if (res.status === 409) {
-          // SHA conflict — re-fetch current SHA and let the next keystroke retry
           setSyncStatus("conflict");
           const latest = await fetch("/api/engineering");
           const ld = await latest.json() as { sha: string | null };
