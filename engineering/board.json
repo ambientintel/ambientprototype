@@ -29,12 +29,30 @@
       "description": "",
       "created": "May 1",
       "updated": "May 1"
+    },
+    {
+      "id": "ENG-L1777746767221",
+      "type": "task",
+      "title": "finish routing PMIC to the OSD62",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Gavin",
+      "assigneeInitial": "G",
+      "assigneeColor": "#00B4D8",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 2",
+      "updated": "May 2"
     }
   ],
   "personalTasks": {
     "Brian": [
       "Website for pilot study",
       "Mobile app for pilot study"
+    ],
+    "Gavin": [
+      "finish routing PMIC to the OSD62"
     ]
   },
   "completedTasks": {
