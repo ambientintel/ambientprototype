@@ -74,6 +74,21 @@
       "description": "",
       "created": "May 2",
       "updated": "May 2"
+    },
+    {
+      "id": "ENG-L1777746862879",
+      "type": "task",
+      "title": "route pcb",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Gavin",
+      "assigneeInitial": "G",
+      "assigneeColor": "#00B4D8",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 2",
+      "updated": "May 2"
     }
   ],
   "personalTasks": {
@@ -84,7 +99,8 @@
     "Gavin": [
       "finish routing PMIC to the OSD62",
       "add barrel jack",
-      "add wifi module"
+      "add wifi module",
+      "route pcb"
     ]
   },
   "completedTasks": {
