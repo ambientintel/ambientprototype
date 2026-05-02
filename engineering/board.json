@@ -59,6 +59,21 @@
       "description": "",
       "created": "May 2",
       "updated": "May 2"
+    },
+    {
+      "id": "ENG-L1777746845352",
+      "type": "task",
+      "title": "add wifi module",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Gavin",
+      "assigneeInitial": "G",
+      "assigneeColor": "#00B4D8",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 2",
+      "updated": "May 2"
     }
   ],
   "personalTasks": {
@@ -68,7 +83,8 @@
     ],
     "Gavin": [
       "finish routing PMIC to the OSD62",
-      "add barrel jack"
+      "add barrel jack",
+      "add wifi module"
     ]
   },
   "completedTasks": {
