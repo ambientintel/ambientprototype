@@ -44,6 +44,21 @@
       "description": "",
       "created": "May 2",
       "updated": "May 2"
+    },
+    {
+      "id": "ENG-L1777746838593",
+      "type": "task",
+      "title": "add barrel jack",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Gavin",
+      "assigneeInitial": "G",
+      "assigneeColor": "#00B4D8",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 2",
+      "updated": "May 2"
     }
   ],
   "personalTasks": {
@@ -52,7 +67,8 @@
       "Mobile app for pilot study"
     ],
     "Gavin": [
-      "finish routing PMIC to the OSD62"
+      "finish routing PMIC to the OSD62",
+      "add barrel jack"
     ]
   },
   "completedTasks": {
