@@ -10,6 +10,7 @@ export default authkitMiddleware({
       "/landing1",
       "/landing3",
       "/home",
+      "/algorithmlab",
       "/api/push/(.*)",
     ],
   },
