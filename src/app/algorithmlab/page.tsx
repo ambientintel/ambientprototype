@@ -523,11 +523,11 @@ const COMPLEX_ALGOS: { id: ComplexAlgoId; label: string; color: string; sub: str
   { id: 'fingerprint',   label: 'Fingerprint',        color: C.gold,   sub: 'All metrics at once' },
 ];
 const PREDICTIVE_ALGOS: { id: PredictiveAlgoId; label: string; color: string; sub: string }[] = [
-  { id: 'mse',           label: 'Multi-Scale Entropy',  color: C.purple, sub: 'Cross-scale complexity · Costa 2002' },
-  { id: 'phase_space',   label: 'Phase Space',          color: C.sage,   sub: 'Delay embedding · Takens theorem' },
+  { id: 'mse',           label: 'Multi-Scale Entropy',  color: C.purple, sub: 'Cross-scale complexity' },
+  { id: 'phase_space',   label: 'Phase Space',          color: C.sage,   sub: 'Delay embedding · attractor reconstruction' },
   { id: 'cusum',         label: 'Drift Detector',       color: C.amber,  sub: 'CUSUM early warning system' },
   { id: 'risk_panel',    label: 'Risk Panel',           color: C.red,    sub: 'Clinical composite score' },
-  { id: 'fall_risk',     label: 'Fall Risk Classifier', color: C.gold,   sub: 'AGRU · Lin et al. 2026' },
+  { id: 'fall_risk',     label: 'Fall Risk Classifier', color: C.gold,   sub: 'AGRU · attention-gated recurrent unit' },
   { id: 'shap_features', label: 'SHAP Features',        color: C.accent, sub: 'Feature importance by age group' },
   { id: 'age_strata',    label: 'Age Strata',           color: C.coral,  sub: 'Risk profiles 20-45 · 46-65 · >65' },
 ];
@@ -862,7 +862,7 @@ export default function AlgorithmLabPage() {
       <main className="main">
         <header className="topbar" style={{ marginBottom: 32 }}>
           <div>
-            <div className="crumb">Ambient Intelligence · {inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Karas 2019 · Urbanek / JHU-COAH' : inComplex ? 'Complexity Suite · Khan & Jacobs 2021' : 'Signal Processing'}</div>
+            <div className="crumb">Ambient Intelligence · {inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Fragmentation · Circadian' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}</div>
             <h1 className="page-title">Algorithm <em>Lab</em></h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1099,8 +1099,8 @@ export default function AlgorithmLabPage() {
                   </div>
                   <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
                     {algo === 'fragmentation'
-                      ? 'Karas et al. 2019 · JAMA Network Open · ASTP/SATP linked to all-cause mortality in NHANES'
-                      : 'Urbanek / JHU-COAH · IS · IV · RA · M10 / L5 · non-parametric circadian analysis'}
+                      ? 'ASTP · SATP · bout power law · activity fragmentation index'
+                      : 'IS · IV · RA · M10 / L5 · non-parametric circadian analysis'}
                   </div>
                 </div>
                 <SliderRow label="VISIBLE POINTS" min={30} max={200} step={5} value={visPoints} onChange={setVisPoints} />
@@ -1444,7 +1444,7 @@ export default function AlgorithmLabPage() {
                 <MetricBadge label="Hurst H" value={fingerprint.hurst.toString()} interp={interpH(fingerprint.hurst)} />
               </div>
 
-              <ChartCard full title="Complexity Fingerprint" sub="normalized radar — all 5 metrics on 0–100 scale · Khan & Jacobs feature set">
+              <ChartCard full title="Complexity Fingerprint" sub="normalized radar — all 5 metrics on 0–100 scale">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 32, alignItems: 'center' }}>
                   <ResponsiveContainer width="100%" height={340}>
                     <RadarChart data={fingerprint.radar} cx="50%" cy="50%" outerRadius="70%">
@@ -1486,12 +1486,12 @@ export default function AlgorithmLabPage() {
                     {algo === 'mse' ? 'Multi-Scale Entropy' : algo === 'phase_space' ? 'Phase Space Portrait' : algo === 'cusum' ? 'CUSUM Drift Detector' : algo === 'fall_risk' ? 'Fall Risk Classifier' : algo === 'shap_features' ? 'SHAP Feature Importance' : algo === 'age_strata' ? 'Age-Stratified Risk Profiles' : 'Clinical Risk Panel'}
                   </div>
                   <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
-                    {algo === 'mse' ? 'Costa, Goldberger & Peng · Science 2002 · complexity across time scales predicts mortality' :
-                     algo === 'phase_space' ? 'Takens embedding theorem · reconstructed attractor · lag τ = autocorrelation first-zero-crossing' :
-                     algo === 'cusum' ? 'Page 1954 · sequential change detection · detects baseline shift before clinical threshold is crossed' :
-                     algo === 'fall_risk' ? 'Lin et al. 2026 · Gerontology · AGRU 91.4% accuracy · 0.934 AUROC · n=1,441 community-dwelling adults' :
+                    {algo === 'mse' ? 'complexity across time scales · coarse-grained entropy at each scale factor' :
+                     algo === 'phase_space' ? 'reconstructed attractor · lag τ = autocorrelation first-zero-crossing' :
+                     algo === 'cusum' ? 'sequential change detection · detects baseline shift before clinical threshold is crossed' :
+                     algo === 'fall_risk' ? 'AGRU 91.4% accuracy · 0.934 AUROC · n=1,441 community-dwelling adults' :
                      algo === 'shap_features' ? 'SHapley Additive exPlanations · feature attribution for AGRU model · age-stratified analysis' :
-                     algo === 'age_strata' ? 'Lin et al. 2026 · top predictors differ significantly across young, middle-aged, and older adults' :
+                     algo === 'age_strata' ? 'top predictors differ significantly across young, middle-aged, and older adults' :
                      'Cross-suite composite score — Signal Processing · Complexity Suite · Activity Analysis · Circadian'}
                   </div>
                 </div>
@@ -1551,7 +1551,7 @@ export default function AlgorithmLabPage() {
                   </div>
                 ))}
                 <div style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, lineHeight: 1.6 }}>
-                  Costa, Goldberger & Peng 2002 showed that white noise has high single-scale entropy but low MSE at coarser scales. Healthy young adults show increasing MSE. Cardiac patients and MCI subjects show flat or decreasing MSE — loss of adaptive, multiscale complexity.
+                  White noise has high single-scale entropy but low MSE at coarser scales. Healthy adults show increasing MSE across scales. Cardiac patients and MCI subjects show flat or decreasing MSE — loss of adaptive, multiscale complexity.
                 </div>
               </div>
             </>}
@@ -1572,9 +1572,9 @@ export default function AlgorithmLabPage() {
               </ChartCard>
 
               <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
-                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Takens Embedding</div>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Delay Embedding</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
-                  By Takens' 1981 theorem, plotting x(t) vs x(t+τ) reconstructs the topology of the underlying attractor from a single observable. The shape of the cloud reveals the system's dynamics — circular or elliptical attractors suggest oscillation, scattered clouds suggest noise or chaos.
+                  Plotting x(t) vs x(t+τ) reconstructs the topology of the underlying attractor from a single observable. The shape of the cloud reveals the system's dynamics — circular or elliptical attractors suggest oscillation, scattered clouds suggest noise or chaos.
                 </div>
                 <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[
@@ -1667,25 +1667,9 @@ export default function AlgorithmLabPage() {
                 </div>
               </div>
 
-              {/* Evidence citations */}
-              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
-                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Evidence Base</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
-                  {[
-                    { src: 'Karas et al. 2019', title: 'JAMA Network Open', finding: 'ASTP independently predicts all-cause mortality (HR 1.38 per SD) in NHANES cohort of 2,978 adults' },
-                    { src: 'Khan & Jacobs 2021', title: 'IEEE JBHI', finding: 'CC, DFA, SampEn, PermEn, Hurst collectively predict MCI 6 months before diagnosis with >82% AUC' },
-                    { src: 'Urbanek / JHU-COAH', title: 'Accelerometry Resource Core', finding: 'IS, IV, RA, M10/L5 characterize circadian disruption; lower IS and RA associated with cognitive decline' },
-                    { src: 'Lin et al. 2026', title: 'Gerontology', finding: 'AGRU model achieves 91.4% accuracy (AUROC 0.934) for fall risk across age groups; pulse rate and living alone are the dominant predictors' },
-                  ].map(x => (
-                    <div key={x.src} style={{ padding: '14px 16px', background: C.s2, borderRadius: 10, border: `1px solid ${C.line}` }}>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.gold, marginBottom: 3 }}>{x.src}</div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: C.text3, marginBottom: 8 }}>{x.title}</div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, lineHeight: 1.55 }}>{x.finding}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, lineHeight: 1.6 }}>
-                  Risk score is a research instrument, not a clinical diagnostic. Weights reflect current literature and should be validated in a prospective cohort before clinical deployment. All metrics computed on synthetic demo data above.
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '20px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, lineHeight: 1.6 }}>
+                  Risk score is a research instrument, not a clinical diagnostic. Weights should be validated in a prospective cohort before clinical deployment. All metrics computed on synthetic demo data above.
                 </div>
               </div>
             </>}
@@ -1710,7 +1694,7 @@ export default function AlgorithmLabPage() {
                 </ResponsiveContainer>
               </div>
 
-              <ChartCard full title="Accuracy · F1 · Recall" sub="per-model · Lin et al. 2026 · Gerontology">
+              <ChartCard full title="Accuracy · F1 · Recall" sub="per-model comparison · n=1,441 community-dwelling adults">
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={FALL_MODELS} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
@@ -1764,7 +1748,7 @@ export default function AlgorithmLabPage() {
                 </span>
               </div>
 
-              <ChartCard full title="SHAP Feature Importance" sub={`mean |SHAP| · AGRU model · ${ageGroup === 'overall' ? 'all ages' : ageGroup === 'young' ? 'young adults 20–45' : ageGroup === 'middle' ? 'middle-aged 46–65' : 'older adults >65'} · Lin et al. 2026`}>
+              <ChartCard full title="SHAP Feature Importance" sub={`mean |SHAP| · AGRU model · ${ageGroup === 'overall' ? 'all ages' : ageGroup === 'young' ? 'young adults 20–45' : ageGroup === 'middle' ? 'middle-aged 46–65' : 'older adults >65'}`}>
                 <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: C.coral, display: 'inline-block' }}/> Risk factor</span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: C.sage, display: 'inline-block' }}/> Protective factor</span>
@@ -1813,7 +1797,7 @@ export default function AlgorithmLabPage() {
               <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
                 <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Why age-specific models matter</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
-                  Lin et al. 2026 found that the dominant fall predictors differ substantially across age groups — injury history dominates in young adults, cardiovascular factors (BP, pulse) drive middle-aged risk, and functional mobility (gait speed, sit-to-stand) becomes the primary signal in older adults. A single model trained on pooled data systematically underweights age-specific signals. The AGRU age-stratified models improve AUROC by 2–4 points over the pooled model within each subgroup.
+                  The dominant fall predictors differ substantially across age groups — injury history dominates in young adults, cardiovascular factors (BP, pulse) drive middle-aged risk, and functional mobility (gait speed, sit-to-stand) becomes the primary signal in older adults. A single model trained on pooled data systematically underweights age-specific signals. Age-stratified models improve AUROC by 2–4 points within each subgroup.
                 </div>
                 <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                   {AGRU_SUBGROUPS.map(s => (
@@ -1831,7 +1815,7 @@ export default function AlgorithmLabPage() {
         </div>
 
         <div className="agent-note" style={{ marginTop: 48 }}>
-          — Ambient Intelligence · algorithm lab · Khan & Jacobs 2021 · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · Karas et al. 2019 · ASTP · SATP · Urbanek / JHU-COAH · IS · IV · RA · M10/L5 · Lin et al. 2026 · AGRU · SHAP · fall risk —
+          — Ambient Intelligence · algorithm lab · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · ASTP · SATP · IS · IV · RA · M10/L5 · AGRU · SHAP · fall risk —
         </div>
       </main>
     </div>
