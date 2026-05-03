@@ -388,18 +388,124 @@ function clinicalRisk(m: { astp: number; dfa: number; se: number; pe: number; hu
   return { score, components };
 }
 
+// ── Lin et al. 2026 — Fall Risk Models ──────────────────────────
+const FALL_MODELS = [
+  { name: 'AGRU',     auroc: 0.934, acc: 91.4, f1: 91.2, recall: 89.1, isDeep: true  },
+  { name: 'GRU',      auroc: 0.911, acc: 88.2, f1: 87.8, recall: 86.3, isDeep: true  },
+  { name: 'CatBoost', auroc: 0.893, acc: 86.1, f1: 85.6, recall: 84.1, isDeep: false },
+  { name: 'XGBoost',  auroc: 0.881, acc: 84.7, f1: 84.3, recall: 82.7, isDeep: false },
+  { name: 'GBDT',     auroc: 0.872, acc: 83.4, f1: 82.9, recall: 81.3, isDeep: false },
+  { name: 'RF',       auroc: 0.851, acc: 81.2, f1: 80.7, recall: 79.5, isDeep: false },
+  { name: 'KNN',      auroc: 0.786, acc: 76.3, f1: 74.8, recall: 73.2, isDeep: false },
+];
+
+const AGRU_SUBGROUPS = [
+  { group: '20–45', label: 'Young',   auroc: 0.891, acc: 88.3 },
+  { group: '46–65', label: 'Middle',  auroc: 0.921, acc: 90.7 },
+  { group: '>65',   label: 'Older',   auroc: 0.938, acc: 91.9 },
+];
+
+type AgeGroup = 'overall' | 'young' | 'middle' | 'older';
+
+function shapFeatureData(group: AgeGroup) {
+  const sets: Record<AgeGroup, { feature: string; shap: number }[]> = {
+    overall: [
+      { feature: 'Pulse Rate',       shap:  0.42 },
+      { feature: 'Living Alone',     shap:  0.38 },
+      { feature: 'Systolic BP',      shap:  0.31 },
+      { feature: '5× Sit-to-Stand',  shap:  0.29 },
+      { feature: 'Sex (female)',      shap:  0.24 },
+      { feature: 'BMI',              shap:  0.18 },
+      { feature: 'Age',              shap:  0.16 },
+      { feature: 'Gait Speed',       shap: -0.15 },
+      { feature: 'Activity Level',   shap: -0.12 },
+      { feature: 'Social Support',   shap: -0.09 },
+    ],
+    young: [
+      { feature: 'Injury History',   shap:  0.48 },
+      { feature: 'BMI',              shap:  0.38 },
+      { feature: 'Alcohol Use',      shap:  0.35 },
+      { feature: 'Pulse Rate',       shap:  0.28 },
+      { feature: 'Medications',      shap:  0.22 },
+      { feature: 'Activity Level',   shap: -0.32 },
+      { feature: 'Sleep Quality',    shap: -0.18 },
+      { feature: 'Gait Speed',       shap: -0.14 },
+      { feature: 'Social Support',   shap: -0.10 },
+      { feature: 'Vitamin D',        shap: -0.07 },
+    ],
+    middle: [
+      { feature: 'Systolic BP',      shap:  0.44 },
+      { feature: '5× Sit-to-Stand',  shap:  0.39 },
+      { feature: 'Medication Count', shap:  0.33 },
+      { feature: 'Pulse Rate',       shap:  0.31 },
+      { feature: 'BMI',              shap:  0.25 },
+      { feature: 'Living Alone',     shap:  0.22 },
+      { feature: 'Activity Level',   shap: -0.24 },
+      { feature: 'Gait Speed',       shap: -0.19 },
+      { feature: 'Social Support',   shap: -0.15 },
+      { feature: 'Sleep Quality',    shap: -0.11 },
+    ],
+    older: [
+      { feature: 'Living Alone',     shap:  0.52 },
+      { feature: '5× Sit-to-Stand',  shap:  0.47 },
+      { feature: 'Systolic BP',      shap:  0.38 },
+      { feature: 'Sex (female)',      shap:  0.35 },
+      { feature: 'Cognitive Score',  shap:  0.31 },
+      { feature: 'Medication Count', shap:  0.27 },
+      { feature: 'Gait Speed',       shap: -0.43 },
+      { feature: 'Activity Level',   shap: -0.29 },
+      { feature: 'Social Support',   shap: -0.22 },
+      { feature: 'Vitamin D',        shap: -0.16 },
+    ],
+  };
+  return sets[group].map(d => ({ ...d, absShap: Math.abs(d.shap), isRisk: d.shap > 0 }));
+}
+
+const AGE_STRATA: { group: string; label: string; color: string; factors: { name: string; value: number; dir: string }[] }[] = [
+  {
+    group: '20–45', label: 'Young Adults', color: C.sage,
+    factors: [
+      { name: 'Injury History', value: 48, dir: 'risk' },
+      { name: 'BMI', value: 38, dir: 'risk' },
+      { name: 'Alcohol Use', value: 35, dir: 'risk' },
+      { name: 'Activity Level', value: 32, dir: 'protect' },
+      { name: 'Pulse Rate', value: 28, dir: 'risk' },
+    ],
+  },
+  {
+    group: '46–65', label: 'Middle-Aged', color: C.amber,
+    factors: [
+      { name: 'Systolic BP', value: 44, dir: 'risk' },
+      { name: '5× Sit-to-Stand', value: 39, dir: 'risk' },
+      { name: 'Medication Count', value: 33, dir: 'risk' },
+      { name: 'Pulse Rate', value: 31, dir: 'risk' },
+      { name: 'Activity Level', value: 24, dir: 'protect' },
+    ],
+  },
+  {
+    group: '>65', label: 'Older Adults', color: C.coral,
+    factors: [
+      { name: 'Living Alone', value: 52, dir: 'risk' },
+      { name: '5× Sit-to-Stand', value: 47, dir: 'risk' },
+      { name: 'Gait Speed', value: 43, dir: 'protect' },
+      { name: 'Systolic BP', value: 38, dir: 'risk' },
+      { name: 'Sex (female)', value: 35, dir: 'risk' },
+    ],
+  },
+];
+
 // ── Types ──────────────────────────────────────────────────────
 type SignalAlgoId      = 'moving_avg' | 'exp_smooth' | 'zscore' | 'rolling_std' | 'autocorr';
 type ComplexAlgoId  = 'cc' | 'dfa' | 'sample_entropy' | 'perm_entropy' | 'hurst' | 'fingerprint';
 type ActivityAlgoId    = 'fragmentation' | 'circadian';
-type PredictiveAlgoId  = 'mse' | 'phase_space' | 'cusum' | 'risk_panel';
+type PredictiveAlgoId  = 'mse' | 'phase_space' | 'cusum' | 'risk_panel' | 'fall_risk' | 'shap_features' | 'age_strata';
 type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId;
 const isComplex     = (a: AlgoId): a is ComplexAlgoId     =>
   ['cc','dfa','sample_entropy','perm_entropy','hurst','fingerprint'].includes(a);
 const isActivity    = (a: AlgoId): a is ActivityAlgoId    =>
   ['fragmentation','circadian'].includes(a);
 const isPredictive  = (a: AlgoId): a is PredictiveAlgoId  =>
-  ['mse','phase_space','cusum','risk_panel'].includes(a);
+  ['mse','phase_space','cusum','risk_panel','fall_risk','shap_features','age_strata'].includes(a);
 
 const SIGNAL_ALGOS: { id: SignalAlgoId; label: string; color: string }[] = [
   { id: 'moving_avg',  label: 'Moving Average',        color: C.sage   },
@@ -417,10 +523,13 @@ const COMPLEX_ALGOS: { id: ComplexAlgoId; label: string; color: string; sub: str
   { id: 'fingerprint',   label: 'Fingerprint',        color: C.gold,   sub: 'All metrics at once' },
 ];
 const PREDICTIVE_ALGOS: { id: PredictiveAlgoId; label: string; color: string; sub: string }[] = [
-  { id: 'mse',         label: 'Multi-Scale Entropy', color: C.purple, sub: 'Cross-scale complexity · Costa 2002' },
-  { id: 'phase_space', label: 'Phase Space',         color: C.sage,   sub: 'Delay embedding · Takens theorem' },
-  { id: 'cusum',       label: 'Drift Detector',      color: C.amber,  sub: 'CUSUM early warning system' },
-  { id: 'risk_panel',  label: 'Risk Panel',          color: C.red,    sub: 'Clinical composite score' },
+  { id: 'mse',           label: 'Multi-Scale Entropy',  color: C.purple, sub: 'Cross-scale complexity · Costa 2002' },
+  { id: 'phase_space',   label: 'Phase Space',          color: C.sage,   sub: 'Delay embedding · Takens theorem' },
+  { id: 'cusum',         label: 'Drift Detector',       color: C.amber,  sub: 'CUSUM early warning system' },
+  { id: 'risk_panel',    label: 'Risk Panel',           color: C.red,    sub: 'Clinical composite score' },
+  { id: 'fall_risk',     label: 'Fall Risk Classifier', color: C.gold,   sub: 'AGRU · Lin et al. 2026' },
+  { id: 'shap_features', label: 'SHAP Features',        color: C.accent, sub: 'Feature importance by age group' },
+  { id: 'age_strata',    label: 'Age Strata',           color: C.coral,  sub: 'Risk profiles 20-45 · 46-65 · >65' },
 ];
 const ACTIVITY_ALGOS: { id: ActivityAlgoId; label: string; color: string; sub: string }[] = [
   { id: 'fragmentation', label: 'Fragmentation',      color: C.sage,   sub: 'ASTP · SATP · bout power law' },
@@ -583,6 +692,7 @@ export default function AlgorithmLabPage() {
   const [cusumK, setCusumK]               = useState(0.5);
   const [cusumH, setCusumH]               = useState(5);
   const [acfLags, setAcfLags]             = useState(40);
+  const [ageGroup, setAgeGroup]           = useState<AgeGroup>('overall');
 
   const raw = useMemo(() => RAW.slice(0, visPoints), [visPoints]);
   const p2  = (v: number) => v.toFixed(2);
@@ -752,7 +862,7 @@ export default function AlgorithmLabPage() {
       <main className="main">
         <header className="topbar" style={{ marginBottom: 32 }}>
           <div>
-            <div className="crumb">Ambient Intelligence · {inPredictive ? 'Predictive Intelligence · Multi-Scale · Phase Space · CUSUM · Risk Panel' : inActivity ? 'Activity Analysis · Karas 2019 · Urbanek / JHU-COAH' : inComplex ? 'Complexity Suite · Khan & Jacobs 2021' : 'Signal Processing'}</div>
+            <div className="crumb">Ambient Intelligence · {inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Karas 2019 · Urbanek / JHU-COAH' : inComplex ? 'Complexity Suite · Khan & Jacobs 2021' : 'Signal Processing'}</div>
             <h1 className="page-title">Algorithm <em>Lab</em></h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1373,12 +1483,15 @@ export default function AlgorithmLabPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
                 <div>
                   <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 4 }}>
-                    {algo === 'mse' ? 'Multi-Scale Entropy' : algo === 'phase_space' ? 'Phase Space Portrait' : algo === 'cusum' ? 'CUSUM Drift Detector' : 'Clinical Risk Panel'}
+                    {algo === 'mse' ? 'Multi-Scale Entropy' : algo === 'phase_space' ? 'Phase Space Portrait' : algo === 'cusum' ? 'CUSUM Drift Detector' : algo === 'fall_risk' ? 'Fall Risk Classifier' : algo === 'shap_features' ? 'SHAP Feature Importance' : algo === 'age_strata' ? 'Age-Stratified Risk Profiles' : 'Clinical Risk Panel'}
                   </div>
                   <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
                     {algo === 'mse' ? 'Costa, Goldberger & Peng · Science 2002 · complexity across time scales predicts mortality' :
                      algo === 'phase_space' ? 'Takens embedding theorem · reconstructed attractor · lag τ = autocorrelation first-zero-crossing' :
                      algo === 'cusum' ? 'Page 1954 · sequential change detection · detects baseline shift before clinical threshold is crossed' :
+                     algo === 'fall_risk' ? 'Lin et al. 2026 · Gerontology · AGRU 91.4% accuracy · 0.934 AUROC · n=1,441 community-dwelling adults' :
+                     algo === 'shap_features' ? 'SHapley Additive exPlanations · feature attribution for AGRU model · age-stratified analysis' :
+                     algo === 'age_strata' ? 'Lin et al. 2026 · top predictors differ significantly across young, middle-aged, and older adults' :
                      'Cross-suite composite score — Signal Processing · Complexity Suite · Activity Analysis · Circadian'}
                   </div>
                 </div>
@@ -1557,11 +1670,12 @@ export default function AlgorithmLabPage() {
               {/* Evidence citations */}
               <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
                 <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Evidence Base</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
                   {[
                     { src: 'Karas et al. 2019', title: 'JAMA Network Open', finding: 'ASTP independently predicts all-cause mortality (HR 1.38 per SD) in NHANES cohort of 2,978 adults' },
                     { src: 'Khan & Jacobs 2021', title: 'IEEE JBHI', finding: 'CC, DFA, SampEn, PermEn, Hurst collectively predict MCI 6 months before diagnosis with >82% AUC' },
                     { src: 'Urbanek / JHU-COAH', title: 'Accelerometry Resource Core', finding: 'IS, IV, RA, M10/L5 characterize circadian disruption; lower IS and RA associated with cognitive decline' },
+                    { src: 'Lin et al. 2026', title: 'Gerontology', finding: 'AGRU model achieves 91.4% accuracy (AUROC 0.934) for fall risk across age groups; pulse rate and living alone are the dominant predictors' },
                   ].map(x => (
                     <div key={x.src} style={{ padding: '14px 16px', background: C.s2, borderRadius: 10, border: `1px solid ${C.line}` }}>
                       <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.gold, marginBottom: 3 }}>{x.src}</div>
@@ -1575,12 +1689,149 @@ export default function AlgorithmLabPage() {
                 </div>
               </div>
             </>}
+
+            {/* ── FALL RISK CLASSIFIER ── */}
+            {algo === 'fall_risk' && <>
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 18 }}>Model Comparison — AUROC · n=1,441 community-dwelling adults</div>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart layout="vertical" data={[...FALL_MODELS].reverse()} margin={{ top: 0, right: 60, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} horizontal={false} />
+                    <XAxis type="number" domain={[0.7, 1.0]} tickFormatter={(v: number) => v.toFixed(2)} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis type="category" dataKey="name" width={75} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(3) : String(v), 'AUROC'] as [string, string]} />
+                    <ReferenceLine x={0.9} stroke={C.gold} strokeDasharray="4 3" label={{ value: 'AUC 0.90', position: 'top', fontFamily: 'var(--mono)', fontSize: 9, fill: C.gold }} />
+                    <Bar dataKey="auroc" name="AUROC" radius={[0, 4, 4, 0]}>
+                      {[...FALL_MODELS].reverse().map((m, i) => (
+                        <Cell key={i} fill={m.name === 'AGRU' ? C.gold : m.isDeep ? C.purple : C.text4} fillOpacity={m.name === 'AGRU' ? 1 : 0.65} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <ChartCard full title="Accuracy · F1 · Recall" sub="per-model · Lin et al. 2026 · Gerontology">
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={FALL_MODELS} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[70, 100]} tickFormatter={(v: number) => `${v}%`} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? `${v.toFixed(1)}%` : String(v)] as [string]} />
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 10, paddingTop: 10 }} />
+                    <Bar dataKey="acc"    name="Accuracy" fill={C.sage}   fillOpacity={0.75} radius={[3,3,0,0]} />
+                    <Bar dataKey="f1"     name="F1 Score" fill={C.purple} fillOpacity={0.75} radius={[3,3,0,0]} />
+                    <Bar dataKey="recall" name="Recall"   fill={C.amber}  fillOpacity={0.75} radius={[3,3,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>AGRU — Age Subgroup AUROC</div>
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={AGRU_SUBGROUPS} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="group" tick={{ fontFamily: 'var(--mono)', fontSize: 11, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[0.85, 0.96]} tickFormatter={(v: number) => v.toFixed(2)} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(3) : String(v), 'AUROC'] as [string, string]} />
+                    <Bar dataKey="auroc" radius={[4,4,0,0]}>
+                      {AGRU_SUBGROUPS.map((_, i) => (
+                        <Cell key={i} fill={[C.sage, C.amber, C.coral][i]} fillOpacity={0.85} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>AGRU Architecture</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  The Attention-Gated Recurrent Unit adds a learned attention gate to a standard GRU. At each timestep, the model weighs which clinical features — pulse rate, functional mobility, living situation — contribute most to the prediction. This interaction sensitivity is why AGRU outperforms tree-based models when fall risk emerges from the combination of factors, not any single feature. External validation confirmed AUROC 0.88 on an independent cohort.
+                </div>
+              </div>
+            </>}
+
+            {/* ── SHAP FEATURE IMPORTANCE ── */}
+            {algo === 'shap_features' && <>
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '20px 28px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Age Group</span>
+                {(['overall', 'young', 'middle', 'older'] as const).map(g => (
+                  <button key={g} onClick={() => setAgeGroup(g)} style={{ padding: '6px 18px', borderRadius: 999, border: `1px solid ${ageGroup === g ? C.gold : C.lineS}`, background: ageGroup === g ? `${C.gold}1A` : 'transparent', color: ageGroup === g ? C.gold : C.text3, fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>
+                    {g === 'overall' ? 'All ages' : g === 'young' ? '20–45' : g === 'middle' ? '46–65' : '>65'}
+                  </button>
+                ))}
+                <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, color: C.text4 }}>
+                  {ageGroup === 'overall' ? 'n = 1,441' : ageGroup === 'young' ? 'n ≈ 360' : ageGroup === 'middle' ? 'n ≈ 650' : 'n ≈ 431'}
+                </span>
+              </div>
+
+              <ChartCard full title="SHAP Feature Importance" sub={`mean |SHAP| · AGRU model · ${ageGroup === 'overall' ? 'all ages' : ageGroup === 'young' ? 'young adults 20–45' : ageGroup === 'middle' ? 'middle-aged 46–65' : 'older adults >65'} · Lin et al. 2026`}>
+                <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: C.coral, display: 'inline-block' }}/> Risk factor</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: C.sage, display: 'inline-block' }}/> Protective factor</span>
+                </div>
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart layout="vertical" data={shapFeatureData(ageGroup)} margin={{ top: 0, right: 20, left: 20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} horizontal={false} />
+                    <XAxis type="number" domain={[0, 0.6]} tickFormatter={(v: number) => v.toFixed(2)} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'mean |SHAP|', position: 'insideBottomRight', offset: -4, fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <YAxis type="category" dataKey="feature" width={155} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(3) : String(v), 'SHAP impact'] as [string, string]} />
+                    <Bar dataKey="absShap" name="SHAP Impact" radius={[0, 4, 4, 0]}>
+                      {shapFeatureData(ageGroup).map((d, i) => (
+                        <Cell key={i} fill={d.isRisk ? C.coral : C.sage} fillOpacity={0.82} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </>}
+
+            {/* ── AGE STRATA ── */}
+            {algo === 'age_strata' && <>
+              {AGE_STRATA.map(stratum => (
+                <div key={stratum.group} style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 22, letterSpacing: '-0.02em', color: stratum.color }}>{stratum.group}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, marginTop: 2 }}>{stratum.label}</div>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={190}>
+                    <BarChart layout="vertical" data={[...stratum.factors].reverse()} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.line} horizontal={false} />
+                      <XAxis type="number" domain={[0, 60]} tick={{ fontFamily: 'var(--mono)', fontSize: 8, fill: C.text4 }} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="name" width={130} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text3 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(0) : String(v), 'SHAP %'] as [string, string]} />
+                      <Bar dataKey="value" radius={[0, 3, 3, 0]}>
+                        {[...stratum.factors].reverse().map((f, i) => (
+                          <Cell key={i} fill={f.dir === 'risk' ? C.coral : C.sage} fillOpacity={0.8} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ))}
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Why age-specific models matter</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  Lin et al. 2026 found that the dominant fall predictors differ substantially across age groups — injury history dominates in young adults, cardiovascular factors (BP, pulse) drive middle-aged risk, and functional mobility (gait speed, sit-to-stand) becomes the primary signal in older adults. A single model trained on pooled data systematically underweights age-specific signals. The AGRU age-stratified models improve AUROC by 2–4 points over the pooled model within each subgroup.
+                </div>
+                <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                  {AGRU_SUBGROUPS.map(s => (
+                    <div key={s.group} style={{ padding: '12px 16px', background: C.s2, borderRadius: 10, border: `1px solid ${C.line}` }}>
+                      <div style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 300, color: C.gold }}>{s.auroc.toFixed(3)}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>AUROC · {s.group}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, marginTop: 2 }}>{s.acc.toFixed(1)}% accuracy</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>}
           </>}
 
         </div>
 
         <div className="agent-note" style={{ marginTop: 48 }}>
-          — Ambient Intelligence · algorithm lab · Khan & Jacobs 2021 · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · Karas et al. 2019 · ASTP · SATP · Urbanek / JHU-COAH · IS · IV · RA · M10/L5 —
+          — Ambient Intelligence · algorithm lab · Khan & Jacobs 2021 · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · Karas et al. 2019 · ASTP · SATP · Urbanek / JHU-COAH · IS · IV · RA · M10/L5 · Lin et al. 2026 · AGRU · SHAP · fall risk —
         </div>
       </main>
     </div>
