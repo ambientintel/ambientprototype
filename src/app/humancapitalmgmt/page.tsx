@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 
 // ── Types ─────────────────────────────────────────────────────────────────
-type View = "orgchart" | "directory" | "roles" | "analytics";
+type View = "orgchart" | "directory" | "analytics";
 type Status = "active" | "onleave" | "contractor" | "open";
 type Department = "Executive" | "Engineering" | "Clinical" | "Operations" | "Design" | "Finance" | "Regulatory";
 type Level = "L1" | "L2" | "L3" | "L4" | "L5" | "L6" | "L7";
@@ -250,7 +250,6 @@ export default function HumanCapitalMgmt() {
   const navItems: { label:string; view:View; icon:React.ReactNode }[] = [
     { label:"Org Chart",   view:"orgchart",   icon:Icon.org   },
     { label:"Directory",   view:"directory",  icon:Icon.list  },
-    { label:"Roles",       view:"roles",      icon:Icon.roles },
     { label:"Analytics",   view:"analytics",  icon:Icon.chart },
   ];
 
@@ -336,7 +335,6 @@ export default function HumanCapitalMgmt() {
         <div style={{ flex:1, minWidth:0 }}>
           {view === "orgchart"  && <OrgChartView people={people} deptFilter={deptFilter} onSelect={setSelected} onAddUnder={openAdd} />}
           {view === "directory" && <DirectoryView people={people} search={search} setSearch={setSearch} sortKey={sortKey} setSortKey={setSortKey} sortAsc={sortAsc} setSortAsc={setSortAsc} deptFilter={deptFilter} onSelect={setSelected} onAdd={() => openAdd(null)} />}
-          {view === "roles"     && <RolesView people={people} deptFilter={deptFilter} onSelect={setSelected} onAdd={() => openAdd(null)} />}
           {view === "analytics" && <AnalyticsView people={people} />}
         </div>
       </main>
@@ -376,7 +374,7 @@ export default function HumanCapitalMgmt() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Org Chart View
+// Org Chart View — split: tree left, roles panel right
 // ═══════════════════════════════════════════════════════════════════════════
 function OrgChartView({ people, deptFilter, onSelect, onAddUnder }: {
   people: Person[];
@@ -384,35 +382,40 @@ function OrgChartView({ people, deptFilter, onSelect, onAddUnder }: {
   onSelect: (p: Person) => void;
   onAddUnder: (managerId: string | null) => void;
 }) {
-  const filtered = deptFilter === "all" ? people : people.filter(p => {
+  const treeInput = deptFilter === "all" ? people : people.filter(p => {
     if (p.department === deptFilter) return true;
     return people.some(q => q.department === deptFilter && q.managerId === p.id);
   });
 
-  const { nodes, width, height } = layoutTree(deptFilter === "all" ? people : filtered);
+  const { nodes, width, height } = layoutTree(treeInput);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(0.75);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const rolesPanelRef = useRef<HTMLDivElement>(null);
+  const roleRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // Auto-scroll to center the root node
+  // Auto-scroll tree to center root
   useEffect(() => {
     if (!scrollRef.current || !nodes.length) return;
     const root = nodes.find(n => !n.person.managerId);
     if (!root) return;
     const container = scrollRef.current;
     const rootCenterX = (root.x + NODE_W / 2) * zoom;
-    const scrollLeft = rootCenterX - container.clientWidth / 2;
-    container.scrollLeft = Math.max(0, scrollLeft);
+    container.scrollLeft = Math.max(0, rootCenterX - container.clientWidth / 2);
     container.scrollTop = 0;
   }, [nodes, zoom]);
 
-  // Fit-to-screen zoom
+  // When hovering org node, scroll roles panel to that row
+  useEffect(() => {
+    if (!hoverId || !rolesPanelRef.current) return;
+    const row = roleRowRefs.current[hoverId];
+    if (row) row.scrollIntoView({ block:"nearest", behavior:"smooth" });
+  }, [hoverId]);
+
   function fitZoom() {
     if (!scrollRef.current) return;
-    const containerW = scrollRef.current.clientWidth;
-    const containerH = scrollRef.current.clientHeight;
-    const zw = (containerW - 40) / Math.max(width, 1);
-    const zh = (containerH - 40) / Math.max(height, 1);
+    const zw = (scrollRef.current.clientWidth - 40) / Math.max(width, 1);
+    const zh = (scrollRef.current.clientHeight - 40) / Math.max(height, 1);
     setZoom(Math.min(Math.max(Math.min(zw, zh), 0.25), 1));
   }
 
@@ -422,72 +425,147 @@ function OrgChartView({ people, deptFilter, onSelect, onAddUnder }: {
     if (!n.person.managerId) continue;
     const parent = nodes.find(m => m.person.id === n.person.managerId);
     if (!parent) continue;
-    const px = parent.x + NODE_W / 2;
-    const py = parent.y + NODE_H;
-    const cx = n.x + NODE_W / 2;
-    const cy = n.y;
+    const px = parent.x + NODE_W / 2, py = parent.y + NODE_H;
+    const cx = n.x + NODE_W / 2,     cy = n.y;
     const my = (py + cy) / 2;
     paths.push({ d:`M${px},${py} C${px},${my} ${cx},${my} ${cx},${cy}`, color: DEPT_COLORS[n.person.department] });
   }
 
+  const depts = deptFilter === "all" ? DEPARTMENTS : [deptFilter];
   const scaledW = Math.max(width * zoom, 600);
   const scaledH = Math.max(height * zoom, 400);
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", overflow:"hidden" }}>
       {/* Toolbar */}
-      <div style={{ display:"flex", alignItems:"center", gap:16, padding:"10px 24px", borderBottom:"1px solid var(--line)", flexShrink:0 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12, padding:"9px 20px", borderBottom:"1px solid var(--line)", flexShrink:0 }}>
         <div style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-4)" }}>
-          {nodes.filter(n => n.person.status !== "open").length} people · {nodes.filter(n => n.person.status === "open").length} open roles
+          {nodes.filter(n => n.person.status !== "open").length} people · {nodes.filter(n => n.person.status === "open").length} open
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center", marginLeft:"auto" }}>
           {Object.entries(STATUS_META).map(([s, m]) => (
             <div key={s} style={{ display:"flex", alignItems:"center", gap:5, fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", textTransform:"uppercase", letterSpacing:"0.08em" }}>
-              <span style={{ width:6, height:6, borderRadius:"50%", background:m.color, flexShrink:0 }}/>
-              {m.label}
+              <span style={{ width:6, height:6, borderRadius:"50%", background:m.color, flexShrink:0 }}/>{m.label}
             </div>
           ))}
-          <div style={{ width:1, height:16, background:"var(--line)", margin:"0 4px" }}/>
-          <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.25))} style={{ padding:"4px 8px", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-2)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:12, lineHeight:1 }}>−</button>
-          <span style={{ fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text-3)", minWidth:36, textAlign:"center" }}>{Math.round(zoom*100)}%</span>
-          <button onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))} style={{ padding:"4px 8px", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-2)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:12, lineHeight:1 }}>+</button>
-          <button onClick={fitZoom} style={{ padding:"4px 10px", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-3)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.08em" }}>Fit</button>
-          <button onClick={() => setZoom(1)} style={{ padding:"4px 10px", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-3)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.08em" }}>1:1</button>
-          <button onClick={() => onAddUnder(null)} style={{ padding:"4px 10px", background:"var(--accent)", border:0, borderRadius:4, color:"#fff", cursor:"pointer", fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.08em", display:"flex", alignItems:"center", gap:5 }}>
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M8 2v12M2 8h12" strokeLinecap="round"/></svg>Add
+          <div style={{ width:1, height:14, background:"var(--line)", margin:"0 2px" }}/>
+          <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.25))} style={{ padding:"3px 8px", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-2)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:12, lineHeight:1 }}>−</button>
+          <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", minWidth:34, textAlign:"center" }}>{Math.round(zoom*100)}%</span>
+          <button onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))} style={{ padding:"3px 8px", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-2)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:12, lineHeight:1 }}>+</button>
+          <button onClick={fitZoom} style={{ padding:"3px 9px", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-3)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.08em" }}>Fit</button>
+          <button onClick={() => setZoom(1)} style={{ padding:"3px 9px", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-3)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.08em" }}>1:1</button>
+          <button onClick={() => onAddUnder(null)} style={{ padding:"3px 9px", background:"var(--accent)", border:0, borderRadius:4, color:"#fff", cursor:"pointer", fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.08em", display:"flex", alignItems:"center", gap:5 }}>
+            <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M8 2v12M2 8h12" strokeLinecap="round"/></svg>Add
           </button>
         </div>
       </div>
 
-      {/* Scrollable canvas */}
-      <div ref={scrollRef} style={{ overflow:"auto", flex:1, position:"relative" }}>
-        {/* Scroll area sized to scaled canvas */}
-        <div style={{ width:scaledW + 80, height:scaledH + 60, position:"relative", flexShrink:0 }}>
-          {/* Scaled canvas */}
-          <div style={{ position:"absolute", top:0, left:0, width, height, transform:`scale(${zoom})`, transformOrigin:"top left" }}>
-            {/* SVG connectors */}
-            <svg style={{ position:"absolute", top:0, left:0, width, height, pointerEvents:"none", overflow:"visible" }}>
-              {paths.map((p, i) => (
-                <path key={i} d={p.d} fill="none" stroke={p.color} strokeWidth={1.8} strokeOpacity={0.35}/>
-              ))}
-            </svg>
+      {/* Split body */}
+      <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
 
-            {/* Nodes */}
-            {nodes.map(n => (
-              <OrgNode key={n.person.id} node={n} isHovered={hoverId === n.person.id}
-                onHover={setHoverId} onSelect={onSelect} onAdd={onAddUnder}
-              />
-            ))}
+        {/* ── Org tree canvas ── */}
+        <div ref={scrollRef} style={{ flex:1, overflow:"auto", position:"relative" }}>
+          <div style={{ width:scaledW + 80, height:scaledH + 60, position:"relative" }}>
+            <div style={{ position:"absolute", top:0, left:0, width, height, transform:`scale(${zoom})`, transformOrigin:"top left" }}>
+              <svg style={{ position:"absolute", top:0, left:0, width, height, pointerEvents:"none", overflow:"visible" }}>
+                {paths.map((p, i) => (
+                  <path key={i} d={p.d} fill="none" stroke={p.color}
+                    strokeWidth={hoverId && nodes.find(n => n.person.id === hoverId)?.person.department
+                      ? (nodes.find(n => n.person.id === hoverId)?.person.department
+                          ? (p.color === DEPT_COLORS[nodes.find(n => n.person.id === hoverId)!.person.department] ? 2.5 : 1.8)
+                          : 1.8)
+                      : 1.8}
+                    strokeOpacity={0.35}/>
+                ))}
+              </svg>
+              {nodes.map(n => (
+                <OrgNode key={n.person.id} node={n}
+                  isHovered={hoverId === n.person.id}
+                  isHighlighted={hoverId === n.person.id}
+                  onHover={setHoverId} onSelect={onSelect} onAdd={onAddUnder}
+                />
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* ── Roles panel ── */}
+        <div ref={rolesPanelRef} style={{ width:272, flexShrink:0, borderLeft:"1px solid var(--line)", overflowY:"auto", background:"var(--bg)" }}>
+          {/* Panel header */}
+          <div style={{ padding:"10px 16px 8px", borderBottom:"1px solid var(--line)", position:"sticky", top:0, background:"var(--bg)", zIndex:2 }}>
+            <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)" }}>
+              Role Registry
+            </div>
+          </div>
+
+          {/* Dept sections */}
+          {depts.map(dept => {
+            const deptPeople = people.filter(p => p.department === dept);
+            if (!deptPeople.length) return null;
+            const dc = DEPT_COLORS[dept];
+            const filled = deptPeople.filter(p => p.status !== "open").length;
+            const total  = deptPeople.length;
+
+            return (
+              <div key={dept}>
+                {/* Dept header */}
+                <div style={{ padding:"10px 16px 6px", borderBottom:"1px solid var(--line)", background:"var(--surface-1)" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
+                    <span style={{ width:6, height:6, borderRadius:2, background:dc, flexShrink:0 }}/>
+                    <span style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.13em", color:dc, flex:1 }}>{dept}</span>
+                    <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)" }}>{filled}/{total}</span>
+                  </div>
+                  <div style={{ height:3, borderRadius:2, background:"var(--surface-3)" }}>
+                    <div style={{ width:`${(filled/total)*100}%`, height:"100%", background:dc, borderRadius:2, transition:"width 0.3s" }}/>
+                  </div>
+                </div>
+
+                {/* Role rows */}
+                {deptPeople.map(p => {
+                  const sm = STATUS_META[p.status];
+                  const isOpen = p.status === "open";
+                  const isHov = hoverId === p.id;
+                  return (
+                    <div key={p.id}
+                      ref={el => { roleRowRefs.current[p.id] = el; }}
+                      style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", cursor:"pointer", background: isHov ? "var(--surface-2)" : "transparent", borderBottom:"1px solid var(--line)", transition:"background 0.12s", borderLeft: isHov ? `2px solid ${dc}` : "2px solid transparent" }}
+                      onMouseEnter={() => setHoverId(p.id)}
+                      onMouseLeave={() => setHoverId(null)}
+                      onClick={() => onSelect(p)}
+                    >
+                      {/* Avatar */}
+                      <div style={{ width:22, height:22, borderRadius:5, background: isOpen ? "var(--surface-3)" : `${dc}25`, color: isOpen ? "var(--text-4)" : dc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, fontWeight:700, fontFamily:"var(--mono)", flexShrink:0, border: isOpen ? "1.5px dashed var(--line-strong)" : "none" }}>
+                        {isOpen ? "?" : initials(p.name)}
+                      </div>
+                      {/* Name + role */}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight: isOpen ? 400 : 500, color: isOpen ? "var(--text-3)" : "var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          {isOpen ? <em style={{ fontStyle:"italic" }}>Open Role</em> : p.name}
+                        </div>
+                        <div style={{ fontSize:10.5, color:"var(--text-4)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.role}</div>
+                      </div>
+                      {/* Level + status dot */}
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3, flexShrink:0 }}>
+                        <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)" }}>{p.level}</span>
+                        <span style={{ width:5, height:5, borderRadius:"50%", background:sm.color, opacity: isOpen ? 0.5 : 1 }}/>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+
       </div>
     </div>
   );
 }
 
-function OrgNode({ node, isHovered, onHover, onSelect, onAdd }: {
+function OrgNode({ node, isHovered, isHighlighted, onHover, onSelect, onAdd }: {
   node: TreeNode;
   isHovered: boolean;
+  isHighlighted: boolean;
   onHover: (id: string | null) => void;
   onSelect: (p: Person) => void;
   onAdd: (managerId: string | null) => void;
