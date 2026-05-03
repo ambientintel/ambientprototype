@@ -76,6 +76,59 @@ function epochToTime(i: number): string {
   const m = i * 5; return `${String(Math.floor(m / 60) % 24).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`;
 }
 
+// ── Radar / depth-sensor frames ───────────────────────────────
+interface RadarFrame {
+  frameNumber: number;
+  HeightData: number[][];
+  timestamp: number;
+  CurrTime: string;
+  PointsDetected: number;
+}
+const RADAR_RNG = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+// 60-second TUG-style clinical gait assessment (20 fps = 1200 frames)
+const RADAR_FRAMES: RadarFrame[] = (() => {
+  const fps = 20, baseTs = 1740615900, sf = 6235;
+  return Array.from({ length: fps * 60 }, (_, i) => {
+    const t = i / fps;
+    const r = (o: number) => RADAR_RNG(i * 7 + o);
+    const noise = (a: number) => (r(1) - 0.5) * a;
+    let x = 0, h = 1.72, pts = 5;
+    if (t < 4) {
+      x = 0; h = 1.72 + noise(0.018); pts = 5;
+    } else if (t < 9) {
+      x = (t - 4) * 0.88;
+      h = 1.72 + 0.022 * Math.sin(t * 2 * Math.PI * 1.85) + noise(0.012); pts = 4 + Math.floor(r(2) * 3);
+    } else if (t < 12) {
+      x = 4.4 - (t - 9) * 0.25; h = 1.72 + noise(0.02); pts = 4;
+    } else if (t < 18) {
+      x = Math.max(0, 3.65 - (t - 12) * 0.58);
+      h = 1.72 + 0.020 * Math.sin(t * 2 * Math.PI * 1.72) + noise(0.013); pts = 4 + Math.floor(r(3) * 3);
+    } else if (t < 20.5) {
+      x = 0; h = 1.72 - (t - 18) * 0.268 + noise(0.015); pts = 3;
+    } else if (t < 38) {
+      x = 0; h = 1.05 + noise(0.022); pts = 2 + Math.floor(r(4) * 2);
+    } else if (t < 41) {
+      x = 0; h = 1.05 + (t - 38) * 0.223 + noise(0.02); pts = 3;
+    } else if (t < 44) {
+      x = 0; h = 1.72 + noise(0.018); pts = 4;
+    } else {
+      const tW = t - 44;
+      x = tW < 8 ? tW * 0.72 : Math.max(0, 5.76 - (tW - 8) * 0.65);
+      h = 1.72 + 0.018 * Math.sin(t * 2 * Math.PI * 1.65) + noise(0.016); pts = 3 + Math.floor(r(5) * 3);
+    }
+    const h2 = Math.max(0.5, h - 0.08 + noise(0.014));
+    const ts = baseTs + t;
+    const dt = new Date(ts * 1000);
+    return {
+      frameNumber: sf + i,
+      HeightData: [[Math.max(0, x + noise(0.025)), Math.max(0.5, h), h2]],
+      timestamp: ts,
+      CurrTime: dt.toUTCString().replace(' GMT', ''),
+      PointsDetected: Math.max(1, pts),
+    };
+  });
+})();
+
 // ── Signal processing algorithms ──────────────────────────────
 function movingAverage(data: number[], w: number): (number | null)[] {
   return data.map((_, i) => i < w - 1 ? null
@@ -143,6 +196,76 @@ function logSizes(lo: number, hi: number, n: number): number[] {
     Math.round(Math.exp(Math.log(lo) + i * (Math.log(hi) - Math.log(lo)) / (n - 1)))
   ).filter(v => v >= lo && v <= hi))];
 }
+
+// ── Radar-derived metrics ─────────────────────────────────────
+function radarHeightSeries(frames: RadarFrame[]): { t: number; h: number; pts: number }[] {
+  return frames.map((f, i) => ({
+    t: Math.round((i / 20) * 10) / 10,
+    h: Math.round((f.HeightData[0]?.[1] ?? 1.72) * 1000) / 1000,
+    pts: f.PointsDetected,
+  }));
+}
+function radarEpochs(frames: RadarFrame[]): { epoch: number; t: number; meanH: number; speed: number; heightSD: number }[] {
+  const EPF = 100; // 5s at 20fps
+  const n = Math.floor(frames.length / EPF);
+  return Array.from({ length: n }, (_, e) => {
+    const sl = frames.slice(e * EPF, (e + 1) * EPF);
+    const heights = sl.map(f => f.HeightData[0]?.[1] ?? 1.72);
+    const xs = sl.map(f => f.HeightData[0]?.[0] ?? 0);
+    const meanH = mn(heights);
+    const displacement = Math.abs(xs[xs.length - 1] - xs[0]);
+    const speed = displacement / 5;
+    return { epoch: e, t: e * 5, meanH: Math.round(meanH * 1000) / 1000, speed: Math.round(speed * 100) / 100, heightSD: Math.round(sd(heights) * 10000) / 10000 };
+  });
+}
+function classifyActivity(ep: { meanH: number; speed: number }): { label: string; met: number; color: string } {
+  if (ep.meanH < 1.25) return { label: 'Sitting',    met: 1.3, color: C.purple };
+  if (ep.speed < 0.12) return { label: 'Standing',   met: 1.5, color: C.accent };
+  if (ep.speed < 0.50) return { label: 'Slow Walk',  met: 2.5, color: C.amber  };
+  if (ep.speed < 1.05) return { label: 'Walk',       met: 3.5, color: C.sage   };
+  return { label: 'Brisk Walk', met: 4.5, color: C.gold };
+}
+function radarMETEpochs(frames: RadarFrame[]): { t: number; label: string; met: number; color: string; kcal: number; speed: number }[] {
+  return radarEpochs(frames).map(ep => {
+    const cls = classifyActivity(ep);
+    const kcal = Math.round(cls.met * 1.225 * (5 / 60) * 100) / 100;
+    return { t: ep.t, label: cls.label, met: cls.met, color: cls.color, kcal, speed: ep.speed };
+  });
+}
+function detectSteps(frames: RadarFrame[]): { t: number; h: number }[] {
+  const series = radarHeightSeries(frames);
+  const steps: { t: number; h: number }[] = [];
+  for (let i = 3; i < series.length - 3; i++) {
+    const p = series;
+    if (p[i].h > 1.5 && p[i].h < p[i-1].h && p[i].h < p[i-2].h && p[i].h < p[i+1].h && p[i].h < p[i+2].h && p[i].h < 1.714) {
+      if (steps.length === 0 || p[i].t - steps[steps.length - 1].t > 0.22) steps.push({ t: p[i].t, h: p[i].h });
+    }
+  }
+  return steps;
+}
+function computeGaitMetrics(frames: RadarFrame[]) {
+  const steps = detectSteps(frames);
+  if (steps.length < 3) return { stepCount: steps.length, cadence: 0, stepTimeCV: 0, walkSpeed: 0, tug: 0 };
+  const intervals = steps.slice(1).map((s, i) => s.t - steps[i].t).filter(v => v > 0.15 && v < 1.5);
+  const meanInt = mn(intervals);
+  const cadence = meanInt > 0 ? Math.round(60 / meanInt) : 0;
+  const cvPct = meanInt > 0 ? Math.round((sd(intervals) / meanInt) * 1000) / 10 : 0;
+  const walkPhases = frames.filter((_, i) => { const t = i / 20; return (t >= 4 && t < 18) || t >= 44; });
+  const xDisps: number[] = [];
+  for (let i = 1; i < walkPhases.length; i++) {
+    const dx = Math.abs((walkPhases[i].HeightData[0]?.[0] ?? 0) - (walkPhases[i-1].HeightData[0]?.[0] ?? 0));
+    if (dx * 20 > 0.05) xDisps.push(dx * 20);
+  }
+  const walkSpeed = xDisps.length ? Math.round(mn(xDisps) * 100) / 100 : 0;
+  const tugStart = frames.findIndex((_, i) => { const t = i/20; return t >= 4; }) / 20;
+  const tugEnd = frames.findIndex((_, i) => { const t = i/20; return t >= 44; }) / 20;
+  const tug = Math.round((tugEnd - tugStart) * 10) / 10;
+  return { stepCount: steps.length, cadence, stepTimeCV: cvPct, walkSpeed, tug };
+}
+function interpGaitSpeed(v: number) { return v === 0 ? { text: 'No walking', c: C.text3 } : v < 0.6 ? { text: 'Very slow — fall risk', c: C.red } : v < 0.8 ? { text: 'Slow gait', c: C.coral } : v < 1.0 ? { text: 'Below normal', c: C.amber } : v < 1.3 ? { text: 'Normal', c: C.sage } : { text: 'Fast gait', c: C.accent }; }
+function interpCadence(c: number) { return c === 0 ? { text: 'No walking', c: C.text3 } : c < 90 ? { text: 'Very slow', c: C.red } : c < 100 ? { text: 'Slow', c: C.coral } : c < 120 ? { text: 'Normal range', c: C.sage } : { text: 'Fast', c: C.accent }; }
+function interpStepCV(cv: number) { return cv === 0 ? { text: 'No data', c: C.text3 } : cv < 2 ? { text: 'Very regular', c: C.sage } : cv < 4 ? { text: 'Normal variability', c: C.amber } : cv < 6 ? { text: 'Borderline', c: C.coral } : { text: 'Elevated — caution', c: C.red }; }
+function interpMET(met: number) { return met < 1.6 ? { text: 'Sedentary', c: C.purple } : met < 3.0 ? { text: 'Light activity', c: C.accent } : met < 6.0 ? { text: 'Moderate', c: C.sage } : { text: 'Vigorous', c: C.gold }; }
 
 // ── Complexity Suite algorithms ────────────────────────────────
 
@@ -731,7 +854,10 @@ type SedentaryAlgoId   = 'sed_overview' | 'sed_bouts' | 'sed_breaks' | 'sed_inte
 type AutonomicAlgoId   = 'lfhf' | 'poincare_plot' | 'stress_index' | 'autonomic_24h';
 type MetabolicAlgoId   = 'glucose_trace' | 'time_in_range' | 'agp' | 'glucose_variability';
 type LongitudinalAlgoId = 'timeline' | 'correlation' | 'health_calendar' | 'risk_evolution';
-type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId | SleepAlgoId | SedentaryAlgoId | AutonomicAlgoId | MetabolicAlgoId | LongitudinalAlgoId;
+type RadarAlgoId    = 'radar_signal' | 'height_trace' | 'point_density';
+type GaitAlgoId     = 'step_detection' | 'gait_speed' | 'cadence' | 'gait_variability';
+type METAlgoId      = 'activity_class' | 'met_timeline' | 'energy_expenditure' | 'intensity_zones';
+type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId | SleepAlgoId | SedentaryAlgoId | AutonomicAlgoId | MetabolicAlgoId | LongitudinalAlgoId | RadarAlgoId | GaitAlgoId | METAlgoId;
 const isComplex     = (a: AlgoId): a is ComplexAlgoId     =>
   ['cc','dfa','sample_entropy','perm_entropy','hurst','fingerprint'].includes(a);
 const isActivity    = (a: AlgoId): a is ActivityAlgoId    =>
@@ -748,6 +874,9 @@ const isMetabolic   = (a: AlgoId): a is MetabolicAlgoId   =>
   ['glucose_trace','time_in_range','agp','glucose_variability'].includes(a);
 const isLongitudinal = (a: AlgoId): a is LongitudinalAlgoId =>
   ['timeline','correlation','health_calendar','risk_evolution'].includes(a);
+const isRadar    = (a: AlgoId): a is RadarAlgoId    => ['radar_signal','height_trace','point_density'].includes(a);
+const isGait     = (a: AlgoId): a is GaitAlgoId     => ['step_detection','gait_speed','cadence','gait_variability'].includes(a);
+const isMET      = (a: AlgoId): a is METAlgoId      => ['activity_class','met_timeline','energy_expenditure','intensity_zones'].includes(a);
 
 const SIGNAL_ALGOS: { id: SignalAlgoId; label: string; color: string }[] = [
   { id: 'moving_avg',  label: 'Moving Average',        color: C.sage   },
@@ -807,6 +936,23 @@ const LONGITUDINAL_ALGOS: { id: LongitudinalAlgoId; label: string; color: string
   { id: 'correlation',      label: 'Correlation Matrix', color: C.gold,   sub: 'Cross-domain Pearson r matrix' },
   { id: 'health_calendar',  label: 'Health Calendar',   color: C.sage,   sub: '30-day recovery heatmap' },
   { id: 'risk_evolution',   label: 'Risk Evolution',     color: C.coral,  sub: 'Recovery trend · anomaly days' },
+];
+const RADAR_ALGOS: { id: RadarAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'radar_signal',  label: 'Height Signal',   color: C.accent, sub: 'Frame-by-frame height trajectory' },
+  { id: 'height_trace',  label: 'Phase Timeline',  color: C.sage,   sub: 'Annotated standing · walking · sitting' },
+  { id: 'point_density', label: 'Point Density',   color: C.amber,  sub: 'Detected points per epoch' },
+];
+const GAIT_ALGOS: { id: GaitAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'step_detection',  label: 'Step Detection',    color: C.sage,   sub: 'Automatic footfall detection' },
+  { id: 'gait_speed',      label: 'Gait Speed',        color: C.accent, sub: 'Studenski 2011 · <0.8 m/s = risk' },
+  { id: 'cadence',         label: 'Cadence',           color: C.amber,  sub: 'Steps/min · 100–120 normal' },
+  { id: 'gait_variability',label: 'Step Variability',  color: C.coral,  sub: 'Step-time CV% · <3% normal' },
+];
+const MET_ALGOS: { id: METAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'activity_class',     label: 'Activity Classes',     color: C.sage,   sub: 'Ainsworth Compendium classification' },
+  { id: 'met_timeline',       label: 'MET Timeline',         color: C.amber,  sub: 'Metabolic equivalent over time' },
+  { id: 'energy_expenditure', label: 'Energy Expenditure',   color: C.gold,   sub: 'kcal · daily projection · 70 kg' },
+  { id: 'intensity_zones',    label: 'Intensity Zones',      color: C.purple, sub: 'Sedentary · light · moderate · vigorous' },
 ];
 
 // ── Interpretation helpers ────────────────────────────────────
@@ -968,6 +1114,10 @@ export default function AlgorithmLabPage() {
   const [ageGroup, setAgeGroup]           = useState<AgeGroup>('overall');
   const [sleepNight, setSleepNight]       = useState(0);
   const [hoveredCell, setHoveredCell]     = useState<{ day: number; val: number } | null>(null);
+
+  const [radarFrames, setRadarFrames] = useState<RadarFrame[]>(RADAR_FRAMES);
+  const [radarUploaded, setRadarUploaded] = useState(false);
+  const radarInputRef = useRef<HTMLInputElement>(null);
 
   const raw = useMemo(() => RAW.slice(0, visPoints), [visPoints]);
   const p2  = (v: number) => v.toFixed(2);
@@ -1162,6 +1312,37 @@ export default function AlgorithmLabPage() {
   const inAutonomic        = isAutonomic(algo);
   const inMetabolic        = isMetabolic(algo);
   const inLongitudinal     = isLongitudinal(algo);
+  const inRadar        = isRadar(algo);
+  const inGait         = isGait(algo);
+  const inMET          = isMET(algo);
+  const radarSeries    = useMemo(() => radarHeightSeries(radarFrames), [radarFrames]);
+  const radarEpochData = useMemo(() => radarEpochs(radarFrames), [radarFrames]);
+  const metEpochData   = useMemo(() => radarMETEpochs(radarFrames), [radarFrames]);
+  const stepData       = useMemo(() => detectSteps(radarFrames), [radarFrames]);
+  const gaitStats      = useMemo(() => computeGaitMetrics(radarFrames), [radarFrames]);
+
+  const handleRadarUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      try {
+        let parsed: RadarFrame[];
+        if (text.trim().startsWith('[')) {
+          parsed = JSON.parse(text);
+        } else {
+          parsed = text.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+        }
+        if (parsed.length && 'HeightData' in parsed[0]) {
+          setRadarFrames(parsed);
+          setRadarUploaded(true);
+          setFiles(f => [...f, { name: file.name, size: file.size }]);
+        }
+      } catch { /* ignore */ }
+    };
+    reader.readAsText(file);
+  }, []);
 
   return (
     <div className="app" style={{ color: C.text }}>
@@ -1182,6 +1363,36 @@ export default function AlgorithmLabPage() {
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>
               {label}
             </Link>
+          ))}
+        </nav>
+
+        <nav className="nav-section">
+          <div className="nav-label">Radar · Point Cloud</div>
+          {RADAR_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <nav className="nav-section">
+          <div className="nav-label">Gait Analysis</div>
+          {GAIT_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <nav className="nav-section">
+          <div className="nav-label">METs & Energy</div>
+          {MET_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
           ))}
         </nav>
 
@@ -1256,7 +1467,7 @@ export default function AlgorithmLabPage() {
         </nav>
 
         <nav className="nav-section">
-          <div className="nav-label">Metabolic / CGM</div>
+          <div className="nav-label" style={{ color: C.text4 }}>Archive · Metabolic/CGM</div>
           {METABOLIC_ALGOS.map(a => (
             <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
@@ -1285,7 +1496,7 @@ export default function AlgorithmLabPage() {
       <main className="main">
         <header className="topbar" style={{ marginBottom: 32 }}>
           <div>
-            <div className="crumb">Ambient Intelligence · {inLongitudinal ? 'Longitudinal · Timeline · Correlation · Calendar · Risk Evolution' : inMetabolic ? 'Metabolic · CGM Trace · TIR · AGP · Variability' : inAutonomic ? 'Autonomic · LF/HF · Poincaré · Stress · 24h' : inSedentary ? 'Sedentary · Overview · Bouts · Breaks · Intensity' : inSleep ? 'Sleep Analysis · Architecture · SII · HRV · Recovery · Chronotype' : inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Fragmentation · Circadian' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}</div>
+            <div className="crumb">Ambient Intelligence · {inRadar ? 'Radar · Height Signal · Phase Timeline · Point Density' : inGait ? 'Gait · Step Detection · Speed · Cadence · Variability' : inMET ? 'METs & Energy · Activity Classes · MET Timeline · Energy · Intensity Zones' : inLongitudinal ? 'Longitudinal · Timeline · Correlation · Calendar · Risk Evolution' : inMetabolic ? 'Metabolic · CGM Trace · TIR · AGP · Variability' : inAutonomic ? 'Autonomic · LF/HF · Poincaré · Stress · 24h' : inSedentary ? 'Sedentary · Overview · Bouts · Breaks · Intensity' : inSleep ? 'Sleep Analysis · Architecture · SII · HRV · Recovery · Chronotype' : inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Fragmentation · Circadian' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}</div>
             <h1 className="page-title">Algorithm <em>Lab</em></h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1294,9 +1505,47 @@ export default function AlgorithmLabPage() {
           </div>
         </header>
 
+        {(inRadar || inGait || inMET) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: '12px 20px', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 10 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
+              {radarUploaded ? `${radarFrames.length} frames loaded` : 'Demo: synthetic TUG assessment · 60s · 20fps'}
+            </div>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+              {radarUploaded && (
+                <button onClick={() => { setRadarFrames(RADAR_FRAMES); setRadarUploaded(false); }} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, background: 'none', border: `1px solid ${C.line}`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>reset demo</button>
+              )}
+              <button onClick={() => radarInputRef.current?.click()} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.accent, background: `${C.accent}18`, border: `1px solid ${C.accent}44`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer' }}>
+                Upload JSON / JSONL
+              </button>
+              <input ref={radarInputRef} type="file" accept=".json,.jsonl,.txt" style={{ display: 'none' }} onChange={handleRadarUpload} />
+            </div>
+          </div>
+        )}
+
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 28 }}>
-          {(inLongitudinal ? [
+          {(inRadar ? [
+            { label: 'Frames',       value: radarFrames.length.toLocaleString(),      color: C.accent },
+            { label: 'Duration',     value: `${Math.round(radarFrames.length / 20)}s`, color: C.text2 },
+            { label: 'Walk 1',       value: `${gaitStats.walkSpeed} m/s`,             color: interpGaitSpeed(gaitStats.walkSpeed).c },
+            { label: 'Steps',        value: gaitStats.stepCount.toString(),           color: C.sage },
+            { label: 'Data',         value: radarUploaded ? 'uploaded' : 'synthetic', color: radarUploaded ? C.sage : C.amber },
+            { label: 'TUG',          value: `${gaitStats.tug}s`,                      color: gaitStats.tug < 12 ? C.sage : gaitStats.tug < 20 ? C.amber : C.red },
+          ] : inGait ? [
+            { label: 'Walk Speed',   value: `${gaitStats.walkSpeed} m/s`,             color: interpGaitSpeed(gaitStats.walkSpeed).c },
+            { label: 'Cadence',      value: `${gaitStats.cadence} spm`,               color: interpCadence(gaitStats.cadence).c },
+            { label: 'Steps',        value: gaitStats.stepCount.toString(),           color: C.sage },
+            { label: 'Step CV%',     value: `${gaitStats.stepTimeCV}%`,               color: interpStepCV(gaitStats.stepTimeCV).c },
+            { label: 'TUG',          value: `${gaitStats.tug}s`,                      color: gaitStats.tug < 12 ? C.sage : gaitStats.tug < 20 ? C.amber : C.red },
+            { label: 'Risk',         value: interpGaitSpeed(gaitStats.walkSpeed).text, color: interpGaitSpeed(gaitStats.walkSpeed).c },
+          ] : inMET ? [
+            { label: 'Mean MET',     value: metEpochData.length ? (mn(metEpochData.map(e => e.met))).toFixed(1) : '—',  color: C.amber },
+            { label: 'Total kcal',   value: metEpochData.length ? Math.round(metEpochData.reduce((a,e) => a + e.kcal, 0)).toString() : '—', color: C.gold },
+            { label: 'Active Time',  value: `${metEpochData.filter(e => e.met >= 3).length * 5}s`,                     color: C.sage },
+            { label: 'Sit Time',     value: `${metEpochData.filter(e => e.label === 'Sitting').length * 5}s`,           color: C.purple },
+            { label: 'Epochs',       value: metEpochData.length.toString(),                                             color: C.text2 },
+            { label: 'Peak MET',     value: metEpochData.length ? Math.max(...metEpochData.map(e => e.met)).toFixed(1) : '—', color: C.coral },
+          ] : inLongitudinal ? [
             { label: 'Days',          value: '30',                                                      color: C.accent },
             { label: 'Avg Recovery',  value: Math.round(mn(THIRTY_DAYS.map(d => d.recovery))).toString(), color: interpRecovery(Math.round(mn(THIRTY_DAYS.map(d => d.recovery)))).c },
             { label: 'Avg Sleep',     value: `${mn(THIRTY_DAYS.map(d => d.sleepH)).toFixed(1)}h`,      color: C.purple },
@@ -1384,7 +1633,7 @@ export default function AlgorithmLabPage() {
           </div>
 
           {/* ── SIGNAL PROCESSING MODE ── */}
-          {!inComplex && !inActivity && !inPredictive && !inSleep && !inSedentary && !inAutonomic && !inMetabolic && !inLongitudinal && <>
+          {!inComplex && !inActivity && !inPredictive && !inSleep && !inSedentary && !inAutonomic && !inMetabolic && !inLongitudinal && !inRadar && !inGait && !inMET && <>
             {/* Algorithm selector + sliders */}
             <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
               <div style={{ marginBottom: 18 }}>
@@ -3267,10 +3516,341 @@ export default function AlgorithmLabPage() {
             </>}
           </>}
 
+          {inRadar && <>
+            <div className="section-header">
+              <div className="section-title">Radar Point Cloud</div>
+              <div className="section-sub">mmWave height trajectory · frame analysis · {radarFrames.length} frames · {Math.round(radarFrames.length / 20)}s</div>
+            </div>
+
+            {algo === 'radar_signal' && (
+              <ChartCard title="Height Signal" sub="Frame-by-frame detected height (m) · standing ~1.72m · sitting ~1.05m" badge={radarUploaded ? 'Live data' : 'Synthetic'} badgeColor={radarUploaded ? C.sage : C.amber} full>
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart data={radarSeries} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                    <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                    <XAxis dataKey="t" type="number" domain={[0, 60]} tickCount={13} tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[0.8, 2.0]} tickFormatter={(v: number) => `${v}m`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={42} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${Number(v).toFixed(3)}m`, 'Height'] as [string,string]} labelFormatter={(l: unknown) => `t=${Number(l).toFixed(1)}s`} />
+                    <ReferenceLine y={1.72} stroke={C.sage} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: 'Standing', fill: C.sage, fontSize: 9, fontFamily: 'var(--mono)' }} />
+                    <ReferenceLine y={1.05} stroke={C.purple} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: 'Sitting', fill: C.purple, fontSize: 9, fontFamily: 'var(--mono)' }} />
+                    <ReferenceArea x1={4} x2={18} fill={C.sage} fillOpacity={0.05} />
+                    <ReferenceArea x1={20.5} x2={38} fill={C.purple} fillOpacity={0.07} />
+                    <ReferenceArea x1={44} x2={60} fill={C.sage} fillOpacity={0.05} />
+                    <Line type="monotone" dataKey="h" stroke={C.accent} strokeWidth={1.5} dot={false} name="Height" />
+                  </LineChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'flex', gap: 20, marginTop: 16, flexWrap: 'wrap' }}>
+                  {[{label:'Walk 1', x1:4, x2:18, color:C.sage},{label:'Sit', x1:20.5, x2:38, color:C.purple},{label:'Walk 2', x1:44, x2:60, color:C.gold}].map(ph => (
+                    <div key={ph.label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <div style={{ width: 28, height: 3, background: ph.color, borderRadius: 2, opacity: 0.7 }} />
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{ph.label} ({ph.x1}–{ph.x2}s)</span>
+                    </div>
+                  ))}
+                </div>
+              </ChartCard>
+            )}
+
+            {algo === 'height_trace' && (
+              <ChartCard title="Phase Timeline" sub="Activity state annotation · walking / standing / sitting transitions" badge={`${radarEpochData.length} epochs`} full>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={radarEpochData.map(ep => ({ ...ep, cls: classifyActivity(ep) }))} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                    <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                    <XAxis dataKey="t" tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[0.8, 2.0]} tickFormatter={(v: number) => `${v}m`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={42} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${Number(v).toFixed(3)}m`, 'Mean height'] as [string,string]} labelFormatter={(l: unknown) => `t=${l}s`} />
+                    <Bar dataKey="meanH" name="Mean height">
+                      {radarEpochData.map((ep, i) => <Cell key={i} fill={classifyActivity(ep).color} fillOpacity={0.75} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'flex', gap: 14, marginTop: 16, flexWrap: 'wrap' }}>
+                  {[{l:'Sitting',c:C.purple},{l:'Standing',c:C.accent},{l:'Slow Walk',c:C.amber},{l:'Walk',c:C.sage},{l:'Brisk Walk',c:C.gold}].map(x => (
+                    <div key={x.l} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, background: x.c }} />
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{x.l}</span>
+                    </div>
+                  ))}
+                </div>
+              </ChartCard>
+            )}
+
+            {algo === 'point_density' && (
+              <ChartCard title="Point Density" sub="Detected radar points per 5-second epoch · higher during walking phases" badge="PointsDetected" full>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={radarEpochData.map(ep => {
+                    const sl = radarFrames.slice(ep.epoch * 100, (ep.epoch + 1) * 100);
+                    const avgPts = mn(sl.map(f => f.PointsDetected));
+                    return { t: ep.t, avgPts: Math.round(avgPts * 10) / 10 };
+                  })} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                    <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                    <XAxis dataKey="t" tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={30} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${v}`, 'Avg pts/frame'] as [string,string]} labelFormatter={(l: unknown) => `t=${l}s`} />
+                    <Bar dataKey="avgPts" fill={C.amber} fillOpacity={0.75} radius={[3,3,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 12, lineHeight: 1.7 }}>
+                  Point density reflects signal-to-noise — moving limbs generate more reflections. Sitting phases typically return fewer points as body surface presents a smaller cross-section to the radar beam. Useful for activity presence detection independent of height estimation.
+                </div>
+              </ChartCard>
+            )}
+          </>}
+
+          {inGait && <>
+            <div className="section-header">
+              <div className="section-title">Gait Analysis</div>
+              <div className="section-sub">Walking speed · step detection · cadence · variability · TUG estimate</div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 28 }}>
+              {[
+                { label: 'Walk Speed',  value: `${gaitStats.walkSpeed}`, unit: 'm/s', interp: interpGaitSpeed(gaitStats.walkSpeed) },
+                { label: 'Cadence',     value: `${gaitStats.cadence}`, unit: 'spm', interp: interpCadence(gaitStats.cadence) },
+                { label: 'Step CV%',    value: `${gaitStats.stepTimeCV}`, unit: '%',  interp: interpStepCV(gaitStats.stepTimeCV) },
+                { label: 'TUG',         value: `${gaitStats.tug}`, unit: 's',   interp: { text: gaitStats.tug < 12 ? 'Normal' : gaitStats.tug < 20 ? 'Borderline' : 'Impaired', c: gaitStats.tug < 12 ? C.sage : gaitStats.tug < 20 ? C.amber : C.red } },
+              ].map(m => <MetricBadge key={m.label} label={m.label} value={m.value} unit={m.unit} interp={m.interp} />)}
+            </div>
+
+            {algo === 'step_detection' && (
+              <ChartCard title="Step Detection" sub="Local minima in height oscillation · each dot = one footfall contact" badge={`${stepData.length} steps`} badgeColor={C.sage} full>
+                <ResponsiveContainer width="100%" height={250}>
+                  <ComposedChart data={radarSeries.filter(p => p.h > 1.45)} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                    <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                    <XAxis dataKey="t" type="number" domain={[0, 60]} tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[1.5, 1.8]} tickFormatter={(v: number) => `${v}m`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={42} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${Number(v).toFixed(3)}m`, 'Height'] as [string,string]} />
+                    <Line type="monotone" dataKey="h" stroke={C.text3} strokeWidth={1} dot={false} />
+                    <ReferenceLine y={1.714} stroke={C.sage} strokeDasharray="3 2" strokeOpacity={0.45} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+                  {stepData.slice(0, 10).map((s, i) => (
+                    <div key={i} style={{ padding: '5px 10px', background: C.s2, borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 10, color: C.sage }}>t={s.t.toFixed(1)}s</div>
+                  ))}
+                  {stepData.length > 10 && <div style={{ padding: '5px 10px', background: C.s2, borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>+{stepData.length - 10} more</div>}
+                </div>
+              </ChartCard>
+            )}
+
+            {algo === 'gait_speed' && (
+              <ChartCard title="Walking Speed" sub="Epoch-by-epoch velocity from horizontal displacement · Studenski 2011 thresholds" badge={`${gaitStats.walkSpeed} m/s`} badgeColor={interpGaitSpeed(gaitStats.walkSpeed).c} full>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={radarEpochData.filter(ep => ep.speed > 0.05)} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                    <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                    <XAxis dataKey="t" tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis tickFormatter={(v: number) => `${v}`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={36} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${Number(v).toFixed(2)} m/s`, 'Speed'] as [string,string]} labelFormatter={(l: unknown) => `t=${l}s`} />
+                    <ReferenceLine y={0.8} stroke={C.red} strokeDasharray="4 3" label={{ value: '0.8 m/s risk threshold', fill: C.red, fontSize: 9, fontFamily: 'var(--mono)' }} />
+                    <ReferenceLine y={1.0} stroke={C.amber} strokeDasharray="4 3" label={{ value: '1.0 m/s normal', fill: C.amber, fontSize: 9, fontFamily: 'var(--mono)' }} />
+                    <Bar dataKey="speed" fill={C.accent} fillOpacity={0.8} radius={[3,3,0,0]}>
+                      {radarEpochData.filter(ep => ep.speed > 0.05).map((ep, i) => <Cell key={i} fill={ep.speed < 0.8 ? C.red : ep.speed < 1.0 ? C.amber : C.sage} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 12, lineHeight: 1.7 }}>
+                  Studenski et al. (JAMA 2011) established gait speed as a vital sign — each 0.1 m/s improvement predicts ~10% reduction in 10-year mortality risk. A threshold of 0.8 m/s discriminates slow walkers at higher fall and hospitalization risk. The TUG (Timed Up and Go) threshold of 12s corresponds to &lt;1.0 m/s walking speed.
+                </div>
+              </ChartCard>
+            )}
+
+            {algo === 'cadence' && (() => {
+              const stepIntervals = stepData.slice(1).map((s, i) => ({ i, interval: Math.round((s.t - stepData[i].t) * 1000) / 1000, cadence: stepData[i].t > 0 ? Math.round(60 / (s.t - stepData[i].t)) : 0 }));
+              return (
+                <ChartCard title="Cadence" sub="Steps per minute · step interval distribution" badge={`${gaitStats.cadence} spm`} badgeColor={interpCadence(gaitStats.cadence).c} full>
+                  <ResponsiveContainer width="100%" height={230}>
+                    <LineChart data={stepIntervals} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                      <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                      <XAxis dataKey="i" tickFormatter={(v: number) => `Step ${v+1}`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                      <YAxis domain={[60, 150]} tickFormatter={(v: number) => `${v}`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={36} />
+                      <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${v} spm`, 'Cadence'] as [string,string]} />
+                      <ReferenceLine y={100} stroke={C.amber} strokeDasharray="4 3" label={{ value: '100', fill: C.amber, fontSize: 9, fontFamily: 'var(--mono)' }} />
+                      <ReferenceLine y={120} stroke={C.sage} strokeDasharray="4 3" label={{ value: '120', fill: C.sage, fontSize: 9, fontFamily: 'var(--mono)' }} />
+                      <Line type="monotone" dataKey="cadence" stroke={C.amber} strokeWidth={2} dot={{ r: 3, fill: C.amber }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 12, lineHeight: 1.7 }}>
+                    Normal cadence range is 100–120 steps/min during self-selected walking pace. Tudor-Locke et al. (2018) proposed cadence thresholds: ≥100 spm = moderate intensity, ≥130 spm = vigorous. Cadence naturally declines 2–3% per decade after age 60.
+                  </div>
+                </ChartCard>
+              );
+            })()}
+
+            {algo === 'gait_variability' && (() => {
+              const intervals = stepData.slice(1).map((s, i) => s.t - stepData[i].t).filter(v => v > 0.15 && v < 1.5);
+              const histData = intervals.length > 2 ? (() => {
+                const min = Math.min(...intervals), max = Math.max(...intervals), bins = 10, w = (max - min) / bins || 0.01;
+                const counts = Array(bins).fill(0);
+                intervals.forEach(v => counts[Math.min(bins-1, Math.floor((v - min) / w))]++);
+                return counts.map((count, i) => ({ bin: `${(min + i * w).toFixed(2)}s`, count }));
+              })() : [];
+              return (
+                <ChartCard title="Step-Time Variability" sub={`Step interval CV% = ${gaitStats.stepTimeCV}% · lower = more regular gait`} badge={interpStepCV(gaitStats.stepTimeCV).text} badgeColor={interpStepCV(gaitStats.stepTimeCV).c} full>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={histData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                      <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                      <XAxis dataKey="bin" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={28} />
+                      <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${v}`, 'Count'] as [string,string]} />
+                      <Bar dataKey="count" fill={C.coral} fillOpacity={0.75} radius={[3,3,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 12, lineHeight: 1.7 }}>
+                    Step-time CV% quantifies gait regularity. Values under 2% indicate very regular walking; 2–4% is within normal range; above 4–5% signals impaired motor control or early neurodegenerative changes. Maki (1997) showed step-time variability better predicts falls than static balance tests.
+                  </div>
+                </ChartCard>
+              );
+            })()}
+          </>}
+
+          {inMET && <>
+            <div className="section-header">
+              <div className="section-title">METs & Energy Expenditure</div>
+              <div className="section-sub">Metabolic equivalents · Ainsworth Compendium · WHO intensity thresholds</div>
+            </div>
+
+            {algo === 'activity_class' && (
+              <ChartCard title="Activity Classification" sub="5-second epoch classification · Ainsworth Compendium of Physical Activities (2011)" full>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={metEpochData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                    <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                    <XAxis dataKey="t" tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[0, 6]} tickFormatter={(v: number) => `${v}`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={30} label={{ value: 'MET', angle: -90, position: 'insideLeft', fill: C.text4, fontFamily: 'var(--mono)', fontSize: 10 }} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown, _n: unknown, props: { payload?: { label: string } }) => [`${v} METs · ${props.payload?.label ?? ''}`, 'Activity'] as [string,string]} labelFormatter={(l: unknown) => `t=${l}s`} />
+                    <ReferenceLine y={1.5} stroke={C.purple} strokeDasharray="3 2" strokeOpacity={0.5} />
+                    <ReferenceLine y={3.0} stroke={C.amber} strokeDasharray="3 2" strokeOpacity={0.5} label={{ value: 'Moderate', fill: C.amber, fontSize: 8, fontFamily: 'var(--mono)' }} />
+                    <ReferenceLine y={6.0} stroke={C.gold} strokeDasharray="3 2" strokeOpacity={0.5} label={{ value: 'Vigorous', fill: C.gold, fontSize: 8, fontFamily: 'var(--mono)' }} />
+                    <Bar dataKey="met" radius={[3,3,0,0]}>
+                      {metEpochData.map((ep, i) => <Cell key={i} fill={ep.color} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+                  {(['Sitting','Standing','Slow Walk','Walk','Brisk Walk'] as const).map((lbl, li) => {
+                    const cols = [C.purple, C.accent, C.amber, C.sage, C.gold];
+                    const mets = [1.3, 1.5, 2.5, 3.5, 4.5];
+                    const count = metEpochData.filter(e => e.label === lbl).length;
+                    return count > 0 ? (
+                      <div key={lbl} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', background: C.s2, borderRadius: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: cols[li] }} />
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text2 }}>{lbl}</span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4 }}>{mets[li]} METs · {count * 5}s</span>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              </ChartCard>
+            )}
+
+            {algo === 'met_timeline' && (
+              <ChartCard title="MET Timeline" sub="Metabolic equivalents over time · 1 MET = 3.5 mL O₂/kg/min at rest" badge={`Mean ${metEpochData.length ? mn(metEpochData.map(e=>e.met)).toFixed(1) : '—'} METs`} badgeColor={C.amber} full>
+                <ResponsiveContainer width="100%" height={240}>
+                  <AreaChart data={metEpochData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                    <defs>
+                      <linearGradient id="metGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={C.amber} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={C.amber} stopOpacity={0.03}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                    <XAxis dataKey="t" tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[0, 6]} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={30} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${v} METs`, 'Intensity'] as [string,string]} labelFormatter={(l: unknown) => `t=${l}s`} />
+                    <ReferenceLine y={1.5} stroke={C.purple} strokeDasharray="3 2" strokeOpacity={0.6} label={{ value: 'Sedentary', fill: C.purple, fontSize: 9, fontFamily: 'var(--mono)' }} />
+                    <ReferenceLine y={3.0} stroke={C.sage} strokeDasharray="3 2" strokeOpacity={0.6} label={{ value: 'Moderate', fill: C.sage, fontSize: 9, fontFamily: 'var(--mono)' }} />
+                    <Area type="stepAfter" dataKey="met" stroke={C.amber} strokeWidth={2} fill="url(#metGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            )}
+
+            {algo === 'energy_expenditure' && (() => {
+              const cumulData = metEpochData.reduce<{ t: number; cumKcal: number }[]>((acc, ep, i) => {
+                const prev = acc[i - 1]?.cumKcal ?? 0;
+                acc.push({ t: ep.t, cumKcal: Math.round((prev + ep.kcal) * 100) / 100 });
+                return acc;
+              }, []);
+              const totalKcal = cumulData[cumulData.length - 1]?.cumKcal ?? 0;
+              const durationMin = (radarFrames.length / 20) / 60;
+              const dailyProjection = durationMin > 0 ? Math.round(totalKcal * (60 * 16 / (durationMin * 60))) : 0;
+              return (
+                <ChartCard title="Energy Expenditure" sub="Cumulative kcal · 70 kg assumed · EE = MET × 0.01225 × 60 kcal/min" badge={`${totalKcal} kcal`} badgeColor={C.gold} full>
+                  <ResponsiveContainer width="100%" height={230}>
+                    <AreaChart data={cumulData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                      <defs>
+                        <linearGradient id="kcalGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={C.gold} stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor={C.gold} stopOpacity={0.03}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                      <XAxis dataKey="t" tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={36} />
+                      <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${v} kcal`, 'Cumulative'] as [string,string]} labelFormatter={(l: unknown) => `t=${l}s`} />
+                      <Area type="monotone" dataKey="cumKcal" stroke={C.gold} strokeWidth={2} fill="url(#kcalGrad)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 16 }}>
+                    {[
+                      { label: 'Session kcal', value: `${totalKcal}`, desc: `${Math.round(durationMin)} min session` },
+                      { label: 'Daily projection', value: `${dailyProjection}`, desc: '16h awake day' },
+                      { label: 'Activity fraction', value: `${metEpochData.length ? Math.round(metEpochData.filter(e => e.met >= 3).length / metEpochData.length * 100) : 0}%`, desc: 'time ≥ 3 METs' },
+                    ].map(m => (
+                      <div key={m.label} style={{ padding: '12px 16px', background: C.s2, borderRadius: 8 }}>
+                        <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 28, color: C.text, marginBottom: 2 }}>{m.value}</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{m.label}</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, marginTop: 4 }}>{m.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+              );
+            })()}
+
+            {algo === 'intensity_zones' && (() => {
+              const zoneDef = [
+                { label: 'Sedentary', min: 0,   max: 1.6, color: C.purple },
+                { label: 'Light',     min: 1.6,  max: 3.0, color: C.accent },
+                { label: 'Moderate',  min: 3.0,  max: 6.0, color: C.sage   },
+                { label: 'Vigorous',  min: 6.0,  max: 99,  color: C.gold   },
+              ];
+              const zoneData = zoneDef.map(z => ({
+                ...z,
+                epochs: metEpochData.filter(e => e.met >= z.min && e.met < z.max).length,
+                seconds: metEpochData.filter(e => e.met >= z.min && e.met < z.max).length * 5,
+              }));
+              return (
+                <ChartCard title="Intensity Zones" sub="Time distribution · WHO recommends ≥150 min/wk moderate or ≥75 min/wk vigorous" full>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'center' }}>
+                    <div>
+                      {zoneData.map(z => (
+                        <div key={z.label} style={{ marginBottom: 14 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: z.color }}>{z.label}</span>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>{z.seconds}s · {metEpochData.length ? Math.round(z.epochs / metEpochData.length * 100) : 0}%</span>
+                          </div>
+                          <div style={{ height: 6, borderRadius: 3, background: C.s3 }}>
+                            <div style={{ height: '100%', borderRadius: 3, background: z.color, width: `${metEpochData.length ? z.epochs / metEpochData.length * 100 : 0}%`, opacity: 0.8, transition: 'width 0.4s' }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.8 }}>
+                      <div style={{ color: C.text2, marginBottom: 8 }}>WHO 2020 Physical Activity Guidelines</div>
+                      <div>→ Adults 18–64: ≥150–300 min/wk moderate</div>
+                      <div>→ Or 75–150 min/wk vigorous equivalent</div>
+                      <div>→ Muscle-strengthening ≥2 days/wk</div>
+                      <div style={{ marginTop: 12, color: C.text4 }}>1 min vigorous ≈ 2 min moderate</div>
+                      <div style={{ color: C.text4 }}>METs from Ainsworth et al. 2011 Compendium</div>
+                    </div>
+                  </div>
+                </ChartCard>
+              );
+            })()}
+          </>}
+
         </div>
 
         <div className="agent-note" style={{ marginTop: 48 }}>
-          — Ambient Intelligence · algorithm lab · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · ASTP · SATP · IS · IV · RA · M10/L5 · AGRU · SHAP · fall risk · sleep architecture · SII · HRV · recovery · chronotype · sedentary behavior · breaks/hour · LF/HF · Poincaré · stress index · CGM · TIR · AGP · CV% · MAGE · longitudinal · correlation matrix · health calendar · risk evolution —
+          — Ambient Intelligence · algorithm lab · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · ASTP · SATP · IS · IV · RA · M10/L5 · AGRU · SHAP · fall risk · sleep architecture · SII · HRV · recovery · chronotype · sedentary behavior · breaks/hour · LF/HF · Poincaré · stress index · CGM · TIR · AGP · CV% · MAGE · longitudinal · correlation matrix · health calendar · risk evolution · radar point cloud · height signal · gait speed · step detection · cadence · step-time variability · TUG · METs · energy expenditure · intensity zones · Ainsworth Compendium —
         </div>
       </main>
     </div>

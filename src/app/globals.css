@@ -251,6 +251,8 @@ input { font-family: inherit; color: inherit; }
 .section-title { font-family: var(--serif); font-weight: 300; font-size: 28px; letter-spacing: -0.015em; margin: 0; }
 .section-title em { font-style: italic; color: var(--text-2); }
 .section-meta { font-family: var(--mono); font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.14em; }
+.section-header { grid-column: 1 / -1; margin-bottom: 4px; }
+.section-sub { font-family: var(--mono); font-size: 11px; color: var(--text-3); margin-top: 4px; }
 
 /* Ella card */
 .ella {
