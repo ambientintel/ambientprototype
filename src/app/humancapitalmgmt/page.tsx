@@ -350,6 +350,7 @@ export default function HumanCapitalMgmt() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [newPerson, setNewPerson] = useState<Person>(blank());
   const [clock, setClock] = useState("");
+  const [rosterView, setRosterView] = useState<"table"|"roster">("table");
 
   useEffect(() => { lsSave(people); }, [people]);
   useEffect(() => {
@@ -471,16 +472,36 @@ export default function HumanCapitalMgmt() {
 
         {/* Directory */}
         <div style={{ flex:1, padding:"20px 32px 40px" }}>
-          <DirectoryTable
-            people={people}
-            search={search} setSearch={setSearch}
-            sortKey={sortKey} setSortKey={setSortKey}
-            sortAsc={sortAsc} setSortAsc={setSortAsc}
-            deptFilter={deptFilter}
-            statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-            onSelect={setSelected}
-            onAdd={() => openAdd(null)}
-          />
+          {/* View toggle */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+            <div style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)" }}>Directory</div>
+            <div style={{ display:"flex", gap:2, background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:6, padding:2 }}>
+              {(["table","roster"] as const).map(v => (
+                <button key={v} onClick={() => setRosterView(v)} style={{ padding:"5px 14px", borderRadius:4, border:0, fontSize:11, fontFamily:"var(--mono)", letterSpacing:"0.07em", textTransform:"uppercase", cursor:"pointer", transition:"all 0.15s", background:rosterView===v?"var(--surface-3)":"transparent", color:rosterView===v?"var(--text)":"var(--text-4)", fontWeight:rosterView===v?500:400 }}>
+                  {v === "table" ? "Table" : "Roster"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {rosterView === "table" ? (
+            <DirectoryTable
+              people={people}
+              search={search} setSearch={setSearch}
+              sortKey={sortKey} setSortKey={setSortKey}
+              sortAsc={sortAsc} setSortAsc={setSortAsc}
+              deptFilter={deptFilter}
+              statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+              onSelect={setSelected}
+              onAdd={() => openAdd(null)}
+            />
+          ) : (
+            <DeptRosterView
+              people={people} setPeople={setPeople}
+              deptFilter={deptFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+              search={search} setSearch={setSearch}
+              onSelect={setSelected} onAdd={() => openAdd(null)}
+            />
+          )}
         </div>
       </main>
 
@@ -659,6 +680,165 @@ function DirectoryTable({ people, search, setSearch, sortKey, setSortKey, sortAs
         {filtered.length === 0 && (
           <div style={{ padding:"48px 32px", textAlign:"center", color:"var(--text-4)", fontFamily:"var(--mono)", fontSize:11, textTransform:"uppercase", letterSpacing:"0.14em" }}>No results</div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Dept Roster View (kanban-style, drag-and-drop between departments)
+// ═══════════════════════════════════════════════════════════════════════════
+function DeptRosterView({ people, setPeople, deptFilter, statusFilter, setStatusFilter, search, setSearch, onSelect, onAdd }: {
+  people: Person[]; setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
+  deptFilter: Department|"all"; statusFilter: Status|"all"; setStatusFilter:(s:Status|"all")=>void;
+  search: string; setSearch:(s:string)=>void;
+  onSelect:(p:Person)=>void; onAdd:()=>void;
+}) {
+  const [draggedId, setDraggedId] = useState<string|null>(null);
+  const [dropDept, setDropDept] = useState<Department|null>(null);
+
+  const depts = deptFilter === "all" ? DEPARTMENTS : [deptFilter as Department];
+
+  const filtered = people
+    .filter(p => deptFilter === "all" || p.department === deptFilter)
+    .filter(p => statusFilter === "all" || p.status === statusFilter)
+    .filter(p => !search || [p.name,p.role,p.email,p.location].some(f => f.toLowerCase().includes(search.toLowerCase())));
+
+  function changeDept(id: string, dept: Department) {
+    setPeople(prev => prev.map(p => p.id === id ? { ...p, department:dept, color:DEPT_COLORS[dept] } : p));
+  }
+
+  const statusCounts = (["active","contractor","onleave","open"] as Status[]).map(s => ({
+    key:s, ...STATUS_META[s], count:people.filter(p=>p.status===s&&(deptFilter==="all"||p.department===deptFilter)).length
+  }));
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div style={{ display:"flex", gap:10, marginBottom:10, alignItems:"center" }}>
+        <div style={{ flex:1, position:"relative" }}>
+          <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", opacity:0.4 }}>{Icon.search}</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, role, location…"
+            style={{ width:"100%", background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:6, padding:"8px 12px 8px 30px", color:"var(--text)", fontSize:13, fontFamily:"var(--sans)", outline:"none", boxSizing:"border-box" as const }}/>
+        </div>
+        <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", whiteSpace:"nowrap" }}>{filtered.length} records</div>
+        <button onClick={onAdd} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", background:"var(--accent)", color:"#fff", border:0, borderRadius:6, fontSize:12.5, fontWeight:500, cursor:"pointer", fontFamily:"var(--sans)" }}>
+          {Icon.plus} Add Person
+        </button>
+      </div>
+      {/* Status chips */}
+      <div style={{ display:"flex", gap:6, marginBottom:20, alignItems:"center", flexWrap:"wrap" }}>
+        <button onClick={() => setStatusFilter("all")} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 12px", borderRadius:99, border:"1px solid", fontSize:11, fontFamily:"var(--mono)", cursor:"pointer", letterSpacing:"0.04em", transition:"all 0.12s", background:statusFilter==="all"?"var(--surface-2)":"transparent", borderColor:statusFilter==="all"?"var(--text-3)":"var(--line)", color:statusFilter==="all"?"var(--text)":"var(--text-4)" }}>
+          All · {people.filter(p=>deptFilter==="all"||p.department===deptFilter).length}
+        </button>
+        {statusCounts.map(s => (
+          <button key={s.key} onClick={() => setStatusFilter(s.key)} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 12px", borderRadius:99, border:"1px solid", fontSize:11, fontFamily:"var(--mono)", cursor:"pointer", letterSpacing:"0.04em", transition:"all 0.12s", background:statusFilter===s.key?s.bg:"transparent", borderColor:statusFilter===s.key?s.color:"var(--line)", color:statusFilter===s.key?s.color:"var(--text-4)" }}>
+            <span style={{ width:5, height:5, borderRadius:"50%", background:s.color, flexShrink:0 }}/>
+            {s.label} · {s.count}
+          </button>
+        ))}
+        <div style={{ marginLeft:"auto", fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.1em" }}>Drag cards to reassign department</div>
+      </div>
+
+      {/* Department lanes */}
+      <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+        {depts.map(dept => {
+          const dc = DEPT_COLORS[dept];
+          const deptFiltered = filtered.filter(p => p.department === dept);
+          const allInDept = people.filter(p => p.department === dept);
+          const filled = allInDept.filter(p => p.status !== "open").length;
+          const fillPct = allInDept.length ? (filled/allInDept.length)*100 : 0;
+          const isDrop = dropDept === dept;
+          if (!deptFiltered.length && !isDrop) return null;
+
+          return (
+            <div key={dept} style={{ marginBottom:1, borderRadius:10, overflow:"hidden", border:`1px solid ${isDrop ? dc : "var(--line)"}`, transition:"border-color 0.15s" }}
+              onDragOver={e => { e.preventDefault(); setDropDept(dept); }}
+              onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropDept(null); }}
+              onDrop={e => {
+                e.preventDefault(); setDropDept(null);
+                if (draggedId) changeDept(draggedId, dept);
+                setDraggedId(null);
+              }}>
+              {/* Dept header */}
+              <div style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 18px", background:isDrop?`${dc}10`:"var(--surface-1)", borderBottom:`1px solid ${isDrop?dc:"var(--line)"}`, transition:"all 0.15s" }}>
+                <span style={{ width:8, height:8, borderRadius:2, background:dc, flexShrink:0 }}/>
+                <span style={{ fontFamily:"var(--mono)", fontSize:10.5, textTransform:"uppercase", letterSpacing:"0.14em", color:dc, flex:1, fontWeight:500 }}>{dept}</span>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:80, height:3, borderRadius:2, background:"var(--surface-3)" }}>
+                    <div style={{ width:`${fillPct}%`, height:"100%", background:dc, borderRadius:2, transition:"width 0.3s" }}/>
+                  </div>
+                  <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", minWidth:42, textAlign:"right" }}>{filled}/{allInDept.length}</span>
+                  {isDrop && (
+                    <span style={{ fontFamily:"var(--mono)", fontSize:9, color:dc, letterSpacing:"0.08em", paddingLeft:8, borderLeft:`1px solid ${dc}40` }}>Drop to move</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Person cards grid */}
+              {deptFiltered.length > 0 ? (
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(240px, 1fr))", gap:1, background:"var(--line)" }}>
+                  {deptFiltered.map(p => (
+                    <PersonCard key={p.id} person={p} deptColor={dc}
+                      isDragging={draggedId === p.id}
+                      onDragStart={() => setDraggedId(p.id)}
+                      onDragEnd={() => { setDraggedId(null); setDropDept(null); }}
+                      onSelect={() => onSelect(p)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding:"24px", textAlign:"center", fontFamily:"var(--mono)", fontSize:10, color:dc, textTransform:"uppercase", letterSpacing:"0.12em", opacity:0.6, background:"var(--bg)" }}>
+                  Drop here
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PersonCard({ person: p, deptColor: dc, isDragging, onDragStart, onDragEnd, onSelect }: {
+  person: Person; deptColor: string; isDragging: boolean;
+  onDragStart:()=>void; onDragEnd:()=>void; onSelect:()=>void;
+}) {
+  const [hov, setHov] = useState(false);
+  const sm = STATUS_META[p.status];
+  const isOpen = p.status === "open";
+  const tenureStr = isOpen ? null : formatTenure(parseTenureMonths(p.startDate));
+
+  return (
+    <div draggable onDragStart={onDragStart} onDragEnd={onDragEnd}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      onClick={onSelect}
+      style={{ display:"flex", flexDirection:"column", padding:"14px 16px", background:hov?"var(--surface-2)":isDragging?"var(--surface-3)":"var(--bg)", cursor:isDragging?"grabbing":"pointer", opacity:isDragging?0.45:1, transition:"background 0.12s, opacity 0.15s", borderLeft:`3px solid ${hov?dc:"transparent"}`, position:"relative" }}>
+      {/* Drag handle */}
+      <div style={{ position:"absolute", top:10, right:10, display:"flex", gap:2.5, opacity:hov?0.35:0, transition:"opacity 0.15s", cursor:"grab" }}>
+        {[0,1].map(c => <div key={c} style={{ display:"flex", flexDirection:"column", gap:2 }}>{[0,1,2].map(r => <div key={r} style={{ width:2, height:2, borderRadius:"50%", background:"var(--text-3)" }}/>)}</div>)}
+      </div>
+      {/* Top row: avatar + name + status */}
+      <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:8 }}>
+        <div style={{ width:34, height:34, borderRadius:8, background:isOpen?"var(--surface-3)":`${dc}25`, color:isOpen?"var(--text-4)":dc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:600, fontFamily:"var(--mono)", flexShrink:0, border:isOpen?"1.5px dashed var(--line-strong)":"none" }}>
+          {isOpen?"?":initials(p.name)}
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:13, fontWeight:isOpen?400:500, color:isOpen?"var(--text-3)":"var(--text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.3 }}>
+            {isOpen?<em style={{ fontStyle:"italic" }}>Open Role</em>:p.name}
+          </div>
+          <div style={{ fontSize:11.5, color:"var(--text-3)", marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.role}</div>
+        </div>
+        <span style={{ width:6, height:6, borderRadius:"50%", background:sm.color, flexShrink:0, marginTop:5 }}/>
+      </div>
+      {/* Bottom row: level + status + tenure */}
+      <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+        <span style={{ display:"inline-flex", padding:"2px 7px", borderRadius:3, background:`${dc}18`, border:`1px solid ${dc}35`, fontFamily:"var(--mono)", fontSize:9, color:dc, textTransform:"uppercase", letterSpacing:"0.07em" }}>{p.level}</span>
+        <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"2px 7px", borderRadius:99, background:sm.bg, fontFamily:"var(--mono)", fontSize:9, color:sm.color, letterSpacing:"0.05em" }}>
+          <span style={{ width:4, height:4, borderRadius:"50%", background:sm.color }}/>{sm.label}
+        </span>
+        {tenureStr && <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", marginLeft:"auto" }}>{tenureStr}</span>}
+        {p.location && <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:120 }}>{p.location}</span>}
       </div>
     </div>
   );
