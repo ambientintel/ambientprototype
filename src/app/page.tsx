@@ -41,6 +41,16 @@ const MODULE_GROUPS = [
     ],
   },
   {
+    key: 'people',
+    label: 'People & Organization',
+    accent: '#00B4D8',
+    accentDim: 'rgba(0,180,216,0.10)',
+    cols: 1,
+    modules: [
+      { href: '/humancapitalmgmt', tag: 'HR', label: 'Human Capital Management', description: 'Org chart, directory, role registry, and people analytics for the Ambient Intelligence team. Add roles, manage headcount, and visualize reporting structure.', meta: 'Org Chart · Directory · Roles' },
+    ],
+  },
+  {
     key: 'tools',
     label: 'Mobile, Design & Tools',
     accent: '#8B6BE8',
@@ -51,6 +61,7 @@ const MODULE_GROUPS = [
       { href: '/mobilelab', tag: 'Mobile', label: 'Mobile Alert Lab', description: 'Simulated nurse mobile dashboard with live fall-alert push notifications, phone frame preview, and PWA install flow.', meta: 'PWA · Push · iOS · Android' },
       { href: '/mobile', tag: 'Mobile', label: 'Mobile Download', description: 'Install the Ambient nurse app directly from the browser — no App Store required. Step-by-step guide for iOS and Android.', meta: 'PWA · No App Store' },
       { href: '/datascience', tag: 'Data Science', label: 'Data Science', description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the platform.', meta: 'Parquet · ML · Recharts' },
+      { href: '/algorithmlab', tag: 'Data Science', label: 'Algorithm Lab', description: 'Upload parquet files, run signal processing algorithms — moving average, exponential smoothing, z-score, FFT — and explore time series visualizations.', meta: 'Parquet · Algorithms · Recharts' },
       { href: '/contractlab', tag: 'Tools', label: 'Contract Lab', description: 'AI-assisted contract authoring, multi-party e-signature workflows, and document status tracking for vendor and partner agreements.', meta: 'NDA · MSA · SOW · E-sign' },
       { href: '/backgroundlab', tag: 'Design', label: 'Background Lab', description: 'Generative backgrounds, motion studies, and ambient UI pattern experiments for the Ambient Intelligence design system.', meta: 'Canvas · Motion · UI' },
       { href: '/brand', tag: 'Design', label: 'Brand & Color Picker', description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and full type scale reference.', meta: 'ambientdesign · interactive' },
