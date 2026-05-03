@@ -6,6 +6,7 @@ import {
   SterilizationMethod, StandardDef, StandardCategory,
 } from './data';
 import { STANDARDS, getApplicableStandards, CATEGORY_META, MARKET_META } from './standards';
+import { CategoryIcon, CertBadgeIcon, CERT_BADGES } from './icons';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -52,8 +53,8 @@ function StatusBadge({ status }: { status: ComplianceStatus }) {
   const m = STATUS_META[status];
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', padding: '2px 7px',
-      borderRadius: 3, fontSize: 10, fontWeight: 600,
+      display: 'inline-flex', alignItems: 'center', padding: '3px 9px',
+      borderRadius: 3, fontSize: 11, fontWeight: 600,
       background: m.bg, color: m.color,
       fontFamily: 'var(--mono)',
       textTransform: 'uppercase',
@@ -85,7 +86,7 @@ function Toggle({
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 9, color: '#fff',
       }}>{value ? '✓' : ''}</span>
-      <span style={{ fontSize: 12 }}>
+      <span style={{ fontSize: 13 }}>
         {label}
         {sublabel && <span style={{ display: 'block', fontSize: 10, color: 'var(--text-4)', marginTop: 1 }}>{sublabel}</span>}
       </span>
@@ -112,7 +113,7 @@ function SegmentSelect<T extends string>({
             <button key={o.value}
               onClick={() => onChange(nullable && active ? null : o.value)}
               style={{
-                padding: '5px 11px', borderRadius: 2, fontSize: 12, cursor: 'pointer',
+                padding: '5px 11px', borderRadius: 2, fontSize: 13, cursor: 'pointer',
                 background: active ? 'rgba(45,114,210,0.13)' : 'var(--surface-1)',
                 color: active ? 'var(--accent)' : 'var(--text-3)',
                 border: `1px solid ${active ? 'rgba(45,114,210,0.35)' : 'var(--line)'}`,
@@ -128,7 +129,7 @@ function ProfileSection({ title, children }: { title: string; children: React.Re
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{
-        fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase',
+        fontSize: 11, color: 'var(--text-4)', textTransform: 'uppercase',
         letterSpacing: '0.14em', fontFamily: 'var(--mono)', marginBottom: 10,
         paddingBottom: 6, borderBottom: '1px solid var(--line)',
       }}>{title}</div>
@@ -145,7 +146,57 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
         color: 'var(--text-3)', fontFamily: 'var(--mono)',
         textTransform: 'uppercase', letterSpacing: '0.12em',
       }}>{title}</h2>
-      {subtitle && <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--text-2)', fontWeight: 400 }}>{subtitle}</p>}
+      {subtitle && <p style={{ margin: '5px 0 0', fontSize: 14, color: 'var(--text-2)', fontWeight: 400 }}>{subtitle}</p>}
+    </div>
+  );
+}
+
+// ── Certification Panel ───────────────────────────────────────────────────────
+
+function certIsActive(certId: string, profile: DeviceProfile): boolean {
+  switch (certId) {
+    case 'HIPAA': return (profile.isSaMD || profile.isNetworked) && profile.targetMarkets.includes('us');
+    case 'UL':    return profile.isActiveElectrical && (profile.targetMarkets.includes('us') || profile.targetMarkets.includes('canada'));
+    case 'FDA':   return profile.targetMarkets.includes('us');
+    case 'CE':    return profile.targetMarkets.includes('eu');
+    case 'ANSI':  return profile.isActiveElectrical && profile.targetMarkets.includes('us');
+    case 'FCC':   return (profile.isActiveElectrical || profile.isNetworked) && profile.targetMarkets.includes('us');
+    case 'ISO':   return true;
+    case 'TGA':   return profile.targetMarkets.includes('australia');
+    case 'PMDA':  return profile.targetMarkets.includes('japan');
+    case 'UKCA':  return profile.targetMarkets.includes('uk');
+    default:      return false;
+  }
+}
+
+function CertificationPanel({ profile }: { profile: DeviceProfile }) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{
+        fontSize: 11, color: 'var(--text-4)', textTransform: 'uppercase',
+        letterSpacing: '0.14em', fontFamily: 'var(--mono)', marginBottom: 10,
+        paddingBottom: 6, borderBottom: '1px solid var(--line)',
+      }}>Certifications Required</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+        {CERT_BADGES.map(badge => {
+          const active = certIsActive(badge.id, profile);
+          return (
+            <div key={badge.id} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+              padding: '10px 8px',
+              background: active ? 'var(--surface-1)' : 'transparent',
+              border: `1px solid ${active ? 'var(--line-strong)' : 'var(--line)'}`,
+              borderRadius: 2,
+              opacity: active ? 1 : 0.3,
+              transition: 'opacity 0.15s',
+            }}>
+              <CertBadgeIcon id={badge.id} size={28} color={active ? 'var(--accent)' : 'var(--text-4)'} />
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: active ? 'var(--text-2)' : 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{badge.label}</span>
+              <span style={{ fontSize: 9, color: 'var(--text-4)', textAlign: 'center', lineHeight: 1.3 }}>{badge.subtitle}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -176,16 +227,18 @@ export function ProfileTab({ state, update }: { state: BiodesignState; update: (
         subtitle="Configure device attributes and target markets. The Standards tracker auto-updates to show only applicable standards."
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 20 }}>
         <div style={{ padding: '12px 16px', background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 2 }}>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 500, color: 'var(--text)' }}>{applicable.length}</div>
-          <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 3, fontFamily: 'var(--mono)' }}>Applicable standards</div>
+          <div style={{ fontSize: 11, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 3, fontFamily: 'var(--mono)' }}>Applicable standards</div>
         </div>
         <div style={{ padding: '12px 16px', background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 2 }}>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 500, color: critCount > 0 ? '#c04040' : 'var(--text-4)' }}>{critCount}</div>
-          <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 3, fontFamily: 'var(--mono)' }}>Critical requirements</div>
+          <div style={{ fontSize: 11, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 3, fontFamily: 'var(--mono)' }}>Critical requirements</div>
         </div>
       </div>
+
+      <CertificationPanel profile={profile} />
 
       <ProfileSection title="Software & Intelligence">
         <Toggle label="Contains software" value={profile.hasSoftware} onChange={v => set({ hasSoftware: v })} />
@@ -259,7 +312,7 @@ export function ProfileTab({ state, update }: { state: BiodesignState; update: (
 
       <div style={{ marginBottom: 24 }}>
         <div style={{
-          fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase',
+          fontSize: 11, color: 'var(--text-4)', textTransform: 'uppercase',
           letterSpacing: '0.14em', fontFamily: 'var(--mono)', marginBottom: 10,
           paddingBottom: 6, borderBottom: '1px solid var(--line)',
         }}>Target Markets</div>
@@ -270,7 +323,7 @@ export function ProfileTab({ state, update }: { state: BiodesignState; update: (
             return (
               <button key={m} onClick={() => toggleMarket(m)}
                 style={{
-                  padding: '5px 14px', borderRadius: 2, fontSize: 12, cursor: 'pointer',
+                  padding: '6px 14px', borderRadius: 2, fontSize: 13, cursor: 'pointer',
                   fontFamily: 'var(--mono)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
                   background: active ? 'rgba(45,114,210,0.13)' : 'var(--surface-1)',
                   color: active ? 'var(--accent)' : 'var(--text-3)',
@@ -371,7 +424,7 @@ export function StandardsTab({ state, update }: { state: BiodesignState; update:
     <div>
       <SectionHeader title="Standards Tracker" subtitle={`${stats.total} applicable standards across ${categories.length} categories`} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 16 }}>
         {([
           ['Complete',     stats.complete,    '#1e8f68'],
           ['In Progress',  stats.inProgress,  '#9a7000'],
@@ -379,11 +432,13 @@ export function StandardsTab({ state, update }: { state: BiodesignState; update:
           ['N/A',          stats.na,          'var(--text-4)'],
         ] as const).map(([label, value, color]) => (
           <div key={label} style={{ padding: '10px 14px', background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 2 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 500, color }}>{value}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 3, fontFamily: 'var(--mono)' }}>{label}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 500, color }}>{value}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 3, fontFamily: 'var(--mono)' }}>{label}</div>
           </div>
         ))}
       </div>
+
+      <CertificationPanel profile={profile} />
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -393,7 +448,7 @@ export function StandardsTab({ state, update }: { state: BiodesignState; update:
             return (
               <button key={s} onClick={() => setFilterStatus(s)}
                 style={{
-                  padding: '4px 10px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+                  padding: '6px 14px', borderRadius: 2, fontSize: 12, cursor: 'pointer',
                   fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em',
                   background: filterStatus === s ? 'var(--surface-3)' : 'transparent',
                   color: filterStatus === s ? 'var(--text-2)' : 'var(--text-4)',
@@ -406,7 +461,7 @@ export function StandardsTab({ state, update }: { state: BiodesignState; update:
         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
           <button onClick={() => setFilterCategory('all')}
             style={{
-              padding: '4px 10px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+              padding: '6px 14px', borderRadius: 2, fontSize: 12, cursor: 'pointer',
               fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em',
               background: filterCategory === 'all' ? 'var(--surface-3)' : 'transparent',
               color: filterCategory === 'all' ? 'var(--text-2)' : 'var(--text-4)',
@@ -417,7 +472,7 @@ export function StandardsTab({ state, update }: { state: BiodesignState; update:
             return (
               <button key={cat} onClick={() => setFilterCategory(cat === filterCategory ? 'all' : cat)}
                 style={{
-                  padding: '4px 10px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+                  padding: '6px 14px', borderRadius: 2, fontSize: 12, cursor: 'pointer',
                   fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em',
                   background: filterCategory === cat ? meta.bg : 'transparent',
                   color: filterCategory === cat ? meta.color : 'var(--text-4)',
@@ -443,7 +498,8 @@ export function StandardsTab({ state, update }: { state: BiodesignState; update:
                 marginBottom: collapsed ? 0 : 4,
               }}
             >
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{category}</span>
+              <CategoryIcon category={category} size={14} color={meta.color} />
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 700, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{category}</span>
               <span style={{ fontSize: 11, color: meta.color + '99', marginLeft: 2 }}>{standards.length}</span>
               <div style={{ flex: 1 }} />
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: meta.color, letterSpacing: '0.04em' }}>
@@ -506,17 +562,15 @@ function StandardRow({
     <div style={{
       background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 2,
       marginBottom: 4, overflow: 'hidden',
+      borderLeft: `3px solid ${priorityColor}`,
     }}>
       <div
         onClick={onToggle}
         style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', cursor: 'pointer' }}
       >
-        {/* Priority dot */}
-        <span style={{ width: 5, height: 5, borderRadius: '50%', background: priorityColor, flexShrink: 0 }} />
-
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{std.number}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{std.number}</span>
             {std.markets !== 'global' && (std.markets as TargetMarket[]).map((m: TargetMarket) => (
               <span key={m} style={{
                 fontFamily: 'var(--mono)', fontSize: 9, padding: '1px 5px', borderRadius: 2,
@@ -525,7 +579,7 @@ function StandardRow({
               }}>{MARKET_META[m].label}</span>
             ))}
           </div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginTop: 2, lineHeight: 1.3 }}>{std.title}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginTop: 2, lineHeight: 1.3 }}>{std.title}</div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
@@ -544,7 +598,7 @@ function StandardRow({
 
       {isOpen && (
         <div style={{ padding: '0 14px 14px', borderTop: '1px solid var(--line)' }}>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6, margin: '12px 0' }}>{std.description}</p>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6, margin: '12px 0' }}>{std.description}</p>
 
           {/* Status selector */}
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -578,7 +632,7 @@ function StandardRow({
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 9, color: '#fff',
                 }}>{item.done ? '✓' : ''}</span>
-                <span style={{ fontSize: 12, color: item.done ? 'var(--text-3)' : 'var(--text-2)', lineHeight: 1.5, textDecoration: item.done ? 'line-through' : 'none' }}>
+                <span style={{ fontSize: 13, color: item.done ? 'var(--text-3)' : 'var(--text-2)', lineHeight: 1.5, textDecoration: item.done ? 'line-through' : 'none' }}>
                   {item.text}
                 </span>
               </label>

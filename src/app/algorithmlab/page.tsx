@@ -692,11 +692,8 @@ export default function AlgorithmLabPage() {
         <nav className="nav-section">
           <div className="nav-label">Platform</div>
           {([
-            ['/dashboard/overview','Dashboard',  <path key="d" d="M2.5 7L8 2.5 13.5 7v6.5h-4V10h-3v3.5h-4z" strokeLinejoin="round"/>],
-            ['/bom',              'BOM',         <><rect key="b1" x="3" y="2.5" width="10" height="11" rx="1"/><path key="b2" d="M5.5 6h5M5.5 8.5h5M5.5 11h3" strokeLinecap="round"/></>],
-            ['/gapanalysis',      'Gap Analysis',<><path key="g1" d="M2.5 12.5h11M5 12.5V9M8 12.5V5.5M11 12.5V8" strokeLinecap="round"/></>],
-            ['/datascience',      'Data Science',<><circle key="ds1" cx="5" cy="5" r="2.5"/><circle key="ds2" cx="11" cy="11" r="2.5"/><path key="ds3" d="M11 5.5a2.5 2.5 0 110 0z"/><path key="ds4" d="M5 11a2.5 2.5 0 110 0z"/></>],
             ['/algorithmlab',     'Algorithm Lab',<><path key="a1" d="M3 13L6 8l3 3 3-5 3 3" strokeLinecap="round" strokeLinejoin="round"/><circle key="a2" cx="13" cy="9" r="1.5" fill="currentColor"/></>],
+            ['/datascience',      'Data Science',<><circle key="ds1" cx="5" cy="5" r="2.5"/><circle key="ds2" cx="11" cy="11" r="2.5"/><path key="ds3" d="M11 5.5a2.5 2.5 0 110 0z"/><path key="ds4" d="M5 11a2.5 2.5 0 110 0z"/></>],
           ] as [string, string, React.ReactNode][]).map(([href, label, icon]) => (
             <Link key={label} href={href} className={`nav-item${href === '/algorithmlab' ? ' active' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>

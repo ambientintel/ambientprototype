@@ -11,7 +11,7 @@ export type SterilizationMethod = 'eo' | 'radiation' | 'steam' | 'other';
 export type StandardCategory =
   | 'QMS' | 'Risk' | 'Software' | 'Electrical' | 'Battery'
   | 'Biocompatibility' | 'Sterilization' | 'Usability' | 'Clinical'
-  | 'Labeling' | 'Market Regulatory' | 'Cybersecurity';
+  | 'Labeling' | 'Market Regulatory' | 'Cybersecurity' | 'Privacy' | 'Safety Certification';
 export type StandardPriority = 'critical' | 'high' | 'medium';
 export type ComplianceStatus = 'not-started' | 'in-progress' | 'complete' | 'na';
 
