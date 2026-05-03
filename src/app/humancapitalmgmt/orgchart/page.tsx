@@ -1,11 +1,12 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 type Status = "active" | "onleave" | "contractor" | "open";
 type Department = "Executive" | "Engineering" | "Clinical" | "Operations" | "Design" | "Finance" | "Regulatory";
 type Level = "L1" | "L2" | "L3" | "L4" | "L5" | "L6" | "L7";
+type SortKey = "name" | "role" | "department" | "level" | "status" | "startDate" | "tenure";
 
 interface Person {
   id: string; name: string; role: string; department: Department;
@@ -13,13 +14,7 @@ interface Person {
   status: Status; startDate: string; color: string; location: string;
 }
 
-interface TreeNode {
-  person: Person; children: TreeNode[];
-  x: number; y: number; subtreeWidth: number;
-}
-
 // ── Constants ─────────────────────────────────────────────────────────────
-const NODE_W = 130, NODE_H = 52, GAP_H = 10, GAP_V = 36, PAD_TOP = 32, PAD_H = 60;
 const DEPARTMENTS: Department[] = ["Executive","Engineering","Clinical","Operations","Design","Finance","Regulatory"];
 const LEVELS: Level[] = ["L1","L2","L3","L4","L5","L6","L7"];
 
@@ -81,54 +76,43 @@ function blank(o?: Partial<Person>): Person {
   return { id:newId(), name:"", role:"", department:"Engineering", level:"L3", managerId:null, email:"", status:"active", startDate:"", color:"#2D72D2", location:"", ...o };
 }
 
-// ── Tree utilities ─────────────────────────────────────────────────────────
-function buildChildren(people: Person[], parentId: string | null): TreeNode[] {
-  return people.filter(p => p.managerId === parentId).map(p => ({
-    person: p, children: buildChildren(people, p.id), x:0, y:0, subtreeWidth:0,
-  }));
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function parseTenureMonths(startDate: string): number | null {
+  if (!startDate) return null;
+  const [mon, yr] = startDate.split(" ");
+  const mIdx = MONTH_NAMES.indexOf(mon);
+  const y = parseInt(yr);
+  if (mIdx < 0 || isNaN(y)) return null;
+  const start = new Date(y, mIdx);
+  const now = new Date();
+  return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
 }
-function measureWidth(n: TreeNode): void {
-  n.children.forEach(measureWidth);
-  n.subtreeWidth = n.children.length === 0
-    ? NODE_W + GAP_H
-    : Math.max(NODE_W + GAP_H, n.children.reduce((s, c) => s + c.subtreeWidth, 0));
-}
-function placeNodes(n: TreeNode, left: number, depth: number): void {
-  n.y = PAD_TOP + depth * (NODE_H + GAP_V);
-  n.x = left + n.subtreeWidth / 2 - NODE_W / 2;
-  let cl = left;
-  for (const c of n.children) { placeNodes(c, cl, depth + 1); cl += c.subtreeWidth; }
-}
-function flatten(n: TreeNode): TreeNode[] { return [n, ...n.children.flatMap(flatten)]; }
-function layoutTree(people: Person[]): { nodes: TreeNode[]; width: number; height: number } {
-  const roots = buildChildren(people, null);
-  if (!roots.length) return { nodes:[], width:800, height:400 };
-  let offset = PAD_H;
-  roots.forEach(r => { measureWidth(r); placeNodes(r, offset, 0); offset += r.subtreeWidth + GAP_H * 2; });
-  const all = roots.flatMap(flatten);
-  const w = offset + PAD_H;
-  const h = all.reduce((m, n) => Math.max(m, n.y + NODE_H), 0) + 60;
-  return { nodes: all, width: w, height: h };
+
+function formatTenure(months: number | null): string {
+  if (months === null) return "—";
+  if (months < 1) return "<1m";
+  const y = Math.floor(months / 12), m = months % 12;
+  if (y === 0) return `${m}m`;
+  if (m === 0) return `${y}y`;
+  return `${y}y ${m}m`;
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 const Icon = {
-  list:  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="1.5" y="2.5" width="13" height="2" rx=".5"/><rect x="1.5" y="7" width="13" height="2" rx=".5"/><rect x="1.5" y="11.5" width="13" height="2" rx=".5"/></svg>,
-  org:   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="6" y="1.5" width="4" height="3" rx=".75"/><rect x="1" y="11" width="4" height="3" rx=".75"/><rect x="6" y="11" width="4" height="3" rx=".75"/><rect x="11" y="11" width="4" height="3" rx=".75"/><path d="M8 4.5v3M3 11V9h10V8" strokeLinecap="round"/></svg>,
-  plus:  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 2v12M2 8h12" strokeLinecap="round"/></svg>,
-  close: <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3l10 10M13 3L3 13" strokeLinecap="round"/></svg>,
-  edit:  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M11 2l3 3-9 9H2v-3L11 2z" strokeLinejoin="round"/></svg>,
-  trash: <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 4h12M5.5 4V2.5h5V4M6 7v5M10 7v5M3 4l1 10h8l1-10" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  arrow: <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M6 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-};
-
-const btnSm: React.CSSProperties = {
-  padding:"4px 10px", background:"var(--surface-2)", border:"1px solid var(--line)",
-  borderRadius:4, color:"var(--text-3)", fontSize:11, fontFamily:"var(--mono)", cursor:"pointer",
+  list:     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="1.5" y="2.5" width="13" height="2" rx=".5"/><rect x="1.5" y="7" width="13" height="2" rx=".5"/><rect x="1.5" y="11.5" width="13" height="2" rx=".5"/></svg>,
+  org:      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="6" y="1.5" width="4" height="3" rx=".75"/><rect x="1" y="11" width="4" height="3" rx=".75"/><rect x="6" y="11" width="4" height="3" rx=".75"/><rect x="11" y="11" width="4" height="3" rx=".75"/><path d="M8 4.5v3M3 11V9h10V8" strokeLinecap="round"/></svg>,
+  plus:     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M8 2v12M2 8h12" strokeLinecap="round"/></svg>,
+  close:    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3l10 10M13 3L3 13" strokeLinecap="round"/></svg>,
+  edit:     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M11 2l3 3-9 9H2v-3L11 2z" strokeLinejoin="round"/></svg>,
+  trash:    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 4h12M5.5 4V2.5h5V4M6 7v5M10 7v5M3 4l1 10h8l1-10" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  search:   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="7" cy="7" r="5"/><path d="M10.5 10.5l3 3" strokeLinecap="round"/></svg>,
+  download: <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2v8M5 7l3 3 3-3" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12h12" strokeLinecap="round"/></svg>,
+  chevron:  <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 6l3 3 3-3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Org Chart Page
+// Main Page
 // ═══════════════════════════════════════════════════════════════════════════
 export default function OrgChartPage() {
   const [people, setPeople] = useState<Person[]>(() => lsLoad() ?? SEED);
@@ -138,6 +122,10 @@ export default function OrgChartPage() {
   const [editDraft, setEditDraft] = useState<Person | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [deptFilter, setDeptFilter] = useState<Department | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortAsc, setSortAsc] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [newPerson, setNewPerson] = useState<Person>(blank());
   const [clock, setClock] = useState("");
@@ -149,7 +137,7 @@ export default function OrgChartPage() {
   }, []);
 
   const headcount = people.filter(p => p.status !== "open").length;
-  const openRoles  = people.filter(p => p.status === "open").length;
+  const openRoles = people.filter(p => p.status === "open").length;
 
   function addPerson() {
     const p = { ...newPerson, id:newId(), managerId:addManagerId, color:DEPT_COLORS[newPerson.department] };
@@ -170,7 +158,7 @@ export default function OrgChartPage() {
   }
 
   const navLabel: React.CSSProperties = { fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", padding:"0 8px", marginBottom:8 };
-  const navItem: React.CSSProperties  = { display:"flex", alignItems:"center", gap:10, padding:"7px 8px 7px 10px", fontSize:13, color:"var(--text-2)", borderRadius:4, cursor:"pointer", transition:"all 0.15s" };
+  const navItem:  React.CSSProperties = { display:"flex", alignItems:"center", gap:10, padding:"7px 8px 7px 10px", fontSize:13, color:"var(--text-2)", borderRadius:4, cursor:"pointer", transition:"all 0.15s" };
   const navActive: React.CSSProperties = { ...navItem, background:"var(--surface-2)", color:"var(--text)", fontWeight:500 };
 
   return (
@@ -193,13 +181,13 @@ export default function OrgChartPage() {
 
         <div>
           <div style={navLabel}>Department</div>
-          {(["all", ...DEPARTMENTS] as (Department | "all")[]).map(d => {
-            const count = d === "all" ? people.filter(p => p.status !== "open").length : people.filter(p => p.department === d && p.status !== "open").length;
+          {(["all",...DEPARTMENTS] as (Department|"all")[]).map(d => {
+            const count = d === "all" ? people.filter(p=>p.status!=="open").length : people.filter(p=>p.department===d&&p.status!=="open").length;
             return (
               <div key={d} style={{ ...navItem, color:deptFilter===d?"var(--text)":"var(--text-2)", background:deptFilter===d?"var(--surface-2)":"transparent" }}
-                onClick={() => setDeptFilter(d as Department | "all")}>
+                onClick={() => setDeptFilter(d as Department|"all")}>
                 {d !== "all" && <span style={{ width:6, height:6, borderRadius:2, background:DEPT_COLORS[d as Department], flexShrink:0 }}/>}
-                <span style={{ flex:1, fontSize:12.5 }}>{d === "all" ? "All Departments" : d}</span>
+                <span style={{ flex:1, fontSize:12.5 }}>{d==="all"?"All Departments":d}</span>
                 <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>{count}</span>
               </div>
             );
@@ -218,9 +206,9 @@ export default function OrgChartPage() {
       </aside>
 
       {/* Main */}
-      <main style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-        {/* Header */}
-        <div style={{ borderBottom:"1px solid var(--line)", padding:"18px 32px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--bg)", flexShrink:0 }}>
+      <main style={{ flex:1, minWidth:0, overflowY:"auto" }}>
+        {/* Sticky Header */}
+        <div style={{ borderBottom:"1px solid var(--line)", padding:"16px 32px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--bg)", position:"sticky", top:0, zIndex:10 }}>
           <div>
             <div style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)", marginBottom:4 }}>People Operations</div>
             <h1 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:26, letterSpacing:"-0.02em" }}>
@@ -243,11 +231,23 @@ export default function OrgChartPage() {
           </div>
         </div>
 
-        {/* Org Chart (fills remaining height) */}
-        <div style={{ flex:1, overflow:"hidden", display:"flex", flexDirection:"column" }}>
-          <OrgChartView
-            people={people} setPeople={setPeople} deptFilter={deptFilter}
-            onSelect={setSelected} onAddUnder={openAdd} onRemovePerson={deletePerson}
+        {/* Org Hierarchy */}
+        <div style={{ padding:"24px 32px", borderBottom:"2px solid var(--line)" }}>
+          <OrgHierarchy people={people} deptFilter={deptFilter} onSelect={setSelected} onAdd={openAdd}/>
+        </div>
+
+        {/* Directory Table */}
+        <div style={{ padding:"24px 32px 48px" }}>
+          <div style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)", marginBottom:16 }}>Directory</div>
+          <DirectoryTable
+            people={people}
+            search={search} setSearch={setSearch}
+            sortKey={sortKey} setSortKey={setSortKey}
+            sortAsc={sortAsc} setSortAsc={setSortAsc}
+            deptFilter={deptFilter}
+            statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+            onSelect={setSelected}
+            onAdd={() => openAdd(null)}
           />
         </div>
       </main>
@@ -271,221 +271,198 @@ export default function OrgChartPage() {
       {showAdd && (
         <AddModal person={newPerson} onChange={setNewPerson} onSave={addPerson}
           onClose={() => { setShowAdd(false); setNewPerson(blank()); setAddManagerId(null); }}
-          people={people} managerId={addManagerId} />
+          people={people} managerId={addManagerId}/>
       )}
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Org Chart View
+// Org Hierarchy — collapsible tree rows, fully readable at any size
 // ═══════════════════════════════════════════════════════════════════════════
-function OrgChartView({ people, setPeople, deptFilter, onSelect, onAddUnder, onRemovePerson }: {
-  people: Person[]; setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
-  deptFilter: Department | "all"; onSelect: (p: Person) => void;
-  onAddUnder: (managerId: string | null) => void; onRemovePerson: (id: string) => void;
+function OrgHierarchy({ people, deptFilter, onSelect, onAdd }: {
+  people: Person[]; deptFilter: Department | "all";
+  onSelect: (p: Person) => void; onAdd: (managerId: string | null) => void;
 }) {
-  const treeInput = deptFilter === "all" ? people : people.filter(p => {
-    if (p.department === deptFilter) return true;
-    return people.some(q => q.department === deptFilter && q.managerId === p.id);
+  const [expanded, setExpanded] = useState<Set<string>>(() => {
+    const s = new Set<string>();
+    people.filter(p => !p.managerId).forEach(r => s.add(r.id));
+    return s;
   });
-  const { nodes, width, height } = layoutTree(treeInput);
-  const [hoverId, setHoverId] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(0.75);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const roleRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  useEffect(() => {
-    if (!scrollRef.current || !nodes.length) return;
-    const root = nodes.find(n => !n.person.managerId);
-    if (!root) return;
-    const c = scrollRef.current;
-    c.scrollLeft = Math.max(0, (root.x + NODE_W / 2) * zoom - c.clientWidth / 2);
-    c.scrollTop = 0;
-  }, [nodes, zoom]);
-
-  useEffect(() => { fitZoom(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!hoverId) return;
-    const row = roleRowRefs.current[hoverId];
-    if (row) row.scrollIntoView({ block:"nearest", behavior:"smooth" });
-  }, [hoverId]);
-
-  function fitZoom() {
-    if (!scrollRef.current) return;
-    const zw = (scrollRef.current.clientWidth - 40) / Math.max(width, 1);
-    const zh = (scrollRef.current.clientHeight - 40) / Math.max(height, 1);
-    setZoom(Math.min(Math.max(Math.min(zw, zh), 0.25), 1));
+  function toggle(id: string) {
+    setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function expandAll() { setExpanded(new Set(people.map(p => p.id))); }
+  function collapseToRoot() {
+    const s = new Set<string>();
+    people.filter(p => !p.managerId).forEach(r => s.add(r.id));
+    setExpanded(s);
   }
 
-  function changeDept(id: string, dept: Department) {
-    setPeople(prev => prev.map(p => p.id === id ? { ...p, department:dept, color:DEPT_COLORS[dept] } : p));
+  function renderBranch(parentId: string | null, depth: number): React.ReactNode {
+    const children = people
+      .filter(p => p.managerId === parentId)
+      .filter(p => {
+        if (deptFilter === "all") return true;
+        if (p.department === deptFilter) return true;
+        return people.some(q => q.managerId === p.id && q.department === deptFilter);
+      })
+      .sort((a, b) => {
+        const levelOrder = { L7:0, L6:1, L5:2, L4:3, L3:4, L2:5, L1:6 };
+        return (levelOrder[a.level]??7) - (levelOrder[b.level]??7);
+      });
+    if (!children.length) return null;
+
+    return (
+      <div style={{ marginLeft: depth === 0 ? 0 : 28, borderLeft: depth > 0 ? "1px solid var(--line)" : "none" }}>
+        {children.map(person => {
+          const hasChildren = people.some(p => p.managerId === person.id);
+          const isExp = expanded.has(person.id);
+          const dc = DEPT_COLORS[person.department];
+          const sm = STATUS_META[person.status];
+          const isOpen = person.status === "open";
+          const tenure = formatTenure(parseTenureMonths(person.startDate));
+          const reports = people.filter(p => p.managerId === person.id).length;
+
+          return (
+            <div key={person.id}>
+              <HierarchyRow
+                person={person} depth={depth} dc={dc} sm={sm} isOpen={isOpen}
+                hasChildren={hasChildren} isExpanded={isExp} reports={reports} tenure={tenure}
+                onToggle={() => toggle(person.id)}
+                onSelect={() => onSelect(person)}
+                onAdd={() => onAdd(person.id)}
+              />
+              {isExp && renderBranch(person.id, depth + 1)}
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
-  const paths: { d: string; color: string }[] = [];
-  for (const n of nodes) {
-    if (!n.person.managerId) continue;
-    const par = nodes.find(m => m.person.id === n.person.managerId);
-    if (!par) continue;
-    const px = par.x + NODE_W / 2, py = par.y + NODE_H;
-    const cx = n.x + NODE_W / 2, cy = n.y, my = (py + cy) / 2;
-    paths.push({ d:`M${px},${py} C${px},${my} ${cx},${my} ${cx},${cy}`, color:DEPT_COLORS[n.person.department] });
-  }
-
-  const depts = deptFilter === "all" ? DEPARTMENTS : [deptFilter as Department];
-  const scaledW = Math.max(width * zoom, 600);
-  const scaledH = Math.max(height * zoom, 400);
+  const totalShown = people.filter(p => deptFilter === "all" || p.department === deptFilter).length;
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100%", overflow:"hidden" }}>
+    <div>
       {/* Toolbar */}
-      <div style={{ display:"flex", alignItems:"center", gap:12, padding:"9px 20px", borderBottom:"1px solid var(--line)", flexShrink:0 }}>
-        <span style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-4)" }}>
-          {nodes.filter(n => n.person.status !== "open").length} people · {nodes.filter(n => n.person.status === "open").length} open
-        </span>
-        <div style={{ display:"flex", gap:8, alignItems:"center", marginLeft:"auto" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+        <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-4)" }}>
+          {totalShown} people · {people.filter(p=>p.status==="open"&&(deptFilter==="all"||p.department===deptFilter)).length} open roles
+        </div>
+        <div style={{ marginLeft:"auto", display:"flex", gap:6 }}>
           {Object.entries(STATUS_META).map(([s, m]) => (
-            <span key={s} style={{ display:"flex", alignItems:"center", gap:5, fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", textTransform:"uppercase", letterSpacing:"0.08em" }}>
-              <span style={{ width:6, height:6, borderRadius:"50%", background:m.color, flexShrink:0 }}/>{m.label}
+            <span key={s} style={{ display:"flex", alignItems:"center", gap:4, fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", textTransform:"uppercase", letterSpacing:"0.08em" }}>
+              <span style={{ width:5, height:5, borderRadius:"50%", background:m.color }}/>{m.label}
             </span>
           ))}
-          <div style={{ width:1, height:14, background:"var(--line)", margin:"0 2px" }}/>
-          <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.25))} style={btnSm}>−</button>
-          <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", minWidth:34, textAlign:"center" }}>{Math.round(zoom*100)}%</span>
-          <button onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))} style={btnSm}>+</button>
-          <button onClick={fitZoom} style={btnSm}>Fit</button>
-          <button onClick={() => setZoom(1)} style={btnSm}>1:1</button>
-          <button onClick={() => onAddUnder(null)} style={{ ...btnSm, background:"var(--accent)", border:0, color:"#fff", display:"flex", alignItems:"center", gap:5 }}>
-            <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M8 2v12M2 8h12" strokeLinecap="round"/></svg>Add
+          <div style={{ width:1, height:14, background:"var(--line)", margin:"0 4px" }}/>
+          <button onClick={expandAll} style={{ padding:"4px 10px", background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-3)", fontSize:10.5, fontFamily:"var(--mono)", cursor:"pointer" }}>Expand all</button>
+          <button onClick={collapseToRoot} style={{ padding:"4px 10px", background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:4, color:"var(--text-3)", fontSize:10.5, fontFamily:"var(--mono)", cursor:"pointer" }}>Collapse</button>
+          <button onClick={() => onAdd(null)} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 10px", background:"var(--accent)", border:0, borderRadius:4, color:"#fff", fontSize:10.5, fontFamily:"var(--mono)", cursor:"pointer" }}>
+            {Icon.plus} Add
           </button>
         </div>
       </div>
 
-      {/* Split: tree left + roles right */}
-      <div style={{ display:"flex", height:390, flexShrink:0, borderBottom:"2px solid var(--line)" }}>
-        <div ref={scrollRef} style={{ flex:1, overflow:"auto", position:"relative" }}>
-          <div style={{ width:scaledW + 80, height:scaledH + 60, position:"relative" }}>
-            <div style={{ position:"absolute", top:0, left:0, width, height, transform:`scale(${zoom})`, transformOrigin:"top left" }}>
-              <svg style={{ position:"absolute", top:0, left:0, width, height, pointerEvents:"none", overflow:"visible" }}>
-                {paths.map((p, i) => <path key={i} d={p.d} fill="none" stroke={p.color} strokeWidth={1.8} strokeOpacity={0.35}/>)}
-              </svg>
-              {nodes.map(n => (
-                <OrgNode key={n.person.id} node={n}
-                  isHovered={hoverId === n.person.id} isHighlighted={hoverId === n.person.id}
-                  onHover={setHoverId} onSelect={onSelect} onAdd={onAddUnder}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Roles panel */}
-        <div style={{ width:268, flexShrink:0, borderLeft:"1px solid var(--line)", overflowY:"auto", background:"var(--bg)" }}>
-          <div style={{ padding:"12px 16px 8px", borderBottom:"1px solid var(--line)", position:"sticky", top:0, background:"var(--bg)", zIndex:2 }}>
-            <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)" }}>Role Registry</div>
-          </div>
-          {depts.map(dept => {
-            const deptPeople = people.filter(p => p.department === dept);
-            if (!deptPeople.length) return null;
-            const dc = DEPT_COLORS[dept];
-            return (
-              <div key={dept}>
-                <div style={{ padding:"8px 16px 6px", background:"var(--surface-1)", borderBottom:"1px solid var(--line)", display:"flex", alignItems:"center", gap:8, position:"sticky", top:36, zIndex:1 }}>
-                  <span style={{ width:5, height:5, borderRadius:1, background:dc, flexShrink:0 }}/>
-                  <span style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.12em", color:dc, flex:1 }}>{dept}</span>
-                  <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)" }}>{deptPeople.filter(p=>p.status!=="open").length}/{deptPeople.length}</span>
-                </div>
-                {deptPeople.map(p => {
-                  const sm = STATUS_META[p.status];
-                  const isHov = hoverId === p.id;
-                  return (
-                    <div key={p.id} ref={el => { roleRowRefs.current[p.id] = el; }}
-                      style={{ padding:"9px 16px", borderBottom:"1px solid var(--line)", cursor:"pointer", background:isHov?"var(--surface-2)":"transparent", borderLeft:`2px solid ${isHov ? dc : "transparent"}`, transition:"all 0.12s" }}
-                      onMouseEnter={() => setHoverId(p.id)} onMouseLeave={() => setHoverId(null)}
-                      onClick={() => onSelect(p)}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:6 }}>
-                        <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:12, fontWeight:500, color:p.status==="open"?"var(--text-3)":"var(--text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                            {p.status==="open" ? <em style={{ fontStyle:"italic" }}>Open Role</em> : p.name}
-                          </div>
-                          <div style={{ fontSize:11, color:"var(--text-3)", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.role}</div>
-                        </div>
-                        <span style={{ width:5, height:5, borderRadius:"50%", background:sm.color, flexShrink:0, marginTop:5 }}/>
-                      </div>
-                      <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}>
-                        <span style={{ fontFamily:"var(--mono)", fontSize:9, color:dc, textTransform:"uppercase", letterSpacing:"0.06em" }}>{p.level}</span>
-                        <span style={{ color:"var(--line-strong)", fontSize:9 }}>·</span>
-                        <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)" }}>{p.startDate || (p.status==="open" ? "Hiring" : "—")}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
+      {/* Tree */}
+      <div style={{ background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:10, overflow:"hidden" }}>
+        {renderBranch(null, 0)}
+        {totalShown === 0 && (
+          <div style={{ padding:"40px", textAlign:"center", fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.14em" }}>No people</div>
+        )}
       </div>
-
-      {/* Employee Roster */}
-      <EmployeeRoster
-        people={people} deptFilter={deptFilter}
-        onSelect={onSelect} onAdd={onAddUnder}
-        onRemove={onRemovePerson} onChangeDept={changeDept}
-      />
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Org Node
-// ═══════════════════════════════════════════════════════════════════════════
-function OrgNode({ node, isHovered, isHighlighted, onHover, onSelect, onAdd }: {
-  node: TreeNode; isHovered: boolean; isHighlighted: boolean;
-  onHover: (id: string | null) => void; onSelect: (p: Person) => void;
-  onAdd: (managerId: string | null) => void;
+function HierarchyRow({ person: p, depth, dc, sm, isOpen, hasChildren, isExpanded, reports, tenure, onToggle, onSelect, onAdd }: {
+  person: Person; depth: number; dc: string; sm: { color: string; label: string; bg: string };
+  isOpen: boolean; hasChildren: boolean; isExpanded: boolean; reports: number; tenure: string;
+  onToggle: () => void; onSelect: () => void; onAdd: () => void;
 }) {
-  const p = node.person;
-  const dc = DEPT_COLORS[p.department];
-  const sm = STATUS_META[p.status];
-  const isOpen = p.status === "open";
+  const [hov, setHov] = useState(false);
 
   return (
-    <div style={{
-      position:"absolute", left:node.x, top:node.y, width:NODE_W, height:NODE_H,
-      background:isHovered?"var(--surface-2)":"var(--surface-1)",
-      border:`1px solid ${isHovered?"var(--line-strong)":"var(--line)"}`,
-      borderLeft:`3px solid ${dc}`, borderRadius:6, padding:"6px 9px",
-      cursor:"pointer", transition:"all 0.18s ease",
-      boxShadow:isHovered?"0 4px 20px rgba(0,0,0,0.4)":"none",
-      display:"flex", flexDirection:"column", gap:3,
-    }}
-      onMouseEnter={() => onHover(p.id)} onMouseLeave={() => onHover(null)}
-      onClick={() => onSelect(p)}>
-      <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-        <div style={{ width:20, height:20, borderRadius:4, background:isOpen?"var(--surface-3)":`${dc}28`, color:isOpen?"var(--text-4)":dc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, fontWeight:600, fontFamily:"var(--mono)", flexShrink:0, border:isOpen?"1.5px dashed var(--line-strong)":"none" }}>
+    <div
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display:"flex", alignItems:"center", gap:0, borderBottom:"1px solid var(--line)", background:hov?"var(--surface-2)":"transparent", transition:"background 0.12s", position:"relative" }}>
+      {/* Indent spacer */}
+      {depth > 0 && <div style={{ width: depth * 28, flexShrink:0 }}/>}
+
+      {/* Expand toggle */}
+      <div style={{ width:40, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", alignSelf:"stretch", borderRight:"1px solid var(--line)" }}>
+        {hasChildren ? (
+          <button onClick={e => { e.stopPropagation(); onToggle(); }} style={{ width:20, height:20, borderRadius:4, background:isExpanded?"var(--surface-3)":"var(--surface-2)", border:"1px solid var(--line)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"var(--text-3)", transform:isExpanded?"rotate(0deg)":"rotate(-90deg)", transition:"transform 0.18s" }}>
+            {Icon.chevron}
+          </button>
+        ) : (
+          <div style={{ width:6, height:6, borderRadius:"50%", background:"var(--line-strong)", opacity:0.5 }}/>
+        )}
+      </div>
+
+      {/* Dept stripe */}
+      <div style={{ width:3, alignSelf:"stretch", background:dc, flexShrink:0, opacity:0.7 }}/>
+
+      {/* Main content — clickable */}
+      <div onClick={onSelect} style={{ flex:1, display:"flex", alignItems:"center", gap:14, padding:"12px 16px", cursor:"pointer", minWidth:0 }}>
+        {/* Avatar */}
+        <div style={{ width:34, height:34, borderRadius:8, background:isOpen?"var(--surface-3)":`${dc}22`, color:isOpen?"var(--text-4)":dc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:600, fontFamily:"var(--mono)", flexShrink:0, border:isOpen?`1.5px dashed var(--line-strong)`:"none" }}>
           {isOpen?"?":initials(p.name)}
         </div>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:11, fontWeight:500, color:isOpen?"var(--text-3)":"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-            {isOpen?"Open Role":p.name}
+
+        {/* Name + Role */}
+        <div style={{ flex:"0 0 220px", minWidth:0 }}>
+          <div style={{ fontSize:13.5, fontWeight:isOpen?400:500, color:isOpen?"var(--text-3)":"var(--text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            {isOpen?<em style={{ fontStyle:"italic" }}>Open Role</em>:p.name}
           </div>
+          <div style={{ fontSize:11.5, color:"var(--text-3)", marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.role}</div>
         </div>
-        <span style={{ width:5, height:5, borderRadius:"50%", background:sm.color, flexShrink:0, opacity:isOpen?0.5:1 }}/>
+
+        {/* Dept */}
+        <div style={{ flex:"0 0 100px" }}>
+          <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 8px", borderRadius:4, background:`${dc}15`, border:`1px solid ${dc}30`, fontFamily:"var(--mono)", fontSize:9, color:dc, textTransform:"uppercase", letterSpacing:"0.07em" }}>
+            <span style={{ width:4, height:4, borderRadius:"50%", background:dc }}/>{p.department.slice(0,4)}
+          </span>
+        </div>
+
+        {/* Level */}
+        <div style={{ flex:"0 0 60px", fontFamily:"var(--mono)", fontSize:11, color:"var(--text-3)" }}>
+          {p.level} <span style={{ color:"var(--text-4)", fontSize:9.5 }}>· {LEVEL_BAND[p.level]}</span>
+        </div>
+
+        {/* Status */}
+        <div style={{ flex:"0 0 90px", display:"flex", alignItems:"center", gap:6 }}>
+          <span style={{ width:6, height:6, borderRadius:"50%", background:sm.color, flexShrink:0 }}/>
+          <span style={{ fontFamily:"var(--mono)", fontSize:10, color:sm.color }}>{sm.label}</span>
+        </div>
+
+        {/* Reports */}
+        {hasChildren && (
+          <div style={{ flex:"0 0 70px", fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>
+            {reports} report{reports !== 1 ? "s" : ""}
+          </div>
+        )}
+
+        {/* Tenure + location */}
+        <div style={{ marginLeft:"auto", display:"flex", gap:20, alignItems:"center" }}>
+          {!isOpen && tenure !== "—" && (
+            <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)" }}>{tenure}</span>
+          )}
+          {p.location && (
+            <span style={{ fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text-4)", whiteSpace:"nowrap" }}>{p.location}</span>
+          )}
+        </div>
       </div>
-      <div style={{ fontSize:10, color:"var(--text-3)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", paddingLeft:25 }}>{p.role}</div>
-      <div style={{ display:"flex", alignItems:"center", gap:5, paddingLeft:25 }}>
-        <span style={{ fontFamily:"var(--mono)", fontSize:8.5, color:dc, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.06em" }}>{p.level}</span>
-        <span style={{ color:"var(--line-strong)", fontSize:8 }}>·</span>
-        <span style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.05em" }}>{p.department.slice(0,4)}</span>
-      </div>
-      {isHovered && (
-        <button onClick={e => { e.stopPropagation(); onAdd(p.id); }} style={{
-          position:"absolute", bottom:-9, left:"50%", transform:"translateX(-50%)",
-          width:18, height:18, borderRadius:"50%", background:"var(--accent)", border:"2px solid var(--bg)",
-          display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:5, color:"#fff",
-        }}>
-          <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M8 2v12M2 8h12" strokeLinecap="round"/></svg>
+
+      {/* Add direct report (on hover) */}
+      {hov && !isOpen && (
+        <button onClick={e => { e.stopPropagation(); onAdd(); }}
+          style={{ flexShrink:0, marginRight:14, display:"flex", alignItems:"center", gap:5, padding:"4px 10px", background:"transparent", border:"1px dashed var(--line-strong)", borderRadius:4, color:"var(--text-4)", fontSize:10.5, fontFamily:"var(--mono)", cursor:"pointer", transition:"all 0.15s", whiteSpace:"nowrap" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor="var(--accent)"; e.currentTarget.style.color="var(--accent)"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor="var(--line-strong)"; e.currentTarget.style.color="var(--text-4)"; }}>
+          {Icon.plus} Add report
         </button>
       )}
     </div>
@@ -493,114 +470,143 @@ function OrgNode({ node, isHovered, isHighlighted, onHover, onSelect, onAdd }: {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Employee Roster
+// Directory Table
 // ═══════════════════════════════════════════════════════════════════════════
-function EmployeeRoster({ people, deptFilter, onSelect, onAdd, onRemove, onChangeDept }: {
-  people: Person[]; deptFilter: Department | "all";
-  onSelect: (p: Person) => void; onAdd: (managerId: string | null) => void;
-  onRemove: (id: string) => void; onChangeDept: (id: string, dept: Department) => void;
+function DirectoryTable({ people, search, setSearch, sortKey, setSortKey, sortAsc, setSortAsc, deptFilter, statusFilter, setStatusFilter, onSelect, onAdd }: {
+  people: Person[]; search: string; setSearch:(s:string)=>void;
+  sortKey: SortKey; setSortKey:(k:SortKey)=>void;
+  sortAsc: boolean; setSortAsc:(a:boolean)=>void;
+  deptFilter: Department|"all"; statusFilter: Status|"all"; setStatusFilter:(s:Status|"all")=>void;
+  onSelect:(p:Person)=>void; onAdd:()=>void;
 }) {
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dropDept, setDropDept] = useState<Department | null>(null);
-  const depts = deptFilter === "all" ? DEPARTMENTS : [deptFilter as Department];
+  const filtered = people
+    .filter(p => deptFilter === "all" || p.department === deptFilter)
+    .filter(p => statusFilter === "all" || p.status === statusFilter)
+    .filter(p => !search || [p.name,p.role,p.email,p.location].some(f => f.toLowerCase().includes(search.toLowerCase())))
+    .sort((a, b) => {
+      if (sortKey === "tenure") {
+        const am = parseTenureMonths(a.startDate) ?? -1;
+        const bm = parseTenureMonths(b.startDate) ?? -1;
+        return sortAsc ? am - bm : bm - am;
+      }
+      const av = String(a[sortKey as keyof Person] ?? "");
+      const bv = String(b[sortKey as keyof Person] ?? "");
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
 
-  return (
-    <div style={{ flex:1, overflowY:"auto" }}>
-      <div style={{ padding:"10px 20px 8px", borderBottom:"1px solid var(--line)", background:"var(--bg)", position:"sticky", top:0, zIndex:3, display:"flex", alignItems:"center", gap:12 }}>
-        <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)" }}>
-          Employee Roster · {people.filter(p=>p.status!=="open"&&(deptFilter==="all"||p.department===deptFilter)).length} people
-        </div>
-        <div style={{ marginLeft:"auto", display:"flex", gap:8, fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.1em" }}>
-          <span style={{ minWidth:200 }}>Role</span>
-          <span style={{ minWidth:60 }}>Level</span>
-          <span style={{ minWidth:80 }}>Status</span>
-          <span style={{ minWidth:100 }}>Location</span>
-          <span style={{ minWidth:70 }}>Started</span>
-        </div>
-      </div>
+  function toggleSort(k: SortKey) {
+    if (sortKey === k) setSortAsc(!sortAsc); else { setSortKey(k); setSortAsc(true); }
+  }
 
-      {depts.map(dept => {
-        const deptPeople = people.filter(p => p.department === dept);
-        if (!deptPeople.length) return null;
-        const dc = DEPT_COLORS[dept];
-        const filled = deptPeople.filter(p => p.status !== "open").length;
-        const isDrop = dropDept === dept;
+  function exportCsv() {
+    const headers = ["ID","Name","Role","Department","Level","Status","Email","Manager","Location","Start Date","Tenure"];
+    const rows = filtered.map(p => {
+      const mgr = people.find(q => q.id === p.managerId);
+      return [p.id, p.name, p.role, p.department, p.level, p.status, p.email, mgr?.name??"", p.location, p.startDate, formatTenure(parseTenureMonths(p.startDate))];
+    });
+    const csv = [headers,...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type:"text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download="people-export.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
 
-        return (
-          <div key={dept}
-            onDragOver={e => { e.preventDefault(); setDropDept(dept); }}
-            onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropDept(null); }}
-            onDrop={e => {
-              e.preventDefault(); setDropDept(null);
-              if (draggedId) onChangeDept(draggedId, dept);
-              setDraggedId(null);
-            }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 20px", background:isDrop?`${dc}14`:"var(--surface-1)", borderTop:"1px solid var(--line)", borderBottom:"1px solid var(--line)", borderLeft:`3px solid ${isDrop?dc:"transparent"}`, transition:"all 0.15s" }}>
-              <span style={{ width:6, height:6, borderRadius:2, background:dc, flexShrink:0 }}/>
-              <span style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.12em", color:dc, flex:1 }}>{dept}</span>
-              <div style={{ width:72, height:3, borderRadius:2, background:"var(--surface-3)", overflow:"hidden" }}>
-                <div style={{ width:`${deptPeople.length?((filled/deptPeople.length)*100):0}%`, height:"100%", background:dc, borderRadius:2 }}/>
-              </div>
-              <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", minWidth:32 }}>{filled}/{deptPeople.length}</span>
-              <button onClick={() => onAdd(null)} style={{ display:"flex", alignItems:"center", gap:4, padding:"3px 8px", background:`${dc}18`, border:`1px solid ${dc}40`, borderRadius:3, fontSize:9.5, color:dc, cursor:"pointer", fontFamily:"var(--mono)", textTransform:"uppercase", letterSpacing:"0.08em" }}>
-                {Icon.plus} Add
-              </button>
-              {isDrop && <span style={{ fontFamily:"var(--mono)", fontSize:9, color:dc, letterSpacing:"0.08em" }}>Drop here to move</span>}
-            </div>
-            {deptPeople.map(p => (
-              <RosterRow key={p.id} person={p} deptColor={dc}
-                isDragging={draggedId === p.id}
-                onDragStart={() => setDraggedId(p.id)}
-                onDragEnd={() => { setDraggedId(null); setDropDept(null); }}
-                onSelect={() => onSelect(p)}
-                onRemove={() => onRemove(p.id)}
-              />
-            ))}
-          </div>
-        );
-      })}
+  const colHdr = (k: SortKey, label: string, flex = 1) => (
+    <div key={k} style={{ flex, display:"flex", alignItems:"center", gap:4, cursor:"pointer", userSelect:"none" as const, color:sortKey===k?"var(--text)":"var(--text-3)" }}
+      onClick={() => toggleSort(k)}>
+      <span style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em" }}>{label}</span>
+      {sortKey===k && <span style={{ fontSize:9, opacity:0.7 }}>{sortAsc?"↑":"↓"}</span>}
     </div>
   );
-}
 
-function RosterRow({ person: p, deptColor: dc, isDragging, onDragStart, onDragEnd, onSelect, onRemove }: {
-  person: Person; deptColor: string; isDragging: boolean;
-  onDragStart: () => void; onDragEnd: () => void;
-  onSelect: () => void; onRemove: () => void;
-}) {
-  const [hov, setHov] = useState(false);
-  const sm = STATUS_META[p.status];
-  const isOpen = p.status === "open";
+  const statusCounts = (["active","contractor","onleave","open"] as Status[]).map(s => ({
+    key:s, ...STATUS_META[s], count:people.filter(p=>p.status===s&&(deptFilter==="all"||p.department===deptFilter)).length
+  }));
 
   return (
-    <div draggable onDragStart={onDragStart} onDragEnd={onDragEnd}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      onClick={onSelect}
-      style={{ display:"flex", alignItems:"center", gap:12, padding:"9px 20px", borderBottom:"1px solid var(--line)", cursor:"pointer", background:hov?"var(--surface-2)":isDragging?"var(--surface-3)":"transparent", borderLeft:`2px solid ${hov?dc:"transparent"}`, transition:"all 0.12s", opacity:isDragging?0.5:1 }}>
-      <div style={{ display:"flex", gap:3, flexShrink:0, cursor:"grab", opacity:0.3 }}>
-        {[0,1].map(c => <div key={c} style={{ display:"flex", flexDirection:"column", gap:2.5 }}>{[0,1,2].map(r => <div key={r} style={{ width:2.5, height:2.5, borderRadius:"50%", background:"var(--text-3)" }}/>)}</div>)}
-      </div>
-      <div style={{ width:26, height:26, borderRadius:6, background:isOpen?"var(--surface-3)":`${dc}28`, color:isOpen?"var(--text-4)":dc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9.5, fontWeight:600, fontFamily:"var(--mono)", flexShrink:0, border:isOpen?"1.5px dashed var(--line-strong)":"none" }}>
-        {isOpen?"?":initials(p.name)}
-      </div>
-      <div style={{ flex:2, minWidth:0 }}>
-        <div style={{ fontSize:13, fontWeight:isOpen?400:500, color:isOpen?"var(--text-3)":"var(--text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-          {isOpen?<em style={{ fontStyle:"italic" }}>Open Role</em>:p.name}
+    <div>
+      <div style={{ display:"flex", gap:10, marginBottom:10, alignItems:"center" }}>
+        <div style={{ flex:1, position:"relative" }}>
+          <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", opacity:0.4 }}>{Icon.search}</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, role, location…"
+            style={{ width:"100%", background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:6, padding:"8px 12px 8px 30px", color:"var(--text)", fontSize:13, fontFamily:"var(--sans)", outline:"none", boxSizing:"border-box" as const }}/>
         </div>
+        <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", whiteSpace:"nowrap" }}>{filtered.length} records</div>
+        <button onClick={exportCsv} style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 12px", background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:6, color:"var(--text-3)", fontSize:12, cursor:"pointer", fontFamily:"var(--mono)", letterSpacing:"0.04em" }}>
+          {Icon.download} Export CSV
+        </button>
+        <button onClick={onAdd} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", background:"var(--accent)", color:"#fff", border:0, borderRadius:6, fontSize:12.5, fontWeight:500, cursor:"pointer", fontFamily:"var(--sans)" }}>
+          {Icon.plus} Add Person
+        </button>
       </div>
-      <div style={{ flex:2.5, fontSize:12, color:"var(--text-3)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.role}</div>
-      <div style={{ minWidth:60 }}>
-        <span style={{ display:"inline-flex", padding:"2px 7px", borderRadius:3, background:`${dc}18`, border:`1px solid ${dc}35`, fontFamily:"var(--mono)", fontSize:9, color:dc, textTransform:"uppercase", letterSpacing:"0.06em" }}>{p.level}</span>
+
+      <div style={{ display:"flex", gap:6, marginBottom:14, alignItems:"center", flexWrap:"wrap" }}>
+        <button onClick={() => setStatusFilter("all")} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 12px", borderRadius:99, border:"1px solid", fontSize:11, fontFamily:"var(--mono)", cursor:"pointer", letterSpacing:"0.04em", transition:"all 0.12s", background:statusFilter==="all"?"var(--surface-2)":"transparent", borderColor:statusFilter==="all"?"var(--text-3)":"var(--line)", color:statusFilter==="all"?"var(--text)":"var(--text-4)" }}>
+          All · {people.filter(p=>deptFilter==="all"||p.department===deptFilter).length}
+        </button>
+        {statusCounts.map(s => (
+          <button key={s.key} onClick={() => setStatusFilter(s.key)} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 12px", borderRadius:99, border:"1px solid", fontSize:11, fontFamily:"var(--mono)", cursor:"pointer", letterSpacing:"0.04em", transition:"all 0.12s", background:statusFilter===s.key?s.bg:"transparent", borderColor:statusFilter===s.key?s.color:"var(--line)", color:statusFilter===s.key?s.color:"var(--text-4)" }}>
+            <span style={{ width:5, height:5, borderRadius:"50%", background:s.color, flexShrink:0 }}/>
+            {s.label} · {s.count}
+          </button>
+        ))}
       </div>
-      <div style={{ minWidth:80, display:"flex", alignItems:"center", gap:5 }}>
-        <span style={{ width:5, height:5, borderRadius:"50%", background:sm.color, flexShrink:0 }}/>
-        <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:sm.color }}>{sm.label}</span>
+
+      <div style={{ background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:10, overflow:"hidden" }}>
+        <div style={{ display:"flex", padding:"10px 18px", borderBottom:"1px solid var(--line)", gap:12 }}>
+          {colHdr("name","Name",2)}
+          {colHdr("role","Role",2.5)}
+          {colHdr("department","Dept",1)}
+          {colHdr("level","Lvl",0.6)}
+          {colHdr("status","Status",1)}
+          <div style={{ flex:1.5, fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-3)" }}>Manager</div>
+          <div style={{ flex:1.2, fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-3)" }}>Location</div>
+          {colHdr("tenure","Tenure",0.7)}
+          {colHdr("startDate","Started",0.8)}
+        </div>
+
+        {filtered.map((p, i) => {
+          const dc = DEPT_COLORS[p.department];
+          const sm = STATUS_META[p.status];
+          const mgr = people.find(q => q.id === p.managerId);
+          const isOpen = p.status === "open";
+          const tenureStr = isOpen ? "—" : formatTenure(parseTenureMonths(p.startDate));
+          return (
+            <div key={p.id} style={{ display:"flex", padding:"11px 18px", gap:12, borderBottom: i < filtered.length-1 ? "1px solid var(--line)" : "none", cursor:"pointer", background:"transparent", transition:"background 0.12s", alignItems:"center" }}
+              onMouseEnter={e => (e.currentTarget.style.background="var(--surface-2)")}
+              onMouseLeave={e => (e.currentTarget.style.background="transparent")}
+              onClick={() => onSelect(p)}>
+              <div style={{ flex:2, display:"flex", alignItems:"center", gap:9, minWidth:0 }}>
+                <div style={{ width:28, height:28, borderRadius:7, background:isOpen?"var(--surface-3)":`${dc}25`, color:isOpen?"var(--text-4)":dc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:600, fontFamily:"var(--mono)", flexShrink:0, border:isOpen?"1.5px dashed var(--line-strong)":"none" }}>
+                  {isOpen?"?":initials(p.name)}
+                </div>
+                <span style={{ fontSize:13, fontWeight:isOpen?400:500, color:isOpen?"var(--text-3)":"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                  {isOpen?<em style={{ fontStyle:"italic" }}>Open Role</em>:p.name}
+                </span>
+              </div>
+              <div style={{ flex:2.5, fontSize:12.5, color:"var(--text-2)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.role}</div>
+              <div style={{ flex:1 }}>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 8px", borderRadius:4, background:`${dc}18`, border:`1px solid ${dc}35`, fontFamily:"var(--mono)", fontSize:9, color:dc, textTransform:"uppercase", letterSpacing:"0.07em" }}>
+                  <span style={{ width:4, height:4, borderRadius:"50%", background:dc }}/>{p.department.slice(0,4)}
+                </span>
+              </div>
+              <div style={{ flex:0.6, fontFamily:"var(--mono)", fontSize:11, color:"var(--text-3)" }}>{p.level}</div>
+              <div style={{ flex:1 }}>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 8px", borderRadius:99, background:sm.bg, fontFamily:"var(--mono)", fontSize:9, color:sm.color, letterSpacing:"0.05em" }}>
+                  <span style={{ width:5, height:5, borderRadius:"50%", background:sm.color }}/>{sm.label}
+                </span>
+              </div>
+              <div style={{ flex:1.5, fontSize:12, color:"var(--text-3)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{mgr?.name??"—"}</div>
+              <div style={{ flex:1.2, fontSize:11.5, color:"var(--text-3)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.location||"—"}</div>
+              <div style={{ flex:0.7, fontFamily:"var(--mono)", fontSize:11, color:isOpen?"var(--text-4)":"var(--text-3)" }}>{tenureStr}</div>
+              <div style={{ flex:0.8, fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)" }}>{p.startDate||"—"}</div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div style={{ padding:"48px 32px", textAlign:"center", color:"var(--text-4)", fontFamily:"var(--mono)", fontSize:11, textTransform:"uppercase", letterSpacing:"0.14em" }}>No results</div>
+        )}
       </div>
-      <div style={{ minWidth:100, fontSize:11.5, color:"var(--text-4)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.location||"—"}</div>
-      <div style={{ minWidth:70, fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>{p.startDate||(isOpen?"Hiring":"—")}</div>
-      {hov && (
-        <button onClick={e => { e.stopPropagation(); onRemove(); }} style={{ marginLeft:"auto", padding:"3px 7px", background:"rgba(255,107,107,0.1)", border:"1px solid rgba(255,107,107,0.3)", borderRadius:3, color:"#FF6B6B", fontSize:10, cursor:"pointer", fontFamily:"var(--mono)", flexShrink:0 }}>×</button>
-      )}
     </div>
   );
 }
@@ -655,7 +661,7 @@ function PersonDrawer({ person, isEditing, confirmDelete, people, onClose, onEdi
                 <div style={{ fontSize:16, fontWeight:500, lineHeight:1.3 }}>{person.role}</div>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-                {[{ label:"Email", value:person.email||"—" },{ label:"Location", value:person.location||"—" },{ label:"Started", value:person.startDate||"—" },{ label:"Manager", value:manager?.name||"No manager" }].map(({ label, value }) => (
+                {[{ label:"Email", value:person.email||"—" },{ label:"Location", value:person.location||"—" },{ label:"Started", value:person.startDate||"—" },{ label:"Tenure", value:formatTenure(parseTenureMonths(person.startDate)) },{ label:"Manager", value:manager?.name||"No manager" }].map(({ label, value }) => (
                   <div key={label}>
                     <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-4)", marginBottom:3 }}>{label}</div>
                     <div style={{ fontSize:12.5, color:"var(--text-2)" }}>{value}</div>

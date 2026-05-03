@@ -10,7 +10,6 @@ import {
 type Status = "active" | "onleave" | "contractor" | "open";
 type Department = "Executive" | "Engineering" | "Clinical" | "Operations" | "Design" | "Finance" | "Regulatory";
 type Level = "L1" | "L2" | "L3" | "L4" | "L5" | "L6" | "L7";
-type SortKey = "name" | "role" | "department" | "level" | "status" | "startDate" | "tenure";
 
 interface Person {
   id: string; name: string; role: string; department: Department;
@@ -345,12 +344,9 @@ export default function HumanCapitalMgmt() {
   const [deptFilter, setDeptFilter] = useState<Department | "all">("all");
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortAsc, setSortAsc] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [newPerson, setNewPerson] = useState<Person>(blank());
   const [clock, setClock] = useState("");
-  const [rosterView, setRosterView] = useState<"table"|"roster">("table");
 
   useEffect(() => { lsSave(people); }, [people]);
   useEffect(() => {
@@ -470,38 +466,14 @@ export default function HumanCapitalMgmt() {
         {/* Trend sparkline */}
         <HeadcountSpark people={people}/>
 
-        {/* Directory */}
+        {/* Roster */}
         <div style={{ flex:1, padding:"20px 32px 40px" }}>
-          {/* View toggle */}
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-            <div style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)" }}>Directory</div>
-            <div style={{ display:"flex", gap:2, background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:6, padding:2 }}>
-              {(["table","roster"] as const).map(v => (
-                <button key={v} onClick={() => setRosterView(v)} style={{ padding:"5px 14px", borderRadius:4, border:0, fontSize:11, fontFamily:"var(--mono)", letterSpacing:"0.07em", textTransform:"uppercase", cursor:"pointer", transition:"all 0.15s", background:rosterView===v?"var(--surface-3)":"transparent", color:rosterView===v?"var(--text)":"var(--text-4)", fontWeight:rosterView===v?500:400 }}>
-                  {v === "table" ? "Table" : "Roster"}
-                </button>
-              ))}
-            </div>
-          </div>
-          {rosterView === "table" ? (
-            <DirectoryTable
-              people={people}
-              search={search} setSearch={setSearch}
-              sortKey={sortKey} setSortKey={setSortKey}
-              sortAsc={sortAsc} setSortAsc={setSortAsc}
-              deptFilter={deptFilter}
-              statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-              onSelect={setSelected}
-              onAdd={() => openAdd(null)}
-            />
-          ) : (
-            <DeptRosterView
-              people={people} setPeople={setPeople}
-              deptFilter={deptFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-              search={search} setSearch={setSearch}
-              onSelect={setSelected} onAdd={() => openAdd(null)}
-            />
-          )}
+          <DeptRosterView
+            people={people} setPeople={setPeople}
+            deptFilter={deptFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+            search={search} setSearch={setSearch}
+            onSelect={setSelected} onAdd={() => openAdd(null)}
+          />
         </div>
       </main>
 
@@ -525,162 +497,6 @@ export default function HumanCapitalMgmt() {
           onClose={() => { setShowAdd(false); setNewPerson(blank()); setAddManagerId(null); }}
           people={people} managerId={addManagerId}/>
       )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Directory Table
-// ═══════════════════════════════════════════════════════════════════════════
-function DirectoryTable({ people, search, setSearch, sortKey, setSortKey, sortAsc, setSortAsc, deptFilter, statusFilter, setStatusFilter, onSelect, onAdd }: {
-  people: Person[]; search: string; setSearch:(s:string)=>void;
-  sortKey: SortKey; setSortKey:(k:SortKey)=>void;
-  sortAsc: boolean; setSortAsc:(a:boolean)=>void;
-  deptFilter: Department|"all"; statusFilter: Status|"all"; setStatusFilter:(s:Status|"all")=>void;
-  onSelect:(p:Person)=>void; onAdd:()=>void;
-}) {
-  const filtered = people
-    .filter(p => deptFilter === "all" || p.department === deptFilter)
-    .filter(p => statusFilter === "all" || p.status === statusFilter)
-    .filter(p => !search || [p.name,p.role,p.email,p.location].some(f => f.toLowerCase().includes(search.toLowerCase())))
-    .sort((a, b) => {
-      if (sortKey === "tenure") {
-        const am = parseTenureMonths(a.startDate) ?? -1;
-        const bm = parseTenureMonths(b.startDate) ?? -1;
-        return sortAsc ? am - bm : bm - am;
-      }
-      const av = String(a[sortKey as keyof Person] ?? "");
-      const bv = String(b[sortKey as keyof Person] ?? "");
-      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-    });
-
-  function toggleSort(k: SortKey) {
-    if (sortKey === k) setSortAsc(!sortAsc); else { setSortKey(k); setSortAsc(true); }
-  }
-
-  function exportCsv() {
-    const headers = ["ID","Name","Role","Department","Level","Status","Email","Manager","Location","Start Date","Tenure"];
-    const rows = filtered.map(p => {
-      const mgr = people.find(q => q.id === p.managerId);
-      return [p.id, p.name, p.role, p.department, p.level, p.status, p.email, mgr?.name??"", p.location, p.startDate, formatTenure(parseTenureMonths(p.startDate))];
-    });
-    const csv = [headers,...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type:"text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href=url; a.download="people-export.csv"; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  const colHdr = (k: SortKey, label: string, flex = 1) => (
-    <div key={k} style={{ flex, display:"flex", alignItems:"center", gap:4, cursor:"pointer", userSelect:"none" as const, color:sortKey===k?"var(--text)":"var(--text-3)" }}
-      onClick={() => toggleSort(k)}>
-      <span style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em" }}>{label}</span>
-      {sortKey===k && <span style={{ fontSize:9, opacity:0.7 }}>{sortAsc?"↑":"↓"}</span>}
-    </div>
-  );
-
-  const statusCounts = (["active","contractor","onleave","open"] as Status[]).map(s => ({
-    key:s, ...STATUS_META[s], count:people.filter(p=>p.status===s&&(deptFilter==="all"||p.department===deptFilter)).length
-  }));
-
-  return (
-    <div>
-      {/* Toolbar row 1: search + export + add */}
-      <div style={{ display:"flex", gap:10, marginBottom:10, alignItems:"center" }}>
-        <div style={{ flex:1, position:"relative" }}>
-          <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", opacity:0.4 }}>{Icon.search}</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, role, location…"
-            style={{ width:"100%", background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:6, padding:"8px 12px 8px 30px", color:"var(--text)", fontSize:13, fontFamily:"var(--sans)", outline:"none", boxSizing:"border-box" as const }}/>
-        </div>
-        <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", whiteSpace:"nowrap" }}>{filtered.length} records</div>
-        <button onClick={exportCsv} style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 12px", background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:6, color:"var(--text-3)", fontSize:12, cursor:"pointer", fontFamily:"var(--mono)", letterSpacing:"0.04em" }}>
-          {Icon.download} Export CSV
-        </button>
-        <button onClick={onAdd} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", background:"var(--accent)", color:"#fff", border:0, borderRadius:6, fontSize:12.5, fontWeight:500, cursor:"pointer", fontFamily:"var(--sans)" }}>
-          {Icon.plus} Add Person
-        </button>
-      </div>
-
-      {/* Toolbar row 2: status chips */}
-      <div style={{ display:"flex", gap:6, marginBottom:16, alignItems:"center", flexWrap:"wrap" }}>
-        <button onClick={() => setStatusFilter("all")} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 12px", borderRadius:99, border:"1px solid", fontSize:11, fontFamily:"var(--mono)", cursor:"pointer", letterSpacing:"0.04em", transition:"all 0.12s", background:statusFilter==="all"?"var(--surface-2)":"transparent", borderColor:statusFilter==="all"?"var(--text-3)":"var(--line)", color:statusFilter==="all"?"var(--text)":"var(--text-4)" }}>
-          All · {people.filter(p=>deptFilter==="all"||p.department===deptFilter).length}
-        </button>
-        {statusCounts.map(s => (
-          <button key={s.key} onClick={() => setStatusFilter(s.key)} style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 12px", borderRadius:99, border:"1px solid", fontSize:11, fontFamily:"var(--mono)", cursor:"pointer", letterSpacing:"0.04em", transition:"all 0.12s", background:statusFilter===s.key?s.bg:"transparent", borderColor:statusFilter===s.key?s.color:"var(--line)", color:statusFilter===s.key?s.color:"var(--text-4)" }}>
-            <span style={{ width:5, height:5, borderRadius:"50%", background:s.color, flexShrink:0 }}/>
-            {s.label} · {s.count}
-          </button>
-        ))}
-      </div>
-
-      {/* Table */}
-      <div style={{ background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:10, overflow:"hidden" }}>
-        {/* Header */}
-        <div style={{ display:"flex", padding:"10px 18px", borderBottom:"1px solid var(--line)", gap:12 }}>
-          {colHdr("name","Name",2)}
-          {colHdr("role","Role",2.5)}
-          {colHdr("department","Dept",1)}
-          {colHdr("level","Lvl",0.6)}
-          {colHdr("status","Status",1)}
-          <div style={{ flex:1.5, fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-3)" }}>Manager</div>
-          <div style={{ flex:1.2, fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-3)" }}>Location</div>
-          {colHdr("tenure","Tenure",0.7)}
-          {colHdr("startDate","Started",0.8)}
-        </div>
-
-        {/* Rows */}
-        {filtered.map((p, i) => {
-          const dc = DEPT_COLORS[p.department];
-          const sm = STATUS_META[p.status];
-          const mgr = people.find(q => q.id === p.managerId);
-          const isOpen = p.status === "open";
-          const tenureStr = isOpen ? "—" : formatTenure(parseTenureMonths(p.startDate));
-          return (
-            <div key={p.id} style={{ display:"flex", padding:"11px 18px", gap:12, borderBottom: i < filtered.length-1 ? "1px solid var(--line)" : "none", cursor:"pointer", background:"transparent", transition:"background 0.12s", alignItems:"center" }}
-              onMouseEnter={e => (e.currentTarget.style.background="var(--surface-2)")}
-              onMouseLeave={e => (e.currentTarget.style.background="transparent")}
-              onClick={() => onSelect(p)}>
-              {/* Name */}
-              <div style={{ flex:2, display:"flex", alignItems:"center", gap:9, minWidth:0 }}>
-                <div style={{ width:28, height:28, borderRadius:7, background:isOpen?"var(--surface-3)":`${dc}25`, color:isOpen?"var(--text-4)":dc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:600, fontFamily:"var(--mono)", flexShrink:0, border:isOpen?"1.5px dashed var(--line-strong)":"none" }}>
-                  {isOpen?"?":initials(p.name)}
-                </div>
-                <span style={{ fontSize:13, fontWeight:isOpen?400:500, color:isOpen?"var(--text-3)":"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                  {isOpen?<em style={{ fontStyle:"italic" }}>Open Role</em>:p.name}
-                </span>
-              </div>
-              {/* Role */}
-              <div style={{ flex:2.5, fontSize:12.5, color:"var(--text-2)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.role}</div>
-              {/* Dept */}
-              <div style={{ flex:1 }}>
-                <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 8px", borderRadius:4, background:`${dc}18`, border:`1px solid ${dc}35`, fontFamily:"var(--mono)", fontSize:9, color:dc, textTransform:"uppercase", letterSpacing:"0.07em" }}>
-                  <span style={{ width:4, height:4, borderRadius:"50%", background:dc }}/>{p.department.slice(0,4)}
-                </span>
-              </div>
-              {/* Level */}
-              <div style={{ flex:0.6, fontFamily:"var(--mono)", fontSize:11, color:"var(--text-3)" }}>{p.level}</div>
-              {/* Status */}
-              <div style={{ flex:1 }}>
-                <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 8px", borderRadius:99, background:sm.bg, fontFamily:"var(--mono)", fontSize:9, color:sm.color, letterSpacing:"0.05em" }}>
-                  <span style={{ width:5, height:5, borderRadius:"50%", background:sm.color }}/>{sm.label}
-                </span>
-              </div>
-              {/* Manager */}
-              <div style={{ flex:1.5, fontSize:12, color:"var(--text-3)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{mgr?.name??"—"}</div>
-              {/* Location */}
-              <div style={{ flex:1.2, fontSize:11.5, color:"var(--text-3)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.location||"—"}</div>
-              {/* Tenure */}
-              <div style={{ flex:0.7, fontFamily:"var(--mono)", fontSize:11, color:isOpen?"var(--text-4)":"var(--text-3)" }}>{tenureStr}</div>
-              {/* Started */}
-              <div style={{ flex:0.8, fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)" }}>{p.startDate||"—"}</div>
-            </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div style={{ padding:"48px 32px", textAlign:"center", color:"var(--text-4)", fontFamily:"var(--mono)", fontSize:11, textTransform:"uppercase", letterSpacing:"0.14em" }}>No results</div>
-        )}
-      </div>
     </div>
   );
 }
