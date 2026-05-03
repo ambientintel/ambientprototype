@@ -110,7 +110,8 @@
   "weekStatus": {
     "Brian": {
       "Thu": "yes",
-      "Fri": "yes"
+      "Fri": "yes",
+      "SU": "yes"
     },
     "Hanna": {
       "Mon": null
