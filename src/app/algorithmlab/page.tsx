@@ -8,7 +8,7 @@ import {
   ComposedChart,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ReferenceLine,
+  ResponsiveContainer, ReferenceLine, ReferenceArea, Cell,
 } from "recharts";
 
 // ── Design tokens ─────────────────────────────────────────────
@@ -53,6 +53,27 @@ function generateSignal(points: number, seed = 1): number[] {
   });
 }
 const RAW = generateSignal(200);
+
+// ── Activity signal (5-min epochs, 2 days) ────────────────────
+function generateActivitySignal(pts = 576): number[] {
+  const epd = 288;
+  const rng = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+  return Array.from({ length: pts }, (_, i) => {
+    const h = ((i % epd) / epd) * 24;
+    const d = Math.floor(i / epd);
+    let base = h >= 7 && h < 23
+      ? 18 + 25 * Math.sin(Math.PI * (h - 7) / 16)
+        + (h >= 7.5 && h < 10  ? 55 * Math.exp(-(((h - 9)    / 0.7) * ((h - 9)    / 0.7))) : 0)
+        + (h >= 14  && h < 17  ? 48 * Math.exp(-(((h - 15.5) / 1.0) * ((h - 15.5) / 1.0))) : 0)
+        + (h >= 12  && h < 13  ? 22 * Math.exp(-(((h - 12.5) / 0.4) * ((h - 12.5) / 0.4))) : 0)
+      : 3 + rng((i + d * 7) * 3) * 8;
+    return Math.max(0, Math.round(base + (rng(i * 3 + 17) - 0.5) * 22));
+  });
+}
+const ACTIVITY = generateActivitySignal();
+function epochToTime(i: number): string {
+  const m = i * 5; return `${String(Math.floor(m / 60) % 24).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`;
+}
 
 // ── Signal processing algorithms ──────────────────────────────
 function movingAverage(data: number[], w: number): (number | null)[] {
@@ -230,12 +251,88 @@ function hurstExponent(data: number[]) {
   };
 }
 
+// ── Activity Analysis algorithms (Karas et al. 2019 · Urbanek/COAH) ──
+
+function activityBouts(data: number[], threshold: number) {
+  const active = data.map(v => v > threshold);
+  const activeBouts: number[] = [], sedBouts: number[] = [];
+  let len = 1;
+  for (let i = 1; i <= data.length; i++) {
+    if (i < data.length && active[i] === active[i - 1]) { len++; }
+    else { (active[i - 1] ? activeBouts : sedBouts).push(len); len = 1; }
+  }
+  let aToS = 0, sToA = 0, totA = 0, totS = 0;
+  for (let i = 0; i < active.length - 1; i++) {
+    if (active[i]) { totA++; if (!active[i + 1]) aToS++; }
+    else { totS++; if (active[i + 1]) sToA++; }
+  }
+  if (active[active.length - 1]) totA++; else totS++;
+  return {
+    astp: totA > 0 ? +(aToS / totA).toFixed(4) : 0,
+    satp: totS > 0 ? +(sToA / totS).toFixed(4) : 0,
+    activeBouts, sedBouts, totA, totS, active,
+    meanActiveBout: activeBouts.length ? +(activeBouts.reduce((a, b) => a + b, 0) / activeBouts.length).toFixed(1) : 0,
+    meanSedBout:    sedBouts.length    ? +(sedBouts.reduce((a, b) => a + b, 0) / sedBouts.length).toFixed(1) : 0,
+  };
+}
+
+function boutPowerLaw(boutLengths: number[]) {
+  if (boutLengths.length < 4) return { alpha: 0, points: [] as { l: number; logL: number; logP: number; fit: number }[] };
+  const sorted = [...boutLengths].sort((a, b) => a - b);
+  const uniq = [...new Set(sorted)];
+  const n = sorted.length;
+  const pts = uniq.map(l => ({ l, logL: +Math.log10(l).toFixed(3), logP: +Math.log10(sorted.filter(x => x >= l).length / n).toFixed(3) }));
+  const valid = pts.filter(d => d.l > 1);
+  if (valid.length < 3) return { alpha: 0, points: [] as { l: number; logL: number; logP: number; fit: number }[] };
+  const reg = linReg(valid.map(d => d.logL), valid.map(d => d.logP));
+  return { alpha: +Math.abs(reg.slope).toFixed(3), points: valid.map(d => ({ ...d, fit: +(reg.slope * d.logL + reg.intercept).toFixed(3) })) };
+}
+
+function intradailyVariability(data: number[]): number {
+  const N = data.length, xbar = mn(data);
+  const num = data.slice(0, -1).reduce((a, v, i) => a + (data[i + 1] - v) ** 2, 0);
+  const den = data.reduce((a, v) => a + (v - xbar) ** 2, 0);
+  return +(N * num / ((N - 1) * (den || 1))).toFixed(4);
+}
+
+function interdailyStability(data: number[], epd = 288): number {
+  const N = data.length, numDays = Math.floor(N / epd);
+  if (numDays < 2) return 0;
+  const used = data.slice(0, numDays * epd), xbar = mn(used);
+  const hourMeans = Array.from({ length: epd }, (_, h) => mn(Array.from({ length: numDays }, (_, d) => used[d * epd + h])));
+  const num = hourMeans.reduce((a, hm) => a + (hm - xbar) ** 2, 0);
+  const den = used.reduce((a, v) => a + (v - xbar) ** 2, 0);
+  return +Math.min(1, numDays * num / (den || 1)).toFixed(4);
+}
+
+function relativeAmplitude(data: number[], epd = 288) {
+  const day = data.slice(0, epd);
+  const m10n = Math.round(10 * epd / 24), l5n = Math.round(5 * epd / 24);
+  let m10Val = -Infinity, l5Val = Infinity, m10Start = 0, l5Start = 0;
+  for (let i = 0; i <= epd - m10n; i++) {
+    const s = day.slice(i, i + m10n).reduce((a, b) => a + b) / m10n;
+    if (s > m10Val) { m10Val = s; m10Start = i; }
+  }
+  for (let i = 0; i <= epd - l5n; i++) {
+    const s = day.slice(i, i + l5n).reduce((a, b) => a + b) / l5n;
+    if (s < l5Val) { l5Val = s; l5Start = i; }
+  }
+  const ra = +((m10Val - l5Val) / (m10Val + l5Val + 0.001)).toFixed(4);
+  return { m10: +m10Val.toFixed(1), l5: +l5Val.toFixed(1), ra, m10Start, l5Start, m10n, l5n,
+    m10HourStart: Math.floor(m10Start / 12), m10HourEnd: Math.min(24, Math.ceil((m10Start + m10n) / 12)),
+    l5HourStart:  Math.floor(l5Start / 12),  l5HourEnd:  Math.min(24, Math.ceil((l5Start  + l5n)  / 12)),
+  };
+}
+
 // ── Types ──────────────────────────────────────────────────────
-type SignalAlgoId  = 'moving_avg' | 'exp_smooth' | 'zscore' | 'rolling_std';
-type ComplexAlgoId = 'cc' | 'dfa' | 'sample_entropy' | 'perm_entropy' | 'hurst' | 'fingerprint';
-type AlgoId = SignalAlgoId | ComplexAlgoId;
-const isComplex = (a: AlgoId): a is ComplexAlgoId =>
+type SignalAlgoId   = 'moving_avg' | 'exp_smooth' | 'zscore' | 'rolling_std';
+type ComplexAlgoId  = 'cc' | 'dfa' | 'sample_entropy' | 'perm_entropy' | 'hurst' | 'fingerprint';
+type ActivityAlgoId = 'fragmentation' | 'circadian';
+type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId;
+const isComplex  = (a: AlgoId): a is ComplexAlgoId  =>
   ['cc','dfa','sample_entropy','perm_entropy','hurst','fingerprint'].includes(a);
+const isActivity = (a: AlgoId): a is ActivityAlgoId =>
+  ['fragmentation','circadian'].includes(a);
 
 const SIGNAL_ALGOS: { id: SignalAlgoId; label: string; color: string }[] = [
   { id: 'moving_avg',  label: 'Moving Average',        color: C.sage   },
@@ -251,6 +348,10 @@ const COMPLEX_ALGOS: { id: ComplexAlgoId; label: string; color: string; sub: str
   { id: 'hurst',         label: 'Hurst Exponent',     color: C.accent, sub: 'Signal persistence' },
   { id: 'fingerprint',   label: 'Fingerprint',        color: C.gold,   sub: 'All metrics at once' },
 ];
+const ACTIVITY_ALGOS: { id: ActivityAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'fragmentation', label: 'Fragmentation',      color: C.sage,   sub: 'ASTP · SATP · bout power law' },
+  { id: 'circadian',     label: 'Circadian Rhythm',   color: C.purple, sub: 'IS · IV · RA · M10 / L5' },
+];
 
 // ── Interpretation helpers ────────────────────────────────────
 function interpCC(cc: number)  { return cc <= 3 ? { text: 'Minimal branching', c: C.sage } : cc <= 6 ? { text: 'Moderate complexity', c: C.amber } : cc <= 10 ? { text: 'High complexity', c: C.coral } : { text: 'Wandering pattern', c: C.red }; }
@@ -258,6 +359,10 @@ function interpDFA(a: number)  { return a < 0.5 ? { text: 'Anti-correlated', c: 
 function interpSE(se: number)  { return se < 0.5 ? { text: 'Highly regular', c: C.sage } : se < 1.0 ? { text: 'Moderate regularity', c: C.amber } : se < 1.5 ? { text: 'Irregular', c: C.coral } : { text: 'Highly irregular', c: C.red }; }
 function interpPE(pe: number)  { return pe < 0.6 ? { text: 'Ordered patterns', c: C.sage } : pe < 0.75 ? { text: 'Mixed complexity', c: C.amber } : pe < 0.9 ? { text: 'High disorder', c: C.coral } : { text: 'Maximum disorder', c: C.red }; }
 function interpH(h: number)    { return h < 0.4 ? { text: 'Anti-persistent', c: C.red } : h < 0.6 ? { text: 'Random walk', c: C.amber } : h < 0.8 ? { text: 'Persistent', c: C.sage } : { text: 'Strongly persistent', c: C.accent }; }
+function interpASTP(v: number) { return v < 0.10 ? { text: 'Sustained activity', c: C.sage } : v < 0.20 ? { text: 'Somewhat fragmented', c: C.amber } : v < 0.30 ? { text: 'Moderately fragmented', c: C.coral } : { text: 'Highly fragmented', c: C.red }; }
+function interpIV(v: number)   { return v < 0.5  ? { text: 'Very stable rhythm', c: C.sage } : v < 1.0  ? { text: 'Stable', c: C.amber } : v < 1.5 ? { text: 'Irregular', c: C.coral } : { text: 'Highly fragmented rhythm', c: C.red }; }
+function interpIS(v: number)   { return v > 0.8  ? { text: 'Highly regular', c: C.sage } : v > 0.6 ? { text: 'Regular', c: C.amber } : v > 0.4 ? { text: 'Moderate regularity', c: C.coral } : { text: 'Irregular across days', c: C.red }; }
+function interpRA(v: number)   { return v > 0.9  ? { text: 'Strong day/night rhythm', c: C.sage } : v > 0.7 ? { text: 'Good contrast', c: C.amber } : v > 0.5 ? { text: 'Moderate contrast', c: C.coral } : { text: 'Weak rhythm', c: C.red }; }
 
 // ── ChartCard ─────────────────────────────────────────────────
 function ChartCard({ title, sub, badge, badgeColor, full, children }: {
@@ -397,6 +502,7 @@ export default function AlgorithmLabPage() {
   const [seR, setSeR]               = useState(0.20);
   const [peM, setPeM]               = useState(4);
   const [peDelay, setPeDelay]       = useState(1);
+  const [fragThreshold, setFragThreshold] = useState(40);
 
   const raw = useMemo(() => RAW.slice(0, visPoints), [visPoints]);
   const p2  = (v: number) => v.toFixed(2);
@@ -431,6 +537,26 @@ export default function AlgorithmLabPage() {
   const peResult   = useMemo(() => ({ ...permutationEntropy(raw, peM, peDelay), windowed: peWindowed(raw, peM, peDelay, 50, 8) }), [raw, peM, peDelay]);
   const hurstResult = useMemo(() => hurstExponent(raw), [raw]);
 
+  // ── Activity Analysis computations ──────────────────────────
+  const fragResult   = useMemo(() => activityBouts(ACTIVITY.slice(0, 288), fragThreshold), [fragThreshold]);
+  const boutPL       = useMemo(() => boutPowerLaw(fragResult.activeBouts), [fragResult]);
+  const ivResult     = useMemo(() => intradailyVariability(ACTIVITY), []);
+  const isResult     = useMemo(() => interdailyStability(ACTIVITY, 288), []);
+  const raResult     = useMemo(() => relativeAmplitude(ACTIVITY, 288), []);
+  const hourlyData   = useMemo(() => Array.from({ length: 24 }, (_, h) => {
+    const vals = Array.from({ length: 2 }, (_, d) => Array.from({ length: 12 }, (_, ep) => ACTIVITY[d * 288 + h * 12 + ep] ?? 0)).flat();
+    return { hour: h, label: `${String(h).padStart(2,'0')}h`, mean: Math.round(mn(vals)) };
+  }), []);
+  const fragChartData = useMemo(() => ACTIVITY.slice(0, 288).map((v, i) => ({
+    t: i, time: epochToTime(i), signal: v,
+    activeBar: v > fragThreshold ? v - fragThreshold : 0,
+    sedBar: Math.min(v, fragThreshold),
+  })), [fragThreshold]);
+  const boutHistData = useMemo(() => {
+    const maxL = Math.min(25, Math.max(...fragResult.activeBouts, 1));
+    return Array.from({ length: maxL }, (_, i) => ({ l: i + 1, count: fragResult.activeBouts.filter(b => b === i + 1).length })).filter(d => d.count > 0);
+  }, [fragResult]);
+
   const fingerprint = useMemo(() => {
     const cc = cyclomaticComplexity(raw, 5).cc;
     const dfa = dfaAnalysis(raw, 14).alpha;
@@ -454,9 +580,10 @@ export default function AlgorithmLabPage() {
     return { mean: m.toFixed(2), std: s.toFixed(2), min: Math.min(...raw).toFixed(1), max: Math.max(...raw).toFixed(1), anomalies: timeData.filter(d => d.anomaly !== null).length };
   }, [raw, timeData]);
 
-  const activeSignalAlgo = SIGNAL_ALGOS.find(a => a.id === algo);
+  const activeSignalAlgo  = SIGNAL_ALGOS.find(a => a.id === algo);
   const activeComplexAlgo = COMPLEX_ALGOS.find(a => a.id === algo);
-  const inComplex = isComplex(algo);
+  const inComplex  = isComplex(algo);
+  const inActivity = isActivity(algo);
 
   return (
     <div className="app" style={{ color: C.text }}>
@@ -503,6 +630,16 @@ export default function AlgorithmLabPage() {
           ))}
         </nav>
 
+        <nav className="nav-section">
+          <div className="nav-label">Activity Analysis</div>
+          {ACTIVITY_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
         <div className="sidebar-footer">
           <span className="status-dot" style={{ background: files.length ? C.sage : C.amber, boxShadow: `0 0 0 3px ${files.length ? 'rgba(61,204,145,0.18)' : 'rgba(255,201,64,0.18)'}` }}/>
           <span>{files.length ? `${files.length} file${files.length > 1 ? 's' : ''} loaded` : 'demo data'}</span>
@@ -513,7 +650,7 @@ export default function AlgorithmLabPage() {
       <main className="main">
         <header className="topbar" style={{ marginBottom: 32 }}>
           <div>
-            <div className="crumb">Ambient Intelligence · {inComplex ? 'Complexity Suite · Khan & Jacobs 2021' : 'Signal Processing'}</div>
+            <div className="crumb">Ambient Intelligence · {inActivity ? 'Activity Analysis · Karas 2019 · Urbanek / JHU-COAH' : inComplex ? 'Complexity Suite · Khan & Jacobs 2021' : 'Signal Processing'}</div>
             <h1 className="page-title">Algorithm <em>Lab</em></h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -524,7 +661,14 @@ export default function AlgorithmLabPage() {
 
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 28 }}>
-          {(inComplex ? [
+          {(inActivity ? [
+            { label: 'Epochs',       value: '288',                                           color: C.accent },
+            { label: 'ASTP',         value: fragResult.astp.toString(),                      color: interpASTP(fragResult.astp).c },
+            { label: 'SATP',         value: fragResult.satp.toString(),                      color: C.text2  },
+            { label: 'IV',           value: ivResult.toString(),                             color: interpIV(ivResult).c },
+            { label: 'IS',           value: isResult.toString(),                             color: interpIS(isResult).c },
+            { label: 'RA',           value: raResult.ra.toString(),                          color: interpRA(raResult.ra).c },
+          ] : inComplex ? [
             { label: 'Data Points',  value: raw.length.toString(),                           color: C.accent },
             { label: 'Mean',         value: mn(raw).toFixed(2),                              color: C.text2  },
             { label: 'Std Dev',      value: sd(raw).toFixed(2),                              color: C.text2  },
@@ -538,7 +682,7 @@ export default function AlgorithmLabPage() {
             { label: 'Min',          value: sigStats.min,                                    color: C.sage   },
             { label: 'Max',          value: sigStats.max,                                    color: C.amber  },
             { label: 'Anomalies',    value: sigStats.anomalies.toString(),                   color: sigStats.anomalies > 0 ? C.red : C.sage },
-          ]).map(s => (
+          ] as { label: string; value: string; color: string }[]).map(s => (
             <div key={s.label} style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px' }}>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>{s.label}</div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 600, color: s.color }}>{s.value}</div>
@@ -697,6 +841,159 @@ export default function AlgorithmLabPage() {
                 );
               })()}
             </ChartCard>
+          </>}
+
+          {/* ── ACTIVITY ANALYSIS MODE ── */}
+          {inActivity && <>
+
+            {/* Threshold slider */}
+            <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 4 }}>
+                    {algo === 'fragmentation' ? 'Activity Fragmentation' : 'Circadian Rhythm Analysis'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
+                    {algo === 'fragmentation'
+                      ? 'Karas et al. 2019 · JAMA Network Open · ASTP/SATP linked to all-cause mortality in NHANES'
+                      : 'Urbanek / JHU-COAH · IS · IV · RA · M10 / L5 · non-parametric circadian analysis'}
+                  </div>
+                </div>
+                <SliderRow label="VISIBLE POINTS" min={30} max={200} step={5} value={visPoints} onChange={setVisPoints} />
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
+                {ACTIVITY_ALGOS.map(a => (
+                  <button key={a.id} onClick={() => setAlgo(a.id)} style={{ padding: '8px 18px', borderRadius: 999, border: `1px solid ${algo === a.id ? a.color : C.lineS}`, background: algo === a.id ? `${a.color}1A` : 'transparent', color: algo === a.id ? a.color : C.text3, fontFamily: 'var(--mono)', fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>{a.label}</button>
+                ))}
+              </div>
+              {algo === 'fragmentation' && (
+                <div className="ctrl-strip" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
+                  <SliderRow label="Activity threshold" min={5} max={80} step={5} value={fragThreshold} onChange={setFragThreshold} />
+                </div>
+              )}
+            </div>
+
+            {/* ── FRAGMENTATION ── */}
+            {algo === 'fragmentation' && <>
+              {/* Time series colored by active/sedentary */}
+              <ChartCard full title="Activity Signal · Active vs Sedentary" sub={`threshold = ${fragThreshold} · green = active · ${fragResult.totA} active epochs · ${fragResult.totS} sedentary epochs`} badge={`ASTP = ${fragResult.astp}`} badgeColor={interpASTP(fragResult.astp).c}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={fragChartData.slice(0, visPoints)} margin={{ top: 4, right: 8, left: -20, bottom: 0 }} barSize={2} barCategoryGap={0}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="time" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={23} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} labelFormatter={(l) => `${l}`} formatter={(v: unknown, name: unknown) => [String(v), String(name)] as [string, string]} />
+                    <ReferenceLine y={fragThreshold} stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.6} label={{ value: 'threshold', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.amber }} />
+                    <Bar dataKey="signal" name="Activity" radius={0}>
+                      {fragChartData.slice(0, visPoints).map((d, i) => (
+                        <Cell key={i} fill={d.signal > fragThreshold ? C.sage : C.s3} fillOpacity={d.signal > fragThreshold ? 0.75 : 0.5} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              {/* Bout length histogram */}
+              <ChartCard title="Active Bout Lengths" sub={`${fragResult.activeBouts.length} active bouts · mean = ${fragResult.meanActiveBout} epochs`}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={boutHistData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="l" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'bout length (epochs)', position: 'insideBottom', offset: -2, fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [String(v), 'bouts'] as [string, string]} />
+                    <Bar dataKey="count" name="Count" fill={C.sage} fillOpacity={0.75} radius={[3,3,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              {/* Power law log-log CCDF */}
+              <ChartCard title="Bout Power Law (CCDF)" sub={`log P(L ≥ x) vs log x · α = ${boutPL.alpha} · α < 2 → heavy tail (sustained bouts)`} badge={`α = ${boutPL.alpha}`} badgeColor={boutPL.alpha < 2 ? C.sage : C.coral}>
+                {boutPL.points.length >= 3 ? (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <LineChart data={boutPL.points} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                      <XAxis dataKey="logL" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'log₁₀(L)', position: 'insideBottom', offset: -4, fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                      <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'log P(L≥x)', angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                      <Tooltip contentStyle={TT_STYLE} />
+                      <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 10, paddingTop: 10 }} />
+                      <Line type="monotone" dataKey="logP" stroke={C.sage} strokeWidth={0} dot={{ r: 4, fill: C.sage }} name="CCDF" />
+                      <Line type="monotone" dataKey="fit"  stroke={C.sage} strokeWidth={1.5} dot={false} strokeDasharray="5 3" name={`fit (α=${boutPL.alpha})`} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11, color: C.text4 }}>Insufficient bout data — lower threshold to generate more active bouts</div>
+                )}
+              </ChartCard>
+
+              {/* ASTP / SATP metric badges */}
+              <MetricBadge label="ASTP · Active→Sedentary" value={fragResult.astp.toString()} interp={interpASTP(fragResult.astp)} />
+              <MetricBadge label="SATP · Sedentary→Active" value={fragResult.satp.toString()} interp={{ text: `${fragResult.sedBouts.length} sedentary bouts`, c: C.text3 }} />
+              <MetricBadge label="Mean Active Bout" value={fragResult.meanActiveBout.toString()} unit="epochs" interp={{ text: `${fragResult.activeBouts.length} bouts total`, c: C.text3 }} />
+              <MetricBadge label="Mean Sedentary Bout" value={fragResult.meanSedBout.toString()} unit="epochs" interp={{ text: fragResult.meanSedBout > 12 ? 'Prolonged sedentary' : 'Short sedentary bouts', c: fragResult.meanSedBout > 12 ? C.coral : C.sage }} />
+            </>}
+
+            {/* ── CIRCADIAN ── */}
+            {algo === 'circadian' && <>
+              {/* 24-hour profile with M10/L5 windows */}
+              <ChartCard full title="24-Hour Activity Profile" sub="2-day mean per hour · green = M10 most active 10h · amber = L5 least active 5h · synthetic 5-min epochs">
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={hourlyData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor={C.purple} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={C.purple} stopOpacity={0.04}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis dataKey="label" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={1} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [String(v), 'counts'] as [string, string]} />
+                    <ReferenceArea x1={hourlyData[raResult.m10HourStart]?.label} x2={hourlyData[Math.min(23, raResult.m10HourEnd)]?.label} fill={C.sage}  fillOpacity={0.13} label={{ value: 'M10', position: 'insideTop', fontFamily: 'var(--mono)', fontSize: 9, fill: C.sage }} />
+                    <ReferenceArea x1={hourlyData[raResult.l5HourStart]?.label}  x2={hourlyData[Math.min(23, raResult.l5HourEnd)]?.label}  fill={C.amber} fillOpacity={0.13} label={{ value: 'L5',  position: 'insideTop', fontFamily: 'var(--mono)', fontSize: 9, fill: C.amber }} />
+                    <Area type="monotone" dataKey="mean" stroke={C.purple} strokeWidth={2} fill="url(#actGrad)" name="Activity" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              {/* IS / IV / RA metric tiles */}
+              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                <MetricBadge label="IS · Interdaily Stability" value={isResult.toString()} interp={interpIS(isResult)} />
+                <MetricBadge label="IV · Intradaily Variability" value={ivResult.toString()} interp={interpIV(ivResult)} />
+                <MetricBadge label="RA · Relative Amplitude" value={raResult.ra.toString()} interp={interpRA(raResult.ra)} />
+              </div>
+
+              {/* M10/L5 detail + reference */}
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>M10 / L5</div>
+                {[
+                  { label: 'M10 mean',   value: raResult.m10.toString(), sub: `most active 10h window · starts ${epochToTime(raResult.m10Start * 1)} `, color: C.sage },
+                  { label: 'L5 mean',    value: raResult.l5.toString(),  sub: `least active 5h window · starts ${epochToTime(raResult.l5Start * 1)}`,   color: C.amber },
+                  { label: 'RA = (M10−L5)/(M10+L5)', value: raResult.ra.toString(), sub: 'closer to 1.0 = stronger circadian contrast', color: interpRA(raResult.ra).c },
+                ].map(r => (
+                  <div key={r.label} style={{ display: 'flex', alignItems: 'baseline', gap: 14, padding: '8px 0', borderBottom: `1px solid ${C.line}` }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: r.color, minWidth: 200 }}>{r.label}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 600, color: r.color }}>{r.value}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4 }}>{r.sub}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Clinical Context</div>
+                {[
+                  { m: 'IS',  desc: 'Low IS → irregular day-to-day rhythm; associated with cognitive decline and poor sleep quality' },
+                  { m: 'IV',  desc: 'High IV → fragmented within-day rhythm; loss of normal rest-activity structure' },
+                  { m: 'RA',  desc: 'Low RA → blurred day/night contrast; common in dementia and institutionalized older adults' },
+                  { m: 'M10', desc: 'Timing of peak activity window — delayed or attenuated M10 seen in MCI' },
+                  { m: 'L5',  desc: 'Most sedentary 5-hour window — elevated L5 may indicate nighttime activity or poor sleep' },
+                ].map(x => (
+                  <div key={x.m} style={{ padding: '8px 12px', background: C.s2, borderRadius: 8, border: `1px solid ${C.line}`, marginBottom: 8 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.purple, marginBottom: 3 }}>{x.m}</div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, lineHeight: 1.5 }}>{x.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </>}
           </>}
 
           {/* ── COMPLEXITY SUITE MODE ── */}
@@ -937,7 +1234,7 @@ export default function AlgorithmLabPage() {
         </div>
 
         <div className="agent-note" style={{ marginTop: 48 }}>
-          — Ambient Intelligence · algorithm lab · Khan & Jacobs 2021 · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst —
+          — Ambient Intelligence · algorithm lab · Khan & Jacobs 2021 · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · Karas et al. 2019 · ASTP · SATP · Urbanek / JHU-COAH · IS · IV · RA · M10/L5 —
         </div>
       </main>
     </div>
