@@ -151,8 +151,8 @@ export default function EngineeringPage() {
   const [dragOverEngIdx, setDragOverEngIdx] = useState<number|null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
-  const todayIdx = Math.min(4, Math.max(0, new Date().getDay() - 1));
+  const DAYS = ["M","T","W","TH","F","S","SU"];
+  const [todayIdx, setTodayIdx] = useState(() => (new Date().getDay() + 6) % 7);
   const todayKey = new Date().toISOString().slice(0, 10);
 
   const [loading, setLoading] = useState(true);
@@ -174,7 +174,7 @@ export default function EngineeringPage() {
   // ── Load: API first → localStorage fallback → INITIAL_ISSUES ─────────────
   useEffect(() => {
     (async () => {
-      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[]; subsystems?: Subsystem[] };
+      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[]; subsystems?: Subsystem[]; boardWeek?: number };
       let loaded: BoardData | null = null;
       try {
         const res  = await fetch("/api/engineering");
@@ -191,7 +191,7 @@ export default function EngineeringPage() {
         setPersonalTasks(loaded.personalTasks   ?? {});
         setCompletedTasks(loaded.completedTasks ?? {});
         setHistory(loaded.history     ?? []);
-        setWeekStatus(loaded.weekStatus ?? {});
+        setWeekStatus((loaded.boardWeek ?? weekNum) !== weekNum ? {} : (loaded.weekStatus ?? {}));
         if (loaded.team?.length) setTeam(loaded.team.map(tm => ({ ...TEAM.find(d => d.name === tm.name), ...tm })));
         if (loaded.subsystems?.length) setSubsystems(loaded.subsystems);
       }
@@ -211,7 +211,7 @@ export default function EngineeringPage() {
     setSyncStatus("saving");
     saveTimerRef.current = setTimeout(async () => {
       saveTimerRef.current = null;
-      const board = { issues, personalTasks, completedTasks, history, weekStatus, team, subsystems };
+      const board = { issues, personalTasks, completedTasks, history, weekStatus, team, subsystems, boardWeek: weekNum };
       // Always persist locally first — instant, no network
       lsSave(board);
       if (!apiEnabledRef.current) { setSyncStatus("saved"); setTimeout(() => setSyncStatus("idle"), 1500); return; }
@@ -245,14 +245,14 @@ export default function EngineeringPage() {
       if (!apiEnabledRef.current || saveTimerRef.current) return;
       try {
         const res  = await fetch("/api/engineering");
-        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[]; subsystems?: Subsystem[] }; sha: string | null };
+        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[]; subsystems?: Subsystem[]; boardWeek?: number }; sha: string | null };
         if (data.sha && data.sha !== boardShaRef.current && data.board) {
           isMountingRef.current = true;
           setIssues(data.board.issues       ?? INITIAL_ISSUES);
           setPersonalTasks(data.board.personalTasks   ?? {});
           setCompletedTasks(data.board.completedTasks ?? {});
           setHistory(data.board.history     ?? []);
-          setWeekStatus(data.board.weekStatus ?? {});
+          setWeekStatus((data.board.boardWeek ?? weekNum) !== weekNum ? {} : (data.board.weekStatus ?? {}));
           if (data.board.team?.length) setTeam(data.board.team.map(tm => ({ ...TEAM.find(d => d.name === tm.name), ...tm })));
           setSubsystems(data.board.subsystems ?? DEFAULT_SUBSYSTEMS);
           boardShaRef.current = data.sha;
@@ -454,6 +454,11 @@ export default function EngineeringPage() {
     }, 60_000);
     return () => clearInterval(tick);
   }, [loading]);
+
+  useEffect(() => {
+    const tick = setInterval(() => setTodayIdx((new Date().getDay() + 6) % 7), 60_000);
+    return () => clearInterval(tick);
+  }, []);
 
   // ── Week status helpers ────────────────────────────────────────────────────
   function setDayStatus(name: string, day: string, val: "yes"|"no"|null) {
@@ -735,7 +740,7 @@ export default function EngineeringPage() {
                                 style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2, background:"none", border:"none", cursor:"pointer", padding:"1px", borderRadius:3, transition:"transform 0.13s" }}
                                 onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.2)")}
                                 onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>
-                                <span style={{ fontFamily:"var(--mono)", fontSize:7, color: isToday ? t.color : "var(--text-4)", fontWeight: isToday ? 700 : 400, lineHeight:1 }}>{day[0]}</span>
+                                <span style={{ fontFamily:"var(--mono)", fontSize:7, color: isToday ? t.color : "var(--text-4)", fontWeight: isToday ? 700 : 400, lineHeight:1 }}>{day}</span>
                                 <span style={{ width:6, height:6, borderRadius:"50%", background: dotColor, boxShadow: st === "yes" ? `0 0 5px ${dotColor}` : st === "no" ? `0 0 5px ${dotColor}` : "none", transition:"all 0.18s ease", display:"block" }}/>
                               </button>
                             );
