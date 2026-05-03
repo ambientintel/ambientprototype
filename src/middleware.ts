@@ -11,6 +11,7 @@ export default authkitMiddleware({
       "/landing3",
       "/home",
       "/algorithmlab",
+      "/biodesign",
       "/api/push/(.*)",
     ],
   },
