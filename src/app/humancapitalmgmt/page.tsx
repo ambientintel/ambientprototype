@@ -32,10 +32,10 @@ interface TreeNode {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
-const NODE_W = 172;
-const NODE_H = 76;
-const GAP_H = 28;
-const GAP_V = 72;
+const NODE_W = 130;
+const NODE_H = 52;
+const GAP_H = 10;
+const GAP_V = 36;
 const PAD_TOP = 32;
 const PAD_H = 60;
 
@@ -404,6 +404,9 @@ function OrgChartView({ people, setPeople, deptFilter, onSelect, onAddUnder, onR
     c.scrollLeft = Math.max(0, (root.x + NODE_W / 2) * zoom - c.clientWidth / 2);
     c.scrollTop = 0;
   }, [nodes, zoom]);
+
+  // Auto-fit width on first mount
+  useEffect(() => { fitZoom(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!hoverId) return;
@@ -784,47 +787,47 @@ function OrgNode({ node, isHovered, isHighlighted, onHover, onSelect, onAdd }: {
       background: isHovered ? "var(--surface-2)" : "var(--surface-1)",
       border:`1px solid ${isHovered ? "var(--line-strong)" : "var(--line)"}`,
       borderLeft:`3px solid ${deptColor}`,
-      borderRadius:8, padding:"10px 12px",
+      borderRadius:6, padding:"6px 9px",
       cursor:"pointer", transition:"all 0.18s ease",
       boxShadow: isHovered ? "0 4px 20px rgba(0,0,0,0.4)" : "none",
-      display:"flex", flexDirection:"column", gap:5,
+      display:"flex", flexDirection:"column", gap:3,
     }}
       onMouseEnter={() => onHover(p.id)}
       onMouseLeave={() => onHover(null)}
       onClick={() => onSelect(p)}
     >
-      <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:5 }}>
         {/* Avatar */}
-        <div style={{ width:26, height:26, borderRadius:6, background: isOpen ? "var(--surface-3)" : `${deptColor}28`, color: isOpen ? "var(--text-4)" : deptColor, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:600, fontFamily:"var(--mono)", flexShrink:0, border: isOpen ? "1.5px dashed var(--line-strong)" : "none" }}>
+        <div style={{ width:20, height:20, borderRadius:4, background: isOpen ? "var(--surface-3)" : `${deptColor}28`, color: isOpen ? "var(--text-4)" : deptColor, display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, fontWeight:600, fontFamily:"var(--mono)", flexShrink:0, border: isOpen ? "1.5px dashed var(--line-strong)" : "none" }}>
           {isOpen ? "?" : initials(p.name)}
         </div>
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:12, fontWeight:500, color: isOpen ? "var(--text-3)" : "var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+          <div style={{ fontSize:11, fontWeight:500, color: isOpen ? "var(--text-3)" : "var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             {isOpen ? "Open Role" : p.name}
           </div>
         </div>
         {/* Status dot */}
-        <span style={{ width:6, height:6, borderRadius:"50%", background:statusMeta.color, flexShrink:0, opacity: isOpen ? 0.5 : 1 }}/>
+        <span style={{ width:5, height:5, borderRadius:"50%", background:statusMeta.color, flexShrink:0, opacity: isOpen ? 0.5 : 1 }}/>
       </div>
 
-      <div style={{ fontSize:11, color:"var(--text-3)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", paddingLeft:33 }}>
+      <div style={{ fontSize:10, color:"var(--text-3)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", paddingLeft:25 }}>
         {p.role}
       </div>
-      <div style={{ display:"flex", alignItems:"center", gap:6, paddingLeft:33 }}>
-        <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:deptColor, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em" }}>{p.level}</span>
-        <span style={{ color:"var(--line-strong)", fontSize:9 }}>·</span>
-        <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.06em" }}>{p.department.slice(0,4)}</span>
+      <div style={{ display:"flex", alignItems:"center", gap:5, paddingLeft:25 }}>
+        <span style={{ fontFamily:"var(--mono)", fontSize:8.5, color:deptColor, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.06em" }}>{p.level}</span>
+        <span style={{ color:"var(--line-strong)", fontSize:8 }}>·</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:8, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.05em" }}>{p.department.slice(0,4)}</span>
       </div>
 
       {/* Add direct report button */}
       {isHovered && (
         <button onClick={e => { e.stopPropagation(); onAdd(p.id); }} style={{
-          position:"absolute", bottom:-12, left:"50%", transform:"translateX(-50%)",
-          width:22, height:22, borderRadius:"50%", background:"var(--accent)", border:"2px solid var(--bg)",
+          position:"absolute", bottom:-9, left:"50%", transform:"translateX(-50%)",
+          width:18, height:18, borderRadius:"50%", background:"var(--accent)", border:"2px solid var(--bg)",
           display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:5,
           color:"#fff",
         }}>
-          <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M8 2v12M2 8h12" strokeLinecap="round"/></svg>
+          <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M8 2v12M2 8h12" strokeLinecap="round"/></svg>
         </button>
       )}
     </div>
