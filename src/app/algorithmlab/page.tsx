@@ -1137,7 +1137,7 @@ export default function AlgorithmLabPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
                 <div>
                   <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 4 }}>Complexity Suite</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>Movement complexity metrics — Khan & Jacobs, IEEE JBHI 2021 · MCI detection 6 months pre-diagnosis</div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>Movement complexity metrics · MCI detection 6 months pre-diagnosis</div>
                 </div>
                 <SliderRow label="Visible points" min={30} max={200} step={5} value={visPoints} onChange={setVisPoints} />
               </div>
