@@ -494,18 +494,95 @@ const AGE_STRATA: { group: string; label: string; color: string; factors: { name
   },
 ];
 
+// ── Sleep Analysis data ───────────────────────────────────────
+const STAGE_COLOR: Record<number,string> = { 0: C.purple, 1: C.sage, 2: C.accent, 3: C.text4 };
+const STAGE_LABEL: Record<number,string> = { 0: 'Deep',   1: 'Light', 2: 'REM',   3: 'Awake' };
+const STAGE_Y:     Record<number,number> = { 0: 0, 1: 2, 2: 1, 3: 3 }; // deep=bottom
+
+function genHypnogram(seed = 0) {
+  const rng = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+  const seq: number[] = [
+    ...Array(2).fill(3), ...Array(5).fill(1), ...Array(14).fill(0),
+    ...Array(4).fill(1), ...Array(9).fill(2),  ...Array(4).fill(1),
+    ...Array(8).fill(0), ...Array(3).fill(1),  ...Array(1).fill(3),
+    ...Array(3).fill(1), ...Array(12).fill(2), ...Array(4).fill(1),
+    ...Array(6).fill(0), ...Array(4).fill(1),  ...Array(14).fill(2),
+    ...Array(3).fill(1),
+  ];
+  const sHRV = [58, 38, 42, 28];
+  const sHR  = [52, 60, 62, 68];
+  return seq.slice(0, 96).map((s, i) => {
+    const jitter = rng(i * 5 + seed * 7) < 0.06 ? Math.min(3, s + 1) : s;
+    const stage  = Math.min(3, Math.max(0, jitter)) as 0|1|2|3;
+    const hh = String(Math.floor(i * 5 / 60)).padStart(2,'0');
+    const mm = String((i * 5) % 60).padStart(2,'0');
+    return {
+      t: i, time: `${hh}:${mm}`,
+      stageY: STAGE_Y[stage], stage, stageLabel: STAGE_LABEL[stage],
+      hrv: +(sHRV[stage] + (rng(i * 3 + seed) - 0.5) * 10).toFixed(1),
+      hr:  +(sHR[stage]  + (rng(i * 7 + seed) - 0.5) * 8).toFixed(0),
+    };
+  });
+}
+
+function sleepStageStats(hyp: ReturnType<typeof genHypnogram>) {
+  const total = hyp.length;
+  return [0,1,2,3].map(s => ({
+    stage: STAGE_LABEL[s], color: STAGE_COLOR[s],
+    pct: +((hyp.filter(d => d.stage === s).length / total) * 100).toFixed(1),
+    mins: hyp.filter(d => d.stage === s).length * 5,
+  }));
+}
+
+const _srng = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+const SLEEP_NIGHTS = Array.from({ length: 14 }, (_, i) => {
+  const bed  = Math.round(23 * 60 + (_srng(i * 11 + 3) - 0.5) * 90);
+  const dur  = Math.round(420 + (_srng(i * 13 + 7) - 0.5) * 80);
+  const wake = (bed + dur) % (24 * 60);
+  const mid  = (bed + Math.round(dur / 2)) % (24 * 60);
+  const eff  = +Math.round(80 + _srng(i * 17 + 5) * 14).toFixed(0);
+  const hrv  = +(_srng(i * 19 + 11) * 18 + 36).toFixed(1);
+  const day  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i % 7];
+  const fmt  = (m: number) => `${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+  return { night: i+1, day, bed, wake, dur, mid, eff, hrv, bedH: fmt(bed), wakeH: fmt(wake), midH: fmt(mid), isWeekend: day === 'Sat' || day === 'Sun' };
+});
+
+function sleepIrregularityIndex(nights: typeof SLEEP_NIGHTS) { return +sd(nights.map(n => n.mid)).toFixed(1); }
+function interpSII(sii: number) {
+  return sii < 30 ? { text: 'Regular', c: C.sage } : sii < 60 ? { text: 'Mild', c: C.amber } : sii < 90 ? { text: 'Moderate', c: C.coral } : { text: 'High', c: C.red };
+}
+function computeRecovery(night: typeof SLEEP_NIGHTS[0], stats: ReturnType<typeof sleepStageStats>) {
+  const deep = stats.find(s => s.stage === 'Deep')?.pct ?? 0;
+  const rem  = stats.find(s => s.stage === 'REM')?.pct  ?? 0;
+  const comps = [
+    { name: 'HRV Balance',      value: +Math.min(100, night.hrv * 1.8).toFixed(0), weight: 0.25 },
+    { name: 'Sleep Efficiency', value: night.eff,                                   weight: 0.20 },
+    { name: 'Deep Sleep',       value: +Math.min(100, deep * 5.0).toFixed(0),       weight: 0.20 },
+    { name: 'REM Sleep',        value: +Math.min(100, rem  * 4.0).toFixed(0),       weight: 0.15 },
+    { name: 'Total Duration',   value: +Math.min(100, night.dur / 5.04).toFixed(0), weight: 0.20 },
+  ];
+  const score = +Math.round(comps.reduce((a,c) => a + c.value * c.weight, 0) / comps.reduce((a,c) => a + c.weight, 0)).toFixed(0);
+  return { score, comps };
+}
+function interpRecovery(s: number) {
+  return s >= 85 ? { text: 'Optimal', c: C.sage } : s >= 70 ? { text: 'Good', c: C.accent } : s >= 50 ? { text: 'Fair', c: C.amber } : { text: 'Poor', c: C.red };
+}
+
 // ── Types ──────────────────────────────────────────────────────
 type SignalAlgoId      = 'moving_avg' | 'exp_smooth' | 'zscore' | 'rolling_std' | 'autocorr';
 type ComplexAlgoId  = 'cc' | 'dfa' | 'sample_entropy' | 'perm_entropy' | 'hurst' | 'fingerprint';
 type ActivityAlgoId    = 'fragmentation' | 'circadian';
 type PredictiveAlgoId  = 'mse' | 'phase_space' | 'cusum' | 'risk_panel' | 'fall_risk' | 'shap_features' | 'age_strata';
-type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId;
+type SleepAlgoId       = 'sleep_arch' | 'sleep_sii' | 'sleep_hrv' | 'recovery' | 'chronotype';
+type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId | SleepAlgoId;
 const isComplex     = (a: AlgoId): a is ComplexAlgoId     =>
   ['cc','dfa','sample_entropy','perm_entropy','hurst','fingerprint'].includes(a);
 const isActivity    = (a: AlgoId): a is ActivityAlgoId    =>
   ['fragmentation','circadian'].includes(a);
 const isPredictive  = (a: AlgoId): a is PredictiveAlgoId  =>
   ['mse','phase_space','cusum','risk_panel','fall_risk','shap_features','age_strata'].includes(a);
+const isSleep       = (a: AlgoId): a is SleepAlgoId       =>
+  ['sleep_arch','sleep_sii','sleep_hrv','recovery','chronotype'].includes(a);
 
 const SIGNAL_ALGOS: { id: SignalAlgoId; label: string; color: string }[] = [
   { id: 'moving_avg',  label: 'Moving Average',        color: C.sage   },
@@ -534,6 +611,13 @@ const PREDICTIVE_ALGOS: { id: PredictiveAlgoId; label: string; color: string; su
 const ACTIVITY_ALGOS: { id: ActivityAlgoId; label: string; color: string; sub: string }[] = [
   { id: 'fragmentation', label: 'Fragmentation',      color: C.sage,   sub: 'ASTP · SATP · bout power law' },
   { id: 'circadian',     label: 'Circadian Rhythm',   color: C.purple, sub: 'IS · IV · RA · M10 / L5' },
+];
+const SLEEP_ALGOS: { id: SleepAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'sleep_arch',  label: 'Sleep Architecture', color: C.purple, sub: 'Hypnogram · stage distribution' },
+  { id: 'sleep_sii',   label: 'Irregularity Index', color: C.coral,  sub: 'Night-to-night variability · SII' },
+  { id: 'sleep_hrv',   label: 'Sleep HRV',          color: C.sage,   sub: 'RMSSD across sleep stages' },
+  { id: 'recovery',    label: 'Recovery Score',     color: C.gold,   sub: 'Composite readiness · Oura-style' },
+  { id: 'chronotype',  label: 'Chronotype',         color: C.accent, sub: 'Sleep timing · social jetlag' },
 ];
 
 // ── Interpretation helpers ────────────────────────────────────
@@ -693,6 +777,7 @@ export default function AlgorithmLabPage() {
   const [cusumH, setCusumH]               = useState(5);
   const [acfLags, setAcfLags]             = useState(40);
   const [ageGroup, setAgeGroup]           = useState<AgeGroup>('overall');
+  const [sleepNight, setSleepNight]       = useState(0);
 
   const raw = useMemo(() => RAW.slice(0, visPoints), [visPoints]);
   const p2  = (v: number) => v.toFixed(2);
@@ -778,6 +863,16 @@ export default function AlgorithmLabPage() {
     hurst: hurstResult.hurst, iv: ivResult, is_: isResult, ra: raResult.ra, cc: ccResult.full.cc,
   }), [fragResult, dfaResult, seResult, peResult, hurstResult, ivResult, isResult, raResult, ccResult]);
 
+  // ── Sleep Analysis computations ─────────────────────────────
+  const hypnogram  = useMemo(() => genHypnogram(sleepNight), [sleepNight]);
+  const sleepStats = useMemo(() => sleepStageStats(hypnogram), [hypnogram]);
+  const sii        = useMemo(() => sleepIrregularityIndex(SLEEP_NIGHTS), []);
+  const recov      = useMemo(() => computeRecovery(SLEEP_NIGHTS[sleepNight], sleepStats), [sleepNight, sleepStats]);
+  const recovTrend = useMemo(() => SLEEP_NIGHTS.map((n, i) => {
+    const h = genHypnogram(i); const st = sleepStageStats(h);
+    return { night: n.day, score: computeRecovery(n, st).score };
+  }), []);
+
   // ── Signal-mode stats ────────────────────────────────────────
   const sigStats = useMemo(() => {
     const m = mn(raw), s = sd(raw);
@@ -786,9 +881,10 @@ export default function AlgorithmLabPage() {
 
   const activeSignalAlgo  = SIGNAL_ALGOS.find(a => a.id === algo);
   const activeComplexAlgo = COMPLEX_ALGOS.find(a => a.id === algo);
-  const inComplex  = isComplex(algo);
+  const inComplex     = isComplex(algo);
   const inActivity    = isActivity(algo);
   const inPredictive  = isPredictive(algo);
+  const inSleep       = isSleep(algo);
 
   return (
     <div className="app" style={{ color: C.text }}>
@@ -852,6 +948,16 @@ export default function AlgorithmLabPage() {
           ))}
         </nav>
 
+        <nav className="nav-section">
+          <div className="nav-label">Sleep Analysis</div>
+          {SLEEP_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
         <div className="sidebar-footer">
           <span className="status-dot" style={{ background: files.length ? C.sage : C.amber, boxShadow: `0 0 0 3px ${files.length ? 'rgba(61,204,145,0.18)' : 'rgba(255,201,64,0.18)'}` }}/>
           <span>{files.length ? `${files.length} file${files.length > 1 ? 's' : ''} loaded` : 'demo data'}</span>
@@ -862,7 +968,7 @@ export default function AlgorithmLabPage() {
       <main className="main">
         <header className="topbar" style={{ marginBottom: 32 }}>
           <div>
-            <div className="crumb">Ambient Intelligence · {inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Fragmentation · Circadian' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}</div>
+            <div className="crumb">Ambient Intelligence · {inSleep ? 'Sleep Analysis · Architecture · SII · HRV · Recovery · Chronotype' : inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Fragmentation · Circadian' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}</div>
             <h1 className="page-title">Algorithm <em>Lab</em></h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -873,7 +979,14 @@ export default function AlgorithmLabPage() {
 
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 28 }}>
-          {(inPredictive ? [
+          {(inSleep ? [
+            { label: 'Night',        value: SLEEP_NIGHTS[sleepNight].day,                              color: C.accent },
+            { label: 'Total Sleep',  value: `${Math.floor(SLEEP_NIGHTS[sleepNight].dur/60)}h ${SLEEP_NIGHTS[sleepNight].dur%60}m`, color: C.text2 },
+            { label: 'Efficiency',   value: `${SLEEP_NIGHTS[sleepNight].eff}%`,                        color: SLEEP_NIGHTS[sleepNight].eff >= 85 ? C.sage : C.amber },
+            { label: 'Avg HRV',      value: `${SLEEP_NIGHTS[sleepNight].hrv}ms`,                      color: C.purple },
+            { label: 'Recovery',     value: recov.score.toString(),                                    color: interpRecovery(recov.score).c },
+            { label: 'SII',          value: `${sii}min`,                                               color: interpSII(sii).c },
+          ] : inPredictive ? [
             { label: 'Risk Score',   value: riskResult.score.toString(),           color: interpRisk(riskResult.score).c },
             { label: 'MSE Slope',    value: mseSlopeResult.slope.toFixed(3),       color: interpMSE(mseSlopeResult.slope).c },
             { label: 'Phase Lag τ',  value: psLag.toString(),                      color: C.sage   },
@@ -926,7 +1039,7 @@ export default function AlgorithmLabPage() {
           </div>
 
           {/* ── SIGNAL PROCESSING MODE ── */}
-          {!inComplex && !inActivity && !inPredictive && <>
+          {!inComplex && !inActivity && !inPredictive && !inSleep && <>
             {/* Algorithm selector + sliders */}
             <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
               <div style={{ marginBottom: 18 }}>
@@ -1812,10 +1925,264 @@ export default function AlgorithmLabPage() {
             </>}
           </>}
 
+          {/* ── SLEEP ANALYSIS ── */}
+          {inSleep && <>
+            {/* Section header */}
+            <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 4 }}>
+                    {algo === 'sleep_arch' ? 'Sleep Architecture' : algo === 'sleep_sii' ? 'Sleep Irregularity Index' : algo === 'sleep_hrv' ? 'Sleep HRV' : algo === 'recovery' ? 'Recovery Score' : 'Chronotype'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
+                    {algo === 'sleep_arch' ? 'hypnogram · stage distribution · 8-hour synthetic night' :
+                     algo === 'sleep_sii'  ? 'night-to-night variability · sleep midpoint SD · cardiometabolic risk marker' :
+                     algo === 'sleep_hrv'  ? 'RMSSD across the night · parasympathetic activity by sleep stage' :
+                     algo === 'recovery'   ? 'composite readiness score · HRV · efficiency · deep sleep · duration' :
+                     'sleep timing distribution · social jetlag · chronotype classification'}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                {SLEEP_ALGOS.map(a => (
+                  <button key={a.id} onClick={() => setAlgo(a.id)} style={{ padding: '8px 18px', borderRadius: 999, border: `1px solid ${algo === a.id ? a.color : C.lineS}`, background: algo === a.id ? `${a.color}1A` : 'transparent', color: algo === a.id ? a.color : C.text3, fontFamily: 'var(--mono)', fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>{a.label}</button>
+                ))}
+              </div>
+              {/* Night selector (shown for arch / hrv / recovery) */}
+              {(algo === 'sleep_arch' || algo === 'sleep_hrv' || algo === 'recovery') && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, alignSelf: 'center', marginRight: 4 }}>Night:</span>
+                  {SLEEP_NIGHTS.map((n, i) => (
+                    <button key={i} onClick={() => setSleepNight(i)} style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${sleepNight === i ? C.purple : C.lineS}`, background: sleepNight === i ? `${C.purple}1A` : 'transparent', color: sleepNight === i ? C.purple : C.text4, fontFamily: 'var(--mono)', fontSize: 10, cursor: 'pointer' }}>
+                      {n.day}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── SLEEP ARCHITECTURE ── */}
+            {algo === 'sleep_arch' && <>
+              <ChartCard full title="Hypnogram" sub={`${SLEEP_NIGHTS[sleepNight].bedH} → ${SLEEP_NIGHTS[sleepNight].wakeH} · ${Math.floor(SLEEP_NIGHTS[sleepNight].dur/60)}h ${SLEEP_NIGHTS[sleepNight].dur%60}m · efficiency ${SLEEP_NIGHTS[sleepNight].eff}%`}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={hypnogram} margin={{ top: 4, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="time" interval={11} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[-0.4, 3.4]} ticks={[0,1,2,3]} tickFormatter={(v: number) => ['Deep','REM','Light','Awake'][v] ?? ''} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} width={45} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(_v: unknown, _n: unknown, p: {payload?: {stageLabel?: string}}) => [p?.payload?.stageLabel ?? '', 'Stage'] as [string,string]} />
+                    <ReferenceArea y1={-0.4} y2={0.4} fill={C.purple} fillOpacity={0.08} />
+                    <ReferenceArea y1={0.6}  y2={1.4} fill={C.accent} fillOpacity={0.08} />
+                    <ReferenceArea y1={1.6}  y2={2.4} fill={C.sage}   fillOpacity={0.08} />
+                    <ReferenceArea y1={2.6}  y2={3.4} fill={C.text4}  fillOpacity={0.04} />
+                    <Line type="stepAfter" dataKey="stageY" stroke={C.purple} strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Stage Distribution</div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={sleepStats} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="stage" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${v}%`, 'Time in stage'] as [string,string]} />
+                    <Bar dataKey="pct" radius={[4,4,0,0]}>
+                      {sleepStats.map((s, i) => <Cell key={i} fill={s.color} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Stage Minutes</div>
+                {sleepStats.map(s => (
+                  <div key={s.stage} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: s.color, width: 40 }}>{s.stage}</span>
+                    <div style={{ flex: 1, background: C.s3, borderRadius: 4, height: 6 }}>
+                      <div style={{ width: `${s.pct}%`, background: s.color, height: '100%', borderRadius: 4, opacity: 0.75 }} />
+                    </div>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, width: 48, textAlign: 'right' }}>{s.mins}m</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: 16, fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, lineHeight: 1.6 }}>
+                  Ideal targets: Deep 15–20% · REM 20–25% · Light 50–55% · Awake &lt;5%
+                </div>
+              </div>
+            </>}
+
+            {/* ── SLEEP IRREGULARITY ── */}
+            {algo === 'sleep_sii' && <>
+              <div style={{ background: C.s1, border: `2px solid ${interpSII(sii).c}44`, borderRadius: 14, padding: '32px 28px', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Sleep Irregularity Index</div>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 80, lineHeight: 1, letterSpacing: '-0.04em', color: interpSII(sii).c }}>{sii}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 6 }}>minutes (SD of sleep midpoint)</div>
+                <span style={{ display: 'inline-flex', marginTop: 14, padding: '5px 16px', borderRadius: 999, background: `${interpSII(sii).c}18`, border: `1px solid ${interpSII(sii).c}50`, color: interpSII(sii).c, fontFamily: 'var(--mono)', fontSize: 12 }}>{interpSII(sii).text}</span>
+              </div>
+
+              <ChartCard full title="Sleep Timing — 14 Nights" sub="bedtime · midpoint · wake time per night">
+                <ResponsiveContainer width="100%" height={260}>
+                  <ComposedChart data={SLEEP_NIGHTS} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="day" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[1260, 1560]} tickFormatter={(v: number) => `${String(Math.floor(v/60)%24).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} width={48} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown, name: unknown) => [typeof v === 'number' ? `${String(Math.floor(v/60)%24).padStart(2,'0')}:${String(v%60).padStart(2,'0')}` : String(v), String(name)] as [string,string]} />
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 10, paddingTop: 10 }} />
+                    <Line type="monotone" dataKey="bed" stroke={C.purple} strokeWidth={1.5} dot={{ r: 3, fill: C.purple }} name="Bedtime" />
+                    <Line type="monotone" dataKey="mid" stroke={C.gold}   strokeWidth={2}   dot={{ r: 3, fill: C.gold }}   name="Midpoint" strokeDasharray="4 2" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Why sleep irregularity matters</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  Large prospective studies show sleep irregularity predicts obesity, metabolic syndrome, diabetes, and cardiovascular disease — independent of total sleep duration. In some analyses it is a stronger predictor than how long you sleep. The SII (SD of sleep midpoint across 7–14 nights) quantifies this: &lt;30 min is low risk, 30–60 min moderate, &gt;60 min elevated cardiometabolic risk. Social jetlag (shifting bedtime on weekends) is the most common driver.
+                </div>
+              </div>
+            </>}
+
+            {/* ── SLEEP HRV ── */}
+            {algo === 'sleep_hrv' && <>
+              <ChartCard full title="HRV + HR Through the Night" sub={`RMSSD (ms) and heart rate (bpm) · ${SLEEP_NIGHTS[sleepNight].day} · avg HRV ${SLEEP_NIGHTS[sleepNight].hrv}ms`}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <ComposedChart data={hypnogram} margin={{ top: 4, right: 30, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="time" interval={11} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis yAxisId="hrv" domain={[20, 75]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.purple }} tickLine={false} axisLine={false} label={{ value: 'HRV ms', angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.purple }} />
+                    <YAxis yAxisId="hr"  domain={[45, 80]} orientation="right" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.coral }} tickLine={false} axisLine={false} label={{ value: 'HR bpm', angle: 90, position: 'insideRight', fontFamily: 'var(--mono)', fontSize: 9, fill: C.coral }} />
+                    <Tooltip contentStyle={TT_STYLE} />
+                    <ReferenceArea yAxisId="hrv" y1={20} y2={75} x1="00:00" x2="01:10" fill={C.purple} fillOpacity={0.04} />
+                    <Line yAxisId="hrv" type="monotone" dataKey="hrv" stroke={C.purple} strokeWidth={1.8} dot={false} name="HRV (RMSSD)" />
+                    <Line yAxisId="hr"  type="monotone" dataKey="hr"  stroke={C.coral}  strokeWidth={1.5} dot={false} name="Heart Rate" strokeDasharray="3 2" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Avg HRV by Stage</div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={[0,1,2,3].map(s => ({ stage: STAGE_LABEL[s], hrv: +(hypnogram.filter(d=>d.stage===s).reduce((a,d)=>a+d.hrv,0) / Math.max(1,hypnogram.filter(d=>d.stage===s).length)).toFixed(1), color: STAGE_COLOR[s] }))} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="stage" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[0, 70]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${v}ms`, 'Avg RMSSD'] as [string,string]} />
+                    <Bar dataKey="hrv" radius={[4,4,0,0]}>
+                      {[0,1,2,3].map(i => <Cell key={i} fill={STAGE_COLOR[i]} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>HRV during sleep</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  HRV peaks in deep (N3) sleep when parasympathetic tone dominates. REM sleep shows intermediate HRV with high sympathetic activation. The overnight HRV trajectory — rising in the first half, declining toward morning — reflects restorative autonomic recovery. A flat or declining HRV curve is an early stress or illness signal.
+                </div>
+              </div>
+            </>}
+
+            {/* ── RECOVERY SCORE ── */}
+            {algo === 'recovery' && <>
+              <div style={{ background: C.s1, border: `2px solid ${interpRecovery(recov.score).c}44`, borderRadius: 14, padding: '32px 28px', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Recovery Score</div>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 88, lineHeight: 1, letterSpacing: '-0.04em', color: interpRecovery(recov.score).c }}>{recov.score}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 6 }}>out of 100</div>
+                <span style={{ display: 'inline-flex', marginTop: 16, padding: '5px 16px', borderRadius: 999, background: `${interpRecovery(recov.score).c}18`, border: `1px solid ${interpRecovery(recov.score).c}50`, color: interpRecovery(recov.score).c, fontFamily: 'var(--mono)', fontSize: 12 }}>{interpRecovery(recov.score).text}</span>
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Component Breakdown</div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart layout="vertical" data={recov.comps} margin={{ top: 0, right: 40, left: 4, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} horizontal={false} />
+                    <XAxis type="number" domain={[0,100]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis type="category" dataKey="name" width={140} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [String(v), 'Score'] as [string,string]} />
+                    <ReferenceLine x={70} stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.5} />
+                    <Bar dataKey="value" radius={[0,3,3,0]}>
+                      {recov.comps.map((c,i) => <Cell key={i} fill={c.value >= 75 ? C.sage : c.value >= 50 ? C.amber : C.coral} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <ChartCard full title="Recovery Trend — 14 Nights" sub="composite score across all recorded nights">
+                <ResponsiveContainer width="100%" height={200}>
+                  <ComposedChart data={recovTrend} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="night" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[40,100]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} />
+                    <ReferenceArea y1={85} y2={100} fill={C.sage}  fillOpacity={0.06} />
+                    <ReferenceArea y1={70} y2={85} fill={C.accent} fillOpacity={0.04} />
+                    <ReferenceArea y1={50} y2={70} fill={C.amber}  fillOpacity={0.04} />
+                    <Area type="monotone" dataKey="score" stroke={C.gold} strokeWidth={2} fill={C.gold} fillOpacity={0.08} dot={{ r: 3, fill: C.gold }} name="Recovery" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </>}
+
+            {/* ── CHRONOTYPE ── */}
+            {algo === 'chronotype' && <>
+              <ChartCard full title="Sleep Timing — 14 Nights" sub="bedtime and sleep midpoint distribution">
+                <ResponsiveContainer width="100%" height={280}>
+                  <ComposedChart data={SLEEP_NIGHTS} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="day" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[1260, 1560]} tickFormatter={(v: number) => `${String(Math.floor(v/60)%24).padStart(2,'0')}:00`} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} width={44} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown, name: unknown) => [typeof v === 'number' ? `${String(Math.floor(v/60)%24).padStart(2,'0')}:${String(v%60).padStart(2,'0')}` : String(v), String(name)] as [string,string]} />
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 10, paddingTop: 10 }} />
+                    {SLEEP_NIGHTS.map((n, i) => n.isWeekend ? <ReferenceArea key={i} x1={n.day} x2={n.day} fill={C.amber} fillOpacity={0.08} /> : null)}
+                    <Bar dataKey="bed"  name="Bedtime"  fill={C.purple} fillOpacity={0.5} radius={[3,3,0,0]} />
+                    <Line type="monotone" dataKey="mid" stroke={C.gold} strokeWidth={2} dot={{ r: 3, fill: C.gold }} name="Midpoint" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Weekday vs Weekend</div>
+                {(['bed','mid'] as const).map(k => {
+                  const wd = SLEEP_NIGHTS.filter(n => !n.isWeekend).map(n => n[k]);
+                  const we = SLEEP_NIGHTS.filter(n =>  n.isWeekend).map(n => n[k]);
+                  const wdMean = Math.round(mn(wd)), weMean = Math.round(mn(we));
+                  const jl = Math.abs(weMean - wdMean);
+                  const fmt = (m: number) => `${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+                  return (
+                    <div key={k} style={{ marginBottom: 18 }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, marginBottom: 6 }}>{k === 'bed' ? 'Bedtime' : 'Sleep Midpoint'}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                        <div style={{ padding: '10px 14px', background: C.s2, borderRadius: 8 }}>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: C.text2 }}>{fmt(wdMean)}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, marginTop: 2 }}>Weekdays</div>
+                        </div>
+                        <div style={{ padding: '10px 14px', background: C.s2, borderRadius: 8 }}>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: C.text2 }}>{fmt(weMean)}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, marginTop: 2 }}>Weekends</div>
+                        </div>
+                        <div style={{ padding: '10px 14px', background: C.s2, borderRadius: 8 }}>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: jl > 60 ? C.coral : jl > 30 ? C.amber : C.sage }}>{Math.floor(jl/60)}h {jl%60}m</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, marginTop: 2 }}>Social jetlag</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Social jetlag</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  Social jetlag is the difference between your biological clock (free days) and social schedule (work days). Even 1–2 hours of chronic jetlag is associated with higher BMI, metabolic dysregulation, and mood disruption. Irregular sleep timing compounds SII — shifting the midpoint shifts phase relationships between sleep and circadian regulators including cortisol, melatonin, and core body temperature.
+                </div>
+              </div>
+            </>}
+          </>}
+
         </div>
 
         <div className="agent-note" style={{ marginTop: 48 }}>
-          — Ambient Intelligence · algorithm lab · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · ASTP · SATP · IS · IV · RA · M10/L5 · AGRU · SHAP · fall risk —
+          — Ambient Intelligence · algorithm lab · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · ASTP · SATP · IS · IV · RA · M10/L5 · AGRU · SHAP · fall risk · sleep architecture · SII · HRV · recovery · chronotype —
         </div>
       </main>
     </div>
