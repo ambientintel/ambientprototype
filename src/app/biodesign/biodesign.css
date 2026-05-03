@@ -1,0 +1,34 @@
+/* Palantir-style tokens — scoped to .biodesign-root */
+.biodesign-root {
+  --bg: #0C0E13;
+  --sidebar-bg: #06080C;
+  --surface-1: #131720;
+  --surface-2: #181D28;
+  --surface-3: #1E2430;
+  --line: rgba(255, 255, 255, 0.055);
+  --line-strong: rgba(255, 255, 255, 0.10);
+  --text: #CAD2DB;
+  --text-2: rgba(202, 210, 219, 0.72);
+  --text-3: rgba(202, 210, 219, 0.46);
+  --text-4: rgba(202, 210, 219, 0.26);
+  --accent: #2D72D2;
+  --accent-soft: rgba(45, 114, 210, 0.13);
+}
+
+.biodesign-root button  { border-radius: 2px !important; }
+.biodesign-root input   { border-radius: 2px !important; }
+.biodesign-root textarea { border-radius: 2px !important; }
+.biodesign-root select  { border-radius: 2px !important; }
+
+.biodesign-root input:focus,
+.biodesign-root textarea:focus {
+  box-shadow: 0 0 0 1px rgba(45, 114, 210, 0.35) !important;
+  border-color: rgba(45, 114, 210, 0.5) !important;
+  outline: none;
+}
+
+.biodesign-root select:focus {
+  box-shadow: 0 0 0 1px rgba(45, 114, 210, 0.35) !important;
+  border-color: rgba(45, 114, 210, 0.5) !important;
+  outline: none;
+}
