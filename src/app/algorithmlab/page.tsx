@@ -9,6 +9,7 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine, ReferenceArea, Cell,
+  ScatterChart, Scatter, ZAxis,
 } from "recharts";
 
 // ── Design tokens ─────────────────────────────────────────────
@@ -109,6 +110,14 @@ function fft(data: number[], bins: number) {
     let re = 0, im = 0;
     for (let t = 0; t < n; t++) { const a = 2 * Math.PI * (k + 1) * t / n; re += data[t] * Math.cos(a); im -= data[t] * Math.sin(a); }
     return { freq: ((k + 1) / n).toFixed(3), power: Math.round(Math.sqrt(re * re + im * im) / n * 100) / 100 };
+  });
+}
+function acf(data: number[], maxLag: number): { lag: number; r: number }[] {
+  const mu = mn(data), n = data.length;
+  const v = data.reduce((a, x) => a + (x - mu) ** 2, 0) / n || 1;
+  return Array.from({ length: Math.min(maxLag, n - 1) }, (_, lag) => {
+    const r = data.slice(0, n - lag).reduce((a, x, i) => a + (x - mu) * (data[i + lag] - mu), 0) / (n * v);
+    return { lag: lag + 1, r: +r.toFixed(4) };
   });
 }
 function histogram(data: number[], bins: number) {
@@ -324,21 +333,80 @@ function relativeAmplitude(data: number[], epd = 288) {
   };
 }
 
+// ── Predictive Intelligence algorithms ────────────────────────
+
+// Multi-Scale Entropy — Costa et al. 2002 (Science)
+function multiScaleEntropy(data: number[], maxScale = 10, m = 2, r = 0.15) {
+  return Array.from({ length: maxScale }, (_, i) => {
+    const tau = i + 1;
+    const coarse: number[] = [];
+    for (let j = 0; j + tau <= data.length; j += tau)
+      coarse.push(data.slice(j, j + tau).reduce((a, b) => a + b, 0) / tau);
+    return { scale: tau, se: coarse.length >= m + 2 ? sampleEntropy(coarse, m, r) : 0, n: coarse.length };
+  });
+}
+
+// Autocorrelation first-zero-crossing lag (for delay embedding)
+function acLag(data: number[]): number {
+  const mu = mn(data), n = data.length;
+  const v = data.reduce((a, x) => a + (x - mu) ** 2, 0) / n || 1;
+  for (let lag = 1; lag < Math.floor(n / 3); lag++) {
+    const r = data.slice(0, n - lag).reduce((a, x, i) => a + (x - mu) * (data[i + lag] - mu), 0) / (n * v);
+    if (r < 0.1) return lag;
+  }
+  return Math.max(1, Math.floor(n / 8));
+}
+
+// CUSUM — sequential change detection
+function cusumAnalysis(data: number[], k = 0.5, h = 5) {
+  const mu = mn(data), sigma = sd(data) || 1;
+  const kAbs = k * sigma, hAbs = h * sigma;
+  let cp = 0, cm = 0, detectedAt: number | null = null;
+  const points = data.map((x, i) => {
+    cp = Math.max(0, cp + (x - mu - kAbs));
+    cm = Math.max(0, cm - (x - mu + kAbs));
+    if (detectedAt === null && (cp > hAbs || cm > hAbs)) detectedAt = i;
+    return { t: i, signal: x, cp: +cp.toFixed(2), cm: +cm.toFixed(2), alert: detectedAt !== null && i >= (detectedAt ?? Infinity) };
+  });
+  return { threshold: +hAbs.toFixed(2), points, detectedAt, mu: +mu.toFixed(2), sigma: +sigma.toFixed(2) };
+}
+
+// Clinical Risk Panel — weighted composite of all suite metrics
+function clinicalRisk(m: { astp: number; dfa: number; se: number; pe: number; hurst: number; iv: number; is_: number; ra: number; cc: number }) {
+  const components = [
+    { name: 'Fragmentation (ASTP)',   value: +Math.min(100, m.astp * 320).toFixed(1),              weight: 0.22, ref: 'Karas 2019' },
+    { name: 'Circadian Stability (IS)', value: +Math.min(100, (1 - m.is_) * 160).toFixed(1),       weight: 0.15, ref: 'Urbanek / JHU-COAH' },
+    { name: 'Rhythm Fragmentation (IV)', value: +Math.min(100, m.iv * 75).toFixed(1),             weight: 0.12, ref: 'Urbanek / JHU-COAH' },
+    { name: 'Circadian Contrast (RA)', value: +Math.min(100, (1 - m.ra) * 130).toFixed(1),        weight: 0.10, ref: 'Urbanek / JHU-COAH' },
+    { name: 'DFA Deviation from 1/f', value: +Math.min(100, Math.abs(m.dfa - 1.0) * 110).toFixed(1), weight: 0.12, ref: 'Khan & Jacobs 2021' },
+    { name: 'Signal Regularity (SampEn)', value: +Math.min(100, Math.max(0, (1.5 - m.se) * 85)).toFixed(1), weight: 0.10, ref: 'Khan & Jacobs 2021' },
+    { name: 'Movement Complexity (CC)', value: +Math.min(100, Math.max(0, (m.cc - 2) * 11)).toFixed(1), weight: 0.10, ref: 'Khan & Jacobs 2021' },
+    { name: 'Persistence (Hurst H)', value: +Math.min(100, Math.abs(m.hurst - 0.7) * 160).toFixed(1), weight: 0.09, ref: 'Khan & Jacobs 2021' },
+  ];
+  const totalW = components.reduce((a, c) => a + c.weight, 0);
+  const score = +(components.reduce((a, c) => a + Number(c.value) * c.weight, 0) / totalW).toFixed(1);
+  return { score, components };
+}
+
 // ── Types ──────────────────────────────────────────────────────
-type SignalAlgoId   = 'moving_avg' | 'exp_smooth' | 'zscore' | 'rolling_std';
+type SignalAlgoId      = 'moving_avg' | 'exp_smooth' | 'zscore' | 'rolling_std' | 'autocorr';
 type ComplexAlgoId  = 'cc' | 'dfa' | 'sample_entropy' | 'perm_entropy' | 'hurst' | 'fingerprint';
-type ActivityAlgoId = 'fragmentation' | 'circadian';
-type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId;
-const isComplex  = (a: AlgoId): a is ComplexAlgoId  =>
+type ActivityAlgoId    = 'fragmentation' | 'circadian';
+type PredictiveAlgoId  = 'mse' | 'phase_space' | 'cusum' | 'risk_panel';
+type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId;
+const isComplex     = (a: AlgoId): a is ComplexAlgoId     =>
   ['cc','dfa','sample_entropy','perm_entropy','hurst','fingerprint'].includes(a);
-const isActivity = (a: AlgoId): a is ActivityAlgoId =>
+const isActivity    = (a: AlgoId): a is ActivityAlgoId    =>
   ['fragmentation','circadian'].includes(a);
+const isPredictive  = (a: AlgoId): a is PredictiveAlgoId  =>
+  ['mse','phase_space','cusum','risk_panel'].includes(a);
 
 const SIGNAL_ALGOS: { id: SignalAlgoId; label: string; color: string }[] = [
   { id: 'moving_avg',  label: 'Moving Average',        color: C.sage   },
   { id: 'exp_smooth',  label: 'Exponential Smoothing', color: C.amber  },
   { id: 'zscore',      label: 'Z-Score',               color: C.purple },
   { id: 'rolling_std', label: 'Rolling Std Dev',       color: C.coral  },
+  { id: 'autocorr',   label: 'Autocorrelation',        color: C.gold   },
 ];
 const COMPLEX_ALGOS: { id: ComplexAlgoId; label: string; color: string; sub: string }[] = [
   { id: 'cc',            label: 'Cyclomatic CC',      color: C.sage,   sub: 'Movement graph branching' },
@@ -347,6 +415,12 @@ const COMPLEX_ALGOS: { id: ComplexAlgoId; label: string; color: string; sub: str
   { id: 'perm_entropy',  label: 'Permutation Entropy',color: C.coral,  sub: 'Ordinal pattern diversity' },
   { id: 'hurst',         label: 'Hurst Exponent',     color: C.accent, sub: 'Signal persistence' },
   { id: 'fingerprint',   label: 'Fingerprint',        color: C.gold,   sub: 'All metrics at once' },
+];
+const PREDICTIVE_ALGOS: { id: PredictiveAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'mse',         label: 'Multi-Scale Entropy', color: C.purple, sub: 'Cross-scale complexity · Costa 2002' },
+  { id: 'phase_space', label: 'Phase Space',         color: C.sage,   sub: 'Delay embedding · Takens theorem' },
+  { id: 'cusum',       label: 'Drift Detector',      color: C.amber,  sub: 'CUSUM early warning system' },
+  { id: 'risk_panel',  label: 'Risk Panel',          color: C.red,    sub: 'Clinical composite score' },
 ];
 const ACTIVITY_ALGOS: { id: ActivityAlgoId; label: string; color: string; sub: string }[] = [
   { id: 'fragmentation', label: 'Fragmentation',      color: C.sage,   sub: 'ASTP · SATP · bout power law' },
@@ -363,6 +437,8 @@ function interpASTP(v: number) { return v < 0.10 ? { text: 'Sustained activity',
 function interpIV(v: number)   { return v < 0.5  ? { text: 'Very stable rhythm', c: C.sage } : v < 1.0  ? { text: 'Stable', c: C.amber } : v < 1.5 ? { text: 'Irregular', c: C.coral } : { text: 'Highly fragmented rhythm', c: C.red }; }
 function interpIS(v: number)   { return v > 0.8  ? { text: 'Highly regular', c: C.sage } : v > 0.6 ? { text: 'Regular', c: C.amber } : v > 0.4 ? { text: 'Moderate regularity', c: C.coral } : { text: 'Irregular across days', c: C.red }; }
 function interpRA(v: number)   { return v > 0.9  ? { text: 'Strong day/night rhythm', c: C.sage } : v > 0.7 ? { text: 'Good contrast', c: C.amber } : v > 0.5 ? { text: 'Moderate contrast', c: C.coral } : { text: 'Weak rhythm', c: C.red }; }
+function interpRisk(s: number) { return s < 25 ? { text: 'Low risk', c: C.sage } : s < 50 ? { text: 'Borderline', c: C.amber } : s < 70 ? { text: 'Elevated risk', c: C.coral } : { text: 'High risk', c: C.red }; }
+function interpMSE(slope: number) { return slope > 0.06 ? { text: 'Healthy complexity scaling', c: C.sage } : slope > 0 ? { text: 'Moderate scaling', c: C.amber } : slope > -0.06 ? { text: 'Flat — reduced complexity', c: C.coral } : { text: 'Decreasing — pathological', c: C.red }; }
 
 // ── ChartCard ─────────────────────────────────────────────────
 function ChartCard({ title, sub, badge, badgeColor, full, children }: {
@@ -503,6 +579,10 @@ export default function AlgorithmLabPage() {
   const [peM, setPeM]               = useState(4);
   const [peDelay, setPeDelay]       = useState(1);
   const [fragThreshold, setFragThreshold] = useState(40);
+  const [mseScale, setMseScale]           = useState(10);
+  const [cusumK, setCusumK]               = useState(0.5);
+  const [cusumH, setCusumH]               = useState(5);
+  const [acfLags, setAcfLags]             = useState(40);
 
   const raw = useMemo(() => RAW.slice(0, visPoints), [visPoints]);
   const p2  = (v: number) => v.toFixed(2);
@@ -557,6 +637,15 @@ export default function AlgorithmLabPage() {
     return Array.from({ length: maxL }, (_, i) => ({ l: i + 1, count: fragResult.activeBouts.filter(b => b === i + 1).length })).filter(d => d.count > 0);
   }, [fragResult]);
 
+  // ── Predictive Intelligence computations ────────────────────
+  const acfData    = useMemo(() => acf(raw, acfLags), [raw, acfLags]);
+  const acfCI      = useMemo(() => 1.96 / Math.sqrt(raw.length), [raw]);
+  const mseResult  = useMemo(() => multiScaleEntropy(raw, mseScale), [raw, mseScale]);
+  const mseSlopeResult = useMemo(() => linReg(mseResult.map(d => d.scale), mseResult.map(d => d.se)), [mseResult]);
+  const psLag      = useMemo(() => acLag(raw), [raw]);
+  const phaseData  = useMemo(() => raw.slice(0, raw.length - psLag).map((x, i) => ({ x: +x.toFixed(1), y: +raw[i + psLag].toFixed(1) })), [raw, psLag]);
+  const cusumResult = useMemo(() => cusumAnalysis(raw, cusumK, cusumH), [raw, cusumK, cusumH]);
+
   const fingerprint = useMemo(() => {
     const cc = cyclomaticComplexity(raw, 5).cc;
     const dfa = dfaAnalysis(raw, 14).alpha;
@@ -574,6 +663,11 @@ export default function AlgorithmLabPage() {
     };
   }, [raw]);
 
+  const riskResult = useMemo(() => clinicalRisk({
+    astp: fragResult.astp, dfa: dfaResult.alpha, se: seResult.value, pe: peResult.pe,
+    hurst: hurstResult.hurst, iv: ivResult, is_: isResult, ra: raResult.ra, cc: ccResult.full.cc,
+  }), [fragResult, dfaResult, seResult, peResult, hurstResult, ivResult, isResult, raResult, ccResult]);
+
   // ── Signal-mode stats ────────────────────────────────────────
   const sigStats = useMemo(() => {
     const m = mn(raw), s = sd(raw);
@@ -583,7 +677,8 @@ export default function AlgorithmLabPage() {
   const activeSignalAlgo  = SIGNAL_ALGOS.find(a => a.id === algo);
   const activeComplexAlgo = COMPLEX_ALGOS.find(a => a.id === algo);
   const inComplex  = isComplex(algo);
-  const inActivity = isActivity(algo);
+  const inActivity    = isActivity(algo);
+  const inPredictive  = isPredictive(algo);
 
   return (
     <div className="app" style={{ color: C.text }}>
@@ -631,6 +726,16 @@ export default function AlgorithmLabPage() {
         </nav>
 
         <nav className="nav-section">
+          <div className="nav-label">Predictive Intelligence</div>
+          {PREDICTIVE_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <nav className="nav-section">
           <div className="nav-label">Activity Analysis</div>
           {ACTIVITY_ALGOS.map(a => (
             <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
@@ -650,7 +755,7 @@ export default function AlgorithmLabPage() {
       <main className="main">
         <header className="topbar" style={{ marginBottom: 32 }}>
           <div>
-            <div className="crumb">Ambient Intelligence · {inActivity ? 'Activity Analysis · Karas 2019 · Urbanek / JHU-COAH' : inComplex ? 'Complexity Suite · Khan & Jacobs 2021' : 'Signal Processing'}</div>
+            <div className="crumb">Ambient Intelligence · {inPredictive ? 'Predictive Intelligence · Multi-Scale · Phase Space · CUSUM · Risk Panel' : inActivity ? 'Activity Analysis · Karas 2019 · Urbanek / JHU-COAH' : inComplex ? 'Complexity Suite · Khan & Jacobs 2021' : 'Signal Processing'}</div>
             <h1 className="page-title">Algorithm <em>Lab</em></h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -661,7 +766,14 @@ export default function AlgorithmLabPage() {
 
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 28 }}>
-          {(inActivity ? [
+          {(inPredictive ? [
+            { label: 'Risk Score',   value: riskResult.score.toString(),           color: interpRisk(riskResult.score).c },
+            { label: 'MSE Slope',    value: mseSlopeResult.slope.toFixed(3),       color: interpMSE(mseSlopeResult.slope).c },
+            { label: 'Phase Lag τ',  value: psLag.toString(),                      color: C.sage   },
+            { label: 'CUSUM Alert',  value: cusumResult.detectedAt !== null ? `t=${cusumResult.detectedAt}` : 'None', color: cusumResult.detectedAt !== null ? C.red : C.sage },
+            { label: 'Mean',         value: mn(raw).toFixed(2),                    color: C.text2  },
+            { label: 'Std Dev',      value: sd(raw).toFixed(2),                    color: C.text2  },
+          ] : inActivity ? [
             { label: 'Epochs',       value: '288',                                           color: C.accent },
             { label: 'ASTP',         value: fragResult.astp.toString(),                      color: interpASTP(fragResult.astp).c },
             { label: 'SATP',         value: fragResult.satp.toString(),                      color: C.text2  },
@@ -707,7 +819,7 @@ export default function AlgorithmLabPage() {
           </div>
 
           {/* ── SIGNAL PROCESSING MODE ── */}
-          {!inComplex && <>
+          {!inComplex && !inActivity && !inPredictive && <>
             {/* Algorithm selector + sliders */}
             <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
               <div style={{ marginBottom: 18 }}>
@@ -841,6 +953,31 @@ export default function AlgorithmLabPage() {
                 );
               })()}
             </ChartCard>
+
+            {/* ACF */}
+            {algo === 'autocorr' && <>
+              <ChartCard full title="Autocorrelation Function (ACF)" sub={`${acfLags} lags · 95% CI ±${acfCI.toFixed(3)} · seasonal spikes reveal periodicity`} badge={`τ₁ = ${acfData[0]?.r}`} badgeColor={C.gold}>
+                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                  <SliderRow label="Max lags" min={10} max={80} step={5} value={acfLags} onChange={setAcfLags} />
+                </div>
+                <ResponsiveContainer width="100%" height={280}>
+                  <ComposedChart data={acfData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="lag" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'Lag', position: 'insideBottom', offset: -2, fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <YAxis domain={[-1, 1]} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(4) : String(v), 'r(lag)'] as [string, string]} />
+                    <ReferenceLine y={0} stroke={C.lineS} />
+                    <ReferenceLine y={acfCI}  stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: '+95% CI', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.amber }} />
+                    <ReferenceLine y={-acfCI} stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: '−95% CI', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.amber }} />
+                    <Bar dataKey="r" name="ACF" barSize={4}>
+                      {acfData.map((d, i) => (
+                        <Cell key={i} fill={Math.abs(d.r) > acfCI ? C.gold : C.s3} fillOpacity={Math.abs(d.r) > acfCI ? 0.85 : 0.5} />
+                      ))}
+                    </Bar>
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </>}
           </>}
 
           {/* ── ACTIVITY ANALYSIS MODE ── */}
@@ -1228,6 +1365,218 @@ export default function AlgorithmLabPage() {
                   </div>
                 </div>
               </ChartCard>
+            </>}
+          </>}
+
+          {/* ── PREDICTIVE INTELLIGENCE ── */}
+          {inPredictive && <>
+
+            {/* Section header */}
+            <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 4 }}>
+                    {algo === 'mse' ? 'Multi-Scale Entropy' : algo === 'phase_space' ? 'Phase Space Portrait' : algo === 'cusum' ? 'CUSUM Drift Detector' : 'Clinical Risk Panel'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
+                    {algo === 'mse' ? 'Costa, Goldberger & Peng · Science 2002 · complexity across time scales predicts mortality' :
+                     algo === 'phase_space' ? 'Takens embedding theorem · reconstructed attractor · lag τ = autocorrelation first-zero-crossing' :
+                     algo === 'cusum' ? 'Page 1954 · sequential change detection · detects baseline shift before clinical threshold is crossed' :
+                     'Cross-suite composite score — Signal Processing · Complexity Suite · Activity Analysis · Circadian'}
+                  </div>
+                </div>
+                <SliderRow label="Visible points" min={30} max={200} step={5} value={visPoints} onChange={setVisPoints} />
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                {PREDICTIVE_ALGOS.map(a => (
+                  <button key={a.id} onClick={() => setAlgo(a.id)} style={{ padding: '8px 18px', borderRadius: 999, border: `1px solid ${algo === a.id ? a.color : C.lineS}`, background: algo === a.id ? `${a.color}1A` : 'transparent', color: algo === a.id ? a.color : C.text3, fontFamily: 'var(--mono)', fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>{a.label}</button>
+                ))}
+              </div>
+              {algo === 'cusum' && (
+                <div className="ctrl-strip" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px' }}>
+                  <SliderRow label="Reference k (×σ)" min={0.1} max={1.5} step={0.1} value={cusumK} fmt={v => v.toFixed(1)} onChange={setCusumK} />
+                  <SliderRow label="Decision h (×σ)" min={2} max={10} step={0.5} value={cusumH} fmt={v => v.toFixed(1)} onChange={setCusumH} />
+                </div>
+              )}
+              {algo === 'mse' && (
+                <div className="ctrl-strip" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
+                  <SliderRow label="Max scale" min={4} max={15} step={1} value={mseScale} onChange={setMseScale} />
+                </div>
+              )}
+            </div>
+
+            {/* ── MSE ── */}
+            {algo === 'mse' && <>
+              <ChartCard full title="Multi-Scale Entropy" sub={`sample entropy at each coarsening scale · slope = ${mseSlopeResult.slope.toFixed(4)} · m=2 · r=0.15σ`} badge={interpMSE(mseSlopeResult.slope).text} badgeColor={interpMSE(mseSlopeResult.slope).c}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={mseResult} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="mseArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor={C.purple} stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor={C.purple} stopOpacity={0.03}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis dataKey="scale" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'Scale τ', position: 'insideBottom', offset: -4, fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'SampEn', angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(4) : String(v), 'SampEn'] as [string, string]} />
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 10, paddingTop: 10 }} />
+                    <Line type="monotone" dataKey="se" stroke={C.purple} strokeWidth={2.5} dot={{ r: 5, fill: C.purple }} name="Measured MSE" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <MetricBadge label="MSE Slope" value={mseSlopeResult.slope.toFixed(4)} interp={interpMSE(mseSlopeResult.slope)} />
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>What the slope means</div>
+                {[
+                  { r: 'Positive slope',  l: 'Complexity increases with scale — healthy multiscale dynamics', c: C.sage   },
+                  { r: 'Flat / plateau',  l: 'Reduced long-range complexity — typical in older adults',        c: C.amber  },
+                  { r: 'Negative slope',  l: 'High entropy at fine scales only — pathological (arrhythmia / MCI)', c: C.red },
+                ].map(r => (
+                  <div key={r.r} style={{ display: 'flex', gap: 10, padding: '7px 0', borderBottom: `1px solid ${C.line}`, alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: r.c, minWidth: 130 }}>{r.r}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>{r.l}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, lineHeight: 1.6 }}>
+                  Costa, Goldberger & Peng 2002 showed that white noise has high single-scale entropy but low MSE at coarser scales. Healthy young adults show increasing MSE. Cardiac patients and MCI subjects show flat or decreasing MSE — loss of adaptive, multiscale complexity.
+                </div>
+              </div>
+            </>}
+
+            {/* ── PHASE SPACE ── */}
+            {algo === 'phase_space' && <>
+              <ChartCard full title="Phase Space Portrait" sub={`delay embedding · τ = ${psLag} (first AC zero-crossing) · ${phaseData.length} points · reconstructed attractor`} badge={`τ = ${psLag}`} badgeColor={C.sage}>
+                <ResponsiveContainer width="100%" height={400}>
+                  <ScatterChart margin={{ top: 4, right: 8, left: -20, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis type="number" dataKey="x" name="x(t)" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'x(t)', position: 'insideBottom', offset: -8, fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <YAxis type="number" dataKey="y" name={`x(t+τ)`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: `x(t+${psLag})`, angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <ZAxis range={[20, 20]} />
+                    <Tooltip contentStyle={TT_STYLE} cursor={{ strokeDasharray: '3 3', stroke: C.lineS }} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(2) : String(v), ''] as [string, string]} />
+                    <Scatter data={phaseData} fill={C.sage} fillOpacity={0.45} name="Phase portrait" />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Takens Embedding</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  By Takens' 1981 theorem, plotting x(t) vs x(t+τ) reconstructs the topology of the underlying attractor from a single observable. The shape of the cloud reveals the system's dynamics — circular or elliptical attractors suggest oscillation, scattered clouds suggest noise or chaos.
+                </div>
+                <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {[
+                    { t: 'τ = ' + psLag, d: 'Lag chosen at first AC zero-crossing — decorrelates consecutive samples' },
+                    { t: 'Cloud shape', d: 'Ellipse → oscillatory · Filled circle → noise · Fractal → chaos' },
+                    { t: 'Density', d: 'Dense core = most probable state · sparse tails = rare excursions' },
+                    { t: 'Clinical', d: 'MCI signals show more diffuse attractors — loss of organized dynamics' },
+                  ].map(x => (
+                    <div key={x.t} style={{ padding: '10px 14px', background: C.s2, borderRadius: 8, border: `1px solid ${C.line}` }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.sage, marginBottom: 4 }}>{x.t}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, lineHeight: 1.5 }}>{x.d}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>}
+
+            {/* ── CUSUM DRIFT ── */}
+            {algo === 'cusum' && <>
+              <ChartCard full title="Signal + Drift Regions" sub={`baseline μ=${cusumResult.mu} · σ=${cusumResult.sigma} · ${cusumResult.detectedAt !== null ? `drift detected at t=${cusumResult.detectedAt}` : 'no drift detected'}`} badge={cusumResult.detectedAt !== null ? `Alert t=${cusumResult.detectedAt}` : 'No drift'} badgeColor={cusumResult.detectedAt !== null ? C.red : C.sage}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <ComposedChart data={cusumResult.points.slice(0, visPoints)} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis dataKey="t" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} />
+                    <ReferenceLine y={cusumResult.mu} stroke={C.accent} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: 'μ', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.accent }} />
+                    {cusumResult.detectedAt !== null && (
+                      <ReferenceArea x1={cusumResult.detectedAt} fill={C.red} fillOpacity={0.08} label={{ value: 'drift', position: 'insideTopLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.red }} />
+                    )}
+                    <Line type="monotone" dataKey="signal" stroke={C.text3} strokeWidth={1} dot={false} name="Signal" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <ChartCard full title="CUSUM Statistics" sub={`C⁺ and C⁻ · decision threshold h = ${cusumResult.threshold} · k = ${cusumK.toFixed(1)}σ`}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <ComposedChart data={cusumResult.points.slice(0, visPoints)} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis dataKey="t" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} />
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 10, paddingTop: 10 }} />
+                    <ReferenceLine y={cusumResult.threshold} stroke={C.red} strokeDasharray="4 3" label={{ value: 'h (threshold)', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.red }} />
+                    <Line type="monotone" dataKey="cp" stroke={C.sage}  strokeWidth={1.8} dot={false} name="CUSUM⁺ (high shift)" />
+                    <Line type="monotone" dataKey="cm" stroke={C.coral} strokeWidth={1.8} dot={false} name="CUSUM⁻ (low shift)" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <MetricBadge label="Detection Time" value={cusumResult.detectedAt !== null ? `t = ${cusumResult.detectedAt}` : '—'} interp={cusumResult.detectedAt !== null ? { text: 'Drift detected', c: C.red } : { text: 'Signal stable', c: C.sage }} />
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Why CUSUM matters</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  In ambient monitoring, a patient's baseline changes slowly — weeks before a fall or cognitive event. CUSUM accumulates small deviations from baseline, making it far more sensitive than threshold alarms. It trades instantaneous accuracy for longitudinal sensitivity. Clinical deployment: run on 30-day rolling windows, alert care team when drift exceeds h.
+                </div>
+              </div>
+            </>}
+
+            {/* ── RISK PANEL ── */}
+            {algo === 'risk_panel' && <>
+              {/* Score headline */}
+              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, alignItems: 'start' }}>
+                <div style={{ background: C.s1, border: `2px solid ${interpRisk(riskResult.score).c}44`, borderRadius: 14, padding: '32px 28px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Clinical Risk Score</div>
+                  <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 88, lineHeight: 1, letterSpacing: '-0.04em', color: interpRisk(riskResult.score).c }}>{riskResult.score}</div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 6 }}>out of 100</div>
+                  <span style={{ display: 'inline-flex', marginTop: 16, padding: '5px 16px', borderRadius: 999, background: `${interpRisk(riskResult.score).c}18`, border: `1px solid ${interpRisk(riskResult.score).c}50`, color: interpRisk(riskResult.score).c, fontFamily: 'var(--mono)', fontSize: 12 }}>{interpRisk(riskResult.score).text}</span>
+                  <div style={{ marginTop: 20, fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, lineHeight: 1.6, textAlign: 'left' }}>
+                    Weighted composite of fragmentation (ASTP 22%), circadian stability (IS 15%), rhythm fragmentation (IV 12%), DFA deviation (12%), circadian contrast (10%), signal regularity (10%), movement complexity (10%), Hurst persistence (9%)
+                  </div>
+                </div>
+
+                <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Component Breakdown</div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart layout="vertical" data={riskResult.components} margin={{ top: 0, right: 40, left: 4, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.line} horizontal={false} />
+                      <XAxis type="number" domain={[0, 100]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="name" width={210} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text3 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [String(v), 'Component score'] as [string, string]} />
+                      <ReferenceLine x={50} stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.5} />
+                      <Bar dataKey="value" name="Score" radius={[0, 3, 3, 0]}>
+                        {riskResult.components.map((c, i) => (
+                          <Cell key={i} fill={Number(c.value) >= 70 ? C.red : Number(c.value) >= 50 ? C.coral : Number(c.value) >= 30 ? C.amber : C.sage} fillOpacity={0.8} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Evidence citations */}
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Evidence Base</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                  {[
+                    { src: 'Karas et al. 2019', title: 'JAMA Network Open', finding: 'ASTP independently predicts all-cause mortality (HR 1.38 per SD) in NHANES cohort of 2,978 adults' },
+                    { src: 'Khan & Jacobs 2021', title: 'IEEE JBHI', finding: 'CC, DFA, SampEn, PermEn, Hurst collectively predict MCI 6 months before diagnosis with >82% AUC' },
+                    { src: 'Urbanek / JHU-COAH', title: 'Accelerometry Resource Core', finding: 'IS, IV, RA, M10/L5 characterize circadian disruption; lower IS and RA associated with cognitive decline' },
+                  ].map(x => (
+                    <div key={x.src} style={{ padding: '14px 16px', background: C.s2, borderRadius: 10, border: `1px solid ${C.line}` }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.gold, marginBottom: 3 }}>{x.src}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: C.text3, marginBottom: 8 }}>{x.title}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, lineHeight: 1.55 }}>{x.finding}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, lineHeight: 1.6 }}>
+                  Risk score is a research instrument, not a clinical diagnostic. Weights reflect current literature and should be validated in a prospective cohort before clinical deployment. All metrics computed on synthetic demo data above.
+                </div>
+              </div>
             </>}
           </>}
 
