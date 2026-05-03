@@ -568,13 +568,170 @@ function interpRecovery(s: number) {
   return s >= 85 ? { text: 'Optimal', c: C.sage } : s >= 70 ? { text: 'Good', c: C.accent } : s >= 50 ? { text: 'Fair', c: C.amber } : { text: 'Poor', c: C.red };
 }
 
+// ── Sedentary Behavior data ───────────────────────────────────
+const SED_THRESHOLD = 20;
+function sedMetrics(activity: number[], thresh = SED_THRESHOLD) {
+  const isSed = activity.map(v => v < thresh);
+  const totalSedMins = isSed.filter(Boolean).length * 5;
+  const bouts: number[] = [];
+  let bl = 0;
+  isSed.forEach((s, i) => { if (s) bl++; else if (bl > 0) { bouts.push(bl * 5); bl = 0; } if (i === isSed.length - 1 && bl > 0) bouts.push(bl * 5); });
+  let breaks = 0;
+  for (let i = 1; i < isSed.length; i++) if (isSed[i - 1] && !isSed[i]) breaks++;
+  const sedHours = totalSedMins / 60;
+  const breaksPerHour = sedHours > 0 ? +(breaks / sedHours).toFixed(2) : 0;
+  const prolonged = bouts.filter(b => b >= 30).length;
+  const longBouts = bouts.filter(b => b >= 60).length;
+  const pctSed = +((totalSedMins / (activity.length * 5)) * 100).toFixed(1);
+  return { totalSedMins, bouts, breaks, breaksPerHour, prolonged, longBouts, pctSed, sedHours: +sedHours.toFixed(1) };
+}
+
+function intensityDist(activity: number[]) {
+  const n = activity.length;
+  return [
+    { label: 'Sedentary', mins: activity.filter(v => v < 20).length * 5,                              color: C.text4  },
+    { label: 'Light',     mins: activity.filter(v => v >= 20 && v < 45).length * 5,                   color: C.sage   },
+    { label: 'Moderate',  mins: activity.filter(v => v >= 45 && v < 70).length * 5,                   color: C.amber  },
+    { label: 'Vigorous',  mins: activity.filter(v => v >= 70).length * 5,                             color: C.red    },
+  ].map(d => ({ ...d, pct: +((d.mins / (n * 5)) * 100).toFixed(1) }));
+}
+
+// ── Stress & Autonomic data ───────────────────────────────────
+const _arng = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+
+function generateRRIntervals(n = 200, seed = 0) {
+  return Array.from({ length: n }, (_, i) => {
+    const noise = (_arng(i * 3 + seed) - 0.5) * 80 + (_arng(i * 7 + seed) - 0.5) * 30;
+    return Math.max(600, Math.min(1100, Math.round(860 + noise)));
+  });
+}
+
+function poincarePlotData(rr: number[]) {
+  const pairs = rr.slice(0, -1).map((v, i) => ({ rr1: v, rr2: rr[i + 1] }));
+  const diffs  = pairs.map(p => (p.rr1 - p.rr2) / Math.sqrt(2));
+  const sums   = pairs.map(p => (p.rr1 + p.rr2) / Math.sqrt(2));
+  const meanDiff = mn(diffs), meanSum = mn(sums);
+  const sd1 = +(Math.sqrt(diffs.reduce((a, v) => a + (v - meanDiff) * (v - meanDiff), 0) / diffs.length)).toFixed(1);
+  const sd2 = +(Math.sqrt(sums.reduce((a, v) => a + (v - meanSum) * (v - meanSum), 0) / sums.length)).toFixed(1);
+  return { pairs, sd1, sd2, ratio: +(sd1 / sd2).toFixed(3) };
+}
+
+const LFHF_24H = Array.from({ length: 24 }, (_, h) => {
+  const base = h >= 6 && h <= 22 ? 1.6 + Math.sin(Math.PI * (h - 6) / 16) * 1.1 : 0.75;
+  return { h, label: `${String(h).padStart(2, '0')}h`, lfhf: +Math.max(0.3, base + (_arng(h * 7) - 0.5) * 0.4).toFixed(2) };
+});
+
+const HRV_SPECTRUM = Array.from({ length: 80 }, (_, i) => {
+  const freq = +(0.003 + i * 0.005).toFixed(3);
+  let power = 0;
+  if (freq < 0.04) power = 2200 * Math.exp(-((freq - 0.015) * (freq - 0.015)) / (2 * 0.008 * 0.008));
+  else if (freq < 0.15) power = 1100 * Math.exp(-((freq - 0.09) * (freq - 0.09)) / (2 * 0.025 * 0.025));
+  else if (freq <= 0.4)  power = 750 * Math.exp(-((freq - 0.25) * (freq - 0.25)) / (2 * 0.06 * 0.06));
+  return { freq, power: +Math.max(0, power + (_arng(i * 5) - 0.5) * 80).toFixed(1), band: freq < 0.04 ? 'VLF' : freq < 0.15 ? 'LF' : 'HF' };
+});
+
+function interpLFHF(r: number) {
+  return r < 1.0 ? { text: 'Parasympathetic dominant', c: C.sage }
+    : r < 2.0 ? { text: 'Balanced', c: C.accent }
+    : r < 3.0 ? { text: 'Mild sympathetic', c: C.amber }
+    : { text: 'High sympathetic stress', c: C.red };
+}
+
+// ── CGM / Metabolic data ──────────────────────────────────────
+const _grng = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+
+const CGM_DATA = Array.from({ length: 288 }, (_, i) => {
+  const h = (i * 5) / 60;
+  let base = 84;
+  const br = (h - 7.8) / 0.7;  base += h >= 7.0 && h < 10.5 ? 68 * Math.exp(-(br * br)) : 0;
+  const lu = (h - 13.0) / 0.55; base += h >= 12.0 && h < 15.5 ? 58 * Math.exp(-(lu * lu)) : 0;
+  const sn = (h - 16.2) / 0.3;  base += h >= 15.5 && h < 17.5 ? 28 * Math.exp(-(sn * sn)) : 0;
+  const di = (h - 19.2) / 0.75; base += h >= 18.0 && h < 22.0 ? 62 * Math.exp(-(di * di)) : 0;
+  const dn = (h - 6.0) / 0.9;   base += h >= 4.5 && h < 7.5  ? 14 * Math.exp(-(dn * dn)) : 0;
+  if (h < 5.5 || h >= 23.0) base = 80 + (_grng(i * 3) - 0.5) * 6;
+  const noise = (_grng(i * 7 + 3) - 0.5) * 7;
+  const hh = String(Math.floor(h)).padStart(2, '0');
+  const mm = String(Math.round((h % 1) * 60)).padStart(2, '0');
+  return { t: i, time: `${hh}:${mm}`, glucose: +Math.max(55, Math.min(240, base + noise)).toFixed(0) };
+});
+
+function cgmMetrics(data: typeof CGM_DATA) {
+  const vals = data.map(d => +d.glucose);
+  const meanG = mn(vals);
+  const sdG   = sd(vals);
+  const tir   = +(vals.filter(v => v >= 70 && v <= 180).length / vals.length * 100).toFixed(1);
+  const tar1  = +(vals.filter(v => v > 180 && v <= 250).length / vals.length * 100).toFixed(1);
+  const tar2  = +(vals.filter(v => v > 250).length / vals.length * 100).toFixed(1);
+  const tbr1  = +(vals.filter(v => v >= 54 && v < 70).length / vals.length * 100).toFixed(1);
+  const tbr2  = +(vals.filter(v => v < 54).length / vals.length * 100).toFixed(1);
+  const cv    = +(sdG / meanG * 100).toFixed(1);
+  const gmi   = +(3.31 + 0.02392 * meanG).toFixed(2);
+  let mage = 0, mageCount = 0;
+  for (let i = 1; i < vals.length - 1; i++) {
+    const excursion = Math.abs(vals[i] - vals[i - 1]);
+    if (excursion > sdG) { mage += excursion; mageCount++; }
+  }
+  mage = mageCount > 0 ? +(mage / mageCount).toFixed(1) : 0;
+  return { meanG: +meanG.toFixed(1), sdG: +sdG.toFixed(1), tir, tar1, tar2, tbr1, tbr2, cv, gmi, mage };
+}
+
+const AGP_DATA = Array.from({ length: 24 }, (_, h) => {
+  const epochsInHour = CGM_DATA.filter(d => Math.floor((d.t * 5) / 60) === h).map(d => +d.glucose);
+  if (epochsInHour.length === 0) return { h, label: `${String(h).padStart(2, '0')}:00`, p5: 80, p25: 90, p50: 95, p75: 105, p95: 120 };
+  const sorted = [...epochsInHour].sort((a, b) => a - b);
+  const pct = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(p / 100 * sorted.length))];
+  return { h, label: `${String(h).padStart(2, '0')}:00`, p5: pct(5), p25: pct(25), p50: pct(50), p75: pct(75), p95: pct(95) };
+});
+
+function interpTIR(tir: number) {
+  return tir >= 70 ? { text: 'On target', c: C.sage } : tir >= 50 ? { text: 'Below target', c: C.amber } : { text: 'Poor control', c: C.red };
+}
+function interpCV(cv: number) {
+  return cv < 28 ? { text: 'Stable', c: C.sage } : cv < 36 ? { text: 'Moderate', c: C.amber } : { text: 'High variability', c: C.red };
+}
+
+// ── Longitudinal data ─────────────────────────────────────────
+const _lrng2 = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+const THIRTY_DAYS = Array.from({ length: 30 }, (_, d) => {
+  const sleepH    = +(5.8 + _lrng2(d * 3 + 1) * 2.8).toFixed(1);
+  const siiD      = Math.round(22 + _lrng2(d * 5 + 2) * 60);
+  const sedHD     = +(7 + _lrng2(d * 7 + 3) * 5).toFixed(1);
+  const glucoseCV = +(13 + _lrng2(d * 11 + 4) * 20).toFixed(1);
+  const lfhfD     = +(0.8 + _lrng2(d * 13 + 5) * 2.8).toFixed(2);
+  const steps     = Math.round(2800 + _lrng2(d * 17 + 6) * 7200);
+  const baseRec = 75 - (Math.max(0, siiD - 40) * 0.2) - (Math.max(0, +lfhfD - 2.0) * 4) + (sleepH - 7) * 4;
+  const recovery = Math.round(Math.max(20, Math.min(98, baseRec + (_lrng2(d * 19 + 8) - 0.5) * 10)));
+  return { day: d + 1, label: `D${d + 1}`, sleepH, siiD, sedHD, glucoseCV, lfhfD: +lfhfD, steps, recovery };
+});
+
+function pearsonCorr(a: number[], b: number[]) {
+  const ma = mn(a), mb = mn(b);
+  const num = a.reduce((s, v, i) => s + (v - ma) * (b[i] - mb), 0);
+  const den = Math.sqrt(a.reduce((s, v) => s + (v - ma) * (v - ma), 0) * b.reduce((s, v) => s + (v - mb) * (v - mb), 0));
+  return den === 0 ? 0 : +(num / den).toFixed(2);
+}
+
+const METRICS_FOR_CORR = [
+  { key: 'sleepH',    label: 'Sleep Duration'    },
+  { key: 'siiD',      label: 'Sleep Irregularity' },
+  { key: 'recovery',  label: 'Recovery'           },
+  { key: 'lfhfD',     label: 'LF/HF Ratio'       },
+  { key: 'glucoseCV', label: 'Glucose CV%'        },
+  { key: 'sedHD',     label: 'Sedentary Hours'    },
+  { key: 'steps',     label: 'Steps'              },
+] as const;
+
 // ── Types ──────────────────────────────────────────────────────
 type SignalAlgoId      = 'moving_avg' | 'exp_smooth' | 'zscore' | 'rolling_std' | 'autocorr';
 type ComplexAlgoId  = 'cc' | 'dfa' | 'sample_entropy' | 'perm_entropy' | 'hurst' | 'fingerprint';
 type ActivityAlgoId    = 'fragmentation' | 'circadian';
 type PredictiveAlgoId  = 'mse' | 'phase_space' | 'cusum' | 'risk_panel' | 'fall_risk' | 'shap_features' | 'age_strata';
 type SleepAlgoId       = 'sleep_arch' | 'sleep_sii' | 'sleep_hrv' | 'recovery' | 'chronotype';
-type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId | SleepAlgoId;
+type SedentaryAlgoId   = 'sed_overview' | 'sed_bouts' | 'sed_breaks' | 'sed_intensity';
+type AutonomicAlgoId   = 'lfhf' | 'poincare_plot' | 'stress_index' | 'autonomic_24h';
+type MetabolicAlgoId   = 'glucose_trace' | 'time_in_range' | 'agp' | 'glucose_variability';
+type LongitudinalAlgoId = 'timeline' | 'correlation' | 'health_calendar' | 'risk_evolution';
+type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId | SleepAlgoId | SedentaryAlgoId | AutonomicAlgoId | MetabolicAlgoId | LongitudinalAlgoId;
 const isComplex     = (a: AlgoId): a is ComplexAlgoId     =>
   ['cc','dfa','sample_entropy','perm_entropy','hurst','fingerprint'].includes(a);
 const isActivity    = (a: AlgoId): a is ActivityAlgoId    =>
@@ -583,6 +740,14 @@ const isPredictive  = (a: AlgoId): a is PredictiveAlgoId  =>
   ['mse','phase_space','cusum','risk_panel','fall_risk','shap_features','age_strata'].includes(a);
 const isSleep       = (a: AlgoId): a is SleepAlgoId       =>
   ['sleep_arch','sleep_sii','sleep_hrv','recovery','chronotype'].includes(a);
+const isSedentary   = (a: AlgoId): a is SedentaryAlgoId   =>
+  ['sed_overview','sed_bouts','sed_breaks','sed_intensity'].includes(a);
+const isAutonomic   = (a: AlgoId): a is AutonomicAlgoId   =>
+  ['lfhf','poincare_plot','stress_index','autonomic_24h'].includes(a);
+const isMetabolic   = (a: AlgoId): a is MetabolicAlgoId   =>
+  ['glucose_trace','time_in_range','agp','glucose_variability'].includes(a);
+const isLongitudinal = (a: AlgoId): a is LongitudinalAlgoId =>
+  ['timeline','correlation','health_calendar','risk_evolution'].includes(a);
 
 const SIGNAL_ALGOS: { id: SignalAlgoId; label: string; color: string }[] = [
   { id: 'moving_avg',  label: 'Moving Average',        color: C.sage   },
@@ -618,6 +783,30 @@ const SLEEP_ALGOS: { id: SleepAlgoId; label: string; color: string; sub: string 
   { id: 'sleep_hrv',   label: 'Sleep HRV',          color: C.sage,   sub: 'RMSSD across sleep stages' },
   { id: 'recovery',    label: 'Recovery Score',     color: C.gold,   sub: 'Composite readiness · Oura-style' },
   { id: 'chronotype',  label: 'Chronotype',         color: C.accent, sub: 'Sleep timing · social jetlag' },
+];
+const SEDENTARY_ALGOS: { id: SedentaryAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'sed_overview',  label: 'Overview',          color: C.amber,  sub: 'Total sedentary time · breaks/hour' },
+  { id: 'sed_bouts',     label: 'Bout Analysis',     color: C.coral,  sub: 'Sedentary bout distribution' },
+  { id: 'sed_breaks',    label: 'Break Frequency',   color: C.sage,   sub: 'Breaks per sedentary hour · protective' },
+  { id: 'sed_intensity', label: 'Intensity Profile', color: C.gold,   sub: 'MET-based activity intensity' },
+];
+const AUTONOMIC_ALGOS: { id: AutonomicAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'lfhf',          label: 'LF/HF Spectrum',    color: C.amber,  sub: 'HRV power bands · sympathovagal balance' },
+  { id: 'poincare_plot', label: 'Poincaré Plot',      color: C.sage,   sub: 'RR(n) vs RR(n+1) · SD1 · SD2' },
+  { id: 'stress_index',  label: 'Stress Index',       color: C.red,    sub: 'Hourly sympathetic load · 24h' },
+  { id: 'autonomic_24h', label: 'Autonomic 24h',      color: C.purple, sub: 'Circadian autonomic pattern' },
+];
+const METABOLIC_ALGOS: { id: MetabolicAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'glucose_trace',      label: 'CGM Trace',          color: C.sage,   sub: 'Full-day continuous glucose' },
+  { id: 'time_in_range',      label: 'Time in Range',       color: C.accent, sub: 'TIR · TBR · TAR · ADA consensus' },
+  { id: 'agp',                label: 'Ambulatory Glucose',  color: C.amber,  sub: 'p5/p25/p50/p75/p95 percentile bands' },
+  { id: 'glucose_variability',label: 'Variability',         color: C.purple, sub: 'CV% · MAGE · rolling SD' },
+];
+const LONGITUDINAL_ALGOS: { id: LongitudinalAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'timeline',         label: 'Timeline',          color: C.accent, sub: '30-day multi-domain sparklines' },
+  { id: 'correlation',      label: 'Correlation Matrix', color: C.gold,   sub: 'Cross-domain Pearson r matrix' },
+  { id: 'health_calendar',  label: 'Health Calendar',   color: C.sage,   sub: '30-day recovery heatmap' },
+  { id: 'risk_evolution',   label: 'Risk Evolution',     color: C.coral,  sub: 'Recovery trend · anomaly days' },
 ];
 
 // ── Interpretation helpers ────────────────────────────────────
@@ -778,6 +967,7 @@ export default function AlgorithmLabPage() {
   const [acfLags, setAcfLags]             = useState(40);
   const [ageGroup, setAgeGroup]           = useState<AgeGroup>('overall');
   const [sleepNight, setSleepNight]       = useState(0);
+  const [hoveredCell, setHoveredCell]     = useState<{ day: number; val: number } | null>(null);
 
   const raw = useMemo(() => RAW.slice(0, visPoints), [visPoints]);
   const p2  = (v: number) => v.toFixed(2);
@@ -873,18 +1063,105 @@ export default function AlgorithmLabPage() {
     return { night: n.day, score: computeRecovery(n, st).score };
   }), []);
 
+  // ── Sedentary computations ───────────────────────────────────
+  const sedResult    = useMemo(() => sedMetrics(ACTIVITY.slice(0, 288)), []);
+  const intDist      = useMemo(() => intensityDist(ACTIVITY.slice(0, 288)), []);
+  const sedHourly    = useMemo(() => Array.from({ length: 24 }, (_, h) => {
+    const vals = ACTIVITY.slice(h * 12, h * 12 + 12);
+    const sedCount = vals.filter(v => v < SED_THRESHOLD).length;
+    return { h, label: `${String(h).padStart(2, '0')}h`, sedPct: Math.round(sedCount / vals.length * 100), mean: Math.round(mn(vals)) };
+  }), []);
+  const sedBoutHist  = useMemo(() => {
+    const bins = [5, 10, 15, 20, 25, 30, 45, 60];
+    return bins.map((b, i) => {
+      const lo = i === 0 ? 0 : bins[i - 1];
+      const hi = b;
+      const count = sedResult.bouts.filter(v => v > lo && v <= hi).length;
+      return { bin: `≤${b}m`, count, minutes: b };
+    }).concat([{ bin: '>60m', count: sedResult.bouts.filter(v => v > 60).length, minutes: 90 }]);
+  }, [sedResult]);
+  const sedBreakCumul = useMemo(() => {
+    const isSed = ACTIVITY.slice(0, 288).map(v => v < SED_THRESHOLD);
+    let cumBreaks = 0;
+    return Array.from({ length: 288 }, (_, i) => {
+      if (i > 0 && isSed[i - 1] && !isSed[i]) cumBreaks++;
+      return { t: i, time: epochToTime(i), breaks: cumBreaks, sedentary: isSed[i] ? 1 : 0 };
+    });
+  }, []);
+
+  // ── Autonomic computations ───────────────────────────────────
+  const rrIntervals  = useMemo(() => generateRRIntervals(200, 42), []);
+  const poincareData = useMemo(() => poincarePlotData(rrIntervals), [rrIntervals]);
+  const overallLFHF  = useMemo(() => +(mn(LFHF_24H.map(d => d.lfhf))).toFixed(2), []);
+  const stressIndexData = useMemo(() => LFHF_24H.map(d => ({
+    ...d,
+    si: +(d.lfhf * 18 + 12).toFixed(1),
+    color: d.lfhf > 2.0 ? C.red : d.lfhf > 1.5 ? C.amber : C.sage,
+  })), []);
+
+  // ── Metabolic computations ───────────────────────────────────
+  const cgmStats     = useMemo(() => cgmMetrics(CGM_DATA), []);
+  const rollingGlucoseSD = useMemo(() => {
+    const vals = CGM_DATA.map(d => +d.glucose);
+    const w = 12; // 1-hour window
+    return CGM_DATA.map((d, i) => {
+      if (i < w - 1) return { ...d, rollingSD: null as number | null };
+      const seg = vals.slice(i - w + 1, i + 1);
+      return { ...d, rollingSD: +sd(seg).toFixed(1) };
+    });
+  }, []);
+  const glucoseHist  = useMemo(() => {
+    const vals = CGM_DATA.map(d => +d.glucose);
+    const bins = [54, 70, 100, 140, 180, 210, 250];
+    return bins.map((hi, i) => {
+      const lo = i === 0 ? 0 : bins[i - 1];
+      const count = vals.filter(v => v > lo && v <= hi).length;
+      const label = i === 0 ? `<${hi}` : `${lo}–${hi}`;
+      const zone = hi <= 54 ? 'tbr2' : hi <= 70 ? 'tbr1' : hi <= 180 ? 'tir' : hi <= 250 ? 'tar1' : 'tar2';
+      const color = hi <= 54 ? C.red : hi <= 70 ? C.coral : hi <= 180 ? C.sage : hi <= 250 ? C.amber : C.red;
+      return { label, count, zone, color };
+    }).concat([{ label: '>250', count: vals.filter(v => v > 250).length, zone: 'tar2', color: C.red }]);
+  }, []);
+
+  // ── Longitudinal computations ────────────────────────────────
+  const corrMatrix   = useMemo(() => {
+    const keys = METRICS_FOR_CORR.map(m => m.key);
+    return keys.map(ka => keys.map(kb => {
+      const a = THIRTY_DAYS.map(d => d[ka as keyof typeof d] as number);
+      const b = THIRTY_DAYS.map(d => d[kb as keyof typeof d] as number);
+      return pearsonCorr(a, b);
+    }));
+  }, []);
+  const last7Avgs    = useMemo(() => {
+    const last7 = THIRTY_DAYS.slice(-7);
+    return METRICS_FOR_CORR.map(m => ({
+      ...m,
+      avg: +(mn(last7.map(d => d[m.key as keyof typeof d] as number))).toFixed(1),
+    }));
+  }, []);
+  const longTrend    = useMemo(() => {
+    const xs = THIRTY_DAYS.map(d => d.day);
+    const ys = THIRTY_DAYS.map(d => d.recovery);
+    const { slope, intercept } = linReg(xs, ys);
+    return { slope: +slope.toFixed(2), line: xs.map(x => +(slope * x + intercept).toFixed(1)) };
+  }, []);
+
   // ── Signal-mode stats ────────────────────────────────────────
   const sigStats = useMemo(() => {
     const m = mn(raw), s = sd(raw);
     return { mean: m.toFixed(2), std: s.toFixed(2), min: Math.min(...raw).toFixed(1), max: Math.max(...raw).toFixed(1), anomalies: timeData.filter(d => d.anomaly !== null).length };
   }, [raw, timeData]);
 
-  const activeSignalAlgo  = SIGNAL_ALGOS.find(a => a.id === algo);
-  const activeComplexAlgo = COMPLEX_ALGOS.find(a => a.id === algo);
-  const inComplex     = isComplex(algo);
-  const inActivity    = isActivity(algo);
-  const inPredictive  = isPredictive(algo);
-  const inSleep       = isSleep(algo);
+  const activeSignalAlgo   = SIGNAL_ALGOS.find(a => a.id === algo);
+  const activeComplexAlgo  = COMPLEX_ALGOS.find(a => a.id === algo);
+  const inComplex          = isComplex(algo);
+  const inActivity         = isActivity(algo);
+  const inPredictive       = isPredictive(algo);
+  const inSleep            = isSleep(algo);
+  const inSedentary        = isSedentary(algo);
+  const inAutonomic        = isAutonomic(algo);
+  const inMetabolic        = isMetabolic(algo);
+  const inLongitudinal     = isLongitudinal(algo);
 
   return (
     <div className="app" style={{ color: C.text }}>
@@ -958,6 +1235,46 @@ export default function AlgorithmLabPage() {
           ))}
         </nav>
 
+        <nav className="nav-section">
+          <div className="nav-label">Sedentary Behavior</div>
+          {SEDENTARY_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <nav className="nav-section">
+          <div className="nav-label">Stress & Autonomic</div>
+          {AUTONOMIC_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <nav className="nav-section">
+          <div className="nav-label">Metabolic / CGM</div>
+          {METABOLIC_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <nav className="nav-section">
+          <div className="nav-label">Longitudinal</div>
+          {LONGITUDINAL_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
         <div className="sidebar-footer">
           <span className="status-dot" style={{ background: files.length ? C.sage : C.amber, boxShadow: `0 0 0 3px ${files.length ? 'rgba(61,204,145,0.18)' : 'rgba(255,201,64,0.18)'}` }}/>
           <span>{files.length ? `${files.length} file${files.length > 1 ? 's' : ''} loaded` : 'demo data'}</span>
@@ -968,7 +1285,7 @@ export default function AlgorithmLabPage() {
       <main className="main">
         <header className="topbar" style={{ marginBottom: 32 }}>
           <div>
-            <div className="crumb">Ambient Intelligence · {inSleep ? 'Sleep Analysis · Architecture · SII · HRV · Recovery · Chronotype' : inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Fragmentation · Circadian' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}</div>
+            <div className="crumb">Ambient Intelligence · {inLongitudinal ? 'Longitudinal · Timeline · Correlation · Calendar · Risk Evolution' : inMetabolic ? 'Metabolic · CGM Trace · TIR · AGP · Variability' : inAutonomic ? 'Autonomic · LF/HF · Poincaré · Stress · 24h' : inSedentary ? 'Sedentary · Overview · Bouts · Breaks · Intensity' : inSleep ? 'Sleep Analysis · Architecture · SII · HRV · Recovery · Chronotype' : inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Fragmentation · Circadian' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}</div>
             <h1 className="page-title">Algorithm <em>Lab</em></h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -979,7 +1296,35 @@ export default function AlgorithmLabPage() {
 
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 28 }}>
-          {(inSleep ? [
+          {(inLongitudinal ? [
+            { label: 'Days',          value: '30',                                                      color: C.accent },
+            { label: 'Avg Recovery',  value: Math.round(mn(THIRTY_DAYS.map(d => d.recovery))).toString(), color: interpRecovery(Math.round(mn(THIRTY_DAYS.map(d => d.recovery)))).c },
+            { label: 'Avg Sleep',     value: `${mn(THIRTY_DAYS.map(d => d.sleepH)).toFixed(1)}h`,      color: C.purple },
+            { label: 'Avg Steps',     value: Math.round(mn(THIRTY_DAYS.map(d => d.steps))).toLocaleString(), color: C.sage },
+            { label: 'Trend',         value: longTrend.slope >= 0 ? `+${longTrend.slope}` : `${longTrend.slope}`, color: longTrend.slope >= 0 ? C.sage : C.coral },
+            { label: 'Anomaly Days',  value: THIRTY_DAYS.filter(d => d.recovery < 50).length.toString(), color: THIRTY_DAYS.filter(d => d.recovery < 50).length > 5 ? C.red : C.amber },
+          ] : inMetabolic ? [
+            { label: 'TIR',           value: `${cgmStats.tir}%`,                                       color: interpTIR(cgmStats.tir).c },
+            { label: 'Mean Glucose',  value: `${cgmStats.meanG}`,                                      color: C.text2 },
+            { label: 'CV%',           value: `${cgmStats.cv}%`,                                        color: interpCV(cgmStats.cv).c },
+            { label: 'GMI',           value: cgmStats.gmi.toString(),                                  color: C.amber },
+            { label: 'MAGE',          value: `${cgmStats.mage}`,                                       color: C.text3 },
+            { label: 'SD',            value: `${cgmStats.sdG}`,                                        color: C.text3 },
+          ] : inAutonomic ? [
+            { label: 'LF/HF',         value: overallLFHF.toString(),                                   color: interpLFHF(overallLFHF).c },
+            { label: 'SD1',           value: `${poincareData.sd1}ms`,                                  color: C.sage },
+            { label: 'SD2',           value: `${poincareData.sd2}ms`,                                  color: C.amber },
+            { label: 'SD1/SD2',       value: poincareData.ratio.toString(),                            color: C.text2 },
+            { label: 'Peak LF/HF',    value: Math.max(...LFHF_24H.map(d => d.lfhf)).toFixed(2),       color: C.coral },
+            { label: 'Night LF/HF',   value: mn(LFHF_24H.filter(d => d.h < 6 || d.h >= 22).map(d => d.lfhf)).toFixed(2), color: C.purple },
+          ] : inSedentary ? [
+            { label: 'Sed Hours',     value: `${sedResult.sedHours}h`,                                 color: sedResult.sedHours > 10 ? C.red : sedResult.sedHours > 8 ? C.amber : C.sage },
+            { label: 'Sed %',         value: `${sedResult.pctSed}%`,                                   color: C.text2 },
+            { label: 'Breaks',        value: sedResult.breaks.toString(),                              color: C.sage },
+            { label: 'Breaks/hr',     value: sedResult.breaksPerHour.toString(),                       color: sedResult.breaksPerHour >= 7 ? C.sage : C.amber },
+            { label: 'Prolonged',     value: sedResult.prolonged.toString(),                           color: sedResult.prolonged > 3 ? C.coral : C.text3 },
+            { label: 'Long Bouts',    value: sedResult.longBouts.toString(),                           color: sedResult.longBouts > 2 ? C.red : C.text3 },
+          ] : inSleep ? [
             { label: 'Night',        value: SLEEP_NIGHTS[sleepNight].day,                              color: C.accent },
             { label: 'Total Sleep',  value: `${Math.floor(SLEEP_NIGHTS[sleepNight].dur/60)}h ${SLEEP_NIGHTS[sleepNight].dur%60}m`, color: C.text2 },
             { label: 'Efficiency',   value: `${SLEEP_NIGHTS[sleepNight].eff}%`,                        color: SLEEP_NIGHTS[sleepNight].eff >= 85 ? C.sage : C.amber },
@@ -1039,7 +1384,7 @@ export default function AlgorithmLabPage() {
           </div>
 
           {/* ── SIGNAL PROCESSING MODE ── */}
-          {!inComplex && !inActivity && !inPredictive && !inSleep && <>
+          {!inComplex && !inActivity && !inPredictive && !inSleep && !inSedentary && !inAutonomic && !inMetabolic && !inLongitudinal && <>
             {/* Algorithm selector + sliders */}
             <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
               <div style={{ marginBottom: 18 }}>
@@ -1925,6 +2270,749 @@ export default function AlgorithmLabPage() {
             </>}
           </>}
 
+          {/* ── SEDENTARY BEHAVIOR ── */}
+          {inSedentary && <>
+            {/* Section header */}
+            <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 4 }}>
+                    {algo === 'sed_overview' ? 'Sedentary Overview' : algo === 'sed_bouts' ? 'Bout Analysis' : algo === 'sed_breaks' ? 'Break Frequency' : 'Intensity Profile'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
+                    {algo === 'sed_overview' ? 'sedentary time · breaks per hour · prolonged bouts · 288 epochs · 5-min resolution' :
+                     algo === 'sed_bouts'    ? 'sedentary bout length distribution · clinical thresholds at 30 and 60 minutes' :
+                     algo === 'sed_breaks'   ? 'cumulative breaks across the day · target ≥7 breaks/sedentary hour' :
+                     'METs pyramid · sedentary / light / moderate / vigorous intensity zones'}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {SEDENTARY_ALGOS.map(a => (
+                  <button key={a.id} onClick={() => setAlgo(a.id)} style={{ padding: '8px 18px', borderRadius: 999, border: `1px solid ${algo === a.id ? a.color : C.lineS}`, background: algo === a.id ? `${a.color}1A` : 'transparent', color: algo === a.id ? a.color : C.text3, fontFamily: 'var(--mono)', fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>{a.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── SED OVERVIEW ── */}
+            {algo === 'sed_overview' && <>
+              {/* KPI tiles */}
+              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                <MetricBadge label="Total Sedentary" value={`${sedResult.sedHours}h`} interp={{ text: sedResult.sedHours > 10 ? 'Exceeds guidelines' : sedResult.sedHours > 8 ? 'Borderline' : 'Acceptable', c: sedResult.sedHours > 10 ? C.red : sedResult.sedHours > 8 ? C.amber : C.sage }} />
+                <MetricBadge label="Breaks / Hour" value={sedResult.breaksPerHour.toString()} interp={{ text: sedResult.breaksPerHour >= 7 ? 'On target' : sedResult.breaksPerHour >= 4 ? 'Below target' : 'Critically low', c: sedResult.breaksPerHour >= 7 ? C.sage : sedResult.breaksPerHour >= 4 ? C.amber : C.red }} />
+                <MetricBadge label="Prolonged Bouts ≥30m" value={sedResult.prolonged.toString()} interp={{ text: sedResult.prolonged > 3 ? 'High risk' : sedResult.prolonged > 1 ? 'Moderate' : 'Low', c: sedResult.prolonged > 3 ? C.coral : sedResult.prolonged > 1 ? C.amber : C.sage }} />
+                <MetricBadge label="Sedentary %" value={`${sedResult.pctSed}%`} interp={{ text: sedResult.pctSed > 70 ? 'High' : sedResult.pctSed > 55 ? 'Moderate' : 'Acceptable', c: sedResult.pctSed > 70 ? C.red : sedResult.pctSed > 55 ? C.amber : C.sage }} />
+              </div>
+
+              {/* Hourly sedentary pattern */}
+              <ChartCard full title="Hourly Sedentary Pattern" sub="% of each hour below sedentary threshold (< 20 counts) · day 1 profile" badge={`${sedResult.pctSed}% sedentary`} badgeColor={C.amber}>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={sedHourly} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={1} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? `${v}%` : String(v), 'Sedentary'] as [string, string]} />
+                    <ReferenceLine y={50} stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: '50%', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.amber }} />
+                    <Bar dataKey="sedPct" name="Sedentary %" radius={[3, 3, 0, 0]}>
+                      {sedHourly.map((d, i) => <Cell key={i} fill={d.sedPct > 75 ? C.coral : d.sedPct > 50 ? C.amber : C.sage} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              {/* Info panel */}
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Break frequency reduces cardiovascular risk</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  Frequent interruptions to sedentary time reduce cardiometabolic risk independently of total physical activity. Each additional break per sedentary hour is associated with lower waist circumference, reduced triglycerides, and improved insulin sensitivity. Prospective cohort analyses suggest ≥7 breaks per sedentary hour confers a relative risk reduction of approximately 0.73 for cardiovascular mortality — even in individuals who exercise regularly.
+                </div>
+                <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                  {[
+                    { label: 'Target breaks/hr', value: '≥ 7', color: C.sage },
+                    { label: 'Max continuous sitting', value: '< 30m', color: C.amber },
+                    { label: 'WHO daily guideline', value: '< 8h', color: C.accent },
+                  ].map(x => (
+                    <div key={x.label} style={{ padding: '12px 16px', background: C.s2, borderRadius: 10, border: `1px solid ${C.line}` }}>
+                      <div style={{ fontFamily: 'var(--serif)', fontSize: 26, fontWeight: 300, color: x.color }}>{x.value}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, marginTop: 4 }}>{x.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>}
+
+            {/* ── SED BOUTS ── */}
+            {algo === 'sed_bouts' && <>
+              <ChartCard full title="Sedentary Bout Distribution" sub={`${sedResult.bouts.length} total bouts · ${sedResult.prolonged} prolonged (≥30m) · ${sedResult.longBouts} long (≥60m)`} badge={`${sedResult.prolonged} prolonged`} badgeColor={sedResult.prolonged > 3 ? C.coral : C.amber}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={sedBoutHist} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="bin" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [String(v), 'bouts'] as [string, string]} />
+                    <ReferenceLine x="≤30m" stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.6} label={{ value: 'prolonged', position: 'insideTopRight', fontFamily: 'var(--mono)', fontSize: 9, fill: C.amber }} />
+                    <Bar dataKey="count" name="Bouts" radius={[4, 4, 0, 0]}>
+                      {sedBoutHist.map((d, i) => <Cell key={i} fill={d.minutes >= 60 ? C.red : d.minutes >= 30 ? C.coral : d.minutes >= 20 ? C.amber : C.sage} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 12 }}>Clinical Thresholds</div>
+                {[
+                  { label: '< 10 minutes', desc: 'Short bouts — minimal metabolic impact', color: C.sage },
+                  { label: '10–30 minutes', desc: 'Moderate bouts — increasing dysregulation risk', color: C.amber },
+                  { label: '≥ 30 minutes',  desc: 'Prolonged — associated with elevated glucose and triglycerides', color: C.coral },
+                  { label: '≥ 60 minutes',  desc: 'Long bout — independent cardiovascular risk factor', color: C.red },
+                ].map(x => (
+                  <div key={x.label} style={{ padding: '8px 12px', background: C.s2, borderRadius: 8, border: `1px solid ${C.line}`, marginBottom: 8, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: x.color, minWidth: 110, flexShrink: 0 }}>{x.label}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, lineHeight: 1.5 }}>{x.desc}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Bout Summary</div>
+                {[
+                  { label: 'Total bouts',       value: sedResult.bouts.length.toString(),                              color: C.text2 },
+                  { label: 'Mean bout length',   value: `${sedResult.bouts.length > 0 ? +(mn(sedResult.bouts)).toFixed(0) : 0}m`, color: C.text2 },
+                  { label: 'Longest bout',       value: `${sedResult.bouts.length > 0 ? Math.max(...sedResult.bouts) : 0}m`, color: C.coral },
+                  { label: 'Prolonged (≥30m)',   value: sedResult.prolonged.toString(),                               color: C.amber },
+                  { label: 'Long (≥60m)',         value: sedResult.longBouts.toString(),                              color: C.red },
+                ].map(r => (
+                  <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: `1px solid ${C.line}` }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4 }}>{r.label}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: r.color }}>{r.value}</span>
+                  </div>
+                ))}
+              </div>
+            </>}
+
+            {/* ── SED BREAKS ── */}
+            {algo === 'sed_breaks' && <>
+              <ChartCard full title="Cumulative Break Count — Day Profile" sub="breaks from sedentary accumulate through the day · target ≥7 breaks/sedentary hour" badge={`${sedResult.breaks} total breaks`} badgeColor={C.sage}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <ComposedChart data={sedBreakCumul.filter((_, i) => i % 3 === 0)} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis dataKey="time" interval={7} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis yAxisId="breaks" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.sage }} tickLine={false} axisLine={false} label={{ value: 'breaks', angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.sage }} />
+                    <YAxis yAxisId="sed" orientation="right" tick={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown, n: unknown) => [String(v), String(n)] as [string, string]} />
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 10, paddingTop: 10 }} />
+                    <Bar yAxisId="sed" dataKey="sedentary" name="Sedentary epoch" fill={C.s3} fillOpacity={0.6} barSize={3} legendType="none" />
+                    <Line yAxisId="breaks" type="monotone" dataKey="breaks" stroke={C.sage} strokeWidth={2.5} dot={false} name="Cumulative breaks" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ background: C.s1, border: `2px solid ${sedResult.breaksPerHour >= 7 ? C.sage : C.amber}44`, borderRadius: 14, padding: '32px 28px', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Breaks per Sedentary Hour</div>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 80, lineHeight: 1, letterSpacing: '-0.04em', color: sedResult.breaksPerHour >= 7 ? C.sage : sedResult.breaksPerHour >= 4 ? C.amber : C.red }}>{sedResult.breaksPerHour}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 6 }}>target ≥ 7</div>
+                <span style={{ display: 'inline-flex', marginTop: 14, padding: '5px 16px', borderRadius: 999, background: `${sedResult.breaksPerHour >= 7 ? C.sage : C.amber}18`, border: `1px solid ${sedResult.breaksPerHour >= 7 ? C.sage : C.amber}50`, color: sedResult.breaksPerHour >= 7 ? C.sage : C.amber, fontFamily: 'var(--mono)', fontSize: 12 }}>{sedResult.breaksPerHour >= 7 ? 'On target' : sedResult.breaksPerHour >= 4 ? 'Below target' : 'Critically low'}</span>
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Why breaks matter</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  Interrupting prolonged sitting activates skeletal muscle lipoprotein lipase and restores postprandial glucose clearance. Even 2-minute standing breaks every 20–30 minutes attenuate postprandial glycemia by 30% compared to unbroken sitting. The protective effect is dose-responsive — each additional break per sedentary hour independently reduces waist circumference and fasting triglycerides.
+                </div>
+              </div>
+            </>}
+
+            {/* ── SED INTENSITY ── */}
+            {algo === 'sed_intensity' && <>
+              <ChartCard full title="Activity Intensity Distribution" sub="METs-based zone classification · sedentary / light / moderate / vigorous" badge={`${intDist.find(d => d.label === 'Vigorous')?.pct ?? 0}% vigorous`} badgeColor={C.red}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28, alignItems: 'center' }}>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart layout="vertical" data={[...intDist].reverse()} margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.line} horizontal={false} />
+                      <XAxis type="number" tickFormatter={(v: number) => `${v}m`} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="label" width={78} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? `${v}m` : String(v), 'Duration'] as [string, string]} />
+                      <Bar dataKey="mins" name="Minutes" radius={[0, 4, 4, 0]}>
+                        {[...intDist].reverse().map((d, i) => <Cell key={i} fill={d.color} fillOpacity={0.85} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {intDist.map(d => (
+                      <div key={d.label} style={{ padding: '14px 18px', background: C.s2, borderRadius: 10, border: `1px solid ${d.color}30` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: d.color }}>{d.label}</span>
+                          <span style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 300, color: d.color }}>{d.pct}%</span>
+                        </div>
+                        <div style={{ background: C.s3, borderRadius: 3, height: 4 }}>
+                          <div style={{ width: `${d.pct}%`, background: d.color, height: '100%', borderRadius: 3, opacity: 0.8 }} />
+                        </div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, marginTop: 4 }}>{d.mins}m · {d.label === 'Sedentary' ? '< 20 counts · < 1.5 METs' : d.label === 'Light' ? '20–44 counts · 1.5–3 METs' : d.label === 'Moderate' ? '45–69 counts · 3–6 METs' : '≥ 70 counts · > 6 METs'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </ChartCard>
+
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>METs intensity zones</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  Activity counts map to METs via validated actigraphy cut-points. Sedentary (&lt;1.5 METs) includes seated work and lying still. Light activity (1.5–3 METs) includes slow walking and light standing tasks. Moderate (3–6 METs) covers brisk walking, cycling, and household activities. Vigorous (&gt;6 METs) includes running, stair climbing, and intense exercise. Current guidelines recommend 150–300 minutes/week of moderate or 75–150 minutes/week of vigorous activity.
+                </div>
+              </div>
+            </>}
+          </>}
+
+          {/* ── STRESS & AUTONOMIC ── */}
+          {inAutonomic && <>
+            {/* Section header */}
+            <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 4 }}>
+                    {algo === 'lfhf' ? 'HRV Power Spectrum · LF/HF' : algo === 'poincare_plot' ? 'Poincaré Plot' : algo === 'stress_index' ? 'Stress Index · 24h' : 'Autonomic 24h Profile'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
+                    {algo === 'lfhf' ? 'VLF / LF / HF power bands · sympathovagal balance · synthetic RR interval series' :
+                     algo === 'poincare_plot' ? 'RR(n) vs RR(n+1) · SD1 = parasympathetic · SD2 = sympathovagal · n=200 beats' :
+                     algo === 'stress_index' ? 'hourly sympathetic load derived from LF/HF ratio · circadian autonomic rhythm' :
+                     'LF/HF over 24 hours · morning rise · work-hours peak · evening recovery · sleep nadir'}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {AUTONOMIC_ALGOS.map(a => (
+                  <button key={a.id} onClick={() => setAlgo(a.id)} style={{ padding: '8px 18px', borderRadius: 999, border: `1px solid ${algo === a.id ? a.color : C.lineS}`, background: algo === a.id ? `${a.color}1A` : 'transparent', color: algo === a.id ? a.color : C.text3, fontFamily: 'var(--mono)', fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>{a.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── LF/HF SPECTRUM ── */}
+            {algo === 'lfhf' && <>
+              <ChartCard full title="HRV Power Spectrum" sub="VLF (< 0.04 Hz) · LF (0.04–0.15 Hz) · HF (0.15–0.4 Hz) · synthetic 5-min RR series" badge={`LF/HF = ${overallLFHF}`} badgeColor={interpLFHF(overallLFHF).c}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={HRV_SPECTRUM} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="vlfGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.text4} stopOpacity={0.5}/><stop offset="95%" stopColor={C.text4} stopOpacity={0.05}/></linearGradient>
+                      <linearGradient id="lfGrad"  x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.amber} stopOpacity={0.5}/><stop offset="95%" stopColor={C.amber} stopOpacity={0.05}/></linearGradient>
+                      <linearGradient id="hfGrad"  x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.sage}  stopOpacity={0.5}/><stop offset="95%" stopColor={C.sage}  stopOpacity={0.05}/></linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis dataKey="freq" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={9} label={{ value: 'Hz', position: 'insideBottom', offset: -4, fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'Power (ms²/Hz)', angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown, _n: unknown, p: { payload?: { band?: string } }) => [typeof v === 'number' ? v.toFixed(1) : String(v), p?.payload?.band ?? 'Power'] as [string, string]} />
+                    <ReferenceLine x={0.04} stroke={C.text4}  strokeDasharray="3 3" strokeOpacity={0.4} label={{ value: 'VLF|LF', position: 'insideTopLeft', fontFamily: 'var(--mono)', fontSize: 8, fill: C.text4 }} />
+                    <ReferenceLine x={0.15} stroke={C.amber} strokeDasharray="3 3" strokeOpacity={0.4} label={{ value: 'LF|HF', position: 'insideTopLeft', fontFamily: 'var(--mono)', fontSize: 8, fill: C.amber }} />
+                    <Area type="monotone" dataKey="power" stroke="none" fill="url(#lfGrad)">
+                      {HRV_SPECTRUM.map((d, i) => <Cell key={i} fill={d.band === 'VLF' ? 'rgba(246,247,248,0.12)' : d.band === 'LF' ? `${C.amber}55` : `${C.sage}55`} />)}
+                    </Area>
+                    <Line type="monotone" dataKey="power" strokeWidth={0} dot={false}>
+                      {HRV_SPECTRUM.map((d, i) => <Cell key={i} fill={d.band === 'VLF' ? C.text4 : d.band === 'LF' ? C.amber : C.sage} />)}
+                    </Line>
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <ChartCard title="LF/HF · 24h Trend" sub="sympathovagal balance by hour · lower = parasympathetic dominant" badge={interpLFHF(overallLFHF).text} badgeColor={interpLFHF(overallLFHF).c}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={LFHF_24H} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis dataKey="label" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={3} />
+                    <YAxis domain={[0, 4]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(2) : String(v), 'LF/HF'] as [string, string]} />
+                    <ReferenceLine y={2.0} stroke={C.amber} strokeDasharray="4 3" label={{ value: 'sympathetic threshold', position: 'right', fontFamily: 'var(--mono)', fontSize: 8, fill: C.amber }} />
+                    <Line type="monotone" dataKey="lfhf" stroke={C.amber} strokeWidth={2} dot={{ r: 2, fill: C.amber }} name="LF/HF" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <MetricBadge label="Mean LF/HF" value={overallLFHF.toString()} interp={interpLFHF(overallLFHF)} />
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 12 }}>Band Interpretation</div>
+                {[
+                  { band: 'VLF (< 0.04 Hz)', desc: 'Very-low frequency power — renin-angiotensin, thermoregulation, intrinsic cardiac activity', c: C.text3 },
+                  { band: 'LF (0.04–0.15 Hz)', desc: 'Low frequency — mixed sympathetic + parasympathetic; baroreceptor reflex', c: C.amber },
+                  { band: 'HF (0.15–0.4 Hz)', desc: 'High frequency — respiratory sinus arrhythmia; pure parasympathetic tone marker', c: C.sage },
+                  { band: 'LF/HF ratio', desc: 'Sympathovagal balance; elevated values indicate sympathetic dominance or stress', c: C.coral },
+                ].map(x => (
+                  <div key={x.band} style={{ padding: '8px 0', borderBottom: `1px solid ${C.line}`, display: 'flex', gap: 14 }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: x.c, minWidth: 145, flexShrink: 0 }}>{x.band}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, lineHeight: 1.5 }}>{x.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </>}
+
+            {/* ── POINCARÉ PLOT ── */}
+            {algo === 'poincare_plot' && <>
+              <ChartCard full title="Poincaré Plot · RR(n) vs RR(n+1)" sub={`${rrIntervals.length - 1} consecutive RR pairs · SD1 = short-term variability · SD2 = long-term variability`} badge={`SD1/SD2 = ${poincareData.ratio}`} badgeColor={C.sage}>
+                <ResponsiveContainer width="100%" height={400}>
+                  <ScatterChart margin={{ top: 4, right: 8, left: -20, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis type="number" dataKey="rr1" name="RR(n)" domain={[600, 1100]} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'RR(n) ms', position: 'insideBottom', offset: -8, fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <YAxis type="number" dataKey="rr2" name="RR(n+1)" domain={[600, 1100]} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'RR(n+1) ms', angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <ZAxis range={[18, 18]} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown, n: unknown) => [typeof v === 'number' ? `${v}ms` : String(v), String(n)] as [string, string]} />
+                    <ReferenceLine segment={[{ x: 600, y: 600 }, { x: 1100, y: 1100 }]} stroke={C.lineS} strokeDasharray="3 3" />
+                    <Scatter data={poincareData.pairs} fill={C.sage} fillOpacity={0.5} name="RR pair" />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                <MetricBadge label="SD1 · Parasympathetic" value={`${poincareData.sd1}ms`} interp={{ text: poincareData.sd1 > 30 ? 'Good vagal tone' : poincareData.sd1 > 15 ? 'Moderate' : 'Low vagal tone', c: poincareData.sd1 > 30 ? C.sage : poincareData.sd1 > 15 ? C.amber : C.red }} />
+                <MetricBadge label="SD2 · Sympathovagal" value={`${poincareData.sd2}ms`} interp={{ text: `SD1/SD2 = ${poincareData.ratio}`, c: C.amber }} />
+                <MetricBadge label="SD1/SD2 Ratio" value={poincareData.ratio.toString()} interp={{ text: poincareData.ratio < 0.5 ? 'Sympathetic dominance' : poincareData.ratio < 0.8 ? 'Balanced' : 'Parasympathetic lead', c: poincareData.ratio < 0.5 ? C.coral : poincareData.ratio < 0.8 ? C.sage : C.accent }} />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Reading the Poincaré plot</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  SD1 measures the width of the point cloud perpendicular to the line-of-identity — it captures beat-to-beat parasympathetic modulation (respiratory sinus arrhythmia). SD2 measures the cloud length along the identity line — it reflects longer-term sympathovagal dynamics. A tight, elongated ellipse (low SD1, high SD2) indicates parasympathetic withdrawal. A broad, round ellipse indicates healthy high-frequency variability. Athletes and well-rested individuals show larger SD1.
+                </div>
+              </div>
+            </>}
+
+            {/* ── STRESS INDEX ── */}
+            {algo === 'stress_index' && <>
+              <ChartCard full title="Hourly Stress Index" sub="sympathetic load derived from LF/HF · higher = more sympathetic activation" badge={`peak ${Math.max(...stressIndexData.map(d => d.si)).toFixed(0)}`} badgeColor={C.red}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={stressIndexData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={1} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(1) : String(v), 'Stress Index'] as [string, string]} />
+                    <ReferenceLine y={40} stroke={C.amber} strokeDasharray="4 3" label={{ value: 'elevated', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.amber }} />
+                    <ReferenceLine y={52} stroke={C.red}   strokeDasharray="4 3" label={{ value: 'high', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.red }} />
+                    <Bar dataKey="si" name="Stress Index" radius={[3, 3, 0, 0]}>
+                      {stressIndexData.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 12 }}>Autonomic Zones</div>
+                {[
+                  { range: '< 30', label: 'Rest / recovery — parasympathetic dominant', color: C.sage },
+                  { range: '30–40', label: 'Normal waking — balanced ANS', color: C.accent },
+                  { range: '40–52', label: 'Elevated — mild sympathetic activation', color: C.amber },
+                  { range: '> 52', label: 'High stress — sympathetic dominance', color: C.red },
+                ].map(r => (
+                  <div key={r.range} style={{ display: 'flex', gap: 12, padding: '7px 0', borderBottom: `1px solid ${C.line}`, alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: r.color, minWidth: 55 }}>{r.range}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{r.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <MetricBadge label="Mean Stress Index" value={(+(mn(stressIndexData.map(d => d.si))).toFixed(1)).toString()} interp={{ text: mn(stressIndexData.map(d => d.si)) > 52 ? 'High stress load' : mn(stressIndexData.map(d => d.si)) > 40 ? 'Elevated' : 'Normal range', c: mn(stressIndexData.map(d => d.si)) > 52 ? C.red : mn(stressIndexData.map(d => d.si)) > 40 ? C.amber : C.sage }} />
+            </>}
+
+            {/* ── AUTONOMIC 24H ── */}
+            {algo === 'autonomic_24h' && <>
+              <ChartCard full title="Autonomic Balance · 24-Hour Profile" sub="LF/HF over the day · reference line at 2.0 (sympathetic threshold) · morning rise · work hours · recovery" badge={`mean ${overallLFHF}`} badgeColor={interpLFHF(overallLFHF).c}>
+                <ResponsiveContainer width="100%" height={320}>
+                  <ComposedChart data={LFHF_24H} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="lfhfGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor={C.amber} stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor={C.amber} stopOpacity={0.03}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis dataKey="label" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={1} />
+                    <YAxis domain={[0, 3.5]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(2) : String(v), 'LF/HF'] as [string, string]} />
+                    <ReferenceLine y={2.0} stroke={C.red} strokeDasharray="4 3" label={{ value: 'sympathetic threshold', position: 'right', fontFamily: 'var(--mono)', fontSize: 8, fill: C.red }} />
+                    <ReferenceArea x1="06h" x2="09h" fill={C.coral} fillOpacity={0.07} label={{ value: 'morning rise', position: 'insideTop', fontFamily: 'var(--mono)', fontSize: 8, fill: C.coral }} />
+                    <ReferenceArea x1="09h" x2="17h" fill={C.amber} fillOpacity={0.05} label={{ value: 'work hours', position: 'insideTop', fontFamily: 'var(--mono)', fontSize: 8, fill: C.amber }} />
+                    <ReferenceArea x1="20h" x2="23h" fill={C.sage}  fillOpacity={0.05} label={{ value: 'evening recovery', position: 'insideTop', fontFamily: 'var(--mono)', fontSize: 8, fill: C.sage }} />
+                    <Area type="monotone" dataKey="lfhf" stroke={C.amber} strokeWidth={2.5} fill="url(#lfhfGrad)" name="LF/HF" dot={{ r: 3, fill: C.amber }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Circadian autonomic rhythm</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  Healthy circadian autonomic rhythm shows a low overnight LF/HF (parasympathetic recovery during sleep), a morning surge at 6–9h (cortisol-driven sympathetic activation), sustained elevation during work hours, and progressive parasympathetic recovery from 18h onward. Disrupted patterns — flat circadian LF/HF, elevated overnight values, or absent morning rise — are associated with burnout, chronic stress, impaired insulin sensitivity, and increased cardiovascular risk.
+                </div>
+              </div>
+            </>}
+          </>}
+
+          {/* ── METABOLIC / CGM ── */}
+          {inMetabolic && <>
+            {/* Section header */}
+            <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 4 }}>
+                    {algo === 'glucose_trace' ? 'CGM Glucose Trace' : algo === 'time_in_range' ? 'Time in Range' : algo === 'agp' ? 'Ambulatory Glucose Profile' : 'Glucose Variability'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
+                    {algo === 'glucose_trace'       ? 'continuous glucose monitor · 5-min epochs · 24-hour synthetic day with meal events' :
+                     algo === 'time_in_range'        ? 'TIR 70–180 · TBR2 <54 · TBR1 54–70 · TAR1 180–250 · TAR2 >250 · ADA consensus targets' :
+                     algo === 'agp'                  ? 'p5/p25/p50/p75/p95 percentile bands · 24-hour glucose pattern from CGM data' :
+                     'CV% · MAGE · rolling 1h SD · glucose distribution by zone'}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {METABOLIC_ALGOS.map(a => (
+                  <button key={a.id} onClick={() => setAlgo(a.id)} style={{ padding: '8px 18px', borderRadius: 999, border: `1px solid ${algo === a.id ? a.color : C.lineS}`, background: algo === a.id ? `${a.color}1A` : 'transparent', color: algo === a.id ? a.color : C.text3, fontFamily: 'var(--mono)', fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>{a.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── GLUCOSE TRACE ── */}
+            {algo === 'glucose_trace' && <>
+              <ChartCard full title="Continuous Glucose Monitor — 24h" sub="5-min epochs · zones: TBR red · TIR green · TAR amber · reference lines at 70 and 180 mg/dL" badge={`TIR ${cgmStats.tir}%`} badgeColor={interpTIR(cgmStats.tir).c}>
+                <ResponsiveContainer width="100%" height={320}>
+                  <AreaChart data={CGM_DATA} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="cgmGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor={C.sage} stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor={C.sage} stopOpacity={0.04}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="time" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={23} />
+                    <YAxis domain={[50, 250]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'mg/dL', angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? `${v} mg/dL` : String(v), 'Glucose'] as [string, string]} />
+                    <ReferenceArea y1={50}  y2={54}  fill={C.red}   fillOpacity={0.15} />
+                    <ReferenceArea y1={54}  y2={70}  fill={C.coral} fillOpacity={0.10} />
+                    <ReferenceArea y1={70}  y2={180} fill={C.sage}  fillOpacity={0.06} />
+                    <ReferenceArea y1={180} y2={250} fill={C.amber} fillOpacity={0.08} />
+                    <ReferenceArea y1={250} y2={280} fill={C.red}   fillOpacity={0.10} />
+                    <ReferenceLine y={70}  stroke={C.coral} strokeDasharray="4 3" strokeOpacity={0.6} label={{ value: '70', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.coral }} />
+                    <ReferenceLine y={180} stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.6} label={{ value: '180', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.amber }} />
+                    <Area type="monotone" dataKey="glucose" stroke={C.sage} strokeWidth={2} fill="url(#cgmGrad)" name="Glucose" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                <MetricBadge label="Time in Range (70–180)" value={`${cgmStats.tir}%`} interp={interpTIR(cgmStats.tir)} />
+                <MetricBadge label="Mean Glucose" value={`${cgmStats.meanG}`} unit="mg/dL" interp={{ text: cgmStats.meanG <= 100 ? 'Optimal' : cgmStats.meanG <= 140 ? 'Elevated' : 'High', c: cgmStats.meanG <= 100 ? C.sage : cgmStats.meanG <= 140 ? C.amber : C.red }} />
+                <MetricBadge label="GMI" value={cgmStats.gmi.toString()} interp={{ text: cgmStats.gmi < 6.5 ? 'Below diabetes threshold' : 'Above threshold', c: cgmStats.gmi < 6.5 ? C.sage : C.coral }} />
+              </div>
+            </>}
+
+            {/* ── TIME IN RANGE ── */}
+            {algo === 'time_in_range' && <>
+              {/* TIR headline + stacked bar */}
+              <div style={{ background: C.s1, border: `2px solid ${interpTIR(cgmStats.tir).c}44`, borderRadius: 14, padding: '32px 28px', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Time in Range</div>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 88, lineHeight: 1, letterSpacing: '-0.04em', color: interpTIR(cgmStats.tir).c }}>{cgmStats.tir}%</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 6 }}>70–180 mg/dL</div>
+                <span style={{ display: 'inline-flex', marginTop: 14, padding: '5px 16px', borderRadius: 999, background: `${interpTIR(cgmStats.tir).c}18`, border: `1px solid ${interpTIR(cgmStats.tir).c}50`, color: interpTIR(cgmStats.tir).c, fontFamily: 'var(--mono)', fontSize: 12 }}>{interpTIR(cgmStats.tir).text}</span>
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Zone Distribution</div>
+                {/* Horizontal stacked bar */}
+                <div style={{ display: 'flex', height: 32, borderRadius: 6, overflow: 'hidden', marginBottom: 20 }}>
+                  {[
+                    { label: 'TBR2', pct: cgmStats.tbr2, color: C.red },
+                    { label: 'TBR1', pct: cgmStats.tbr1, color: C.coral },
+                    { label: 'TIR',  pct: cgmStats.tir,  color: C.sage },
+                    { label: 'TAR1', pct: cgmStats.tar1, color: C.amber },
+                    { label: 'TAR2', pct: cgmStats.tar2, color: C.red },
+                  ].map(z => z.pct > 0 ? <div key={z.label} style={{ width: `${z.pct}%`, background: z.color, opacity: 0.85, transition: 'width 0.4s' }} title={`${z.label}: ${z.pct}%`} /> : null)}
+                </div>
+                {[
+                  { label: 'TBR2 (< 54)',    pct: cgmStats.tbr2, color: C.red,   target: '< 1%'  },
+                  { label: 'TBR1 (54–70)',   pct: cgmStats.tbr1, color: C.coral, target: '< 4%'  },
+                  { label: 'TIR (70–180)',   pct: cgmStats.tir,  color: C.sage,  target: '> 70%' },
+                  { label: 'TAR1 (180–250)', pct: cgmStats.tar1, color: C.amber, target: '< 25%' },
+                  { label: 'TAR2 (> 250)',   pct: cgmStats.tar2, color: C.red,   target: '< 5%'  },
+                ].map(z => (
+                  <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 2, background: z.color, flexShrink: 0, opacity: 0.8, display: 'inline-block' }} />
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, flex: 1 }}>{z.label}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: z.color }}>{z.pct}%</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, minWidth: 40, textAlign: 'right' }}>target {z.target}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>ADA / EASD consensus targets</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  TIR ≥70% is the primary CGM quality target. Each 10% improvement in TIR (72 min/day) corresponds to a 0.8% reduction in HbA1c-equivalent and is independently associated with reduced risk of microvascular complications. TBR &lt;4% and TBR2 &lt;1% are safety thresholds for hypoglycemia prevention. These targets apply to type 1 and type 2 diabetes; non-diabetic adults typically achieve TIR &gt;90%.
+                </div>
+              </div>
+            </>}
+
+            {/* ── AGP ── */}
+            {algo === 'agp' && <>
+              <ChartCard full title="Ambulatory Glucose Profile" sub="p5/p25/p50/p75/p95 percentile bands · 24h glucose pattern · reference lines at 70 and 180 mg/dL">
+                <ResponsiveContainer width="100%" height={340}>
+                  <ComposedChart data={AGP_DATA} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="agpOuter" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.accent} stopOpacity={0.08}/><stop offset="95%" stopColor={C.accent} stopOpacity={0.02}/></linearGradient>
+                      <linearGradient id="agpInner" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.accent} stopOpacity={0.20}/><stop offset="95%" stopColor={C.accent} stopOpacity={0.06}/></linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} />
+                    <XAxis dataKey="label" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={3} />
+                    <YAxis domain={[50, 220]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'mg/dL', angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown, n: unknown) => [typeof v === 'number' ? `${v} mg/dL` : String(v), String(n)] as [string, string]} />
+                    <ReferenceLine y={70}  stroke={C.coral} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: '70', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.coral }} />
+                    <ReferenceLine y={180} stroke={C.amber} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: '180', position: 'right', fontFamily: 'var(--mono)', fontSize: 9, fill: C.amber }} />
+                    <Area type="monotone" dataKey="p95" stroke="none" fill="url(#agpOuter)" name="p95" legendType="none" />
+                    <Area type="monotone" dataKey="p5"  stroke="none" fill={C.bg} name="p5" legendType="none" />
+                    <Area type="monotone" dataKey="p75" stroke="none" fill="url(#agpInner)" name="p75 (IQR upper)" />
+                    <Area type="monotone" dataKey="p25" stroke="none" fill={C.s1} name="p25 (IQR lower)" />
+                    <Line type="monotone" dataKey="p50" stroke={C.accent} strokeWidth={2.5} dot={false} name="Median (p50)" />
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 10, paddingTop: 10 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Reading the AGP</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  The AGP condenses days or weeks of CGM data into a single 24-hour summary. The p50 median shows the typical glucose pattern. The IQR (p25–p75) band represents day-to-day reproducibility — narrow bands indicate predictable glucose; wide bands indicate high variability. The p5–p95 band captures extreme excursions. Clinicians use the AGP to identify meal-driven spikes, overnight patterns, and high-risk hypoglycemia windows.
+                </div>
+              </div>
+            </>}
+
+            {/* ── GLUCOSE VARIABILITY ── */}
+            {algo === 'glucose_variability' && <>
+              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                <MetricBadge label="CV% · Coefficient of Variation" value={`${cgmStats.cv}%`} interp={interpCV(cgmStats.cv)} />
+                <MetricBadge label="MAGE · Glycemic Excursion" value={`${cgmStats.mage}`} unit="mg/dL" interp={{ text: cgmStats.mage > 50 ? 'High excursion' : cgmStats.mage > 30 ? 'Moderate' : 'Low', c: cgmStats.mage > 50 ? C.coral : cgmStats.mage > 30 ? C.amber : C.sage }} />
+                <MetricBadge label="SD · Standard Deviation" value={`${cgmStats.sdG}`} unit="mg/dL" interp={{ text: cgmStats.sdG > 40 ? 'High' : cgmStats.sdG > 25 ? 'Moderate' : 'Low', c: cgmStats.sdG > 40 ? C.coral : cgmStats.sdG > 25 ? C.amber : C.sage }} />
+                <MetricBadge label="Mean Glucose" value={`${cgmStats.meanG}`} unit="mg/dL" interp={{ text: cgmStats.meanG <= 100 ? 'Optimal' : cgmStats.meanG <= 140 ? 'Elevated' : 'High', c: cgmStats.meanG <= 100 ? C.sage : cgmStats.meanG <= 140 ? C.amber : C.red }} />
+              </div>
+
+              <ChartCard full title="Rolling 1-Hour Glucose SD" sub="variability across the day · peaks around meals · low overnight = stable fasting" badge={`CV = ${cgmStats.cv}%`} badgeColor={interpCV(cgmStats.cv).c}>
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={rollingGlucoseSD.filter(d => d.rollingSD !== null)} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="sdGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.purple} stopOpacity={0.3}/><stop offset="95%" stopColor={C.purple} stopOpacity={0.04}/></linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="time" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={23} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} label={{ value: 'SD (mg/dL)', angle: -90, position: 'insideLeft', fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [typeof v === 'number' ? `${v} mg/dL` : String(v), 'Rolling SD'] as [string, string]} />
+                    <Area type="monotone" dataKey="rollingSD" stroke={C.purple} strokeWidth={2} fill="url(#sdGrad)" name="1h SD" dot={false} connectNulls />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <ChartCard full title="Glucose Distribution by Zone" sub="frequency histogram with TBR / TIR / TAR zone coloring" badge={`${glucoseHist.find(d => d.zone === 'tir')?.count ?? 0} in-range readings`} badgeColor={C.sage}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={glucoseHist} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [String(v), 'readings'] as [string, string]} />
+                    <Bar dataKey="count" name="Readings" radius={[4, 4, 0, 0]}>
+                      {glucoseHist.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </>}
+          </>}
+
+          {/* ── LONGITUDINAL ── */}
+          {inLongitudinal && <>
+            {/* Section header */}
+            <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 4 }}>
+                    {algo === 'timeline' ? '30-Day Timeline' : algo === 'correlation' ? 'Cross-Domain Correlation' : algo === 'health_calendar' ? 'Health Calendar' : 'Risk Evolution'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
+                    {algo === 'timeline'         ? 'multi-domain sparklines · sleep · autonomic · metabolic · sedentary · 30 days' :
+                     algo === 'correlation'       ? '7×7 Pearson r matrix · cross-domain relationships · recovery as primary outcome' :
+                     algo === 'health_calendar'   ? '30-day grid colored by recovery score · identify patterns and anomalies' :
+                     'recovery trajectory · reference bands · anomaly days · 30-day trend line'}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {LONGITUDINAL_ALGOS.map(a => (
+                  <button key={a.id} onClick={() => setAlgo(a.id)} style={{ padding: '8px 18px', borderRadius: 999, border: `1px solid ${algo === a.id ? a.color : C.lineS}`, background: algo === a.id ? `${a.color}1A` : 'transparent', color: algo === a.id ? a.color : C.text3, fontFamily: 'var(--mono)', fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>{a.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── TIMELINE ── */}
+            {algo === 'timeline' && <>
+              {([
+                { key: 'recovery',  label: 'Recovery',          color: C.gold,   unit: '',    domain: 'sleep' },
+                { key: 'sleepH',    label: 'Sleep Duration',    color: C.purple, unit: 'h',   domain: 'sleep' },
+                { key: 'siiD',      label: 'Sleep Irregularity', color: C.coral, unit: 'min', domain: 'sleep' },
+                { key: 'lfhfD',     label: 'LF/HF Ratio',       color: C.amber, unit: '',    domain: 'autonomic' },
+                { key: 'glucoseCV', label: 'Glucose CV%',        color: C.sage,  unit: '%',   domain: 'metabolic' },
+                { key: 'sedHD',     label: 'Sedentary Hours',    color: C.coral, unit: 'h',   domain: 'sedentary' },
+                { key: 'steps',     label: 'Steps',              color: C.accent, unit: '',   domain: 'activity' },
+              ] as const).map(m => {
+                const vals = THIRTY_DAYS.map(d => d[m.key as keyof typeof d] as number);
+                const avg7  = +(mn(vals.slice(-7))).toFixed(1);
+                return (
+                  <div key={m.key} style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 10, padding: '16px 22px', display: 'grid', gridTemplateColumns: '160px 1fr 100px', gap: 16, alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: m.color, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 2 }}>{m.label}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4 }}>{m.domain}</div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={48}>
+                      <LineChart data={THIRTY_DAYS} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+                        <Line type="monotone" dataKey={m.key} stroke={m.color} strokeWidth={1.5} dot={false} />
+                        <YAxis hide domain={['auto', 'auto']} />
+                        <XAxis hide />
+                        <Tooltip contentStyle={{ ...TT_STYLE, padding: '6px 10px' }} formatter={(v: unknown) => [`${v}${m.unit}`, m.label] as [string, string]} labelFormatter={(l: unknown) => `Day ${l}`} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 300, color: m.color }}>{avg7}{m.unit}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4 }}>7-day avg</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </>}
+
+            {/* ── CORRELATION MATRIX ── */}
+            {algo === 'correlation' && <>
+              <ChartCard full title="Cross-Domain Correlation Matrix" sub="Pearson r · 30 days · red = negative · green = positive · diagonal = 1.0" badge="n = 30 days" badgeColor={C.gold}>
+                <div style={{ overflowX: 'auto' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: `120px repeat(${METRICS_FOR_CORR.length}, 1fr)`, gap: 3, minWidth: 560 }}>
+                    <div />
+                    {METRICS_FOR_CORR.map(m => (
+                      <div key={m.key} style={{ fontFamily: 'var(--mono)', fontSize: 8, color: C.text4, textAlign: 'center', padding: '4px 2px', lineHeight: 1.2 }}>{m.label.split(' ').map((w, i) => <span key={i} style={{ display: 'block' }}>{w}</span>)}</div>
+                    ))}
+                    {METRICS_FOR_CORR.map((rm, ri) => [
+                      <div key={`lbl-${ri}`} style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text3, display: 'flex', alignItems: 'center', paddingRight: 8, justifyContent: 'flex-end' }}>{rm.label}</div>,
+                      ...METRICS_FOR_CORR.map((cm, ci) => {
+                        const r = corrMatrix[ri][ci];
+                        const isDiag = ri === ci;
+                        const bg = isDiag ? C.s3 : r > 0 ? `rgba(61,204,145,${Math.min(0.8, Math.abs(r) * 0.85)})` : `rgba(255,107,107,${Math.min(0.8, Math.abs(r) * 0.85)})`;
+                        return (
+                          <div key={`${ri}-${ci}`} title={`${rm.label} × ${cm.label}: r = ${r}`} style={{ aspectRatio: '1', background: bg, borderRadius: 4, border: `1px solid rgba(255,255,255,0.04)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9, color: isDiag ? C.text3 : Math.abs(r) > 0.4 ? '#fff' : C.text4 }}>
+                            {isDiag ? '1.0' : r.toFixed(2)}
+                          </div>
+                        );
+                      })
+                    ])}
+                  </div>
+                </div>
+              </ChartCard>
+
+              <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Key relationships</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {[
+                    { pair: 'Sleep Duration → Recovery',   r: corrMatrix[METRICS_FOR_CORR.findIndex(m=>m.key==='sleepH')][METRICS_FOR_CORR.findIndex(m=>m.key==='recovery')], desc: 'Longer sleep drives recovery score' },
+                    { pair: 'LF/HF → Recovery',            r: corrMatrix[METRICS_FOR_CORR.findIndex(m=>m.key==='lfhfD')][METRICS_FOR_CORR.findIndex(m=>m.key==='recovery')], desc: 'High sympathetic load reduces recovery' },
+                    { pair: 'Glucose CV → Recovery',       r: corrMatrix[METRICS_FOR_CORR.findIndex(m=>m.key==='glucoseCV')][METRICS_FOR_CORR.findIndex(m=>m.key==='recovery')], desc: 'Metabolic instability impairs recovery' },
+                    { pair: 'Sedentary Hours → Steps',     r: corrMatrix[METRICS_FOR_CORR.findIndex(m=>m.key==='sedHD')][METRICS_FOR_CORR.findIndex(m=>m.key==='steps')], desc: 'Less movement = more sedentary time' },
+                  ].map(x => (
+                    <div key={x.pair} style={{ padding: '12px 16px', background: C.s2, borderRadius: 10, border: `1px solid ${C.line}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text2 }}>{x.pair}</span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: x.r > 0 ? C.sage : C.coral }}>r = {x.r}</span>
+                      </div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4 }}>{x.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>}
+
+            {/* ── HEALTH CALENDAR ── */}
+            {algo === 'health_calendar' && <>
+              <ChartCard full title="30-Day Health Calendar" sub="recovery score per day · hover for details · color: red poor → green optimal">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 6, padding: '8px 0' }}>
+                  {THIRTY_DAYS.map(d => {
+                    const c = d.recovery >= 85 ? C.sage : d.recovery >= 70 ? C.accent : d.recovery >= 50 ? C.amber : d.recovery >= 35 ? C.coral : C.red;
+                    return (
+                      <div key={d.day}
+                        onMouseEnter={() => setHoveredCell({ day: d.day, val: d.recovery })}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        style={{ aspectRatio: '1', borderRadius: 8, background: `${c}${d.recovery >= 70 ? '33' : '22'}`, border: `1px solid ${hoveredCell?.day === d.day ? c : C.line}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'default', transition: 'border-color 0.15s', position: 'relative' }}>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4 }}>D{d.day}</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: c }}>{d.recovery}</div>
+                        {hoveredCell?.day === d.day && (
+                          <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: C.s1, border: `1px solid ${C.lineS}`, borderRadius: 6, padding: '6px 10px', whiteSpace: 'nowrap', zIndex: 10, fontFamily: 'var(--mono)', fontSize: 10, color: C.text2 }}>
+                            Day {d.day} · Recovery {d.recovery} · Sleep {d.sleepH}h
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Legend */}
+                <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+                  {[
+                    { label: 'Optimal (≥85)', color: C.sage },
+                    { label: 'Good (70–84)',  color: C.accent },
+                    { label: 'Fair (50–69)',  color: C.amber },
+                    { label: 'Low (35–49)',   color: C.coral },
+                    { label: 'Poor (<35)',    color: C.red },
+                  ].map(x => (
+                    <div key={x.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 3, background: `${x.color}33`, border: `1px solid ${x.color}66` }} />
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4 }}>{x.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </ChartCard>
+            </>}
+
+            {/* ── RISK EVOLUTION ── */}
+            {algo === 'risk_evolution' && <>
+              <ChartCard full title="Recovery Score · 30-Day Trend" sub={`trajectory · reference bands · trend slope ${longTrend.slope > 0 ? '+' : ''}${longTrend.slope}/day · anomaly days highlighted`} badge={`trend ${longTrend.slope > 0 ? '+' : ''}${longTrend.slope}/day`} badgeColor={longTrend.slope >= 0 ? C.sage : C.coral}>
+                <ResponsiveContainer width="100%" height={320}>
+                  <ComposedChart data={THIRTY_DAYS.map((d, i) => ({ ...d, trend: longTrend.line[i], anomaly: d.recovery < 50 ? d.recovery : null }))} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} interval={4} />
+                    <YAxis domain={[0, 100]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text4 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown, n: unknown) => [String(v), String(n)] as [string, string]} />
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 10, paddingTop: 10 }} />
+                    <ReferenceArea y1={85} y2={100} fill={C.sage}  fillOpacity={0.06} label={{ value: 'Optimal', position: 'insideTopRight', fontFamily: 'var(--mono)', fontSize: 8, fill: C.sage }} />
+                    <ReferenceArea y1={70} y2={85}  fill={C.accent} fillOpacity={0.04} label={{ value: 'Good',    position: 'insideTopRight', fontFamily: 'var(--mono)', fontSize: 8, fill: C.accent }} />
+                    <ReferenceArea y1={50} y2={70}  fill={C.amber}  fillOpacity={0.04} label={{ value: 'Fair',    position: 'insideTopRight', fontFamily: 'var(--mono)', fontSize: 8, fill: C.amber }} />
+                    <ReferenceArea y1={0}  y2={50}  fill={C.red}    fillOpacity={0.03} label={{ value: 'Poor',    position: 'insideTopRight', fontFamily: 'var(--mono)', fontSize: 8, fill: C.red }} />
+                    <Bar dataKey="anomaly" name="Anomaly day" fill={C.red} fillOpacity={0.5} radius={[3, 3, 0, 0]} barSize={12} legendType="circle" />
+                    <Line type="monotone" dataKey="recovery" stroke={C.gold}  strokeWidth={2.5} dot={{ r: 2, fill: C.gold }} name="Recovery" />
+                    <Line type="monotone" dataKey="trend"    stroke={longTrend.slope >= 0 ? C.sage : C.coral} strokeWidth={1.5} dot={false} strokeDasharray="6 3" name="Trend" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>30-Day Summary</div>
+                {[
+                  { label: 'Mean recovery',     value: `${Math.round(mn(THIRTY_DAYS.map(d => d.recovery)))}`,         color: interpRecovery(Math.round(mn(THIRTY_DAYS.map(d => d.recovery)))).c },
+                  { label: 'Best day',          value: `Day ${THIRTY_DAYS.reduce((a, d) => d.recovery > a.recovery ? d : a).day} (${THIRTY_DAYS.reduce((a, d) => d.recovery > a.recovery ? d : a).recovery})`, color: C.sage },
+                  { label: 'Worst day',         value: `Day ${THIRTY_DAYS.reduce((a, d) => d.recovery < a.recovery ? d : a).day} (${THIRTY_DAYS.reduce((a, d) => d.recovery < a.recovery ? d : a).recovery})`, color: C.coral },
+                  { label: 'Anomaly days (<50)', value: THIRTY_DAYS.filter(d => d.recovery < 50).length.toString(),   color: C.red },
+                  { label: 'Trend slope',       value: `${longTrend.slope > 0 ? '+' : ''}${longTrend.slope}/day`,     color: longTrend.slope >= 0 ? C.sage : C.coral },
+                ].map(r => (
+                  <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: `1px solid ${C.line}` }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4 }}>{r.label}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: r.color }}>{r.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
+                <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', marginBottom: 10 }}>Longitudinal health modeling</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
+                  Tracking recovery across 30 days reveals patterns invisible in single-night snapshots. A declining trend signals accumulating physiological debt — often driven by poor sleep regularity, elevated autonomic stress, or worsening metabolic control. Anomaly days cluster around high LF/HF weeks and glucose variability spikes. CUSUM-style sequential monitoring of recovery can flag emerging decline 5–10 days before it becomes clinically apparent.
+                </div>
+              </div>
+            </>}
+          </>}
+
           {/* ── SLEEP ANALYSIS ── */}
           {inSleep && <>
             {/* Section header */}
@@ -2182,7 +3270,7 @@ export default function AlgorithmLabPage() {
         </div>
 
         <div className="agent-note" style={{ marginTop: 48 }}>
-          — Ambient Intelligence · algorithm lab · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · ASTP · SATP · IS · IV · RA · M10/L5 · AGRU · SHAP · fall risk · sleep architecture · SII · HRV · recovery · chronotype —
+          — Ambient Intelligence · algorithm lab · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · ASTP · SATP · IS · IV · RA · M10/L5 · AGRU · SHAP · fall risk · sleep architecture · SII · HRV · recovery · chronotype · sedentary behavior · breaks/hour · LF/HF · Poincaré · stress index · CGM · TIR · AGP · CV% · MAGE · longitudinal · correlation matrix · health calendar · risk evolution —
         </div>
       </main>
     </div>
