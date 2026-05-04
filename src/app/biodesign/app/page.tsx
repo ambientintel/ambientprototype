@@ -12,26 +12,63 @@ import '../biodesign.css';
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'ambient-biodesign-v2';
+const LEGACY_KEY    = 'ambient-biodesign-v2';
+const PROJECTS_KEY  = 'ambient-biodesign-projects';
+const PROJECT_KEY   = (id: string) => `ambient-biodesign-project-${id}`;
+const ACTIVE_KEY    = 'ambient-biodesign-active';
 
-function loadState(): BiodesignState {
-  if (typeof window === 'undefined') return DEFAULT_STATE;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('ambient-biodesign-v1');
-    if (!raw) return DEFAULT_STATE;
-    const parsed = JSON.parse(raw);
-    return {
-      ...DEFAULT_STATE,
-      ...parsed,
-      comply: { ...DEFAULT_STATE.comply, ...(parsed.comply ?? {}) },
-    };
-  } catch {
-    return DEFAULT_STATE;
-  }
+interface ProjectMeta {
+  id: string;
+  name: string;
+  indication: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-function saveState(s: BiodesignState) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+function parseRaw(raw: string): BiodesignState {
+  const parsed = JSON.parse(raw);
+  return { ...DEFAULT_STATE, ...parsed, comply: { ...DEFAULT_STATE.comply, ...(parsed.comply ?? {}) } };
+}
+
+function loadProjectData(id: string): BiodesignState {
+  if (typeof window === 'undefined') return DEFAULT_STATE;
+  try {
+    const raw = localStorage.getItem(PROJECT_KEY(id));
+    return raw ? parseRaw(raw) : DEFAULT_STATE;
+  } catch { return DEFAULT_STATE; }
+}
+
+function loadProjectsAndActive(): { projects: ProjectMeta[]; activeId: string | null } {
+  if (typeof window === 'undefined') return { projects: [], activeId: null };
+  try {
+    const existing = localStorage.getItem(PROJECTS_KEY);
+    if (existing) {
+      const projects: ProjectMeta[] = JSON.parse(existing);
+      const activeId = localStorage.getItem(ACTIVE_KEY) ?? projects[0]?.id ?? null;
+      return { projects, activeId };
+    }
+    // Migrate legacy single-project save
+    const legacy = localStorage.getItem(LEGACY_KEY) ?? localStorage.getItem('ambient-biodesign-v1');
+    if (legacy) {
+      const state = parseRaw(legacy);
+      const id = uid();
+      const meta: ProjectMeta = { id, name: state.projectName || 'Untitled Project', indication: state.indication, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify([meta]));
+      localStorage.setItem(PROJECT_KEY(id), legacy);
+      localStorage.setItem(ACTIVE_KEY, id);
+      return { projects: [meta], activeId: id };
+    }
+    return { projects: [], activeId: null };
+  } catch { return { projects: [], activeId: null }; }
+}
+
+function persistProject(id: string, state: BiodesignState, projects: ProjectMeta[]): ProjectMeta[] {
+  localStorage.setItem(PROJECT_KEY(id), JSON.stringify(state));
+  const updated = projects.map(p => p.id === id
+    ? { ...p, name: state.projectName || 'Untitled Project', indication: state.indication, updatedAt: new Date().toISOString() }
+    : p);
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(updated));
+  return updated;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -1048,19 +1085,63 @@ const PHASES = [
 
 export default function BiodesignPage() {
   const [state, setStateRaw] = useState<BiodesignState>(DEFAULT_STATE);
+  const [projects, setProjects] = useState<ProjectMeta[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
   const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'profile' | 'standards'>('needs');
 
   useEffect(() => {
-    setStateRaw(loadState());
+    const { projects: ps, activeId: aid } = loadProjectsAndActive();
+    setProjects(ps);
+    if (aid) {
+      setActiveId(aid);
+      setStateRaw(loadProjectData(aid));
+    } else {
+      // No projects yet — create the first one
+      const id = uid();
+      const meta: ProjectMeta = { id, name: '', indication: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      const newProjects = [meta];
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(newProjects));
+      localStorage.setItem(ACTIVE_KEY, id);
+      setProjects(newProjects);
+      setActiveId(id);
+    }
     setLoaded(true);
   }, []);
 
   const update = useCallback((next: BiodesignState) => {
     setStateRaw(next);
-    saveState(next);
+    setActiveId(id => {
+      if (!id) return id;
+      setProjects(ps => persistProject(id, next, ps));
+      localStorage.setItem(ACTIVE_KEY, id);
+      return id;
+    });
   }, []);
+
+  function newProject() {
+    const id = uid();
+    const meta: ProjectMeta = { id, name: '', indication: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    setProjects(ps => {
+      const updated = [...ps, meta];
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    localStorage.setItem(ACTIVE_KEY, id);
+    setActiveId(id);
+    setStateRaw(DEFAULT_STATE);
+    setPhase('identify');
+    setTab('needs');
+  }
+
+  function switchProject(id: string) {
+    localStorage.setItem(ACTIVE_KEY, id);
+    setActiveId(id);
+    setStateRaw(loadProjectData(id));
+    setPhase('identify');
+    setTab('needs');
+  }
 
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
     identify:  ['needs', 'stakeholders'],
@@ -1163,10 +1244,46 @@ export default function BiodesignPage() {
           </div>
         </div>
 
-        <div style={{ flex: 1 }} />
+        {/* Projects list */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: '20px 0 0', borderTop: '1px solid var(--line)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 6px' }}>
+            <span style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.14em', fontFamily: 'var(--mono)' }}>Projects</span>
+            <button onClick={newProject} style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '3px 8px', borderRadius: 2, cursor: 'pointer',
+              background: 'var(--surface-2)', border: '1px solid var(--line)',
+              color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>+ New</button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {projects.map(p => {
+              const isActive = p.id === activeId;
+              return (
+                <button key={p.id} onClick={() => switchProject(p.id)} style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '8px 20px', paddingLeft: isActive ? 17 : 20,
+                  background: isActive ? 'rgba(82,192,232,0.08)' : 'transparent',
+                  border: 'none',
+                  borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+                  cursor: 'pointer', transition: 'background 0.1s',
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {p.name || 'Untitled Project'}
+                  </div>
+                  {p.indication && (
+                    <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {p.indication}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Footer stats */}
-        <div style={{ padding: '0 20px' }}>
+        <div style={{ padding: '12px 20px 0', borderTop: '1px solid var(--line)' }}>
           <div style={{ display: 'flex', gap: 12, fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <span>{state.needs.length} needs</span>
             <span style={{ color: 'var(--line-strong)' }}>|</span>
