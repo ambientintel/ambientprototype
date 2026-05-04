@@ -94,7 +94,7 @@ function StarRating({ value, onChange }: { value: number | null; onChange: (v: n
 
 const fieldInputStyle: React.CSSProperties = {
   width: '100%', background: 'var(--surface-1)', border: '1px solid var(--line)',
-  borderRadius: 2, padding: '7px 10px', color: 'var(--text)', fontSize: 13,
+  borderRadius: 2, padding: '9px 12px', color: 'var(--text)', fontSize: 14,
   fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical',
 };
 
@@ -108,8 +108,8 @@ function Field({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <label style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--mono)' }}>{label}</label>
       {multiline
-        ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={3} style={fieldInputStyle} />
-        : <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...fieldInputStyle, height: 34, resize: undefined }} />
+        ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={4} style={fieldInputStyle} />
+        : <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...fieldInputStyle, height: 38, resize: undefined }} />
       }
     </div>
   );
@@ -132,7 +132,7 @@ function Card({ children, style }: { children: React.ReactNode; style?: React.CS
   return (
     <div style={{
       background: 'var(--surface-1)', border: '1px solid var(--line)',
-      borderRadius: 2, padding: 16, ...style,
+      borderRadius: 2, padding: 20, ...style,
     }}>
       {children}
     </div>
@@ -1198,7 +1198,7 @@ export default function BiodesignPage() {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', maxWidth: 860 }}>
+        <div style={{ flex: 1, padding: '28px 40px', overflowY: 'auto' }}>
           {tab === 'needs'        && <NeedsTab state={state} update={update} />}
           {tab === 'stakeholders' && <StakeholdersTab state={state} update={update} />}
           {tab === 'concepts'     && <ConceptsTab state={state} update={update} />}
