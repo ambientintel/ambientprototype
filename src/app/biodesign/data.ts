@@ -301,6 +301,124 @@ export const DEFAULT_REIMBURSEMENT: ReimbursementStrategy = {
   notes: '',
 };
 
+// ── Timeline / Milestones ─────────────────────────────────────────────────────
+
+export type MilestoneCategory = 'regulatory' | 'clinical' | 'reimbursement' | 'ip' | 'commercial' | 'manufacturing' | 'operational';
+export type MilestoneStatus = 'upcoming' | 'in-progress' | 'complete' | 'delayed' | 'at-risk';
+
+export interface Milestone {
+  id: string;
+  title: string;
+  category: MilestoneCategory;
+  targetDate: string;
+  completedDate: string;
+  status: MilestoneStatus;
+  owner: string;
+  critical: boolean;
+  notes: string;
+}
+
+// ── Risk Register ─────────────────────────────────────────────────────────────
+
+export type RiskCategory = 'technical' | 'regulatory' | 'clinical' | 'commercial' | 'ip' | 'manufacturing' | 'reimbursement' | 'cybersecurity';
+export type RiskStatus = 'open' | 'mitigated' | 'accepted' | 'closed';
+
+export interface Risk {
+  id: string;
+  title: string;
+  description: string;
+  category: RiskCategory;
+  probability: number; // 1–5
+  impact: number;      // 1–5
+  mitigation: string;
+  owner: string;
+  status: RiskStatus;
+  createdAt: string;
+}
+
+// ── Competitive Landscape ─────────────────────────────────────────────────────
+
+export interface Competitor {
+  id: string;
+  company: string;
+  device: string;
+  fdaStatus: string;
+  deviceClass: string;
+  indication: string;
+  clearanceNumber: string;
+  marketShare: string;
+  listPrice: string;
+  strengths: string;
+  weaknesses: string;
+  reimbursement: string;
+  notes: string;
+}
+
+// ── Design Controls (DHF) ─────────────────────────────────────────────────────
+
+export type DesignInputCategory = 'functional' | 'performance' | 'safety' | 'regulatory' | 'user' | 'interface' | 'labeling';
+export type DesignInputPriority = 'critical' | 'major' | 'minor';
+export type DesignControlStatus = 'planned' | 'in-progress' | 'complete' | 'approved' | 'failed';
+
+export interface DesignInput {
+  id: string;
+  requirement: string;
+  source: string;
+  category: DesignInputCategory;
+  priority: DesignInputPriority;
+  acceptanceCriteria: string;
+  notes: string;
+}
+
+export interface DesignOutput {
+  id: string;
+  title: string;
+  documentRef: string;
+  linkedInputIds: string[];
+  status: DesignControlStatus;
+  notes: string;
+}
+
+export interface DesignVerification {
+  id: string;
+  title: string;
+  method: string;
+  acceptanceCriteria: string;
+  linkedOutputIds: string[];
+  status: DesignControlStatus;
+  result: string;
+  notes: string;
+}
+
+export interface DesignValidation {
+  id: string;
+  title: string;
+  method: string;
+  population: string;
+  acceptanceCriteria: string;
+  status: DesignControlStatus;
+  result: string;
+  notes: string;
+}
+
+export interface DesignControls {
+  inputs: DesignInput[];
+  outputs: DesignOutput[];
+  verifications: DesignVerification[];
+  validations: DesignValidation[];
+  dhfLocation: string;
+  designReviewNotes: string;
+}
+
+export const DEFAULT_DESIGN_CONTROLS: DesignControls = {
+  inputs: [],
+  outputs: [],
+  verifications: [],
+  validations: [],
+  dhfLocation: '',
+  designReviewNotes: '',
+};
+
 // ── Root state ────────────────────────────────────────────────────────────────
 
 export interface BiodesignState {
@@ -318,6 +436,10 @@ export interface BiodesignState {
   comply: ComplyState;
   ipFilings: IPFiling[];
   reimbursement: ReimbursementStrategy;
+  milestones: Milestone[];
+  risks: Risk[];
+  competitors: Competitor[];
+  designControls: DesignControls;
 }
 
 export const DEFAULT_STATE: BiodesignState = {
@@ -376,6 +498,10 @@ export const DEFAULT_STATE: BiodesignState = {
   },
   ipFilings: [],
   reimbursement: DEFAULT_REIMBURSEMENT,
+  milestones: [],
+  risks: [],
+  competitors: [],
+  designControls: DEFAULT_DESIGN_CONTROLS,
 };
 
 export function needScore(n: NeedStatement): number | null {

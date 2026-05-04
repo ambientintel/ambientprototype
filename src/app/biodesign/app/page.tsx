@@ -9,6 +9,10 @@ import {
 } from '../data';
 import { ProfileTab, StandardsTab } from '../comply';
 import { ReimbursementTab } from '../reimburse';
+import { TimelineTab } from '../timeline';
+import { RisksTab } from '../risks';
+import { CompetitiveTab } from '../competitive';
+import { DesignControlsTab } from '../designcontrols';
 import '../biodesign.css';
 
 // ── Storage ────────────────────────────────────────────────────────────────────
@@ -28,7 +32,15 @@ interface ProjectMeta {
 
 function parseRaw(raw: string): BiodesignState {
   const parsed = JSON.parse(raw);
-  return { ...DEFAULT_STATE, ...parsed, comply: { ...DEFAULT_STATE.comply, ...(parsed.comply ?? {}) } };
+  return {
+    ...DEFAULT_STATE,
+    ...parsed,
+    comply: { ...DEFAULT_STATE.comply, ...(parsed.comply ?? {}) },
+    designControls: { ...DEFAULT_STATE.designControls, ...(parsed.designControls ?? {}) },
+    milestones: parsed.milestones ?? [],
+    risks: parsed.risks ?? [],
+    competitors: parsed.competitors ?? [],
+  };
 }
 
 function loadProjectData(id: string): BiodesignState {
@@ -1090,7 +1102,7 @@ export default function BiodesignPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
-  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards'>('needs');
+  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols'>('needs');
 
   useEffect(() => {
     const { projects: ps, activeId: aid } = loadProjectsAndActive();
@@ -1145,21 +1157,25 @@ export default function BiodesignPage() {
   }
 
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
-    identify:  ['needs', 'stakeholders'],
+    identify:  ['needs', 'stakeholders', 'competitors'],
     invent:    ['concepts'],
-    implement: ['regulatory', 'strategy', 'reimbursement'],
-    comply:    ['profile', 'standards'],
+    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks'],
+    comply:    ['profile', 'standards', 'designcontrols'],
   };
 
   const tabMeta: Record<typeof tab, { label: string }> = {
-    needs:        { label: 'Needs' },
-    stakeholders: { label: 'Stakeholders' },
-    concepts:     { label: 'Concepts' },
-    regulatory:   { label: 'Regulatory' },
-    strategy:      { label: 'Strategy' },
-    reimbursement: { label: 'Reimbursement' },
-    profile:       { label: 'Device Profile' },
-    standards:    { label: 'Standards' },
+    needs:          { label: 'Needs' },
+    stakeholders:   { label: 'Stakeholders' },
+    concepts:       { label: 'Concepts' },
+    regulatory:     { label: 'Regulatory' },
+    strategy:       { label: 'Strategy' },
+    reimbursement:  { label: 'Reimbursement' },
+    profile:        { label: 'Device Profile' },
+    standards:      { label: 'Standards' },
+    competitors:    { label: 'Competitive' },
+    timeline:       { label: 'Timeline' },
+    risks:          { label: 'Risks' },
+    designcontrols: { label: 'Design Controls' },
   };
 
   function switchPhase(p: typeof phase) {
@@ -1286,10 +1302,18 @@ export default function BiodesignPage() {
 
         {/* Footer stats */}
         <div style={{ padding: '12px 20px 0', borderTop: '1px solid var(--line)' }}>
-          <div style={{ display: 'flex', gap: 12, fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             <span>{state.needs.length} needs</span>
-            <span style={{ color: 'var(--line-strong)' }}>|</span>
+            <span style={{ color: 'var(--line-strong)' }}>·</span>
             <span>{state.concepts.length} concepts</span>
+            {(state.risks?.length ?? 0) > 0 && <>
+              <span style={{ color: 'var(--line-strong)' }}>·</span>
+              <span style={{ color: (state.risks ?? []).some(r => r.status === 'open' && r.probability * r.impact >= 12) ? '#d9a020' : 'inherit' }}>{state.risks!.length} risks</span>
+            </>}
+            {(state.milestones?.length ?? 0) > 0 && <>
+              <span style={{ color: 'var(--line-strong)' }}>·</span>
+              <span>{state.milestones!.length} milestones</span>
+            </>}
           </div>
         </div>
       </div>
@@ -1297,12 +1321,12 @@ export default function BiodesignPage() {
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Tab bar */}
-        <div style={{ borderBottom: '1px solid var(--line)', padding: '0 28px' }}>
+        <div style={{ borderBottom: '1px solid var(--line)', padding: '0 28px', display: 'flex', alignItems: 'stretch', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: 0 }}>
             {phaseTabMap[phase].map(t => (
               <button key={t} onClick={() => setTab(t)}
                 style={{
-                  padding: '12px 20px 10px', fontSize: 11, cursor: 'pointer',
+                  padding: '12px 18px 10px', fontSize: 11, cursor: 'pointer',
                   fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.09em',
                   background: 'transparent',
                   color: tab === t ? 'var(--text)' : 'var(--text-4)',
@@ -1311,21 +1335,35 @@ export default function BiodesignPage() {
                   borderRadius: 0,
                   marginBottom: -1,
                   transition: 'color 0.1s',
+                  whiteSpace: 'nowrap',
                 }}>{tabMeta[t].label}</button>
             ))}
           </div>
+          <button onClick={() => window.print()}
+            style={{
+              padding: '8px 14px', margin: 'auto 0',
+              borderRadius: 2, fontSize: 10, cursor: 'pointer',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+              background: 'var(--surface-2)', color: 'var(--text-4)',
+              border: '1px solid var(--line)',
+              flexShrink: 0,
+            }}>Export PDF</button>
         </div>
 
         {/* Content */}
         <div style={{ flex: 1, padding: '28px 40px', overflowY: 'auto' }}>
-          {tab === 'needs'        && <NeedsTab state={state} update={update} />}
-          {tab === 'stakeholders' && <StakeholdersTab state={state} update={update} />}
-          {tab === 'concepts'     && <ConceptsTab state={state} update={update} />}
-          {tab === 'regulatory'   && <RegulatoryTab state={state} update={update} />}
+          {tab === 'needs'          && <NeedsTab state={state} update={update} />}
+          {tab === 'stakeholders'   && <StakeholdersTab state={state} update={update} />}
+          {tab === 'competitors'    && <CompetitiveTab state={state} update={update} />}
+          {tab === 'concepts'       && <ConceptsTab state={state} update={update} />}
+          {tab === 'regulatory'     && <RegulatoryTab state={state} update={update} />}
           {tab === 'strategy'       && <StrategyTab state={state} update={update} />}
           {tab === 'reimbursement'  && <ReimbursementTab state={state} update={update} />}
+          {tab === 'timeline'       && <TimelineTab state={state} update={update} />}
+          {tab === 'risks'          && <RisksTab state={state} update={update} />}
           {tab === 'profile'        && <ProfileTab state={state} update={update} />}
-          {tab === 'standards'    && <StandardsTab state={state} update={update} />}
+          {tab === 'standards'      && <StandardsTab state={state} update={update} />}
+          {tab === 'designcontrols' && <DesignControlsTab state={state} update={update} />}
         </div>
       </div>
     </div>
