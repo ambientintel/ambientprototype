@@ -104,6 +104,21 @@
       "description": "",
       "created": "May 4",
       "updated": "May 4"
+    },
+    {
+      "id": "ENG-L1777925247362",
+      "type": "task",
+      "title": "IAC aws git research",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Isaac",
+      "assigneeInitial": "I",
+      "assigneeColor": "#818CF8",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 4",
+      "updated": "May 4"
     }
   ],
   "personalTasks": {
@@ -118,7 +133,8 @@
       "route pcb"
     ],
     "Isaac": [
-      "Test lambda function"
+      "Test lambda function",
+      "IAC aws git research"
     ]
   },
   "completedTasks": {
@@ -239,5 +255,6 @@
       "progress": 10,
       "status": "Backlog — pilot pending"
     }
-  ]
+  ],
+  "boardWeek": 19
 }
