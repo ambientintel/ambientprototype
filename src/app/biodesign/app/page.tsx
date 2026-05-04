@@ -1097,7 +1097,7 @@ export default function BiodesignPage() {
       }}>
         {/* Logo / project */}
         <div style={{ padding: '0 20px', marginBottom: 28 }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', marginBottom: 18 }}>
+          <Link href="/biodesign" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', marginBottom: 18 }}>
             <span style={{ fontSize: 16, color: 'var(--text-4)', fontFamily: 'var(--mono)' }}>←</span>
             <span className="brand-name">Ambient <em>Intelligence</em></span>
           </Link>
