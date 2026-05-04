@@ -174,33 +174,36 @@ export default function InvestPage() {
           <div className="animate-hero-orb-3" style={{ position:'absolute', right:0, top:'20%', width:420, height:420, borderRadius:'50%', background:'radial-gradient(circle, rgba(20,160,160,0.14) 0%, transparent 65%)', filter:'blur(90px)' }} />
           <svg style={{ position:'absolute', width:'100%', height:'100%' }} viewBox="0 0 1440 560" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
             <style>{`
-              .sl { stroke: rgba(246,247,248,0.7); stroke-width: 0.6; fill: none; stroke-dasharray: 10 7; }
-              .sl1  { animation: sf1  4.2s linear infinite;                        opacity: 0.07; }
-              .sl2  { animation: sf2  5.8s linear infinite; animation-delay:-1.2s; opacity: 0.06; }
-              .sl3  { animation: sf3  3.6s linear infinite; animation-delay:-0.8s; opacity: 0.08; }
-              .sl4  { animation: sf4  6.1s linear infinite; animation-delay:-2.1s; opacity: 0.06; }
-              .sl5  { animation: sf5  5.0s linear infinite; animation-delay:-1.5s; opacity: 0.07; }
-              .sl6  { animation: sf6  4.4s linear infinite; animation-delay:-0.4s; opacity: 0.08; }
-              .sl7  { animation: sf7  5.5s linear infinite; animation-delay:-2.8s; opacity: 0.07; }
-              .sl8  { animation: sf8  3.8s linear infinite; animation-delay:-1.0s; opacity: 0.06; }
-              .sl9  { animation: sf9  4.7s linear infinite; animation-delay:-3.2s; opacity: 0.07; }
-              .sl10 { animation: sf10 4.0s linear infinite; animation-delay:-0.6s; opacity: 0.08; }
-              @keyframes sf1  { from { stroke-dashoffset:51;  } to { stroke-dashoffset:0; } }
-              @keyframes sf2  { from { stroke-dashoffset:68;  } to { stroke-dashoffset:0; } }
-              @keyframes sf3  { from { stroke-dashoffset:34;  } to { stroke-dashoffset:0; } }
-              @keyframes sf4  { from { stroke-dashoffset:51;  } to { stroke-dashoffset:0; } }
-              @keyframes sf5  { from { stroke-dashoffset:85;  } to { stroke-dashoffset:0; } }
-              @keyframes sf6  { from { stroke-dashoffset:51;  } to { stroke-dashoffset:0; } }
-              @keyframes sf7  { from { stroke-dashoffset:68;  } to { stroke-dashoffset:0; } }
-              @keyframes sf8  { from { stroke-dashoffset:34;  } to { stroke-dashoffset:0; } }
-              @keyframes sf9  { from { stroke-dashoffset:51;  } to { stroke-dashoffset:0; } }
-              @keyframes sf10 { from { stroke-dashoffset:34;  } to { stroke-dashoffset:0; } }
-              .sn { fill: rgba(246,247,248,0.9); opacity: 0.14; }
-              .sr { fill:none; stroke:rgba(246,247,248,0.9); stroke-width:0.8; transform-box:fill-box; transform-origin:center; animation:pr 3.5s ease-out infinite; }
-              .sr2 { animation-delay:-1.8s; animation-duration:4.2s; }
-              .sr3 { animation-delay:-0.9s; animation-duration:3.8s; }
-              @keyframes pr { 0% { transform:scale(1); opacity:0.22; } 100% { transform:scale(5.5); opacity:0; } }
+              /* faint permanent backbone */
+              .sb { stroke: rgba(246,247,248,1); stroke-width: 0.5; fill: none; opacity: 0.05; }
+              /* traveling spark — short dash, huge gap so only one visible at a time */
+              .sl { stroke: rgba(246,247,248,1); stroke-width: 1.1; fill: none; stroke-dasharray: 18 600; }
+              .sl1  { animation: sp 7.0s linear infinite;                         opacity: 0.22; }
+              .sl2  { animation: sp 9.5s linear infinite; animation-delay:-3.1s;  opacity: 0.18; }
+              .sl3  { animation: sp 6.2s linear infinite; animation-delay:-1.4s;  opacity: 0.24; }
+              .sl4  { animation: sp 8.8s linear infinite; animation-delay:-5.2s;  opacity: 0.18; }
+              .sl5  { animation: sp 8.0s linear infinite; animation-delay:-2.7s;  opacity: 0.20; }
+              .sl6  { animation: sp 6.8s linear infinite; animation-delay:-0.9s;  opacity: 0.22; }
+              .sl7  { animation: sp 9.2s linear infinite; animation-delay:-4.5s;  opacity: 0.20; }
+              .sl8  { animation: sp 7.4s linear infinite; animation-delay:-1.8s;  opacity: 0.18; }
+              .sl9  { animation: sp 8.3s linear infinite; animation-delay:-6.1s;  opacity: 0.20; }
+              .sl10 { animation: sp 6.5s linear infinite; animation-delay:-2.3s;  opacity: 0.22; }
+              @keyframes sp { from { stroke-dashoffset: 618; } to { stroke-dashoffset: 0; } }
+              /* static nodes */
+              .sn { fill: rgba(246,247,248,1); opacity: 0.12; }
             `}</style>
+            {/* backbone */}
+            <line x1="180" y1="140" x2="520" y2="100" className="sb" />
+            <line x1="180" y1="140" x2="380" y2="340" className="sb" />
+            <line x1="520" y1="100" x2="720" y2="260" className="sb" />
+            <line x1="380" y1="340" x2="720" y2="260" className="sb" />
+            <line x1="520" y1="100" x2="880" y2="120" className="sb" />
+            <line x1="720" y1="260" x2="880" y2="120" className="sb" />
+            <line x1="720" y1="260" x2="1060" y2="380" className="sb" />
+            <line x1="880" y1="120" x2="1200" y2="180" className="sb" />
+            <line x1="1060" y1="380" x2="1200" y2="180" className="sb" />
+            <line x1="1200" y1="180" x2="1350" y2="320" className="sb" />
+            {/* sparks */}
             <line x1="180" y1="140" x2="520" y2="100" className="sl sl1" />
             <line x1="180" y1="140" x2="380" y2="340" className="sl sl2" />
             <line x1="520" y1="100" x2="720" y2="260" className="sl sl3" />
@@ -211,17 +214,15 @@ export default function InvestPage() {
             <line x1="880" y1="120" x2="1200" y2="180" className="sl sl8" />
             <line x1="1060" y1="380" x2="1200" y2="180" className="sl sl9" />
             <line x1="1200" y1="180" x2="1350" y2="320" className="sl sl10" />
-            <circle cx="180"  cy="140" r="3.5" className="sn" />
-            <circle cx="380"  cy="340" r="3"   className="sn" />
-            <circle cx="520"  cy="100" r="3.5" className="sn" />
-            <circle cx="720"  cy="260" r="4"   className="sn" />
-            <circle cx="880"  cy="120" r="3.5" className="sn" />
-            <circle cx="1060" cy="380" r="3"   className="sn" />
-            <circle cx="1200" cy="180" r="4"   className="sn" />
-            <circle cx="1350" cy="320" r="3"   className="sn" />
-            <circle cx="180"  cy="140" r="7" className="sr" />
-            <circle cx="720"  cy="260" r="7" className="sr sr2" />
-            <circle cx="1200" cy="180" r="7" className="sr sr3" />
+            {/* nodes */}
+            <circle cx="180"  cy="140" r="2.5" className="sn" />
+            <circle cx="380"  cy="340" r="2"   className="sn" />
+            <circle cx="520"  cy="100" r="2.5" className="sn" />
+            <circle cx="720"  cy="260" r="3"   className="sn" />
+            <circle cx="880"  cy="120" r="2.5" className="sn" />
+            <circle cx="1060" cy="380" r="2"   className="sn" />
+            <circle cx="1200" cy="180" r="3"   className="sn" />
+            <circle cx="1350" cy="320" r="2"   className="sn" />
           </svg>
         </div>
         <div style={{ maxWidth:1280, margin:'0 auto', position:'relative' }}>
