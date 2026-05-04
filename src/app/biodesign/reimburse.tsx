@@ -32,7 +32,7 @@ export function buildRecommendations(state: BiodesignState): Recommendation[] {
 
   if (inUS) {
     if (r.siteOfService === 'inpatient') {
-      recs.push({ priority: 'high', codeType: 'MS-DRG', title: 'Identify applicable MS-DRG(s)', body: 'Inpatient hospital payment uses Medicare Severity Diagnosis Related Groups (MS-DRGs). Your device's procedures drive DRG assignment via ICD-10-PCS procedure codes. Review the top 10 DRGs for your indication by volume. If your device is a new technology offering substantial clinical improvement, apply for New Technology Add-on Payment (NTAP) — CMS accepts applications each spring for the following fiscal year.' });
+      recs.push({ priority: 'high', codeType: 'MS-DRG', title: 'Identify applicable MS-DRG(s)', body: "Inpatient hospital payment uses Medicare Severity Diagnosis Related Groups (MS-DRGs). Your device's procedures drive DRG assignment via ICD-10-PCS procedure codes. Review the top 10 DRGs for your indication by volume. If your device is a new technology offering substantial clinical improvement, apply for New Technology Add-on Payment (NTAP) — CMS accepts applications each spring for the following fiscal year." });
     }
     if (r.siteOfService === 'outpatient-hospital') {
       recs.push({ priority: 'high', codeType: 'APC / CPT', title: 'Map to Ambulatory Payment Classification (APC)', body: 'Hospital outpatient services are paid under the Outpatient Prospective Payment System (OPPS) via APCs. CPT and HCPCS Level II codes drive APC assignment. Determine whether your procedure maps to an existing APC or requires a new CPT code. New implants may qualify for OPPS pass-through payment (C-codes) for 2–3 years, covering full device cost.' });
