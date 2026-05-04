@@ -23,10 +23,11 @@ const MODULE_GROUPS = [
     label: 'Regulatory & Compliance',
     accent: '#C8922A',
     accentDim: 'rgba(200,146,42,0.10)',
-    cols: 2,
+    cols: 3,
     modules: [
-      { href: '/samd', tag: 'Regulatory', label: 'SaMD Dashboard', description: 'Requirements, risk register, SOUP inventory, verification status, and release tracking per IEC 62304 and ISO 14971.', meta: 'IEC 62304 / ISO 14971' },
+      { href: '/samd',        tag: 'Regulatory', label: 'SaMD Dashboard',          description: 'Requirements, risk register, SOUP inventory, verification status, and release tracking per IEC 62304 and ISO 14971.', meta: 'IEC 62304 / ISO 14971' },
       { href: '/gapanalysis', tag: 'Compliance', label: '21 CFR 820 Gap Analysis', description: 'Interactive tracker for all 15 subparts of 21 CFR Part 820. Mark evidence, add notes, auto-persisted.', meta: 'FDA QSR · 15 subparts' },
+      { href: '/biodesign',   tag: 'R&D',        label: 'Biodesign Lab',           description: 'Stanford Biodesign process tracker — need finding, stakeholder analysis, concept generation, regulatory strategy, and patent landscape for medical device development.', meta: 'Needs · Concepts · Regulatory' },
     ],
   },
   {
@@ -36,7 +37,7 @@ const MODULE_GROUPS = [
     accentDim: 'rgba(45,114,210,0.10)',
     cols: 2,
     modules: [
-      { href: '/bom', tag: 'Engineering', label: 'Bill of Materials', description: 'Full parts library, assembly BOMs, and build orders for EVT-0.1 hardware. 57 components priced from DigiKey and Mouser.', meta: 'EVT-0.1 · 57 parts' },
+      { href: '/bom',   tag: 'Engineering',    label: 'Bill of Materials',    description: 'Full parts library, assembly BOMs, and build orders for EVT-0.1 hardware. 57 components priced from DigiKey and Mouser.', meta: 'EVT-0.1 · 57 parts' },
       { href: '/cloud', tag: 'Infrastructure', label: 'Cloud Infrastructure', description: 'AWS backend — seven services across fall-alert hot path, Parquet cold path, Ella AI narratives, and the Nurse API. Architecture v4.', meta: 'ambientcloud · AWS · Terraform' },
     ],
   },
@@ -47,8 +48,18 @@ const MODULE_GROUPS = [
     accentDim: 'rgba(61,204,145,0.10)',
     cols: 2,
     modules: [
-      { href: '/engineering', tag: 'Engineering', label: 'Engineering Board', description: 'Sprint tracker, issue board, team roster, and active critical path for the Ambient Intelligence development team. Sprint 18 live.', meta: 'Sprint 18 · 16 issues · Apr–May' },
-      { href: '/umn', tag: 'Systems', label: 'System Engineering', description: 'Full milestone timeline from clinical need definition through SaMD classification, EVT hardware, cloud architecture, and verification.', meta: 'Concept → Hardware → Cloud → SaMD' },
+      { href: '/engineering', tag: 'Engineering', label: 'Engineering Board',   description: 'Sprint tracker, issue board, team roster, and active critical path for the Ambient Intelligence development team. Sprint 18 live.', meta: 'Sprint 18 · 16 issues · Apr–May' },
+      { href: '/umn',         tag: 'Systems',     label: 'System Engineering', description: 'Full milestone timeline from clinical need definition through SaMD classification, EVT hardware, cloud architecture, and verification.', meta: 'Concept → Hardware → Cloud → SaMD' },
+    ],
+  },
+  {
+    key: 'people',
+    label: 'People & Organization',
+    accent: '#00B4D8',
+    accentDim: 'rgba(0,180,216,0.10)',
+    cols: 1,
+    modules: [
+      { href: '/humancapitalmgmt', tag: 'HR', label: 'Human Capital Management', description: 'Org chart, directory, role registry, and people analytics for the Ambient Intelligence team. Add roles, manage headcount, and visualize reporting structure.', meta: 'Org Chart · Directory · Roles' },
     ],
   },
   {
@@ -56,10 +67,22 @@ const MODULE_GROUPS = [
     label: 'Analytics & Intelligence',
     accent: '#00B4D8',
     accentDim: 'rgba(0,180,216,0.10)',
+    cols: 3,
+    modules: [
+      { href: '/bi',          tag: 'Business Intel', label: 'Business Intelligence', description: 'Revenue trends, payer mix, occupancy, fall-prevention ROI, and facility benchmark. Q1 2026 actuals with Q2 forecast.', meta: '$496.8K MRR · 30% margin · Q1 2026' },
+      { href: '/datascience', tag: 'Data Science',   label: 'Data Science',          description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the platform.', meta: 'Parquet · ML · Recharts' },
+      { href: '/algorithmlab',tag: 'Data Science',   label: 'Algorithm Lab',         description: 'Upload parquet files, run signal processing algorithms — moving average, exponential smoothing, z-score, FFT — and explore time series visualizations.', meta: 'Parquet · Algorithms · Recharts' },
+    ],
+  },
+  {
+    key: 'strategy',
+    label: 'Business & Strategy',
+    accent: '#12B886',
+    accentDim: 'rgba(18,184,134,0.10)',
     cols: 2,
     modules: [
-      { href: '/bi', tag: 'Business Intel', label: 'Business Intelligence', description: 'Revenue trends, payer mix, occupancy, fall-prevention ROI, and facility benchmark. Q1 2026 actuals with Q2 forecast.', meta: '$496.8K MRR · 30% margin · Q1 2026' },
-      { href: '/datascience', tag: 'Data Science', label: 'Data Science', description: 'Signal processing pipelines, ML model benchmarks, Parquet data architecture, and sensor fusion analytics for the platform.', meta: 'Parquet · ML · Recharts' },
+      { href: '/pitchdecklab', tag: 'Strategy', label: 'Pitch Deck Lab',    description: 'AI-assisted slide builder for seed, Series A, product demo, board, and investor update decks. Multi-deck management with export.', meta: 'Seed · Series A · Board · Demo' },
+      { href: '/contractlab',  tag: 'Legal',    label: 'Contract Lab',      description: 'AI-assisted contract authoring, multi-party e-signature workflows, and document status tracking for vendor and partner agreements.', meta: 'NDA · MSA · SOW · E-sign' },
     ],
   },
   {
@@ -69,12 +92,12 @@ const MODULE_GROUPS = [
     accentDim: 'rgba(139,107,232,0.10)',
     cols: 6,
     modules: [
-      { href: '/mobilelab', tag: 'Mobile', label: 'Mobile Alert Lab', description: 'Simulated nurse mobile dashboard with live fall-alert push notifications, phone frame preview, and PWA install flow.', meta: 'PWA · Push · iOS · Android' },
-      { href: '/mobile', tag: 'Mobile', label: 'Mobile Download', description: 'Install the Ambient nurse app directly from the browser — no App Store required. Step-by-step guide for iOS and Android.', meta: 'PWA · No App Store' },
-      { href: '/contractlab', tag: 'Tools', label: 'Contract Lab', description: 'AI-assisted contract authoring, multi-party e-signature workflows, and document status tracking for vendor and partner agreements.', meta: 'NDA · MSA · SOW · E-sign' },
-      { href: '/backgroundlab', tag: 'Design', label: 'Background Lab', description: 'Generative backgrounds, motion studies, and ambient UI pattern experiments for the Ambient Intelligence design system.', meta: 'Canvas · Motion · UI' },
-      { href: '/brand', tag: 'Design', label: 'Brand & Color Picker', description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and full type scale reference.', meta: 'ambientdesign · interactive' },
-      { href: '/colors', tag: 'Design', label: 'Color & Typography', description: 'Design token reference — CSS custom properties, color palette, badge states, type families, and full type scale.', meta: 'globals.css · tokens' },
+      { href: '/gstack',        tag: 'Tools',   label: 'gstack',               description: 'Claude Code skill pack — headless browsing, QA testing, plan reviews, design, ship workflows, and safety guardrails.', meta: 'Claude Code · Skills · AI' },
+      { href: '/mobilelab',     tag: 'Mobile',  label: 'Mobile Alert Lab',     description: 'Simulated nurse mobile dashboard with live fall-alert push notifications, phone frame preview, and PWA install flow.', meta: 'PWA · Push · iOS · Android' },
+      { href: '/mobile',        tag: 'Mobile',  label: 'Mobile Download',      description: 'Install the Ambient nurse app directly from the browser — no App Store required. Step-by-step guide for iOS and Android.', meta: 'PWA · No App Store' },
+      { href: '/backgroundlab', tag: 'Design',  label: 'Background Lab',       description: 'Generative backgrounds, motion studies, and ambient UI pattern experiments for the Ambient Intelligence design system.', meta: 'Canvas · Motion · UI' },
+      { href: '/brand',         tag: 'Design',  label: 'Brand & Color Picker', description: 'Interactive color palette with copyable hex values. Brand mark at scale, badge states, and full type scale reference.', meta: 'ambientdesign · interactive' },
+      { href: '/colors',        tag: 'Design',  label: 'Color & Typography',   description: 'Design token reference — CSS custom properties, color palette, badge states, type families, and full type scale.', meta: 'globals.css · tokens' },
     ],
   },
 ];
