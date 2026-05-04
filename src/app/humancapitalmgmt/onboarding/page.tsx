@@ -1,13 +1,38 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type Tab = "steps" | "docs" | "comp";
+type Tab = "steps" | "docs" | "comp" | "profiles";
 type EmployeeType = "w2_full" | "w2_part" | "1099" | "intern" | "international";
 type CompFor = "new" | "existing";
 type Level = "L1" | "L2" | "L3" | "L4" | "L5" | "L6" | "L7";
 type Department = "Executive" | "Engineering" | "Clinical" | "Operations" | "Design" | "Finance" | "Regulatory";
+
+interface Person {
+  id: string; name: string; role: string; department: Department;
+  level: Level; email: string; status: string; startDate: string;
+  color: string; location: string; managerId: string | null;
+}
+interface OnboardingProfile {
+  id: string; personId: string; employmentType: EmployeeType;
+  createdAt: string; stepProgress: Record<string, boolean>;
+  documents: ProfileDoc[];
+}
+interface ProfileDoc {
+  name: string; required: boolean; category: string; deadline: string;
+  status: "pending" | "submitted" | "verified";
+  uploadedAt?: string; fileName?: string;
+}
+const LS_PROFILES = "hcm_onboarding_v1";
+const LS_PEOPLE   = "hcm_people_v2";
+let _pidC = 0;
+function genProfId(): string { return `OP${Date.now()}${_pidC++}`; }
+function genPersonId(): string { return `P${Date.now()}${_pidC++}`; }
+function profilesLoad(): OnboardingProfile[] { try { const d = localStorage.getItem(LS_PROFILES); return d ? JSON.parse(d) : []; } catch { return []; } }
+function profilesSave(p: OnboardingProfile[]): void { try { localStorage.setItem(LS_PROFILES, JSON.stringify(p)); } catch {} }
+function peopleLoad(): Person[] { try { const d = localStorage.getItem(LS_PEOPLE); return d ? JSON.parse(d) : []; } catch { return []; } }
+function peopleSave(p: Person[]): void { try { localStorage.setItem(LS_PEOPLE, JSON.stringify(p)); } catch {} }
 
 const LEVELS: Level[] = ["L1","L2","L3","L4","L5","L6","L7"];
 const DEPARTMENTS: Department[] = ["Executive","Engineering","Clinical","Operations","Design","Finance","Regulatory"];
@@ -179,7 +204,12 @@ const Icon = {
   info:  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.5v4M8 5.5v.5" strokeLinecap="round"/></svg>,
   dollar:<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M8 2v12M5.5 5A2.5 2.5 0 018 3h.5a2 2 0 010 4H7a2.5 2.5 0 000 5h1A2.5 2.5 0 0110.5 10" strokeLinecap="round"/></svg>,
   equity:<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 12l4-5 3 3 5-7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  back:  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M10 4L6 8l4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  back:   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M10 4L6 8l4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  person: <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 13.5c0-2.8 2.7-5 6-5s6 2.2 6 5" strokeLinecap="round"/></svg>,
+  upload: <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 11V3M5 6l3-3 3 3" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 13h10" strokeLinecap="round"/></svg>,
+  trash:  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M3 5h10M6.5 5V3h3v2M5 5l.6 8h4.8l.6-8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  plus:   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>,
+  close:  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 3l10 10M13 3L3 13" strokeLinecap="round"/></svg>,
 };
 
 function fmt(n: number): string {
@@ -222,9 +252,10 @@ export default function OnboardingPage() {
         <div>
           <div style={navLabel}>Sections</div>
           {([
-            { id:"steps", label:"Onboarding Steps", icon:Icon.steps },
-            { id:"docs",  label:"Document Requirements", icon:Icon.doc },
-            { id:"comp",  label:"Compensation Builder", icon:Icon.comp },
+            { id:"steps",    label:"Onboarding Steps",       icon:Icon.steps  },
+            { id:"docs",     label:"Document Requirements",  icon:Icon.doc    },
+            { id:"comp",     label:"Compensation Builder",   icon:Icon.comp   },
+            { id:"profiles", label:"Employee Profiles",      icon:Icon.person },
           ] as { id:Tab; label:string; icon:React.ReactNode }[]).map(s => (
             <div key={s.id}
               style={{ ...navBase, background:tab===s.id?"var(--surface-2)":"transparent", color:tab===s.id?"var(--text)":"var(--text-2)", fontWeight:tab===s.id?500:400 }}
@@ -253,9 +284,10 @@ export default function OnboardingPage() {
           {/* Tab bar */}
           <div style={{ display:"flex", gap:2, background:"var(--surface-1)", padding:3, borderRadius:8, border:"1px solid var(--line)" }}>
             {([
-              { id:"steps", label:"Steps" },
-              { id:"docs",  label:"Documents" },
-              { id:"comp",  label:"Compensation" },
+              { id:"steps",    label:"Steps"        },
+              { id:"docs",     label:"Documents"    },
+              { id:"comp",     label:"Compensation" },
+              { id:"profiles", label:"Profiles"     },
             ] as { id:Tab; label:string }[]).map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 style={{ padding:"6px 18px", borderRadius:6, border:0, fontFamily:"var(--mono)", fontSize:11, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", transition:"all 0.15s",
@@ -269,9 +301,10 @@ export default function OnboardingPage() {
         </div>
 
         <div style={{ flex:1, padding:"28px 32px 48px", minWidth:0 }}>
-          {tab === "steps" && <OnboardingSteps/>}
-          {tab === "docs"  && <DocumentRequirements/>}
-          {tab === "comp"  && <CompensationBuilder/>}
+          {tab === "steps"    && <OnboardingSteps/>}
+          {tab === "docs"     && <DocumentRequirements/>}
+          {tab === "comp"     && <CompensationBuilder/>}
+          {tab === "profiles" && <EmployeeProfiles/>}
         </div>
       </main>
     </div>
@@ -874,4 +907,276 @@ function getApprovalChain(level: Level, equity: number, includeEquity: boolean):
   if (includeEquity && equity > 0) chain.push("Legal / General Counsel — equity grant execution");
   chain.push("HR / People Ops — final documentation and HRIS entry");
   return chain;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Tab 4 — Employee Profiles
+// ═══════════════════════════════════════════════════════════════════════════
+function EmployeeProfiles() {
+  const [profiles, setProfiles]   = useState<OnboardingProfile[]>([]);
+  const [people,   setPeople]     = useState<Person[]>([]);
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    setProfiles(profilesLoad());
+    setPeople(peopleLoad());
+  }, []);
+
+  function deleteProfile(id: string) {
+    const next = profiles.filter(p => p.id !== id);
+    setProfiles(next); profilesSave(next);
+  }
+
+  function handleCreate(profile: OnboardingProfile, newPerson?: Person) {
+    if (newPerson) {
+      const np = [...people, newPerson];
+      setPeople(np); peopleSave(np);
+    }
+    const next = [...profiles, profile];
+    setProfiles(next); profilesSave(next);
+    setShowModal(false);
+  }
+
+  const totalSteps = PHASES.reduce((s, ph) => s + ph.steps.length, 0);
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:28 }}>
+        <div>
+          <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)", marginBottom:8 }}>Active Onboarding</div>
+          <p style={{ margin:"0 0 20px", fontSize:14, color:"var(--text-2)", lineHeight:1.7, maxWidth:620 }}>
+            Manage new hire onboarding profiles. Track step completion, document submission, and progress for each employee from pre-offer through 90-day review.
+          </p>
+          <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+            <StatPill label="Profiles" value={profiles.length} color="#2D72D2"/>
+            <StatPill label="Completed" value={profiles.filter(p => Object.values(p.stepProgress).filter(Boolean).length >= totalSteps && totalSteps > 0).length} color="#3DCC91"/>
+          </div>
+        </div>
+        <button onClick={() => setShowModal(true)}
+          style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 18px", background:"var(--accent)", border:"none", borderRadius:7, color:"#fff", fontFamily:"var(--mono)", fontSize:11, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", flexShrink:0 }}>
+          <span>{Icon.plus}</span>Start Onboarding
+        </button>
+      </div>
+
+      {profiles.length === 0 ? (
+        <div style={{ textAlign:"center", padding:"60px 20px", border:"1px dashed var(--line-strong)", borderRadius:12 }}>
+          <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10 }}>No Profiles Yet</div>
+          <div style={{ fontSize:13, color:"var(--text-3)", marginBottom:20 }}>Start an onboarding profile to track a new hire's progress and documents.</div>
+          <button onClick={() => setShowModal(true)}
+            style={{ padding:"9px 20px", background:"var(--surface-2)", border:"1px solid var(--line-strong)", borderRadius:7, color:"var(--text-2)", fontFamily:"var(--mono)", fontSize:11, cursor:"pointer" }}>
+            + Start First Onboarding
+          </button>
+        </div>
+      ) : (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(340px, 1fr))", gap:12 }}>
+          {profiles.map(profile => {
+            const person   = people.find(p => p.id === profile.personId);
+            const doneSteps = Object.values(profile.stepProgress).filter(Boolean).length;
+            const doneDocs  = profile.documents.filter(d => d.status !== "pending").length;
+            const meta      = EMP_TYPE_META[profile.employmentType];
+            const dc        = DEPT_COLORS[(person?.department as Department) || "Engineering"] || "#2D72D2";
+            const ini       = (n: string) => { if (!n) return "?"; const pts = n.split(" ").filter(Boolean); return pts.length === 1 ? pts[0][0] : (pts[0][0] + pts[pts.length-1][0]); };
+            const daysSince = Math.floor((Date.now() - new Date(profile.createdAt).getTime()) / 86400000);
+            return (
+              <div key={profile.id} style={{ padding:"18px", background:"var(--surface-1)", borderRadius:10, border:"1px solid var(--line)", display:"flex", flexDirection:"column", gap:14 }}>
+                <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                  <div style={{ width:40, height:40, borderRadius:10, background:`${dc}22`, border:`1.5px solid ${dc}50`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:14, color:dc, fontWeight:700, flexShrink:0 }}>
+                    {ini(person?.name || "")}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:14, fontWeight:500, marginBottom:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{person?.name || "Unknown"}</div>
+                    <div style={{ fontSize:12, color:"var(--text-3)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{person?.role || "—"}</div>
+                  </div>
+                  <span style={{ padding:"2px 7px", borderRadius:3, background:meta.bg, border:`1px solid ${meta.color}40`, fontFamily:"var(--mono)", fontSize:9, color:meta.color, textTransform:"uppercase", letterSpacing:"0.06em", flexShrink:0 }}>{meta.label}</span>
+                </div>
+
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  <ProfileProgressBar label="Onboarding Steps" value={doneSteps} total={totalSteps} color="#3DCC91"/>
+                  <ProfileProgressBar label="Documents" value={doneDocs} total={profile.documents.length} color="#2D72D2"/>
+                </div>
+
+                <div style={{ display:"flex", justifyContent:"space-between", fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)" }}>
+                  <span>{person?.department || "—"} · {person?.level || "—"}</span>
+                  <span>{daysSince === 0 ? "Started today" : `${daysSince}d ago`}</span>
+                </div>
+
+                <div style={{ display:"flex", gap:6 }}>
+                  <Link href={`/humancapitalmgmt/employees/${profile.id}`} style={{ flex:1, textDecoration:"none" }}>
+                    <button style={{ width:"100%", padding:"8px 12px", background:"var(--surface-2)", border:"1px solid var(--line-strong)", borderRadius:6, color:"var(--text-2)", fontFamily:"var(--mono)", fontSize:10.5, letterSpacing:"0.04em", cursor:"pointer", textTransform:"uppercase" }}>
+                      View Dashboard →
+                    </button>
+                  </Link>
+                  <button onClick={() => deleteProfile(profile.id)}
+                    style={{ padding:"8px 10px", background:"transparent", border:"1px solid var(--line)", borderRadius:6, color:"var(--text-4)", cursor:"pointer", display:"flex", alignItems:"center" }}>
+                    {Icon.trash}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showModal && <NewHireModal people={people} onClose={() => setShowModal(false)} onCreate={handleCreate}/>}
+    </div>
+  );
+}
+
+function ProfileProgressBar({ label, value, total, color }: { label:string; value:number; total:number; color:string }) {
+  const pct = total > 0 ? Math.round(value / total * 100) : 0;
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+        <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.08em" }}>{label}</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:pct===100?color:"var(--text-4)" }}>{value}/{total}</span>
+      </div>
+      <div style={{ height:3, background:"var(--surface-3)", borderRadius:2 }}>
+        <div style={{ width:`${pct}%`, height:"100%", background:color, borderRadius:2, transition:"width 0.3s" }}/>
+      </div>
+    </div>
+  );
+}
+
+// ── New Hire Modal ─────────────────────────────────────────────────────────
+function NewHireModal({ people, onClose, onCreate }: {
+  people: Person[];
+  onClose: () => void;
+  onCreate: (profile: OnboardingProfile, newPerson?: Person) => void;
+}) {
+  const [mode,     setMode]     = useState<"new" | "existing">("new");
+  const [empType,  setEmpType]  = useState<EmployeeType>("w2_full");
+  const [name,     setName]     = useState("");
+  const [role,     setRole]     = useState("");
+  const [dept,     setDept]     = useState<Department>("Engineering");
+  const [level,    setLevel]    = useState<Level>("L3");
+  const [email,    setEmail]    = useState("");
+  const [location, setLocation] = useState("");
+  const [startDate,setStartDate]= useState("");
+  const [selId,    setSelId]    = useState("");
+
+  const existing = people.filter(p => p.status !== "open" && p.name);
+  const isValid  = mode === "new" ? name.trim().length > 0 && role.trim().length > 0 : selId.length > 0;
+
+  function handleSubmit() {
+    if (!isValid) return;
+    let personId: string;
+    let newPerson: Person | undefined;
+
+    if (mode === "new") {
+      const id = genPersonId();
+      newPerson = { id, name:name.trim(), role:role.trim(), department:dept, level, email:email.trim(), status:"active", startDate:startDate||"TBD", color:DEPT_COLORS[dept], location:location.trim(), managerId:null };
+      personId = id;
+    } else {
+      personId = selId;
+    }
+
+    const documents: ProfileDoc[] = DOCS[empType].map(d => ({ name:d.name, required:d.required, category:d.category, deadline:d.deadline, status:"pending" }));
+    const profile: OnboardingProfile = { id:genProfId(), personId, employmentType:empType, createdAt:new Date().toISOString(), stepProgress:{}, documents };
+    onCreate(profile, newPerson);
+  }
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ width:"min(560px, 90vw)", maxHeight:"90vh", overflowY:"auto", background:"var(--bg)", borderRadius:12, border:"1px solid var(--line-strong)", padding:"28px 28px 24px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:22 }}>
+          <div>
+            <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:5 }}>Start Onboarding</div>
+            <div style={{ fontSize:20, fontFamily:"var(--serif)", fontWeight:300, letterSpacing:"-0.01em" }}>New Hire Profile</div>
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-4)", padding:4, marginTop:-2 }}>
+            {Icon.close}
+          </button>
+        </div>
+
+        {/* Mode toggle */}
+        <div style={{ display:"flex", gap:2, background:"var(--surface-1)", padding:3, borderRadius:7, border:"1px solid var(--line)", marginBottom:20 }}>
+          {([["new","New Employee"],["existing","Existing Employee"]] as [typeof mode, string][]).map(([id,lbl]) => (
+            <button key={id} onClick={() => setMode(id)}
+              style={{ flex:1, padding:"7px 14px", borderRadius:5, border:0, fontFamily:"var(--mono)", fontSize:11, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer",
+                background:mode===id?"var(--surface-3)":"transparent", color:mode===id?"var(--text)":"var(--text-4)", fontWeight:mode===id?500:400 }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+
+        {mode === "new" ? (
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <MField label="Full Name" required><input value={name} onChange={e=>setName(e.target.value)} placeholder="Jane Smith" style={minput}/></MField>
+              <MField label="Role / Title" required><input value={role} onChange={e=>setRole(e.target.value)} placeholder="Software Engineer" style={minput}/></MField>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <MField label="Department">
+                <select value={dept} onChange={e=>setDept(e.target.value as Department)} style={minput}>
+                  {DEPARTMENTS.map(d=><option key={d} value={d}>{d}</option>)}
+                </select>
+              </MField>
+              <MField label="Level">
+                <select value={level} onChange={e=>setLevel(e.target.value as Level)} style={minput}>
+                  {LEVELS.map(l=><option key={l} value={l}>{l} — {LEVEL_BAND[l]}</option>)}
+                </select>
+              </MField>
+            </div>
+            <MField label="Work Email"><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="jsmith@company.com" type="email" style={minput}/></MField>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <MField label="Start Date"><input value={startDate} onChange={e=>setStartDate(e.target.value)} placeholder="Jan 2025" style={minput}/></MField>
+              <MField label="Location"><input value={location} onChange={e=>setLocation(e.target.value)} placeholder="San Francisco, CA" style={minput}/></MField>
+            </div>
+          </div>
+        ) : (
+          <MField label="Select Employee" required>
+            <select value={selId} onChange={e=>setSelId(e.target.value)} style={minput}>
+              <option value="">— Choose an employee —</option>
+              {existing.map(p=><option key={p.id} value={p.id}>{p.name} — {p.role} ({p.department})</option>)}
+            </select>
+          </MField>
+        )}
+
+        {/* Employment type */}
+        <div style={{ marginTop:20 }}>
+          <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-4)", marginBottom:8 }}>Employment Type</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6 }}>
+            {(Object.entries(EMP_TYPE_META) as [EmployeeType, typeof EMP_TYPE_META[EmployeeType]][]).map(([key,m]) => (
+              <button key={key} onClick={()=>setEmpType(key)}
+                style={{ padding:"9px 4px", background:empType===key?m.bg:"var(--surface-1)", border:`1px solid ${empType===key?m.color:"var(--line)"}`, borderRadius:7, cursor:"pointer", textAlign:"center" }}>
+                <div style={{ fontFamily:"var(--mono)", fontSize:9.5, fontWeight:500, color:empType===key?m.color:"var(--text-3)", lineHeight:1.4 }}>{m.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginTop:12, padding:"10px 14px", background:"var(--surface-1)", borderRadius:7, border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text-3)" }}>
+          <span style={{ color:"var(--text-4)", marginRight:6 }}>Documents to collect:</span>
+          <span style={{ color:"var(--text-2)", fontWeight:500 }}>{DOCS[empType].filter(d=>d.required).length} required</span>
+          <span style={{ color:"var(--text-4)", margin:"0 6px" }}>·</span>
+          <span>{DOCS[empType].filter(d=>!d.required).length} optional</span>
+        </div>
+
+        <div style={{ display:"flex", gap:8, marginTop:22 }}>
+          <button onClick={onClose}
+            style={{ flex:1, padding:"10px", background:"transparent", border:"1px solid var(--line-strong)", borderRadius:7, color:"var(--text-3)", fontFamily:"var(--mono)", fontSize:11, cursor:"pointer" }}>
+            Cancel
+          </button>
+          <button onClick={handleSubmit} disabled={!isValid}
+            style={{ flex:2, padding:"10px", background:isValid?"var(--accent)":"var(--surface-2)", border:"none", borderRadius:7, color:isValid?"#fff":"var(--text-4)", fontFamily:"var(--mono)", fontSize:11, letterSpacing:"0.06em", textTransform:"uppercase", cursor:isValid?"pointer":"default", fontWeight:500 }}>
+            Create Profile →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const minput: React.CSSProperties = { width:"100%", background:"var(--surface-1)", border:"1px solid var(--line-strong)", borderRadius:5, padding:"8px 10px", color:"var(--text)", fontSize:13, fontFamily:"var(--sans)", outline:"none", boxSizing:"border-box" };
+
+function MField({ label, children, required }: { label:string; children:React.ReactNode; required?:boolean }) {
+  return (
+    <div>
+      <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-4)", marginBottom:5 }}>
+        {label}{required && <span style={{ color:"var(--accent)", marginLeft:3 }}>*</span>}
+      </div>
+      {children}
+    </div>
+  );
 }
