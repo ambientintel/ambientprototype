@@ -253,6 +253,54 @@ export interface IPFiling {
   createdAt: string;
 }
 
+// ── Reimbursement Strategy ────────────────────────────────────────────────────
+
+export type SiteOfService = 'inpatient' | 'outpatient-hospital' | 'asc' | 'physician-office' | 'home' | 'snf';
+export type CoverageStatus = 'unknown' | 'covered' | 'non-covered' | 'lcd' | 'ncd' | 'ced' | 'no-policy';
+export type ReimbPathway = 'existing-codes' | 'new-code-needed' | 'coverage-determination' | 'breakthrough' | null;
+
+export interface ReimbCode {
+  id: string;
+  code: string;
+  description: string;
+  isPrimary: boolean;
+  notes: string;
+}
+
+export interface ReimbursementStrategy {
+  siteOfService: SiteOfService | null;
+  technologyStatus: 'new-technology' | 'established' | null;
+  cptCodes: ReimbCode[];
+  icdCodes: ReimbCode[];
+  drgCodes: ReimbCode[];
+  hcpcsCodes: ReimbCode[];
+  medicareCoverage: CoverageStatus;
+  medicaidCoverage: CoverageStatus;
+  commercialCoverage: CoverageStatus;
+  coverageNotes: string;
+  estimatedPayment: string;
+  pathway: ReimbPathway;
+  barriers: string;
+  notes: string;
+}
+
+export const DEFAULT_REIMBURSEMENT: ReimbursementStrategy = {
+  siteOfService: null,
+  technologyStatus: null,
+  cptCodes: [],
+  icdCodes: [],
+  drgCodes: [],
+  hcpcsCodes: [],
+  medicareCoverage: 'unknown',
+  medicaidCoverage: 'unknown',
+  commercialCoverage: 'unknown',
+  coverageNotes: '',
+  estimatedPayment: '',
+  pathway: null,
+  barriers: '',
+  notes: '',
+};
+
 // ── Root state ────────────────────────────────────────────────────────────────
 
 export interface BiodesignState {
@@ -269,6 +317,7 @@ export interface BiodesignState {
   business: BusinessModel;
   comply: ComplyState;
   ipFilings: IPFiling[];
+  reimbursement: ReimbursementStrategy;
 }
 
 export const DEFAULT_STATE: BiodesignState = {
@@ -326,6 +375,7 @@ export const DEFAULT_STATE: BiodesignState = {
     certifications: [],
   },
   ipFilings: [],
+  reimbursement: DEFAULT_REIMBURSEMENT,
 };
 
 export function needScore(n: NeedStatement): number | null {

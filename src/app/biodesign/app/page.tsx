@@ -8,6 +8,7 @@ import {
   NEED_STATUS_META, CONCEPT_STATUS_META, PATHWAY_META, STAKEHOLDER_ROLE_META,
 } from '../data';
 import { ProfileTab, StandardsTab } from '../comply';
+import { ReimbursementTab } from '../reimburse';
 import '../biodesign.css';
 
 // ── Storage ────────────────────────────────────────────────────────────────────
@@ -1089,7 +1090,7 @@ export default function BiodesignPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
-  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'profile' | 'standards'>('needs');
+  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards'>('needs');
 
   useEffect(() => {
     const { projects: ps, activeId: aid } = loadProjectsAndActive();
@@ -1146,7 +1147,7 @@ export default function BiodesignPage() {
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
     identify:  ['needs', 'stakeholders'],
     invent:    ['concepts'],
-    implement: ['regulatory', 'strategy'],
+    implement: ['regulatory', 'strategy', 'reimbursement'],
     comply:    ['profile', 'standards'],
   };
 
@@ -1155,8 +1156,9 @@ export default function BiodesignPage() {
     stakeholders: { label: 'Stakeholders' },
     concepts:     { label: 'Concepts' },
     regulatory:   { label: 'Regulatory' },
-    strategy:     { label: 'Strategy' },
-    profile:      { label: 'Device Profile' },
+    strategy:      { label: 'Strategy' },
+    reimbursement: { label: 'Reimbursement' },
+    profile:       { label: 'Device Profile' },
     standards:    { label: 'Standards' },
   };
 
@@ -1320,8 +1322,9 @@ export default function BiodesignPage() {
           {tab === 'stakeholders' && <StakeholdersTab state={state} update={update} />}
           {tab === 'concepts'     && <ConceptsTab state={state} update={update} />}
           {tab === 'regulatory'   && <RegulatoryTab state={state} update={update} />}
-          {tab === 'strategy'     && <StrategyTab state={state} update={update} />}
-          {tab === 'profile'      && <ProfileTab state={state} update={update} />}
+          {tab === 'strategy'       && <StrategyTab state={state} update={update} />}
+          {tab === 'reimbursement'  && <ReimbursementTab state={state} update={update} />}
+          {tab === 'profile'        && <ProfileTab state={state} update={update} />}
           {tab === 'standards'    && <StandardsTab state={state} update={update} />}
         </div>
       </div>
