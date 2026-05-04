@@ -163,7 +163,7 @@ export default function BiodesignLanding() {
               background: '#52C0E8', display: 'inline-block',
               boxShadow: '0 0 10px #52C0E8',
             }} />
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Stanford Biodesign Framework</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Medical Device Innovation</span>
           </div>
 
           {/* Headline */}
@@ -557,7 +557,7 @@ export default function BiodesignLanding() {
         </Link>
         <div style={{ flex: 1 }} />
         <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
-          Biodesign Platform · Built on the Stanford Biodesign Framework
+          Biodesign Platform · Built on the Medical Device Innovation
         </span>
         <Link href="/biodesign/app" style={{
           fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)',
