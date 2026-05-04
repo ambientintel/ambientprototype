@@ -661,3 +661,24 @@ input { font-family: inherit; color: inherit; }
   70%  { box-shadow: 0 0 0 8px rgba(124,110,173,0); }
   100% { box-shadow: 0 0 0 0 rgba(124,110,173,0); }
 }
+
+/* ── Invest page hero motion graphic ── */
+@keyframes hero-orb-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%  { transform: translate(60px, -45px) scale(1.04); }
+  50%  { transform: translate(25px, 35px)  scale(0.97); }
+  75%  { transform: translate(-35px, -15px) scale(1.02); }
+}
+@keyframes hero-orb-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-55px, 40px)  scale(1.06); }
+  66%  { transform: translate(45px, -30px)  scale(0.95); }
+}
+@keyframes hero-orb-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%  { transform: translate(35px, 55px)  scale(1.08); }
+  80%  { transform: translate(-25px, -35px) scale(0.96); }
+}
+.animate-hero-orb-1 { animation: hero-orb-1 20s ease-in-out infinite; }
+.animate-hero-orb-2 { animation: hero-orb-2 26s ease-in-out infinite; }
+.animate-hero-orb-3 { animation: hero-orb-3 18s ease-in-out infinite; }
