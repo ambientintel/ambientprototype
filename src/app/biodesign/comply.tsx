@@ -73,9 +73,9 @@ function Toggle({
       style={{
         display: 'flex', alignItems: 'center', gap: 9, padding: '7px 12px',
         borderRadius: 2, cursor: 'pointer', textAlign: 'left',
-        background: value ? 'rgba(45,114,210,0.11)' : 'var(--surface-1)',
+        background: value ? 'rgba(82,192,232,0.11)' : 'var(--surface-1)',
         color: value ? 'var(--accent)' : 'var(--text-2)',
-        border: `1px solid ${value ? 'rgba(45,114,210,0.32)' : 'var(--line)'}`,
+        border: `1px solid ${value ? 'rgba(82,192,232,0.32)' : 'var(--line)'}`,
         transition: 'background 0.1s',
       }}
     >
@@ -114,9 +114,9 @@ function SegmentSelect<T extends string>({
               onClick={() => onChange(nullable && active ? null : o.value)}
               style={{
                 padding: '5px 11px', borderRadius: 2, fontSize: 13, cursor: 'pointer',
-                background: active ? 'rgba(45,114,210,0.13)' : 'var(--surface-1)',
+                background: active ? 'rgba(82,192,232,0.13)' : 'var(--surface-1)',
                 color: active ? 'var(--accent)' : 'var(--text-3)',
-                border: `1px solid ${active ? 'rgba(45,114,210,0.35)' : 'var(--line)'}`,
+                border: `1px solid ${active ? 'rgba(82,192,232,0.35)' : 'var(--line)'}`,
               }}>{o.label}</button>
           );
         })}
@@ -201,11 +201,11 @@ function CertificationPanel({ state, update }: { state: BiodesignState; update: 
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                 padding: '12px 8px', cursor: 'pointer',
-                background: active ? 'rgba(45,114,210,0.12)' : suggested ? 'rgba(45,114,210,0.05)' : 'var(--surface-1)',
+                background: active ? 'rgba(82,192,232,0.12)' : suggested ? 'rgba(82,192,232,0.05)' : 'var(--surface-1)',
                 border: active
-                  ? '1px solid rgba(45,114,210,0.45)'
+                  ? '1px solid rgba(82,192,232,0.45)'
                   : suggested
-                  ? '1px dashed rgba(45,114,210,0.3)'
+                  ? '1px dashed rgba(82,192,232,0.3)'
                   : '1px solid var(--line)',
                 borderRadius: 2,
                 transition: 'background 0.12s, border-color 0.12s',
@@ -214,7 +214,7 @@ function CertificationPanel({ state, update }: { state: BiodesignState; update: 
               <CertBadgeIcon
                 id={badge.id}
                 size={28}
-                color={active ? 'var(--accent)' : suggested ? 'rgba(45,114,210,0.5)' : 'var(--text-4)'}
+                color={active ? 'var(--accent)' : suggested ? 'rgba(82,192,232,0.5)' : 'var(--text-4)'}
               />
               <span style={{
                 fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700,
@@ -228,7 +228,7 @@ function CertificationPanel({ state, update }: { state: BiodesignState; update: 
                 <span style={{ fontSize: 8, color: 'var(--accent)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 1 }}>✓ required</span>
               )}
               {suggested && (
-                <span style={{ fontSize: 8, color: 'rgba(45,114,210,0.6)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 1 }}>suggested</span>
+                <span style={{ fontSize: 8, color: 'rgba(82,192,232,0.6)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 1 }}>suggested</span>
               )}
             </button>
           );
@@ -258,7 +258,7 @@ export function ProfileTab({ state, update }: { state: BiodesignState; update: (
   }
 
   return (
-    <div style={{ maxWidth: 760 }}>
+    <div>
       <SectionHeader
         title="Device Profile"
         subtitle="Configure device attributes and target markets. The Standards tracker auto-updates to show only applicable standards."
@@ -362,9 +362,9 @@ export function ProfileTab({ state, update }: { state: BiodesignState; update: (
                 style={{
                   padding: '6px 14px', borderRadius: 2, fontSize: 13, cursor: 'pointer',
                   fontFamily: 'var(--mono)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
-                  background: active ? 'rgba(45,114,210,0.13)' : 'var(--surface-1)',
+                  background: active ? 'rgba(82,192,232,0.13)' : 'var(--surface-1)',
                   color: active ? 'var(--accent)' : 'var(--text-3)',
-                  border: `1px solid ${active ? 'rgba(45,114,210,0.35)' : 'var(--line)'}`,
+                  border: `1px solid ${active ? 'rgba(82,192,232,0.35)' : 'var(--line)'}`,
                 }}>{meta.label}</button>
             );
           })}
@@ -623,7 +623,7 @@ function StandardRow({
           {prog.total > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <div style={{ width: 44, height: 3, borderRadius: 1, background: 'var(--surface-3)' }}>
-                <div style={{ width: `${progressPct}%`, height: '100%', borderRadius: 1, background: progressPct === 100 ? '#3DCC91' : '#2D72D2', transition: 'width 0.2s' }} />
+                <div style={{ width: `${progressPct}%`, height: '100%', borderRadius: 1, background: progressPct === 100 ? '#3DCC91' : '#52C0E8', transition: 'width 0.2s' }} />
               </div>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)', whiteSpace: 'nowrap' }}>{prog.done}/{prog.total}</span>
             </div>
@@ -682,12 +682,12 @@ function StandardRow({
               <label style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--mono)', display: 'block', marginBottom: 4 }}>Assignee</label>
               <input value={compliance.assignee} onChange={e => onFieldChange('assignee', e.target.value)}
                 placeholder="Owner / responsible party"
-                style={{ width: '100%', height: 32, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 2, padding: '0 10px', color: 'var(--text)', fontSize: 12, fontFamily: 'var(--sans)', outline: 'none' }} />
+                style={{ width: '100%', height: 38, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 2, padding: '0 12px', color: 'var(--text)', fontSize: 14, fontFamily: 'var(--sans)', outline: 'none' }} />
             </div>
             <div>
               <label style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--mono)', display: 'block', marginBottom: 4 }}>Target Date</label>
               <input type="date" value={compliance.targetDate} onChange={e => onFieldChange('targetDate', e.target.value)}
-                style={{ width: '100%', height: 32, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 2, padding: '0 10px', color: 'var(--text)', fontSize: 12, fontFamily: 'var(--sans)', outline: 'none', colorScheme: 'dark' }} />
+                style={{ width: '100%', height: 38, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 2, padding: '0 12px', color: 'var(--text)', fontSize: 14, fontFamily: 'var(--sans)', outline: 'none', colorScheme: 'dark' }} />
             </div>
           </div>
 
@@ -695,8 +695,8 @@ function StandardRow({
             <label style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--mono)', display: 'block', marginBottom: 4 }}>Notes</label>
             <textarea value={compliance.notes} onChange={e => onFieldChange('notes', e.target.value)}
               placeholder="Evidence links, open questions, lab contacts, audit notes…"
-              rows={3}
-              style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 2, padding: '7px 10px', color: 'var(--text)', fontSize: 12, fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical' }} />
+              rows={4}
+              style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 2, padding: '9px 12px', color: 'var(--text)', fontSize: 14, fontFamily: 'var(--sans)', outline: 'none', resize: 'vertical' }} />
           </div>
         </div>
       )}
