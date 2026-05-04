@@ -1,18 +1,18 @@
-/* Palantir-style tokens — scoped to .biodesign-root */
+/* Mayo theme tokens — scoped to .biodesign-root */
 .biodesign-root {
-  --bg: #0C0E13;
-  --sidebar-bg: #06080C;
-  --surface-1: #131720;
-  --surface-2: #181D28;
-  --surface-3: #1E2430;
-  --line: rgba(255, 255, 255, 0.055);
-  --line-strong: rgba(255, 255, 255, 0.10);
-  --text: #CAD2DB;
-  --text-2: rgba(202, 210, 219, 0.72);
-  --text-3: rgba(202, 210, 219, 0.46);
-  --text-4: rgba(202, 210, 219, 0.26);
-  --accent: #2D72D2;
-  --accent-soft: rgba(45, 114, 210, 0.13);
+  --bg: #FFFFFF;
+  --sidebar-bg: #F4F7FB;
+  --surface-1: #F4F7FB;
+  --surface-2: #EAF0F8;
+  --surface-3: #D6E4F0;
+  --line: rgba(0, 70, 140, 0.08);
+  --line-strong: rgba(0, 70, 140, 0.16);
+  --text: #0D1F2D;
+  --text-2: rgba(13, 31, 45, 0.68);
+  --text-3: rgba(13, 31, 45, 0.46);
+  --text-4: rgba(13, 31, 45, 0.28);
+  --accent: #005EB8;
+  --accent-soft: rgba(0, 94, 184, 0.10);
 }
 
 .biodesign-root button  { border-radius: 2px !important; }
@@ -22,14 +22,14 @@
 
 .biodesign-root input:focus,
 .biodesign-root textarea:focus {
-  box-shadow: 0 0 0 1px rgba(45, 114, 210, 0.35) !important;
-  border-color: rgba(45, 114, 210, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(0, 94, 184, 0.35) !important;
+  border-color: rgba(0, 94, 184, 0.5) !important;
   outline: none;
 }
 
 .biodesign-root select:focus {
-  box-shadow: 0 0 0 1px rgba(45, 114, 210, 0.35) !important;
-  border-color: rgba(45, 114, 210, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(0, 94, 184, 0.35) !important;
+  border-color: rgba(0, 94, 184, 0.5) !important;
   outline: none;
 }
 
@@ -39,14 +39,14 @@
   position: fixed;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent 0%, #2D72D2 30%, rgba(45, 114, 210, 0.45) 68%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, #005EB8 30%, rgba(0, 94, 184, 0.45) 68%, transparent 100%);
   z-index: 500;
   pointer-events: none;
 }
 
 /* Subtle dot grid on the main content area */
 .biodesign-dots {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(0, 70, 140, 0.07) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
@@ -81,13 +81,13 @@
 
 .bd-shimmer-text {
   background: linear-gradient(90deg,
-    #CAD2DB 0%,
-    #CAD2DB 20%,
-    #5aaeff 40%,
-    #2D72D2 50%,
-    #5aaeff 60%,
-    #CAD2DB 80%,
-    #CAD2DB 100%
+    #0D1F2D 0%,
+    #0D1F2D 20%,
+    #3A86D4 40%,
+    #005EB8 50%,
+    #3A86D4 60%,
+    #0D1F2D 80%,
+    #0D1F2D 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -110,9 +110,9 @@
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(45, 114, 210, 0.04) 40%,
-    rgba(45, 114, 210, 0.08) 50%,
-    rgba(45, 114, 210, 0.04) 60%,
+    rgba(0, 94, 184, 0.04) 40%,
+    rgba(0, 94, 184, 0.08) 50%,
+    rgba(0, 94, 184, 0.04) 60%,
     transparent 100%
   );
   animation: bd-scan-line 9s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -138,14 +138,14 @@
 }
 .bd-cap-card:hover {
   background: var(--surface-2) !important;
-  border-color: rgba(45, 114, 210, 0.25) !important;
+  border-color: rgba(0, 94, 184, 0.25) !important;
 }
 
 .bd-cta-btn {
   transition: box-shadow 0.2s, transform 0.15s;
 }
 .bd-cta-btn:hover {
-  box-shadow: 0 0 60px rgba(45, 114, 210, 0.55) !important;
+  box-shadow: 0 0 60px rgba(0, 94, 184, 0.45) !important;
   transform: translateY(-1px);
 }
 
