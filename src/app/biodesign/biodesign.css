@@ -1,10 +1,10 @@
 /* Mayo theme tokens — scoped to .biodesign-root */
 .biodesign-root {
-  --bg: #FFFFFF;
-  --sidebar-bg: #F4F7FB;
-  --surface-1: #F4F7FB;
-  --surface-2: #EAF0F8;
-  --surface-3: #D6E4F0;
+  --bg: #EAF0F8;
+  --sidebar-bg: #DDE7F3;
+  --surface-1: #DDE7F3;
+  --surface-2: #D0DEEC;
+  --surface-3: #C0D1E5;
   --line: rgba(0, 70, 140, 0.08);
   --line-strong: rgba(0, 70, 140, 0.16);
   --text: #0D1F2D;

@@ -103,7 +103,7 @@ export default function BiodesignLanding() {
         height: 52,
         display: 'flex', alignItems: 'center',
         padding: '0 40px',
-        background: 'rgba(255,255,255,0.92)',
+        background: 'rgba(234,240,248,0.94)',
         backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--line)',
       }}>
@@ -254,7 +254,7 @@ export default function BiodesignLanding() {
           position: 'absolute', bottom: 0, left: 0, right: 0,
           display: 'flex', justifyContent: 'center',
           borderTop: '1px solid var(--line)',
-          background: 'rgba(244,247,251,0.85)',
+          background: 'rgba(221,231,243,0.88)',
           backdropFilter: 'blur(12px)',
         }}>
           {STATS.map((s, i) => (
