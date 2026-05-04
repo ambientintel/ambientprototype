@@ -13,6 +13,9 @@ import { TimelineTab } from '../timeline';
 import { RisksTab } from '../risks';
 import { CompetitiveTab } from '../competitive';
 import { DesignControlsTab } from '../designcontrols';
+import { IPFilingsTab } from '../ipfilings';
+import { InvestorOnePager } from '../onepager';
+import { AiDraftButton } from '../aiassist';
 import '../biodesign.css';
 
 // ── Storage ────────────────────────────────────────────────────────────────────
@@ -381,6 +384,14 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
 
       {adding ? (
         <Card style={{ marginBottom: 8 }}>
+          <div style={{ marginBottom: 12 }}>
+            <AiDraftButton
+              type="need"
+              context={{ problem: draft.problem, population: draft.population, setting: draft.setting, outcome: draft.outcome, indication: state.indication }}
+              onResult={r => setDraft(d => ({ ...d, ...r }))}
+              label="Draft need statement"
+            />
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
             <Field label="Problem" value={draft.problem} onChange={v => setDraft(d => ({ ...d, problem: v }))} placeholder="cannot do X / pain point" />
             <Field label="Population" value={draft.population} onChange={v => setDraft(d => ({ ...d, population: v }))} placeholder="patients with Y" />
@@ -709,6 +720,18 @@ function ConceptsTab({ state, update }: { state: BiodesignState; update: (s: Bio
 
       {adding ? (
         <Card style={{ marginTop: 8 }}>
+          <div style={{ marginBottom: 12 }}>
+            <AiDraftButton
+              type="concept"
+              context={{
+                title: draft.title, description: draft.description, mechanism: draft.mechanism,
+                indication: state.indication,
+                need: (() => { const n = state.needs.find(x => x.id === state.selectedNeedId); return n ? `${n.problem} for ${n.population}` : ''; })(),
+              }}
+              onResult={r => setDraft(d => ({ ...d, ...r }))}
+              label="Draft concept"
+            />
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
             <Field label="Concept Name" value={draft.title} onChange={v => setDraft(d => ({ ...d, title: v }))} placeholder="Short name for this solution idea" />
             <Field label="Description" value={draft.description} onChange={v => setDraft(d => ({ ...d, description: v }))} multiline placeholder="Brief description of what it does" />
@@ -811,6 +834,35 @@ function RegulatoryTab({ state, update }: { state: BiodesignState; update: (s: B
           <Field label="Predicate Device" value={reg.predicateDevice} onChange={v => set({ predicateDevice: v })} placeholder="Device name" />
           <Field label="Predicate 510(k) #" value={reg.predicateNumber} onChange={v => set({ predicateNumber: v })} placeholder="e.g. K201234" />
         </div>
+
+        {/* FDA database quick links */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <a
+            href={reg.predicateNumber ? `https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=${reg.predicateNumber.replace(/\s/g, '')}` : 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm'}
+            target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--mono)', textDecoration: 'none', padding: '4px 10px', border: '1px solid rgba(82,192,232,0.3)', borderRadius: 2, background: 'rgba(82,192,232,0.06)' }}
+          >
+            {reg.predicateNumber ? `View ${reg.predicateNumber} on FDA ↗` : 'Search 510(k) DB ↗'}
+          </a>
+          <a
+            href={reg.productCode ? `https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpcd/classification.cfm?ID=${reg.productCode}` : 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpcd/classification.cfm'}
+            target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--mono)', textDecoration: 'none', padding: '4px 10px', border: '1px solid rgba(82,192,232,0.3)', borderRadius: 2, background: 'rgba(82,192,232,0.06)' }}
+          >
+            {reg.productCode ? `Product Code ${reg.productCode} ↗` : 'Product Code DB ↗'}
+          </a>
+          <a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm" target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--line)', borderRadius: 2 }}>
+            FDA 510(k) Search ↗
+          </a>
+        </div>
+
+        <AiDraftButton
+          type="regulatory"
+          context={{ deviceClass: reg.deviceClass, pathway: reg.pathway, predicateDevice: reg.predicateDevice, indication: state.indication, intendedUse: reg.intendedUse, indicationsForUse: reg.indicationsForUse }}
+          onResult={r => set({ intendedUse: r.intendedUse ?? reg.intendedUse, indicationsForUse: r.indicationsForUse ?? reg.indicationsForUse, substantialEquivalence: r.substantialEquivalence ?? reg.substantialEquivalence })}
+          label="Draft regulatory language"
+        />
 
         <Field label="Intended Use" value={reg.intendedUse} onChange={v => set({ intendedUse: v })} multiline placeholder="Describe the intended use of the device…" />
         <Field label="Indications for Use" value={reg.indicationsForUse} onChange={v => set({ indicationsForUse: v })} multiline placeholder="Specific conditions, populations, anatomical sites…" />
@@ -1102,7 +1154,8 @@ export default function BiodesignPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
-  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols'>('needs');
+  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings'>('needs');
+  const [showOnePager, setShowOnePager] = useState(false);
 
   useEffect(() => {
     const { projects: ps, activeId: aid } = loadProjectsAndActive();
@@ -1159,7 +1212,7 @@ export default function BiodesignPage() {
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
     identify:  ['needs', 'stakeholders', 'competitors'],
     invent:    ['concepts'],
-    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks'],
+    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks', 'ipfilings'],
     comply:    ['profile', 'standards', 'designcontrols'],
   };
 
@@ -1176,6 +1229,7 @@ export default function BiodesignPage() {
     timeline:       { label: 'Timeline' },
     risks:          { label: 'Risks' },
     designcontrols: { label: 'Design Controls' },
+    ipfilings:      { label: 'IP Portfolio' },
   };
 
   function switchPhase(p: typeof phase) {
@@ -1186,6 +1240,7 @@ export default function BiodesignPage() {
   if (!loaded) return null;
 
   return (
+    <>
     <div className="biodesign-root" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Sidebar */}
       <div style={{
@@ -1300,8 +1355,18 @@ export default function BiodesignPage() {
           </div>
         </div>
 
+        {/* One-pager button */}
+        <div style={{ padding: '10px 20px 0', borderTop: '1px solid var(--line)' }}>
+          <button onClick={() => setShowOnePager(true)} style={{
+            width: '100%', padding: '8px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+            background: 'rgba(82,192,232,0.08)', color: 'var(--accent)',
+            border: '1px solid rgba(82,192,232,0.25)',
+            fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.09em',
+          }}>✦ Investor One-Pager</button>
+        </div>
+
         {/* Footer stats */}
-        <div style={{ padding: '12px 20px 0', borderTop: '1px solid var(--line)' }}>
+        <div style={{ padding: '10px 20px 0', borderTop: '1px solid var(--line)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             <span>{state.needs.length} needs</span>
             <span style={{ color: 'var(--line-strong)' }}>·</span>
@@ -1364,8 +1429,12 @@ export default function BiodesignPage() {
           {tab === 'profile'        && <ProfileTab state={state} update={update} />}
           {tab === 'standards'      && <StandardsTab state={state} update={update} />}
           {tab === 'designcontrols' && <DesignControlsTab state={state} update={update} />}
+          {tab === 'ipfilings'      && <IPFilingsTab state={state} update={update} />}
         </div>
       </div>
     </div>
+
+    {showOnePager && <InvestorOnePager state={state} onClose={() => setShowOnePager(false)} />}
+    </>
   );
 }
