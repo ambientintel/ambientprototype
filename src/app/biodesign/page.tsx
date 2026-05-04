@@ -103,7 +103,7 @@ export default function BiodesignLanding() {
         height: 52,
         display: 'flex', alignItems: 'center',
         padding: '0 40px',
-        background: 'rgba(234,240,248,0.94)',
+        background: 'rgba(13,22,34,0.90)',
         backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--line)',
       }}>
@@ -120,7 +120,7 @@ export default function BiodesignLanding() {
             fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
             textTransform: 'uppercase', letterSpacing: '0.12em',
             textDecoration: 'none', borderRadius: 2,
-            boxShadow: '0 0 24px rgba(0,94,184,0.25)',
+            boxShadow: '0 0 24px rgba(82,192,232,0.25)',
           }}>Launch →</Link>
         </div>
       </nav>
@@ -139,29 +139,29 @@ export default function BiodesignLanding() {
         {/* Radial glow */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
-          background: 'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(0,94,184,0.10) 0%, rgba(0,94,184,0.04) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(82,192,232,0.10) 0%, rgba(82,192,232,0.04) 40%, transparent 70%)',
         }} />
         {/* Scan animation */}
         <div className="bd-scan" style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
         {/* Corner accent lines */}
-        <div style={{ position: 'absolute', top: 72, left: 40, width: 80, height: 80, borderTop: '1px solid rgba(0,94,184,0.2)', borderLeft: '1px solid rgba(0,94,184,0.2)', zIndex: 0 }} />
-        <div style={{ position: 'absolute', top: 72, right: 40, width: 80, height: 80, borderTop: '1px solid rgba(0,94,184,0.2)', borderRight: '1px solid rgba(0,94,184,0.2)', zIndex: 0 }} />
-        <div style={{ position: 'absolute', bottom: 160, left: 40, width: 80, height: 80, borderBottom: '1px solid rgba(0,94,184,0.2)', borderLeft: '1px solid rgba(0,94,184,0.2)', zIndex: 0 }} />
-        <div style={{ position: 'absolute', bottom: 160, right: 40, width: 80, height: 80, borderBottom: '1px solid rgba(0,94,184,0.2)', borderRight: '1px solid rgba(0,94,184,0.2)', zIndex: 0 }} />
+        <div style={{ position: 'absolute', top: 72, left: 40, width: 80, height: 80, borderTop: '1px solid rgba(82,192,232,0.2)', borderLeft: '1px solid rgba(82,192,232,0.2)', zIndex: 0 }} />
+        <div style={{ position: 'absolute', top: 72, right: 40, width: 80, height: 80, borderTop: '1px solid rgba(82,192,232,0.2)', borderRight: '1px solid rgba(82,192,232,0.2)', zIndex: 0 }} />
+        <div style={{ position: 'absolute', bottom: 160, left: 40, width: 80, height: 80, borderBottom: '1px solid rgba(82,192,232,0.2)', borderLeft: '1px solid rgba(82,192,232,0.2)', zIndex: 0 }} />
+        <div style={{ position: 'absolute', bottom: 160, right: 40, width: 80, height: 80, borderBottom: '1px solid rgba(82,192,232,0.2)', borderRight: '1px solid rgba(82,192,232,0.2)', zIndex: 0 }} />
 
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: 860 }}>
           {/* Framework badge */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 44,
             padding: '7px 18px',
-            border: '1px solid rgba(0,94,184,0.3)',
+            border: '1px solid rgba(82,192,232,0.3)',
             borderRadius: 2,
-            background: 'rgba(0,94,184,0.07)',
+            background: 'rgba(82,192,232,0.07)',
           }}>
             <span className="bd-pulse-dot" style={{
               width: 6, height: 6, borderRadius: '50%',
-              background: '#005EB8', display: 'inline-block',
-              boxShadow: '0 0 10px #005EB8',
+              background: '#52C0E8', display: 'inline-block',
+              boxShadow: '0 0 10px #52C0E8',
             }} />
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Stanford Biodesign Framework</span>
           </div>
@@ -204,7 +204,7 @@ export default function BiodesignLanding() {
               fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 700,
               textTransform: 'uppercase', letterSpacing: '0.14em',
               textDecoration: 'none', borderRadius: 2,
-              boxShadow: '0 0 40px rgba(0,94,184,0.4)',
+              boxShadow: '0 0 40px rgba(82,192,232,0.4)',
             }}>
               Launch Platform →
             </Link>
@@ -254,7 +254,7 @@ export default function BiodesignLanding() {
           position: 'absolute', bottom: 0, left: 0, right: 0,
           display: 'flex', justifyContent: 'center',
           borderTop: '1px solid var(--line)',
-          background: 'rgba(221,231,243,0.88)',
+          background: 'rgba(13,22,34,0.78)',
           backdropFilter: 'blur(12px)',
         }}>
           {STATS.map((s, i) => (
@@ -377,7 +377,7 @@ export default function BiodesignLanding() {
         <div className="biodesign-dots" style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: 0.6 }} />
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
-          background: 'radial-gradient(ellipse 50% 60% at 50% 50%, rgba(0,94,184,0.05) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 50% 60% at 50% 50%, rgba(82,192,232,0.05) 0%, transparent 70%)',
         }} />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 1160, margin: '0 auto' }}>
           {/* Header */}
@@ -496,12 +496,12 @@ export default function BiodesignLanding() {
         <div className="biodesign-dots" style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
-          background: 'radial-gradient(ellipse 60% 80% at 50% 50%, rgba(0,94,184,0.09) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 60% 80% at 50% 50%, rgba(82,192,232,0.09) 0%, transparent 70%)',
         }} />
         {/* Decorative lines */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 600, height: 600, border: '1px solid rgba(0,94,184,0.07)', borderRadius: '50%', zIndex: 0 }} />
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, height: 400, border: '1px solid rgba(0,94,184,0.1)', borderRadius: '50%', zIndex: 0 }} />
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 200, height: 200, border: '1px solid rgba(0,94,184,0.14)', borderRadius: '50%', zIndex: 0 }} />
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 600, height: 600, border: '1px solid rgba(82,192,232,0.07)', borderRadius: '50%', zIndex: 0 }} />
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, height: 400, border: '1px solid rgba(82,192,232,0.1)', borderRadius: '50%', zIndex: 0 }} />
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 200, height: 200, border: '1px solid rgba(82,192,232,0.14)', borderRadius: '50%', zIndex: 0 }} />
 
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto' }}>
           <div style={{
@@ -538,7 +538,7 @@ export default function BiodesignLanding() {
             fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700,
             textTransform: 'uppercase', letterSpacing: '0.16em',
             textDecoration: 'none', borderRadius: 2,
-            boxShadow: '0 0 60px rgba(0,94,184,0.45)',
+            boxShadow: '0 0 60px rgba(82,192,232,0.45)',
           }}>
             Launch Platform →
           </Link>
