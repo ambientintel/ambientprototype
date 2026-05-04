@@ -210,6 +210,7 @@ const Icon = {
   trash:  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M3 5h10M6.5 5V3h3v2M5 5l.6 8h4.8l.6-8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   plus:   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>,
   close:  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 3l10 10M13 3L3 13" strokeLinecap="round"/></svg>,
+  flame:  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M8 14C4.7 14 2.5 12 2.5 9c0-2.5 2-4 2-6 1 1.5 1.5 2 2.5 2.5C7 3.5 7 2 8 1c0 3 3.5 3.5 3.5 6.5C11.5 11.5 10.5 14 8 14z" strokeLinejoin="round"/></svg>,
 };
 
 function fmt(n: number): string {
@@ -247,6 +248,9 @@ export default function OnboardingPage() {
             <div style={navBase as React.CSSProperties}><span style={{ opacity:0.65 }}>{Icon.org}</span>Org Chart</div>
           </Link>
           <div style={navActive}><span>{Icon.steps}</span>Onboarding</div>
+          <Link href="/humancapitalmgmt/payroll" style={{ textDecoration:"none" }}>
+            <div style={navBase as React.CSSProperties}><span style={{ opacity:0.65 }}>{Icon.flame}</span>Payroll & Burn</div>
+          </Link>
         </div>
 
         <div>

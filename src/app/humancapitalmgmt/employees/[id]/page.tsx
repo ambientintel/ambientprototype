@@ -216,6 +216,9 @@ export default function EmployeeDashboardPage() {
           <Link href="/humancapitalmgmt/onboarding" style={{ textDecoration:"none" }}>
             <div style={navBase as React.CSSProperties}><span style={{ opacity:0.65 }}>{Icon.steps}</span>Onboarding</div>
           </Link>
+          <Link href="/humancapitalmgmt/payroll" style={{ textDecoration:"none" }}>
+            <div style={navBase as React.CSSProperties}><span style={{ opacity:0.65 }}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M8 14C4.7 14 2.5 12 2.5 9c0-2.5 2-4 2-6 1 1.5 1.5 2 2.5 2.5C7 3.5 7 2 8 1c0 3 3.5 3.5 3.5 6.5C11.5 11.5 10.5 14 8 14z" strokeLinejoin="round"/></svg></span>Payroll & Burn</div>
+          </Link>
         </div>
         <div>
           <div style={navLabel}>Employee</div>
