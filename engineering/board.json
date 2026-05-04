@@ -100,7 +100,7 @@
       "assigneeInitial": "I",
       "assigneeColor": "#818CF8",
       "labels": [],
-      "column": "todo",
+      "column": "inprogress",
       "description": "",
       "created": "May 4",
       "updated": "May 4"
