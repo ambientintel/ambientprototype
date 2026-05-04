@@ -89,6 +89,36 @@
       "description": "",
       "created": "May 2",
       "updated": "May 2"
+    },
+    {
+      "id": "ENG-L1777918296398",
+      "type": "task",
+      "title": "Test lambda function",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Isaac",
+      "assigneeInitial": "I",
+      "assigneeColor": "#818CF8",
+      "labels": [],
+      "column": "inprogress",
+      "description": "",
+      "created": "May 4",
+      "updated": "May 4"
+    },
+    {
+      "id": "ENG-L1777925247362",
+      "type": "task",
+      "title": "IAC aws git research",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Isaac",
+      "assigneeInitial": "I",
+      "assigneeColor": "#818CF8",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 4",
+      "updated": "May 4"
     }
   ],
   "personalTasks": {
@@ -101,6 +131,10 @@
       "add barrel jack",
       "add wifi module",
       "route pcb"
+    ],
+    "Isaac": [
+      "Test lambda function",
+      "IAC aws git research"
     ]
   },
   "completedTasks": {
@@ -110,7 +144,9 @@
   "weekStatus": {
     "Brian": {
       "Thu": "yes",
-      "Fri": "yes"
+      "Fri": "yes",
+      "SU": "yes",
+      "M": "yes"
     },
     "Hanna": {
       "Mon": null
@@ -120,6 +156,9 @@
     },
     "Aki": {
       "Fri": "no"
+    },
+    "Isaac": {
+      "Mon": "yes"
     }
   },
   "team": [
@@ -216,5 +255,6 @@
       "progress": 10,
       "status": "Backlog — pilot pending"
     }
-  ]
+  ],
+  "boardWeek": 19
 }

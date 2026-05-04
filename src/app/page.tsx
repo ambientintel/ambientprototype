@@ -27,6 +27,8 @@ const MODULE_GROUPS = [
     modules: [
       { href: '/samd', tag: 'Regulatory', label: 'SaMD Dashboard', description: 'Requirements, risk register, SOUP inventory, verification status, and release tracking per IEC 62304 and ISO 14971.', meta: 'IEC 62304 / ISO 14971' },
       { href: '/gapanalysis', tag: 'Compliance', label: '21 CFR 820 Gap Analysis', description: 'Interactive tracker for all 15 subparts of 21 CFR Part 820. Mark evidence, add notes, auto-persisted.', meta: 'FDA QSR · 15 subparts' },
+      { href: '/biodesign', tag: 'R&D', label: 'Biodesign Lab', description: 'Stanford Biodesign process tracker — need finding, stakeholder analysis, concept generation, regulatory strategy, and patent landscape for medical device development.', meta: 'Needs · Concepts · Regulatory' },
+      { href: '/umn', tag: 'Clinical', label: 'UMN IRB & Milestones', description: 'System engineering milestone tracker and IRB application status for the University of Minnesota observational pilot study.', meta: 'IRB · 510(k) · Pilot' },
     ],
   },
   {
@@ -34,10 +36,11 @@ const MODULE_GROUPS = [
     label: 'Infrastructure & Hardware',
     accent: '#2D72D2',
     accentDim: 'rgba(45,114,210,0.10)',
-    cols: 2,
+    cols: 3,
     modules: [
       { href: '/bom', tag: 'Engineering', label: 'Bill of Materials', description: 'Full parts library, assembly BOMs, and build orders for EVT-0.1 hardware. 57 components priced from DigiKey and Mouser.', meta: 'EVT-0.1 · 57 parts' },
       { href: '/cloud', tag: 'Infrastructure', label: 'Cloud Infrastructure', description: 'AWS backend — seven services across fall-alert hot path, Parquet cold path, Ella AI narratives, and the Nurse API. Architecture v4.', meta: 'ambientcloud · AWS · Terraform' },
+      { href: '/engineering', tag: 'Engineering', label: 'Engineering Tracker', description: 'Sprint kanban and issue tracker for the Ambient engineering team. ENG-series tickets across firmware, backend, frontend, and ML.', meta: 'Sprint 18 · Kanban · Issues' },
     ],
   },
   {
@@ -48,6 +51,17 @@ const MODULE_GROUPS = [
     cols: 1,
     modules: [
       { href: '/humancapitalmgmt', tag: 'HR', label: 'Human Capital Management', description: 'Org chart, directory, role registry, and people analytics for the Ambient Intelligence team. Add roles, manage headcount, and visualize reporting structure.', meta: 'Org Chart · Directory · Roles' },
+    ],
+  },
+  {
+    key: 'business',
+    label: 'Business & Strategy',
+    accent: '#12B886',
+    accentDim: 'rgba(18,184,134,0.10)',
+    cols: 2,
+    modules: [
+      { href: '/bi', tag: 'Finance', label: 'Business Intelligence', description: 'Financial P&L forecasts, payer mix analytics, occupancy trends, and revenue cycle metrics for the Ambient Intelligence platform.', meta: 'P&L · Payer Mix · Analytics' },
+      { href: '/pitchdecklab', tag: 'Strategy', label: 'Pitch Deck Lab', description: 'AI-assisted slide builder for seed, Series A, product demo, board, and investor update decks. Multi-deck management with export.', meta: 'Seed · Series A · Board · Demo' },
     ],
   },
   {

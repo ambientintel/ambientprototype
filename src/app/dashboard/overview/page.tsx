@@ -6,16 +6,16 @@ import { useRouter } from "next/navigation";
 
 // ── Floor data ──────────────────────────────────────────────────
 const FLOOR_ROOMS = [
-  { id:'MOH301', resident:'Evelyn Rodriguez',  initial:'E', status:'fall',     priority:'high',   lastEvent:'Fall detected',        ago:'2m',  walking:53,  falls:1 },
-  { id:'MOH302', resident:'Harold Nakamura',   initial:'H', status:'movement', priority:'medium',  lastEvent:'Movement active',      ago:'4m',  walking:41,  falls:0 },
-  { id:'MOH303', resident:'Dorothy Okafor',    initial:'D', status:'quiet',    priority:'low',    lastEvent:'Room quiet',           ago:'12m', walking:68,  falls:0 },
-  { id:'MOH304', resident:'Margaret Kowalski', initial:'M', status:'movement', priority:'medium',  lastEvent:'Restlessness flagged', ago:'8m',  walking:29,  falls:0 },
-  { id:'MOH305', resident:'Robert Chen',       initial:'R', status:'fall',     priority:'medium',  lastEvent:'Fall resolved',        ago:'31m', walking:18,  falls:1 },
-  { id:'MOH306', resident:'Frances Williams',  initial:'F', status:'quiet',    priority:'low',    lastEvent:'Room quiet',           ago:'19m', walking:72,  falls:0 },
-  { id:'MOH307', resident:'James Murphy',      initial:'J', status:'movement', priority:'medium',  lastEvent:'Movement detected',    ago:'6m',  walking:47,  falls:0 },
-  { id:'MOH308', resident:'Alice Thompson',    initial:'A', status:'fall',     priority:'high',   lastEvent:'Fall detected',        ago:'18m', walking:12,  falls:1 },
-  { id:'MOH309', resident:'George Martinez',   initial:'G', status:'quiet',    priority:'low',    lastEvent:'Room quiet',           ago:'25m', walking:61,  falls:0 },
-  { id:'MOH310', resident:'Helen Park',        initial:'H', status:'movement', priority:'low',    lastEvent:'Movement detected',    ago:'9m',  walking:44,  falls:0 },
+  { id:'MOH301', resident:'Subject 1',  initial:'E', status:'fall',     priority:'high',   lastEvent:'Fall detected',        ago:'2m',  walking:53,  falls:1 },
+  { id:'MOH302', resident:'Subject 2',   initial:'H', status:'movement', priority:'medium',  lastEvent:'Movement active',      ago:'4m',  walking:41,  falls:0 },
+  { id:'MOH303', resident:'Subject 3',    initial:'D', status:'quiet',    priority:'low',    lastEvent:'Room quiet',           ago:'12m', walking:68,  falls:0 },
+  { id:'MOH304', resident:'Subject 4', initial:'M', status:'movement', priority:'medium',  lastEvent:'Restlessness flagged', ago:'8m',  walking:29,  falls:0 },
+  { id:'MOH305', resident:'Subject 5',       initial:'R', status:'fall',     priority:'medium',  lastEvent:'Fall resolved',        ago:'31m', walking:18,  falls:1 },
+  { id:'MOH306', resident:'Subject 6',  initial:'F', status:'quiet',    priority:'low',    lastEvent:'Room quiet',           ago:'19m', walking:72,  falls:0 },
+  { id:'MOH307', resident:'Subject 7',      initial:'J', status:'movement', priority:'medium',  lastEvent:'Movement detected',    ago:'6m',  walking:47,  falls:0 },
+  { id:'MOH308', resident:'Subject 8',    initial:'A', status:'fall',     priority:'high',   lastEvent:'Fall detected',        ago:'18m', walking:12,  falls:1 },
+  { id:'MOH309', resident:'Subject 9',   initial:'G', status:'quiet',    priority:'low',    lastEvent:'Room quiet',           ago:'25m', walking:61,  falls:0 },
+  { id:'MOH310', resident:'Subject 10',        initial:'H', status:'movement', priority:'low',    lastEvent:'Movement detected',    ago:'9m',  walking:44,  falls:0 },
 ];
 
 const LIVE_FEED = [
@@ -47,6 +47,7 @@ export default function OverviewPage() {
   const router = useRouter();
   const [now, setNow] = useState(new Date());
   const [feedIdx, setFeedIdx] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
@@ -97,12 +98,11 @@ export default function OverviewPage() {
 
   return (
     <div className="app notion-theme" style={notion}>
-
-      {/* Sidebar */}
-      <aside className="sidebar">
+      <div className={`sidebar-overlay${sidebarOpen ? ' open' : ''}`} onClick={() => setSidebarOpen(false)} />
+      <nav className={`sidebar${sidebarOpen ? ' open' : ''}`}>
         <Link href="/" style={{ textDecoration:'none', color:'inherit' }}>
           <div className="brand">
-            <div className="brand-name">Ambient <em>Intelligence</em></div>
+            <div className="brand-name">Ella AI <em>Nurse Assistant</em></div>
           </div>
         </Link>
 
@@ -118,7 +118,7 @@ export default function OverviewPage() {
           ] as [string, string, React.ReactNode][]).map(([href, label, icon]) => {
             const active = href === '/dashboard/overview';
             return (
-              <Link key={label} href={href} className={`nav-item${active ? ' active' : ''}`} style={{ textDecoration:'none', color:'inherit' }}>
+              <Link key={label} href={href} className={`nav-item${active ? ' active' : ''}`} style={{ textDecoration:'none', color:'inherit' }} onClick={() => setSidebarOpen(false)}>
                 <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>
                 {label}
               </Link>
@@ -130,7 +130,7 @@ export default function OverviewPage() {
           <div className="nav-label">Rooms</div>
           {FLOOR_ROOMS.map(r => (
             <div key={r.id} className="nav-item" style={{ cursor:'pointer' }}
-              onClick={() => router.push(`/dashboard/room/${r.id}`)}>
+              onClick={() => { setSidebarOpen(false); router.push(`/dashboard/room/${r.id}`); }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
                 <rect x="3" y="2.5" width="10" height="11" rx="1"/>
                 <path d="M6.5 13.5V10a1.5 1.5 0 013 0v3.5" strokeLinecap="round"/>
@@ -146,11 +146,21 @@ export default function OverviewPage() {
         <div className="sidebar-footer">
           <span className="status-dot"/>
           <span>Sensors online · MOH 301–310</span>
+          <a href="https://www.ellamemory.com/" target="_blank" rel="noopener noreferrer" style={{ display:'block', marginTop:6, fontFamily:'var(--mono)', fontSize:10, color:'var(--text-4)', textDecoration:'none' }}>ellamemory.com ↗</a>
         </div>
-      </aside>
+      </nav>
 
       {/* Main */}
       <main className="main">
+        <div className="mobile-header">
+          <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M2 4h12M2 8h12M2 12h12" strokeLinecap="round"/>
+            </svg>
+          </button>
+          <span style={{ fontFamily:'var(--mono)', fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--text-3)' }}>Ella Memory</span>
+          <div style={{ width:32 }} />
+        </div>
 
         {/* Topbar */}
         <header className="topbar">
@@ -158,11 +168,11 @@ export default function OverviewPage() {
             <div className="crumb">{crumb}</div>
             <h1 className="page-title">Floor <em>Overview</em></h1>
           </div>
-          <div className="tool-group"><AuthButton /></div>
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:8 }}><AuthButton /></div>
         </header>
 
         {/* ── Status strip ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:28 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))', gap:12, marginBottom:28 }}>
           {[
             { label:'Residents',    value:'10', sub:'MOH 301–310',         color:'var(--accent)' },
             { label:'Active Alerts',value:String(activeAlerts.length),  sub:'Require attention', color:'#FF6B6B' },
@@ -182,43 +192,45 @@ export default function OverviewPage() {
           <h2 className="section-title">Active Alerts</h2>
           <div className="section-meta">{activeAlerts.length} requiring response</div>
         </div>
-        <div style={{ background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:14, padding:'0 28px', marginBottom:28 }}>
-          <div style={{ display:'grid', gridTemplateColumns:'100px 1fr 1fr 100px 120px', gap:16, padding:'12px 0', borderBottom:'1px solid var(--line)', fontFamily:'var(--mono)', fontSize:10, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
-            <div>Room</div><div>Resident</div><div>Event</div><div>Time</div><div style={{ textAlign:'right' }}>Priority</div>
+        <div style={{ overflowX:'auto', marginBottom:28 }}>
+          <div style={{ background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:14, padding:'0 28px', minWidth:600 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'100px 1fr 1fr 100px 120px', gap:16, padding:'12px 0', borderBottom:'1px solid var(--line)', fontFamily:'var(--mono)', fontSize:10, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
+              <div>Room</div><div>Resident</div><div>Event</div><div>Time</div><div style={{ textAlign:'right' }}>Priority</div>
+            </div>
+            {FLOOR_ROOMS.filter(r => r.priority !== 'low').map((r, i, arr) => {
+              const ps = PRIORITY_STYLE[r.priority];
+              return (
+                <div key={r.id}
+                  onClick={() => router.push(`/dashboard/room/${r.id}`)}
+                  style={{ display:'grid', gridTemplateColumns:'100px 1fr 1fr 100px 120px', gap:16, padding:'16px 0', borderBottom: i < arr.length-1 ? '1px solid var(--line)' : 'none', alignItems:'center', cursor:'pointer', transition:'background 0.15s' }}
+                  onMouseEnter={e=>(e.currentTarget.style.background='rgba(124,110,173,0.04)')}
+                  onMouseLeave={e=>(e.currentTarget.style.background='transparent')}
+                >
+                  <div style={{ fontFamily:'var(--mono)', fontSize:12, fontWeight:600 }}>{r.id.replace('MOH','MOH ')}</div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <div style={{ width:26, height:26, borderRadius:'50%', background:'var(--surface-2)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--mono)', fontSize:10, fontWeight:600, color:'var(--text-2)', flexShrink:0 }}>{r.initial}</div>
+                    <span style={{ fontSize:13 }}>{r.resident}</span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ width:6, height:6, borderRadius:'50%', background:STATUS_COLOR[r.status], display:'inline-block',
+                      boxShadow: r.status==='fall' ? `0 0 5px ${STATUS_COLOR[r.status]}` : 'none' }}/>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:12, color:STATUS_COLOR[r.status] }}>{r.lastEvent}</span>
+                  </div>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:12, color:'var(--text-3)' }}>{r.ago} ago</div>
+                  <div style={{ textAlign:'right' }}>
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:4, border:`1px solid ${ps.border}`, background:ps.bg, color:ps.color, fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.06em' }}>
+                      <span style={{ width:5, height:5, borderRadius:'50%', background:ps.color, display:'inline-block' }}/>
+                      {r.priority.charAt(0).toUpperCase()+r.priority.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          {FLOOR_ROOMS.filter(r => r.priority !== 'low').map((r, i, arr) => {
-            const ps = PRIORITY_STYLE[r.priority];
-            return (
-              <div key={r.id}
-                onClick={() => router.push(`/dashboard/room/${r.id}`)}
-                style={{ display:'grid', gridTemplateColumns:'100px 1fr 1fr 100px 120px', gap:16, padding:'16px 0', borderBottom: i < arr.length-1 ? '1px solid var(--line)' : 'none', alignItems:'center', cursor:'pointer', transition:'background 0.15s' }}
-                onMouseEnter={e=>(e.currentTarget.style.background='rgba(124,110,173,0.04)')}
-                onMouseLeave={e=>(e.currentTarget.style.background='transparent')}
-              >
-                <div style={{ fontFamily:'var(--mono)', fontSize:12, fontWeight:600 }}>{r.id.replace('MOH','MOH ')}</div>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <div style={{ width:26, height:26, borderRadius:'50%', background:'var(--surface-2)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--mono)', fontSize:10, fontWeight:600, color:'var(--text-2)', flexShrink:0 }}>{r.initial}</div>
-                  <span style={{ fontSize:13 }}>{r.resident}</span>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  <span style={{ width:6, height:6, borderRadius:'50%', background:STATUS_COLOR[r.status], display:'inline-block',
-                    boxShadow: r.status==='fall' ? `0 0 5px ${STATUS_COLOR[r.status]}` : 'none' }}/>
-                  <span style={{ fontFamily:'var(--mono)', fontSize:12, color:STATUS_COLOR[r.status] }}>{r.lastEvent}</span>
-                </div>
-                <div style={{ fontFamily:'var(--mono)', fontSize:12, color:'var(--text-3)' }}>{r.ago} ago</div>
-                <div style={{ textAlign:'right' }}>
-                  <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:4, border:`1px solid ${ps.border}`, background:ps.bg, color:ps.color, fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.06em' }}>
-                    <span style={{ width:5, height:5, borderRadius:'50%', background:ps.color, display:'inline-block' }}/>
-                    {r.priority.charAt(0).toUpperCase()+r.priority.slice(1)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
         </div>
 
         {/* ── Room Status Grid + Live Feed ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 340px', gap:16, marginBottom:28 }}>
+        <div className="room-feed-grid" style={{ marginBottom:28 }}>
 
           {/* Room grid */}
           <div>
@@ -226,7 +238,7 @@ export default function OverviewPage() {
               <h2 className="section-title">Room Status</h2>
               <div className="section-meta">All 10 rooms</div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:10 }}>
               {FLOOR_ROOMS.map(r => {
                 const ps = PRIORITY_STYLE[r.priority];
                 return (
