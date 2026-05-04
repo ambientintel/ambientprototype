@@ -1099,7 +1099,7 @@ export default function BiodesignPage() {
         <div style={{ padding: '0 20px', marginBottom: 28 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', marginBottom: 18 }}>
             <span style={{ fontSize: 16, color: 'var(--text-4)', fontFamily: 'var(--mono)' }}>←</span>
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 16, color: 'var(--text-3)' }}>Ambient</span>
+            <span className="brand-name">Ambient <em>Intelligence</em></span>
           </Link>
           <input
             value={state.projectName}
