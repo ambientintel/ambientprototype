@@ -153,7 +153,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 
 // ── Certification Panel ───────────────────────────────────────────────────────
 
-function certIsActive(certId: string, profile: DeviceProfile): boolean {
+function certSuggested(certId: string, profile: DeviceProfile): boolean {
   switch (certId) {
     case 'HIPAA': return (profile.isSaMD || profile.isNetworked) && profile.targetMarkets.includes('us');
     case 'UL':    return profile.isActiveElectrical && (profile.targetMarkets.includes('us') || profile.targetMarkets.includes('canada'));
@@ -169,31 +169,68 @@ function certIsActive(certId: string, profile: DeviceProfile): boolean {
   }
 }
 
-function CertificationPanel({ profile }: { profile: DeviceProfile }) {
+function CertificationPanel({ state, update }: { state: BiodesignState; update: (s: BiodesignState) => void }) {
+  const profile = state.comply.profile;
+  const selected: string[] = state.comply.certifications ?? [];
+
+  function toggle(id: string) {
+    const next = selected.includes(id)
+      ? selected.filter(x => x !== id)
+      : [...selected, id];
+    update({ ...state, comply: { ...state.comply, certifications: next } });
+  }
+
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={{
-        fontSize: 11, color: 'var(--text-4)', textTransform: 'uppercase',
-        letterSpacing: '0.14em', fontFamily: 'var(--mono)', marginBottom: 10,
-        paddingBottom: 6, borderBottom: '1px solid var(--line)',
-      }}>Certifications Required</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid var(--line)' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.14em', fontFamily: 'var(--mono)' }}>
+          Certifications Required
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--text-4)', fontFamily: 'var(--mono)' }}>
+          — click to mark applicable
+        </span>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
         {CERT_BADGES.map(badge => {
-          const active = certIsActive(badge.id, profile);
+          const active = selected.includes(badge.id);
+          const suggested = !active && certSuggested(badge.id, profile);
           return (
-            <div key={badge.id} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-              padding: '10px 8px',
-              background: active ? 'var(--surface-1)' : 'transparent',
-              border: `1px solid ${active ? 'var(--line-strong)' : 'var(--line)'}`,
-              borderRadius: 2,
-              opacity: active ? 1 : 0.3,
-              transition: 'opacity 0.15s',
-            }}>
-              <CertBadgeIcon id={badge.id} size={28} color={active ? 'var(--accent)' : 'var(--text-4)'} />
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: active ? 'var(--text-2)' : 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{badge.label}</span>
-              <span style={{ fontSize: 9, color: 'var(--text-4)', textAlign: 'center', lineHeight: 1.3 }}>{badge.subtitle}</span>
-            </div>
+            <button
+              key={badge.id}
+              onClick={() => toggle(badge.id)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                padding: '12px 8px', cursor: 'pointer',
+                background: active ? 'rgba(45,114,210,0.12)' : suggested ? 'rgba(45,114,210,0.05)' : 'var(--surface-1)',
+                border: active
+                  ? '1px solid rgba(45,114,210,0.45)'
+                  : suggested
+                  ? '1px dashed rgba(45,114,210,0.3)'
+                  : '1px solid var(--line)',
+                borderRadius: 2,
+                transition: 'background 0.12s, border-color 0.12s',
+              }}
+            >
+              <CertBadgeIcon
+                id={badge.id}
+                size={28}
+                color={active ? 'var(--accent)' : suggested ? 'rgba(45,114,210,0.5)' : 'var(--text-4)'}
+              />
+              <span style={{
+                fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700,
+                color: active ? 'var(--text)' : suggested ? 'var(--text-3)' : 'var(--text-4)',
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}>{badge.label}</span>
+              <span style={{ fontSize: 9, color: 'var(--text-4)', textAlign: 'center', lineHeight: 1.3, fontFamily: 'var(--mono)' }}>
+                {badge.subtitle}
+              </span>
+              {active && (
+                <span style={{ fontSize: 8, color: 'var(--accent)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 1 }}>✓ required</span>
+              )}
+              {suggested && (
+                <span style={{ fontSize: 8, color: 'rgba(45,114,210,0.6)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 1 }}>suggested</span>
+              )}
+            </button>
           );
         })}
       </div>
@@ -238,7 +275,7 @@ export function ProfileTab({ state, update }: { state: BiodesignState; update: (
         </div>
       </div>
 
-      <CertificationPanel profile={profile} />
+      <CertificationPanel state={state} update={update} />
 
       <ProfileSection title="Software & Intelligence">
         <Toggle label="Contains software" value={profile.hasSoftware} onChange={v => set({ hasSoftware: v })} />
@@ -438,7 +475,7 @@ export function StandardsTab({ state, update }: { state: BiodesignState; update:
         ))}
       </div>
 
-      <CertificationPanel profile={profile} />
+      <CertificationPanel state={state} update={update} />
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>

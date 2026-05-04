@@ -398,6 +398,9 @@ export default function HumanCapitalMgmt() {
           <Link href="/humancapitalmgmt/orgchart" style={{ textDecoration:"none" }}>
             <div style={navItem}><span style={{ opacity:0.65 }}>{Icon.org}</span>Org Chart</div>
           </Link>
+          <Link href="/humancapitalmgmt/onboarding" style={{ textDecoration:"none" }}>
+            <div style={navItem}><span style={{ opacity:0.65 }}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 8h4v6H2zM6 5h4v9H6zM10 2h4v12h-4z" strokeLinejoin="round"/></svg></span>Onboarding</div>
+          </Link>
         </div>
 
         <div>

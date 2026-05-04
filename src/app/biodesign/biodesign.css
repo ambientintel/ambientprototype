@@ -32,3 +32,198 @@
   border-color: rgba(45, 114, 210, 0.5) !important;
   outline: none;
 }
+
+/* Top accent bar */
+.biodesign-root::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #2D72D2 30%, rgba(45, 114, 210, 0.45) 68%, transparent 100%);
+  z-index: 500;
+  pointer-events: none;
+}
+
+/* Subtle dot grid on the main content area */
+.biodesign-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── Landing page animations ─────────────────────────────────────────────── */
+
+@keyframes bd-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes bd-scan-line {
+  0%   { top: -2px; opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 0.6; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes bd-pulse-dot {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.5); }
+}
+
+@keyframes bd-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bd-grid-drift {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(28px); }
+}
+
+.bd-shimmer-text {
+  background: linear-gradient(90deg,
+    #CAD2DB 0%,
+    #CAD2DB 20%,
+    #5aaeff 40%,
+    #2D72D2 50%,
+    #5aaeff 60%,
+    #CAD2DB 80%,
+    #CAD2DB 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: bd-shimmer 5s linear infinite;
+}
+
+.bd-scan {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bd-scan::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; height: 120px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(45, 114, 210, 0.04) 40%,
+    rgba(45, 114, 210, 0.08) 50%,
+    rgba(45, 114, 210, 0.04) 60%,
+    transparent 100%
+  );
+  animation: bd-scan-line 9s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.bd-pulse-dot {
+  animation: bd-pulse-dot 2.4s ease-in-out infinite;
+}
+
+.bd-fade-up {
+  animation: bd-fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.bd-phase-card {
+  transition: background 0.25s, transform 0.25s;
+}
+.bd-phase-card:hover {
+  transform: translateY(-2px);
+}
+
+.bd-cap-card {
+  transition: background 0.18s, border-color 0.18s;
+}
+.bd-cap-card:hover {
+  background: var(--surface-2) !important;
+  border-color: rgba(45, 114, 210, 0.25) !important;
+}
+
+.bd-cta-btn {
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+.bd-cta-btn:hover {
+  box-shadow: 0 0 60px rgba(45, 114, 210, 0.55) !important;
+  transform: translateY(-1px);
+}
+
+/* ── Print / PDF export ──────────────────────────────────────────────────────── */
+
+@media print {
+  /* Hide the app chrome */
+  .biodesign-root > div:first-child,
+  .biodesign-root > div:nth-child(2) {
+    display: none !important;
+  }
+
+  /* Show the print overlay */
+  .bd-print-only {
+    display: block !important;
+  }
+
+  /* Reset page appearance for print */
+  .biodesign-root {
+    background: #fff !important;
+    color: #1a1a1a !important;
+  }
+
+  .biodesign-root::before {
+    display: none !important;
+  }
+
+  @page {
+    margin: 24mm 20mm;
+    size: A4;
+  }
+}
+
+/* ── Mobile responsiveness ───────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  /* Landing phase grid: 2 cols */
+  .bd-phase-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Landing capabilities grid: 2 cols */
+  .bd-cap-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Landing phase grid: 1 col */
+  .bd-phase-grid,
+  .bd-cap-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Landing hero */
+  .bd-hero-phase-pills {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Stats bar: wrap */
+  .bd-stats-bar {
+    flex-wrap: wrap;
+  }
+
+  /* Nav padding */
+  .bd-landing nav {
+    padding: 0 20px !important;
+  }
+
+  /* Section padding */
+  .bd-landing section {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  /* App sidebar: hide on mobile, show toggle */
+  .biodesign-sidebar-mobile {
+    display: none;
+  }
+}

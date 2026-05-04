@@ -91,14 +91,14 @@ const INSTALL_STEPS = [
   { label: 'Configure', code: '# Add to ~/.claude/CLAUDE.md:\n# Use /browse for all web browsing.\n# Never use mcp__claude-in-chrome__* tools.' },
 ];
 
-export default function GstackPage() {
+export default function ArchivePage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', fontFamily: 'var(--sans)' }}>
       {/* Header */}
       <div style={{ borderBottom: '1px solid var(--line)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <Link href="/" style={{ color: 'var(--text-3)', textDecoration: 'none', fontSize: 13 }}>← Home</Link>
         <span style={{ color: 'var(--line-strong)' }}>·</span>
-        <span style={{ color: 'var(--text-3)', fontSize: 13 }}>gstack</span>
+        <span style={{ color: 'var(--text-3)', fontSize: 13 }}>Archive</span>
       </div>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '48px 24px 96px' }}>

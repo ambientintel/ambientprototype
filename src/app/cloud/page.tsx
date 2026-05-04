@@ -5,7 +5,11 @@ import dynamic from 'next/dynamic';
 
 const ServiceEditor = dynamic(() => import('./ServiceEditor'), { ssr: false });
 
-type Tab = 'services' | 'paths' | 'architecture' | 'accounts' | 'runbooks';
+type Tab = 'services' | 'paths' | 'architecture' | 'accounts' | 'runbooks' | 'editor';
+type TfFile = 'main.tf' | 'backend.tf' | 'dev.tfvars' | 'prod.tfvars';
+type ActionStatus = 'idle' | 'running' | 'ok' | 'error';
+
+const TF_FILES: TfFile[] = ['main.tf', 'backend.tf', 'dev.tfvars', 'prod.tfvars'];
 
 const SERVICES = [
   { id: 'ella',       tag: 'AI · Bedrock', label: 'Ella',            path: 'services/ella/',        tests: 11,   desc: 'Twice-daily Claude Sonnet narrative per subject via Bedrock — de-identified summaries stored in DynamoDB for clinical staff.', tf: true,  lambdaFn: 'ambient-dev-ella' },
@@ -36,6 +40,526 @@ const RUNBOOKS = [
   'Escalation', 'Fall alert — false positive', 'Fall alert — missed',
   'IRB data request', 'Narrative broken', 'Telemetry gap',
 ];
+
+// ── Terraform content per service ─────────────────────────────────────────────
+
+const TF_CONTENT: Record<string, Record<TfFile, string>> = {
+  ella: {
+    'main.tf':
+`locals {
+  name = "ambient-\${var.environment}-ella"
+}
+
+variable "environment"           { type = string }
+variable "device_table"          { type = string }
+variable "alert_table"           { type = string }
+variable "telemetry_database"    { type = string }
+variable "athena_workgroup"      { type = string }
+variable "athena_output"         { type = string }
+variable "athena_results_bucket" { type = string }
+variable "kms_key_arn"           { type = string; default = "" }
+
+resource "aws_sqs_queue" "dlq" {
+  name                      = "\${local.name}-dlq"
+  message_retention_seconds = 1209600
+  kms_master_key_id         = "alias/aws/sqs"
+}
+
+resource "aws_sqs_queue" "fanout" {
+  name                       = "\${local.name}-fanout"
+  visibility_timeout_seconds = 300
+  message_retention_seconds  = 86400
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.dlq.arn
+    maxReceiveCount     = 3
+  })
+}
+
+resource "aws_dynamodb_table" "updates" {
+  name         = "\${local.name}-updates"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "subject_id"
+  range_key    = "date"
+
+  attribute { name = "subject_id" type = "S" }
+  attribute { name = "date"       type = "S" }
+
+  ttl { attribute_name = "expires_at" enabled = true }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = var.kms_key_arn != "" ? var.kms_key_arn : null
+  }
+}
+
+resource "aws_lambda_function" "ella" {
+  function_name = local.name
+  role          = aws_iam_role.ella.arn
+  runtime       = "python3.12"
+  handler       = "handler.lambda_handler"
+  timeout       = 270
+  memory_size   = 512
+
+  filename         = data.archive_file.ella.output_path
+  source_code_hash = data.archive_file.ella.output_base64sha256
+
+  environment {
+    variables = {
+      DEVICE_TABLE     = var.device_table
+      ALERT_TABLE      = var.alert_table
+      UPDATES_TABLE    = aws_dynamodb_table.updates.name
+      ATHENA_DATABASE  = var.telemetry_database
+      ATHENA_WORKGROUP = var.athena_workgroup
+      ATHENA_OUTPUT    = var.athena_output
+      BEDROCK_MODEL    = "us.anthropic.claude-sonnet-4-5-20251001-v1:0"
+    }
+  }
+}
+
+output "lambda_name"   { value = aws_lambda_function.ella.function_name }
+output "updates_table" { value = aws_dynamodb_table.updates.name }`,
+    'backend.tf':
+`terraform {
+  backend "s3" {
+    key     = "services/ella/terraform.tfstate"
+    encrypt = true
+  }
+}`,
+    'dev.tfvars':
+`environment           = "dev"
+device_table          = "ambient-dev-devices"
+alert_table           = "ambient-dev-telemetry-alerts"
+telemetry_database    = "ambient_dev_telemetry"
+athena_workgroup      = "ambient-dev-athena"
+athena_output         = "s3://ambient-dev-athena-results/queries/"
+athena_results_bucket = "ambient-dev-athena-results"`,
+    'prod.tfvars':
+`environment           = "prod"
+device_table          = "ambient-prod-devices"
+alert_table           = "ambient-prod-telemetry-alerts"
+telemetry_database    = "ambient_prod_telemetry"
+athena_workgroup      = "ambient-prod-athena"
+athena_output         = "s3://ambient-prod-athena-results/queries/"
+athena_results_bucket = "ambient-prod-athena-results"
+kms_key_arn           = "arn:aws:kms:us-east-1:ACCOUNT_ID:key/KEY_ID"`,
+  },
+
+  api: {
+    'main.tf':
+`locals {
+  name = "ambient-\${var.environment}-api"
+}
+
+variable "environment"           { type = string }
+variable "device_table"          { type = string }
+variable "alert_table"           { type = string }
+variable "update_table"          { type = string }
+variable "ella_lambda_name"      { type = string }
+variable "telemetry_database"    { type = string }
+variable "athena_workgroup"      { type = string }
+variable "athena_output"         { type = string }
+variable "athena_results_bucket" { type = string }
+variable "cors_origins"          { type = string; default = "https://app.ellamemory.com" }
+
+resource "aws_cognito_user_pool" "pool" {
+  name                     = "\${local.name}-users"
+  auto_verified_attributes = ["email"]
+
+  admin_create_user_config { allow_admin_create_user_only = true }
+
+  password_policy {
+    minimum_length    = 12
+    require_uppercase = true
+    require_numbers   = true
+    require_symbols   = true
+  }
+}
+
+resource "aws_cognito_user_pool_client" "web" {
+  name         = "\${local.name}-web"
+  user_pool_id = aws_cognito_user_pool.pool.id
+  explicit_auth_flows = [
+    "ALLOW_USER_SRP_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+  ]
+}
+
+resource "aws_apigatewayv2_api" "api" {
+  name          = local.name
+  protocol_type = "HTTP"
+  cors_configuration {
+    allow_origins = [var.cors_origins]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers = ["Authorization", "Content-Type"]
+  }
+}
+
+resource "aws_lambda_function" "api" {
+  function_name = local.name
+  role          = aws_iam_role.api.arn
+  runtime       = "python3.12"
+  handler       = "main.handler"
+  timeout       = 29
+  memory_size   = 256
+
+  filename         = data.archive_file.api.output_path
+  source_code_hash = data.archive_file.api.output_base64sha256
+
+  environment {
+    variables = {
+      ENVIRONMENT       = var.environment
+      DEVICE_TABLE      = var.device_table
+      ALERT_TABLE       = var.alert_table
+      UPDATE_TABLE      = var.update_table
+      ELLA_LAMBDA       = var.ella_lambda_name
+      COGNITO_USER_POOL = aws_cognito_user_pool.pool.id
+      ATHENA_DATABASE   = var.telemetry_database
+      ATHENA_WORKGROUP  = var.athena_workgroup
+      ATHENA_OUTPUT     = var.athena_output
+    }
+  }
+}
+
+output "api_endpoint"    { value = aws_apigatewayv2_api.api.api_endpoint }
+output "cognito_pool_id" { value = aws_cognito_user_pool.pool.id }`,
+    'backend.tf':
+`terraform {
+  backend "s3" {
+    key     = "services/api/terraform.tfstate"
+    encrypt = true
+  }
+}`,
+    'dev.tfvars':
+`environment           = "dev"
+device_table          = "ambient-dev-devices"
+alert_table           = "ambient-dev-telemetry-alerts"
+update_table          = "ambient-dev-ella-updates"
+ella_lambda_name      = "ambient-dev-ella"
+telemetry_database    = "ambient_dev_telemetry"
+athena_workgroup      = "ambient-dev-athena"
+athena_output         = "s3://ambient-dev-athena-results/queries/"
+athena_results_bucket = "ambient-dev-athena-results"
+cors_origins          = "http://localhost:3000"`,
+    'prod.tfvars':
+`environment           = "prod"
+device_table          = "ambient-prod-devices"
+alert_table           = "ambient-prod-telemetry-alerts"
+update_table          = "ambient-prod-ella-updates"
+ella_lambda_name      = "ambient-prod-ella"
+telemetry_database    = "ambient_prod_telemetry"
+athena_workgroup      = "ambient-prod-athena"
+athena_output         = "s3://ambient-prod-athena-results/queries/"
+athena_results_bucket = "ambient-prod-athena-results"
+cors_origins          = "https://app.ellamemory.com"`,
+  },
+
+  telemetry: {
+    'main.tf':
+`locals {
+  name = "ambient-\${var.environment}-telemetry"
+}
+
+variable "environment"   { type = string }
+variable "device_table"  { type = string }
+variable "parquet_bucket"{ type = string }
+
+resource "aws_dynamodb_table" "alerts" {
+  name         = "\${local.name}-alerts"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "subject_id"
+  range_key    = "event_ts"
+
+  attribute { name = "subject_id" type = "S" }
+  attribute { name = "event_ts"   type = "S" }
+
+  ttl { attribute_name = "expires_at" enabled = true }
+}
+
+resource "aws_sns_topic" "fall_alerts" {
+  name              = "\${local.name}-fall-alerts"
+  kms_master_key_id = "alias/aws/sns"
+}
+
+resource "aws_kinesis_firehose_delivery_stream" "telemetry" {
+  name        = "\${local.name}-stream"
+  destination = "extended_s3"
+
+  extended_s3_configuration {
+    role_arn            = aws_iam_role.firehose.arn
+    bucket_arn          = "arn:aws:s3:::\${var.parquet_bucket}"
+    prefix              = "raw/date=!{timestamp:yyyy-MM-dd}/"
+    error_output_prefix = "errors/!{firehose:error-output-type}/"
+    buffering_interval  = 300
+    buffering_size      = 128
+
+    data_format_conversion_configuration {
+      input_format_configuration {
+        deserializer { hive_json_ser_de {} }
+      }
+      output_format_configuration {
+        serializer { parquet_ser_de { compression = "SNAPPY" } }
+      }
+      schema_configuration {
+        database_name = "ambient_\${var.environment}_telemetry"
+        table_name    = "radar_frames"
+        role_arn      = aws_iam_role.firehose.arn
+      }
+    }
+  }
+}
+
+resource "aws_lambda_function" "fall_enricher" {
+  function_name = "\${local.name}-fall-enricher"
+  role          = aws_iam_role.lambda.arn
+  runtime       = "python3.12"
+  handler       = "handler.lambda_handler"
+  timeout       = 15
+  memory_size   = 128
+
+  environment {
+    variables = {
+      ALERTS_TABLE  = aws_dynamodb_table.alerts.name
+      SNS_TOPIC_ARN = aws_sns_topic.fall_alerts.arn
+      DEVICE_TABLE  = var.device_table
+    }
+  }
+}
+
+output "alerts_table"      { value = aws_dynamodb_table.alerts.name }
+output "fall_alerts_topic" { value = aws_sns_topic.fall_alerts.arn }`,
+    'backend.tf':
+`terraform {
+  backend "s3" {
+    key     = "services/telemetry/terraform.tfstate"
+    encrypt = true
+  }
+}`,
+    'dev.tfvars':
+`environment    = "dev"
+device_table   = "ambient-dev-devices"
+parquet_bucket = "ambient-dev-parquet-data"`,
+    'prod.tfvars':
+`environment    = "prod"
+device_table   = "ambient-prod-devices"
+parquet_bucket = "ambient-prod-parquet-data"`,
+  },
+
+  'url-minter': {
+    'main.tf':
+`locals {
+  name = "ambient-\${var.environment}-url-minter"
+}
+
+variable "environment"          { type = string }
+variable "telemetry_bucket_name"{ type = string }
+
+resource "aws_dynamodb_table" "devices" {
+  name         = "ambient-\${var.environment}-devices"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "device_id"
+
+  attribute { name = "device_id" type = "S" }
+}
+
+resource "aws_s3_bucket" "parquet" {
+  bucket = var.telemetry_bucket_name
+  lifecycle { prevent_destroy = true }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "parquet" {
+  bucket = aws_s3_bucket.parquet.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "parquet" {
+  bucket = aws_s3_bucket.parquet.id
+  rule {
+    id     = "glacier-after-90"
+    status = "Enabled"
+    transition { days = 90; storage_class = "GLACIER" }
+  }
+}
+
+resource "aws_lambda_function" "url_minter" {
+  function_name = local.name
+  role          = aws_iam_role.url_minter.arn
+  runtime       = "python3.12"
+  handler       = "handler.lambda_handler"
+  timeout       = 10
+  memory_size   = 128
+
+  environment {
+    variables = {
+      DEVICE_TABLE = aws_dynamodb_table.devices.name
+      BUCKET_NAME  = aws_s3_bucket.parquet.bucket
+    }
+  }
+}
+
+output "device_table_name" { value = aws_dynamodb_table.devices.name }
+output "parquet_bucket"    { value = aws_s3_bucket.parquet.bucket }`,
+    'backend.tf':
+`terraform {
+  backend "s3" {
+    key     = "services/url-minter/terraform.tfstate"
+    encrypt = true
+  }
+}`,
+    'dev.tfvars':
+`environment           = "dev"
+telemetry_bucket_name = "ambient-dev-parquet-data"`,
+    'prod.tfvars':
+`environment           = "prod"
+telemetry_bucket_name = "ambient-prod-parquet-data"`,
+  },
+
+  athena: {
+    'main.tf':
+`locals {
+  name = "ambient-\${var.environment}-athena"
+}
+
+variable "environment"   { type = string }
+variable "parquet_bucket"{ type = string }
+
+data "aws_caller_identity" "current" {}
+
+resource "aws_s3_bucket" "results" {
+  bucket = "\${local.name}-results-\${data.aws_caller_identity.current.account_id}"
+}
+
+resource "aws_athena_workgroup" "main" {
+  name = local.name
+
+  configuration {
+    enforce_workgroup_configuration    = true
+    publish_cloudwatch_metrics_enabled = true
+    result_configuration {
+      output_location = "s3://\${aws_s3_bucket.results.bucket}/queries/"
+      encryption_configuration {
+        encryption_option = "SSE_S3"
+      }
+    }
+    bytes_scanned_cutoff_per_query = 10737418240
+  }
+}
+
+resource "aws_glue_catalog_database" "telemetry" {
+  name = "ambient_\${var.environment}_telemetry"
+}
+
+resource "aws_glue_catalog_table" "radar_frames" {
+  name          = "radar_frames"
+  database_name = aws_glue_catalog_database.telemetry.name
+  table_type    = "EXTERNAL_TABLE"
+
+  partition_keys {
+    name = "date"
+    type = "string"
+  }
+
+  storage_descriptor {
+    location      = "s3://\${var.parquet_bucket}/raw/"
+    input_format  = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"
+    output_format = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"
+    ser_de_info {
+      serialization_library = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
+    }
+    columns { name = "device_id"   type = "string" }
+    columns { name = "subject_id"  type = "string" }
+    columns { name = "facility_id" type = "string" }
+    columns { name = "ts"          type = "bigint" }
+    columns { name = "radar_raw"   type = "binary" }
+  }
+}
+
+output "glue_database"        { value = aws_glue_catalog_database.telemetry.name }
+output "athena_workgroup"     { value = aws_athena_workgroup.main.name }
+output "athena_results_bucket"{ value = aws_s3_bucket.results.bucket }`,
+    'backend.tf':
+`terraform {
+  backend "s3" {
+    key     = "services/athena/terraform.tfstate"
+    encrypt = true
+  }
+}`,
+    'dev.tfvars':
+`environment    = "dev"
+parquet_bucket = "ambient-dev-parquet-data"`,
+    'prod.tfvars':
+`environment    = "prod"
+parquet_bucket = "ambient-prod-parquet-data"`,
+  },
+
+  cloudtrail: {
+    'main.tf':
+`locals {
+  name = "ambient-\${var.environment}-cloudtrail"
+}
+
+variable "environment"      { type = string }
+variable "alert_table_arn"  { type = string }
+variable "update_table_arn" { type = string }
+
+data "aws_caller_identity" "current" {}
+
+resource "aws_s3_bucket" "trail" {
+  bucket        = "\${local.name}-logs-\${data.aws_caller_identity.current.account_id}"
+  force_destroy = false
+  lifecycle { prevent_destroy = true }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "trail" {
+  bucket = aws_s3_bucket.trail.id
+  rule {
+    id     = "glacier-after-365"
+    status = "Enabled"
+    transition { days = 365; storage_class = "GLACIER" }
+    expiration { days = 2557 }
+  }
+}
+
+resource "aws_cloudtrail" "main" {
+  name                          = local.name
+  s3_bucket_name                = aws_s3_bucket.trail.id
+  is_multi_region_trail         = true
+  enable_log_file_validation    = true
+  include_global_service_events = true
+
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true
+
+    data_resource {
+      type   = "AWS::DynamoDB::Table"
+      values = [var.alert_table_arn, var.update_table_arn]
+    }
+  }
+}
+
+output "trail_arn" { value = aws_cloudtrail.main.arn }
+output "trail_s3"  { value = aws_s3_bucket.trail.bucket }`,
+    'backend.tf':
+`terraform {
+  backend "s3" {
+    key     = "services/cloudtrail/terraform.tfstate"
+    encrypt = true
+  }
+}`,
+    'dev.tfvars':
+`environment      = "dev"
+alert_table_arn  = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-dev-telemetry-alerts"
+update_table_arn = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-dev-ella-updates"`,
+    'prod.tfvars':
+`environment      = "prod"
+alert_table_arn  = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-prod-telemetry-alerts"
+update_table_arn = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-prod-ella-updates"`,
+  },
+};
 
 // ── Diagram primitives ────────────────────────────────────────────────────────
 
@@ -72,10 +596,6 @@ function Arr({ dashed }: { dashed?: boolean }) {
   return <span style={{ color: 'var(--text-4)', fontSize: 13, flexShrink: 0, opacity: dashed ? 0.5 : 1 }}>{dashed ? '╌╌▶' : '→'}</span>;
 }
 
-function DashArr() {
-  return <span style={{ color: 'var(--text-4)', fontSize: 11, flexShrink: 0 }}>- - ▶</span>;
-}
-
 function Row({ children }: { children: React.ReactNode }) {
   return <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{children}</div>;
 }
@@ -89,15 +609,6 @@ function Group({ label, type, children, note }: { label: string; type: string; c
         {note && <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', letterSpacing: '0.06em' }}>{note}</span>}
       </div>
       <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
-    </div>
-  );
-}
-
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: 'var(--text-4)', marginBottom: 8 }}>{label}</div>
-      {children}
     </div>
   );
 }
@@ -118,19 +629,15 @@ function Legend() {
 function ArchDiagram() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-      {/* Top row: Factory + Device + IoT Core */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <Group label="Factory & Control Plane" type="factory" note="separate AWS account">
           <Row><Node label="Fleet Provisioning" sub="bootstrap cert → tenant cert" type="factory" /></Row>
           <Row><Node label="Tenant Registry" sub="DDB + CloudTrail" type="factory" /></Row>
         </Group>
-
         <Group label="Ambient Device" type="device" note="3 per room">
           <Row><Node label="mmWave Radar" sub="IWR6843AOP on AM62x" type="device" /></Row>
           <Row><Node label="ambientapp agent" sub="WAL + spool · 5-min Parquet" type="device" /></Row>
         </Group>
-
         <Group label="AWS IoT Core" type="iot" note="mTLS · X.509">
           <Row><Node label="Credentials Provider" sub="role alias → temp AWS creds" type="iot" /></Row>
           <Row><Node label="Device Shadow" sub="facility / subject / room / zone" type="iot" /></Row>
@@ -139,7 +646,6 @@ function ArchDiagram() {
         </Group>
       </div>
 
-      {/* Hot path */}
       <Group label="Hot path — fall alerts" type="hot" note="< 2s latency budget">
         <Row>
           <Node label="Device" sub="MQTT QoS 1" type="device" />
@@ -156,7 +662,6 @@ function ArchDiagram() {
         </Row>
       </Group>
 
-      {/* Cold paths */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <Group label="Cold path (new) — device-side Parquet" type="coldnew">
           <Row>
@@ -167,7 +672,6 @@ function ArchDiagram() {
             <Node label="S3" sub="raw-device/date=/facility=/" type="coldnew" />
           </Row>
         </Group>
-
         <Group label="Cold path (legacy) — retiring" type="coldold">
           <Row>
             <Node label="Device" sub="MQTT QoS 0" type="device" dashed />
@@ -181,7 +685,6 @@ function ArchDiagram() {
         </Group>
       </div>
 
-      {/* Query layer */}
       <Group label="Cold path — shared query layer" type="query">
         <Row>
           <Node label="S3 (new + legacy)" type="coldnew" />
@@ -198,7 +701,6 @@ function ArchDiagram() {
         </Row>
       </Group>
 
-      {/* Narrative */}
       <Group label="Narrative path — Ella" type="narrative" note="12h cadence · 7am + 7pm">
         <Row>
           <Node label="EventBridge" sub="cron: 7am + 7pm" type="narrative" />
@@ -213,7 +715,6 @@ function ArchDiagram() {
         </Row>
       </Group>
 
-      {/* API */}
       <Group label="Nurse / Admin API" type="api" note="12 endpoints · row-level facility scope">
         <Row>
           <Node label="Staff" sub="login + JWT" type="hot" />
@@ -228,7 +729,6 @@ function ArchDiagram() {
         </Row>
       </Group>
 
-      {/* Audit + Observability */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <Group label="Audit & Governance" type="audit">
           <Row>
@@ -247,7 +747,6 @@ function ArchDiagram() {
             <Node label="devices DDB + Shadow" type="audit" />
           </Row>
         </Group>
-
         <Group label="Central Observability" type="obs" note="metrics only · no PHI">
           <Row>
             <Node label="Reconciler" sub="TelemetryDivergence" type="query" />
@@ -272,11 +771,120 @@ function ArchDiagram() {
   );
 }
 
+// ── Action button ─────────────────────────────────────────────────────────────
+
+function ActionButton({ label, icon, status, onClick }: {
+  label: string; icon: string; status: ActionStatus; onClick: () => void;
+}) {
+  const colors: Record<ActionStatus, { bg: string; border: string; color: string }> = {
+    idle:    { bg: 'transparent',            border: '#30363d', color: '#8b949e' },
+    running: { bg: 'rgba(187,128,9,0.15)',   border: '#9e6a03', color: '#d29922' },
+    ok:      { bg: 'rgba(35,134,54,0.15)',   border: '#238636', color: '#3fb950' },
+    error:   { bg: 'rgba(248,81,73,0.15)',   border: '#f85149', color: '#f85149' },
+  };
+  const c = colors[status];
+  const icons: Record<ActionStatus, string> = { idle: icon, running: '◌', ok: '✓', error: '✗' };
+  return (
+    <button
+      onClick={onClick}
+      disabled={status === 'running'}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '5px 12px', borderRadius: 5,
+        background: c.bg, border: `1px solid ${c.border}`,
+        color: c.color, cursor: status === 'running' ? 'default' : 'pointer',
+        fontFamily: '"JetBrains Mono", "Fira Code", Consolas, monospace', fontSize: 11,
+        transition: 'all 0.15s',
+      }}
+    >
+      <span style={{ fontSize: 11 }}>{icons[status]}</span>
+      {label}
+    </button>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CloudPage() {
   const [tab, setTab] = useState<Tab>('services');
   const [editingSvc, setEditingSvc] = useState<(typeof SERVICES)[0] | null>(null);
+
+  // Editor state
+  const [editorSvc, setEditorSvcRaw] = useState('ella');
+  const [editorFile, setEditorFile] = useState<TfFile>('main.tf');
+  const [editorContent, setEditorContent] = useState<Record<string, Record<TfFile, string>>>(TF_CONTENT);
+  const [testStatus,  setTestStatus]  = useState<ActionStatus>('idle');
+  const [gitStatus,   setGitStatus]   = useState<ActionStatus>('idle');
+  const [applyStatus, setApplyStatus] = useState<ActionStatus>('idle');
+  const [actionLog, setActionLog] = useState<string[]>([]);
+
+  const setEditorSvc = (id: string) => {
+    setEditorSvcRaw(id);
+    setEditorFile('main.tf');
+    setTestStatus('idle');
+    setGitStatus('idle');
+    setApplyStatus('idle');
+    setActionLog([]);
+  };
+
+  const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+  const handleTest = async () => {
+    setTestStatus('running');
+    setActionLog([`$ aws sts get-caller-identity`]);
+    await sleep(900);
+    setActionLog(p => [...p,
+      `{`,
+      `    "UserId": "AIDA4EXAMPLE7ABCDEF",`,
+      `    "Account": "123456789012",`,
+      `    "Arn": "arn:aws:iam::123456789012:user/ci-deployer"`,
+      `}`,
+    ]);
+    await sleep(400);
+    setActionLog(p => [...p, `✓  AWS connectivity verified · services/${editorSvc}/`]);
+    setTestStatus('ok');
+  };
+
+  const handleGit = async () => {
+    setGitStatus('running');
+    setActionLog([`$ git add services/${editorSvc}/infra/${editorFile}`]);
+    await sleep(500);
+    setActionLog(p => [...p, `$ git commit -m "infra(${editorSvc}): update ${editorFile}"`]);
+    await sleep(800);
+    setActionLog(p => [...p,
+      `[main 3a7f2c1] infra(${editorSvc}): update ${editorFile}`,
+      ` 1 file changed, 2 insertions(+), 1 deletion(-)`,
+    ]);
+    await sleep(400);
+    setActionLog(p => [...p,
+      `$ git push origin main`,
+      `To github.com:ambientintel/ambientcloud.git`,
+      `   a1b2c3d..3a7f2c1  main -> main`,
+      `✓  Pushed · ambientintel/ambientcloud`,
+    ]);
+    setGitStatus('ok');
+  };
+
+  const handleApply = async () => {
+    setApplyStatus('running');
+    setActionLog([`$ terraform -chdir=services/${editorSvc}/infra init -reconfigure ...`]);
+    await sleep(1000);
+    setActionLog(p => [...p,
+      `Initializing the backend...`,
+      `Terraform has been successfully initialized!`,
+    ]);
+    await sleep(500);
+    setActionLog(p => [...p, `$ terraform -chdir=services/${editorSvc}/infra apply -auto-approve ...`]);
+    await sleep(1300);
+    setActionLog(p => [...p,
+      `aws_lambda_function.${editorSvc}: Modifying...`,
+      `aws_lambda_function.${editorSvc}: Modifications complete after 3s`,
+      ``,
+      `Apply complete! Resources: 0 added, 1 changed, 0 destroyed.`,
+      `✓  IaC applied · services/${editorSvc}/ (dev)`,
+    ]);
+    setApplyStatus('ok');
+  };
 
   const navItems: { key: Tab; label: string }[] = [
     { key: 'services',     label: 'Services' },
@@ -284,9 +892,13 @@ export default function CloudPage() {
     { key: 'architecture', label: 'Architecture' },
     { key: 'accounts',     label: 'Account Model' },
     { key: 'runbooks',     label: 'Runbooks' },
+    { key: 'editor',       label: 'IaC Editor' },
   ];
 
   const totalTests = SERVICES.reduce((s, svc) => s + (svc.tests ?? 0), 0);
+  const tfServices = SERVICES.filter(s => s.tf);
+  const currentText = editorContent[editorSvc]?.[editorFile] ?? '';
+  const lineCount = currentText.split('\n').length;
 
   return (
     <div className="app">
@@ -305,37 +917,6 @@ export default function CloudPage() {
             <button key={item.key} className={`nav-item${tab === item.key ? ' active' : ''}`} onClick={() => setTab(item.key)}>
               {item.label}
             </button>
-          ))}
-        </div>
-
-
-        <div className="nav-section">
-          <p className="nav-label">Engineering</p>
-          {([
-            ['/engineering', 'Engineering Hub'],
-            ['/bom',         'Bill of Materials'],
-            ['/cloud',       'Cloud Infrastructure'],
-          ] as [string,string][]).map(([href, label]) => (
-            <Link key={href} href={href}
-              className={`nav-item${href === '/cloud' ? ' active' : ''}`}
-              style={{ textDecoration: 'none', color: 'inherit' }}>
-              {label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="nav-section">
-          <p className="nav-label">Pages</p>
-          {([
-            ['/dashboard',  'Nurse Dashboard'],
-            ['/gapanalysis','Gap Analysis'],
-            ['/samd',       'SaMD'],
-          ] as [string,string][]).map(([href, label]) => (
-            <Link key={href} href={href}
-              className="nav-item"
-              style={{ textDecoration: 'none', color: 'inherit' }}>
-              {label}
-            </Link>
           ))}
         </div>
 
@@ -559,6 +1140,175 @@ export default function CloudPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          </>
+        )}
+
+        {/* ── IaC Editor ── */}
+        {tab === 'editor' && (
+          <>
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · services/*/infra/</p>
+              <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>IaC Editor</h1>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '200px 1fr',
+              border: '1px solid #30363d',
+              borderRadius: 10,
+              overflow: 'hidden',
+              height: 'calc(100vh - 260px)',
+              minHeight: 480,
+            }}>
+              {/* Service list */}
+              <div style={{ background: '#0d1117', borderRight: '1px solid #30363d', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                <div style={{
+                  padding: '10px 12px', borderBottom: '1px solid #30363d',
+                  fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 9,
+                  textTransform: 'uppercase', letterSpacing: '0.14em', color: '#6e7681',
+                }}>
+                  Terraform services
+                </div>
+                {tfServices.map(svc => (
+                  <button
+                    key={svc.id}
+                    onClick={() => setEditorSvc(svc.id)}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '10px 14px', border: 'none', borderBottom: '1px solid #21262d',
+                      background: editorSvc === svc.id ? 'rgba(56,139,253,0.1)' : 'transparent',
+                      cursor: 'pointer',
+                      borderLeft: editorSvc === svc.id ? '2px solid #388bfd' : '2px solid transparent',
+                    }}
+                  >
+                    <div style={{ fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 12, color: editorSvc === svc.id ? '#e6edf3' : '#8b949e' }}>{svc.label}</div>
+                    <div style={{ fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 9.5, color: '#6e7681', marginTop: 2 }}>{svc.path}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Editor panel */}
+              <div style={{ display: 'flex', flexDirection: 'column', background: '#0d1117', overflow: 'hidden' }}>
+
+                {/* File tabs */}
+                <div style={{ display: 'flex', background: '#161b22', borderBottom: '1px solid #30363d', flexShrink: 0 }}>
+                  {TF_FILES.map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setEditorFile(f)}
+                      style={{
+                        padding: '8px 18px',
+                        fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 11.5,
+                        background: editorFile === f ? '#0d1117' : 'transparent',
+                        color: editorFile === f ? '#e6edf3' : '#6e7681',
+                        border: 'none', borderRight: '1px solid #30363d',
+                        borderTop: editorFile === f ? '1px solid #388bfd' : '1px solid transparent',
+                        cursor: 'pointer',
+                        marginTop: editorFile === f ? -1 : 0,
+                      }}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                  <div style={{ marginLeft: 'auto', padding: '8px 14px', fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 10, color: '#6e7681', alignSelf: 'center' }}>
+                    services/{editorSvc}/infra/{editorFile}
+                  </div>
+                </div>
+
+                {/* Textarea */}
+                <textarea
+                  value={currentText}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setEditorContent(prev => ({
+                      ...prev,
+                      [editorSvc]: { ...prev[editorSvc], [editorFile]: val },
+                    }));
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault();
+                      const el = e.currentTarget;
+                      const s = el.selectionStart;
+                      const end = el.selectionEnd;
+                      const next = el.value.substring(0, s) + '  ' + el.value.substring(end);
+                      setEditorContent(prev => ({
+                        ...prev,
+                        [editorSvc]: { ...prev[editorSvc], [editorFile]: next },
+                      }));
+                      requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = s + 2; });
+                    }
+                  }}
+                  spellCheck={false}
+                  style={{
+                    flex: 1, width: '100%',
+                    background: '#0d1117', color: '#e6edf3',
+                    fontFamily: '"JetBrains Mono", "Fira Code", Consolas, monospace',
+                    fontSize: 12.5, lineHeight: 1.65,
+                    padding: '16px 20px', border: 'none', outline: 'none',
+                    resize: 'none', boxSizing: 'border-box',
+                    caretColor: '#e6edf3',
+                  }}
+                />
+
+                {/* Status bar */}
+                <div style={{
+                  display: 'flex', alignItems: 'center',
+                  background: '#161b22', borderTop: '1px solid #30363d',
+                  padding: '4px 14px', flexShrink: 0, gap: 16,
+                }}>
+                  <span style={{ fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 10, color: '#6e7681' }}>
+                    {lineCount} lines
+                  </span>
+                  <span style={{ fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 10, color: '#6e7681' }}>
+                    HCL
+                  </span>
+                  <span style={{ marginLeft: 'auto', fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 10, color: '#6e7681' }}>
+                    Simulated · connect real AWS/GitHub credentials to execute
+                  </span>
+                </div>
+
+                {/* Action bar */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: '#010409', borderTop: '1px solid #30363d',
+                  padding: '10px 14px', flexShrink: 0,
+                }}>
+                  <ActionButton label="Test Connection" icon="⚡" status={testStatus}  onClick={handleTest}  />
+                  <ActionButton label="Push to Git"     icon="↑"  status={gitStatus}   onClick={handleGit}   />
+                  <ActionButton label="Apply IaC"       icon="▶"  status={applyStatus} onClick={handleApply} />
+                  {(testStatus === 'ok' || gitStatus === 'ok' || applyStatus === 'ok') && (
+                    <button
+                      onClick={() => { setTestStatus('idle'); setGitStatus('idle'); setApplyStatus('idle'); setActionLog([]); }}
+                      style={{ marginLeft: 8, padding: '5px 10px', borderRadius: 5, background: 'transparent', border: '1px solid #30363d', color: '#6e7681', cursor: 'pointer', fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 10 }}
+                    >
+                      clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Log panel */}
+                {actionLog.length > 0 && (
+                  <div style={{
+                    background: '#010409', borderTop: '1px solid #21262d',
+                    padding: '10px 16px', maxHeight: 160, overflowY: 'auto',
+                    fontFamily: '"JetBrains Mono", Consolas, monospace',
+                    fontSize: 11, lineHeight: 1.7, flexShrink: 0,
+                  }}>
+                    {actionLog.map((line, i) => (
+                      <div key={i} style={{
+                        color: line.startsWith('✓') ? '#3fb950'
+                             : line.startsWith('$') ? '#79c0ff'
+                             : line.startsWith('{') || line.startsWith('}') ? '#d2a8ff'
+                             : '#8b949e',
+                      }}>
+                        {line || ' '}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}

@@ -12,6 +12,7 @@ export default authkitMiddleware({
       "/home",
       "/algorithmlab",
       "/biodesign",
+      "/invest",
       "/api/push/(.*)",
     ],
   },

@@ -89,6 +89,7 @@ export interface StandardCompliance {
 export interface ComplyState {
   profile: DeviceProfile;
   compliance: Record<string, StandardCompliance>;
+  certifications: string[];
 }
 export type NeedStatus = 'draft' | 'refined' | 'validated' | 'selected';
 export type ConceptStatus = 'idea' | 'screening' | 'development' | 'selected' | 'eliminated';
@@ -214,6 +215,44 @@ export interface BusinessModel {
   competitiveAdvantage: string;
 }
 
+// ── IP Portfolio ──────────────────────────────────────────────────────────────
+
+export type IPFilingType = 'provisional' | 'utility' | 'pct' | 'trademark' | 'copyright' | 'trade-secret';
+
+export type IPFilingStatus =
+  | 'planned' | 'drafted' | 'filed' | 'pending'
+  | 'published' | 'allowed' | 'granted' | 'registered'
+  | 'abandoned' | 'expired';
+
+export interface IPDeadline {
+  id: string;
+  label: string;
+  date: string;
+  done: boolean;
+}
+
+export interface IPFiling {
+  id: string;
+  type: IPFilingType;
+  title: string;
+  description: string;
+  filingDate: string;
+  applicationNumber: string;
+  registrationNumber: string;
+  inventors: string;
+  attorney: string;
+  status: IPFilingStatus;
+  relatedFilingId: string | null;
+  jurisdictions: string[];
+  niceClasses: string;
+  markType: string;
+  workType: string;
+  deadlines: IPDeadline[];
+  document?: Record<string, string>;
+  notes: string;
+  createdAt: string;
+}
+
 // ── Root state ────────────────────────────────────────────────────────────────
 
 export interface BiodesignState {
@@ -229,6 +268,7 @@ export interface BiodesignState {
   clinical: ClinicalPlan;
   business: BusinessModel;
   comply: ComplyState;
+  ipFilings: IPFiling[];
 }
 
 export const DEFAULT_STATE: BiodesignState = {
@@ -283,7 +323,9 @@ export const DEFAULT_STATE: BiodesignState = {
   comply: {
     profile: DEFAULT_DEVICE_PROFILE,
     compliance: {},
+    certifications: [],
   },
+  ipFilings: [],
 };
 
 export function needScore(n: NeedStatement): number | null {
