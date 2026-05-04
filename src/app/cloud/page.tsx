@@ -18,7 +18,10 @@ const SERVICES = [
   { id: 'admin-cli',  tag: 'CLI',          label: 'Admin CLI',       path: 'services/admin-cli/',   tests: 28,   desc: 'Operator CLI for device provisioning — mints tenant X.509 certs and registers rooms in DynamoDB.', tf: false, lambdaFn: null },
   { id: 'url-minter', tag: 'Upload',       label: 'URL Minter',      path: 'services/url-minter/',  tests: null, desc: 'Presigned S3 upload URLs for device Parquet batches — eliminates MQTT overhead for analytic cold-path data.', tf: true,  lambdaFn: 'ambient-dev-url-minter' },
   { id: 'athena',     tag: 'Analytics',    label: 'Athena',          path: 'services/athena/',      tests: null, desc: 'Glue table and partition projection for raw radar frames on the cold path — queryable without ETL.', tf: true,  lambdaFn: null },
-  { id: 'cloudtrail', tag: 'Audit',        label: 'CloudTrail',      path: 'services/cloudtrail/',  tests: null, desc: 'Data-event audit logging on all sensitive DynamoDB tables — every read/write attributed for HIPAA compliance.', tf: true,  lambdaFn: null },
+  { id: 'cloudtrail',    tag: 'Audit',      label: 'CloudTrail',      path: 'services/cloudtrail/',    tests: null, desc: 'Data-event audit logging on all sensitive DynamoDB tables — every read/write attributed for HIPAA compliance.', tf: true,  lambdaFn: null },
+  { id: 'iot-core',     tag: 'IoT',        label: 'IoT Core',        path: 'services/iot-core/',      tests: null, desc: 'Role alias (temp AWS creds for devices via mTLS), Device Shadow, and IoT Rules for fall-enricher and legacy Firehose paths.', tf: true,  lambdaFn: null },
+  { id: 'kms',          tag: 'Security',   label: 'KMS',             path: 'services/kms/',           tests: null, desc: 'Tenant CMK with 30-day deletion window, automatic annual rotation, and scoped key policy for DynamoDB, S3, SNS, and SQS.', tf: true,  lambdaFn: null },
+  { id: 'observability',tag: 'Monitoring', label: 'Observability',   path: 'services/observability/', tests: null, desc: 'CloudWatch Metric Streams to central account — scalar metrics only (Lambda, DynamoDB, Ambient/* namespace). No PHI crosses the boundary.', tf: true,  lambdaFn: null },
 ];
 
 const PATHS = [
@@ -114,6 +117,26 @@ resource "aws_lambda_function" "ella" {
       BEDROCK_MODEL    = "us.anthropic.claude-sonnet-4-5-20251001-v1:0"
     }
   }
+}
+
+resource "aws_cloudwatch_event_rule" "ella_trigger" {
+  name                = "\${local.name}-trigger"
+  description         = "Trigger Ella narrative generation twice daily"
+  schedule_expression = "cron(0 7,19 * * ? *)"
+}
+
+resource "aws_cloudwatch_event_target" "ella_lambda" {
+  rule      = aws_cloudwatch_event_rule.ella_trigger.name
+  target_id = "EllaLambda"
+  arn       = aws_lambda_function.ella.arn
+}
+
+resource "aws_lambda_permission" "eventbridge" {
+  statement_id  = "AllowEventBridgeInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.ella.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.ella_trigger.arn
 }
 
 output "lambda_name"   { value = aws_lambda_function.ella.function_name }
@@ -477,9 +500,47 @@ resource "aws_glue_catalog_table" "radar_frames" {
   }
 }
 
+resource "aws_lambda_function" "reconciler" {
+  function_name = "\${local.name}-reconciler"
+  role          = aws_iam_role.reconciler.arn
+  runtime       = "python3.12"
+  handler       = "handler.lambda_handler"
+  timeout       = 300
+  memory_size   = 256
+
+  environment {
+    variables = {
+      ATHENA_DATABASE  = aws_glue_catalog_database.telemetry.name
+      ATHENA_WORKGROUP = aws_athena_workgroup.main.name
+      ATHENA_OUTPUT    = "s3://\${aws_s3_bucket.results.bucket}/reconciler/"
+      METRIC_NAMESPACE = "Ambient/Telemetry"
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "reconciler" {
+  name                = "\${local.name}-reconciler"
+  schedule_expression = "rate(15 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "reconciler" {
+  rule      = aws_cloudwatch_event_rule.reconciler.name
+  target_id = "ReconcilerLambda"
+  arn       = aws_lambda_function.reconciler.arn
+}
+
+resource "aws_lambda_permission" "reconciler_eventbridge" {
+  statement_id  = "AllowEventBridgeInvokeReconciler"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.reconciler.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.reconciler.arn
+}
+
 output "glue_database"        { value = aws_glue_catalog_database.telemetry.name }
 output "athena_workgroup"     { value = aws_athena_workgroup.main.name }
-output "athena_results_bucket"{ value = aws_s3_bucket.results.bucket }`,
+output "athena_results_bucket"{ value = aws_s3_bucket.results.bucket }
+output "reconciler_function"  { value = aws_lambda_function.reconciler.function_name }`,
     'backend.tf':
 `terraform {
   backend "s3" {
@@ -559,6 +620,253 @@ update_table_arn = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-dev-ella
 alert_table_arn  = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-prod-telemetry-alerts"
 update_table_arn = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-prod-ella-updates"`,
   },
+
+  'iot-core': {
+    'main.tf':
+`locals {
+  name_prefix = "ambient-\${var.environment}"
+}
+
+variable "environment"              { type = string }
+variable "fall_enricher_lambda_arn" { type = string }
+variable "firehose_stream_name"     { type = string }
+
+data "aws_iam_policy_document" "device_trust" {
+  statement {
+    principals { type = "Service"; identifiers = ["credentials.iot.amazonaws.com"] }
+    actions    = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "device" {
+  name               = "\${local.name_prefix}-iot-device-role"
+  assume_role_policy = data.aws_iam_policy_document.device_trust.json
+}
+
+resource "aws_iot_role_alias" "device" {
+  alias             = "\${local.name_prefix}-device-alias"
+  role_arn          = aws_iam_role.device.arn
+  credential_duration_seconds = 3600
+}
+
+resource "aws_iot_thing_type" "ambient_device" {
+  name = "\${local.name_prefix}-ambient-device"
+}
+
+resource "aws_iot_topic_rule" "fall_enricher" {
+  name        = "\${replace(local.name_prefix, "-", "_")}_fall_enricher"
+  enabled     = true
+  sql         = "SELECT *, topic(3) AS device_id FROM 'ambient/+/fall'"
+  sql_version = "2016-03-23"
+
+  lambda {
+    function_arn = var.fall_enricher_lambda_arn
+  }
+
+  error_action {
+    cloudwatch_logs {
+      log_group_name = "/aws/iot/\${local.name_prefix}-fall-enricher-errors"
+      role_arn       = aws_iam_role.iot_logging.arn
+    }
+  }
+}
+
+resource "aws_iot_topic_rule" "telemetry_legacy" {
+  name        = "\${replace(local.name_prefix, "-", "_")}_telemetry_legacy"
+  enabled     = true
+  sql         = "SELECT * FROM 'ambient/+/telemetry'"
+  sql_version = "2016-03-23"
+
+  firehose {
+    delivery_stream_name = var.firehose_stream_name
+    role_arn             = aws_iam_role.iot_firehose.arn
+    batch_mode           = true
+  }
+}
+
+output "role_alias_name" { value = aws_iot_role_alias.device.alias }
+output "role_alias_arn"  { value = aws_iot_role_alias.device.arn }`,
+    'backend.tf':
+`terraform {
+  backend "s3" {
+    key     = "services/iot-core/terraform.tfstate"
+    encrypt = true
+  }
+}`,
+    'dev.tfvars':
+`environment              = "dev"
+fall_enricher_lambda_arn = "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:ambient-dev-telemetry-fall-enricher"
+firehose_stream_name     = "ambient-dev-telemetry-stream"`,
+    'prod.tfvars':
+`environment              = "prod"
+fall_enricher_lambda_arn = "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:ambient-prod-telemetry-fall-enricher"
+firehose_stream_name     = "ambient-prod-telemetry-stream"`,
+  },
+
+  kms: {
+    'main.tf':
+`locals {
+  name = "ambient-\${var.environment}"
+}
+
+variable "environment"    { type = string }
+variable "admin_role_arn" { type = string }
+
+data "aws_caller_identity" "current" {}
+
+resource "aws_kms_key" "tenant_cmk" {
+  description             = "Ambient \${var.environment} tenant CMK — SSE for DynamoDB, S3, SNS, SQS"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  multi_region            = false
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "RootFullAccess"
+        Effect    = "Allow"
+        Principal = { AWS = "arn:aws:iam::\${data.aws_caller_identity.current.account_id}:root" }
+        Action    = "kms:*"
+        Resource  = "*"
+      },
+      {
+        Sid    = "AllowServicePrincipals"
+        Effect = "Allow"
+        Principal = {
+          Service = [
+            "dynamodb.amazonaws.com",
+            "s3.amazonaws.com",
+            "sns.amazonaws.com",
+            "sqs.amazonaws.com",
+          ]
+        }
+        Action   = ["kms:GenerateDataKey*", "kms:Decrypt", "kms:DescribeKey"]
+        Resource = "*"
+      },
+      {
+        Sid       = "AllowKeyAdmin"
+        Effect    = "Allow"
+        Principal = { AWS = var.admin_role_arn }
+        Action    = [
+          "kms:Create*", "kms:Describe*", "kms:Enable*", "kms:List*",
+          "kms:Put*", "kms:Update*", "kms:Revoke*", "kms:Disable*",
+          "kms:Get*", "kms:Delete*", "kms:ScheduleKeyDeletion", "kms:CancelKeyDeletion",
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = { Environment = var.environment, HIPAA = "true", ManagedBy = "terraform" }
+}
+
+resource "aws_kms_alias" "tenant_cmk" {
+  name          = "alias/\${local.name}-tenant-cmk"
+  target_key_id = aws_kms_key.tenant_cmk.key_id
+}
+
+output "kms_key_arn"   { value = aws_kms_key.tenant_cmk.arn }
+output "kms_key_alias" { value = aws_kms_alias.tenant_cmk.name }
+output "kms_key_id"    { value = aws_kms_key.tenant_cmk.key_id }`,
+    'backend.tf':
+`terraform {
+  backend "s3" {
+    key     = "services/kms/terraform.tfstate"
+    encrypt = true
+  }
+}`,
+    'dev.tfvars':
+`environment    = "dev"
+admin_role_arn = "arn:aws:iam::ACCOUNT_ID:role/ambient-dev-admin"`,
+    'prod.tfvars':
+`environment    = "prod"
+admin_role_arn = "arn:aws:iam::ACCOUNT_ID:role/ambient-prod-admin"`,
+  },
+
+  observability: {
+    'main.tf':
+`locals {
+  name = "ambient-\${var.environment}-observability"
+}
+
+variable "environment"        { type = string }
+variable "central_account_id" { type = string }
+
+resource "aws_iam_role" "metric_stream" {
+  name = "\${local.name}-metric-stream-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "streams.metrics.cloudwatch.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "metric_stream" {
+  role = aws_iam_role.metric_stream.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["firehose:PutRecord", "firehose:PutRecordBatch"]
+      Resource = aws_kinesis_firehose_delivery_stream.metrics.arn
+    }]
+  })
+}
+
+resource "aws_kinesis_firehose_delivery_stream" "metrics" {
+  name        = "\${local.name}-metrics"
+  destination = "extended_s3"
+
+  extended_s3_configuration {
+    role_arn            = aws_iam_role.metric_stream.arn
+    bucket_arn          = "arn:aws:s3:::ambient-central-metrics-\${var.central_account_id}"
+    prefix              = "\${var.environment}/metrics/date=!{timestamp:yyyy-MM-dd}/"
+    buffering_interval  = 60
+    buffering_size      = 1
+    compression_format  = "GZIP"
+  }
+}
+
+resource "aws_cloudwatch_metric_stream" "main" {
+  name          = "\${local.name}-stream"
+  role_arn      = aws_iam_role.metric_stream.arn
+  firehose_arn  = aws_kinesis_firehose_delivery_stream.metrics.arn
+  output_format = "json"
+
+  include_filter {
+    namespace    = "AWS/Lambda"
+    metric_names = ["Duration", "Errors", "Invocations", "Throttles"]
+  }
+  include_filter {
+    namespace    = "AWS/DynamoDB"
+    metric_names = ["ConsumedReadCapacityUnits", "ConsumedWriteCapacityUnits", "SystemErrors"]
+  }
+  include_filter {
+    namespace    = "Ambient/Telemetry"
+    metric_names = ["TelemetryDivergence", "FallAlertsEmitted", "UrlsIssued"]
+  }
+}
+
+output "metric_stream_arn"  { value = aws_cloudwatch_metric_stream.main.arn }
+output "firehose_stream_arn"{ value = aws_kinesis_firehose_delivery_stream.metrics.arn }`,
+    'backend.tf':
+`terraform {
+  backend "s3" {
+    key     = "services/observability/terraform.tfstate"
+    encrypt = true
+  }
+}`,
+    'dev.tfvars':
+`environment        = "dev"
+central_account_id = "CENTRAL_ACCOUNT_ID"`,
+    'prod.tfvars':
+`environment        = "prod"
+central_account_id = "CENTRAL_ACCOUNT_ID"`,
+  },
 };
 
 // ── Diagram primitives ────────────────────────────────────────────────────────
@@ -600,13 +908,23 @@ function Row({ children }: { children: React.ReactNode }) {
   return <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{children}</div>;
 }
 
-function Group({ label, type, children, note }: { label: string; type: string; children: React.ReactNode; note?: string }) {
+function Group({ label, type, children, note, iac, docs }: { label: string; type: string; children: React.ReactNode; note?: string; iac?: string; docs?: string }) {
   const s = TYPE_STYLE[type] ?? TYPE_STYLE.device;
   return (
     <div style={{ border: `1px solid ${s.border}`, borderRadius: 8, overflow: 'hidden' }}>
       <div style={{ padding: '4px 12px', background: s.bg, borderBottom: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: s.labelColor, fontWeight: 600 }}>{label}</span>
         {note && <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', letterSpacing: '0.06em' }}>{note}</span>}
+        {iac && (
+          <span style={{ marginLeft: docs ? undefined : 'auto', fontFamily: 'var(--mono)', fontSize: 8.5, color: '#3fb950', background: 'rgba(35,134,54,0.12)', border: '1px solid rgba(35,134,54,0.25)', borderRadius: 3, padding: '1px 6px', letterSpacing: '0.06em', flexShrink: 0 }}>
+            tf · {iac}
+          </span>
+        )}
+        {docs && (
+          <a href={docs} target="_blank" rel="noreferrer" style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 8.5, color: s.labelColor, background: s.bg, border: `1px solid ${s.border}`, borderRadius: 3, padding: '1px 6px', letterSpacing: '0.06em', textDecoration: 'none', flexShrink: 0, opacity: 0.85 }}>
+            setup guide ↗
+          </a>
+        )}
       </div>
       <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
     </div>
@@ -630,7 +948,7 @@ function ArchDiagram() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-        <Group label="Factory & Control Plane" type="factory" note="separate AWS account">
+        <Group label="Factory & Control Plane" type="factory" note="separate AWS account" docs="https://github.com/ambientintel/ambientcloud/blob/main/docs/control-plane-setup.md">
           <Row><Node label="Fleet Provisioning" sub="bootstrap cert → tenant cert" type="factory" /></Row>
           <Row><Node label="Tenant Registry" sub="DDB + CloudTrail" type="factory" /></Row>
         </Group>
@@ -638,7 +956,7 @@ function ArchDiagram() {
           <Row><Node label="mmWave Radar" sub="IWR6843AOP on AM62x" type="device" /></Row>
           <Row><Node label="ambientapp agent" sub="WAL + spool · 5-min Parquet" type="device" /></Row>
         </Group>
-        <Group label="AWS IoT Core" type="iot" note="mTLS · X.509">
+        <Group label="AWS IoT Core" type="iot" note="mTLS · X.509" iac="iot-core">
           <Row><Node label="Credentials Provider" sub="role alias → temp AWS creds" type="iot" /></Row>
           <Row><Node label="Device Shadow" sub="facility / subject / room / zone" type="iot" /></Row>
           <Row><Node label="IoT Rule: fall-enricher" sub="Basic Ingest · QoS 1" type="iot" /></Row>
@@ -646,7 +964,7 @@ function ArchDiagram() {
         </Group>
       </div>
 
-      <Group label="Hot path — fall alerts" type="hot" note="< 2s latency budget">
+      <Group label="Hot path — fall alerts" type="hot" note="< 2s latency budget" iac="telemetry">
         <Row>
           <Node label="Device" sub="MQTT QoS 1" type="device" />
           <Arr />
@@ -663,7 +981,7 @@ function ArchDiagram() {
       </Group>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Group label="Cold path (new) — device-side Parquet" type="coldnew">
+        <Group label="Cold path (new) — device-side Parquet" type="coldnew" iac="url-minter">
           <Row>
             <Node label="Device" sub="5-min batch · ZSTD" type="device" />
             <Arr />
@@ -672,7 +990,7 @@ function ArchDiagram() {
             <Node label="S3" sub="raw-device/date=/facility=/" type="coldnew" />
           </Row>
         </Group>
-        <Group label="Cold path (legacy) — retiring" type="coldold">
+        <Group label="Cold path (legacy) — retiring" type="coldold" iac="iot-core · telemetry">
           <Row>
             <Node label="Device" sub="MQTT QoS 0" type="device" dashed />
             <Arr dashed />
@@ -685,7 +1003,7 @@ function ArchDiagram() {
         </Group>
       </div>
 
-      <Group label="Cold path — shared query layer" type="query">
+      <Group label="Cold path — shared query layer" type="query" iac="athena">
         <Row>
           <Node label="S3 (new + legacy)" type="coldnew" />
           <Arr />
@@ -701,7 +1019,7 @@ function ArchDiagram() {
         </Row>
       </Group>
 
-      <Group label="Narrative path — Ella" type="narrative" note="12h cadence · 7am + 7pm">
+      <Group label="Narrative path — Ella" type="narrative" note="12h cadence · 7am + 7pm" iac="ella">
         <Row>
           <Node label="EventBridge" sub="cron: 7am + 7pm" type="narrative" />
           <Arr />
@@ -715,7 +1033,7 @@ function ArchDiagram() {
         </Row>
       </Group>
 
-      <Group label="Nurse / Admin API" type="api" note="12 endpoints · row-level facility scope">
+      <Group label="Nurse / Admin API" type="api" note="12 endpoints · row-level facility scope" iac="api">
         <Row>
           <Node label="Staff" sub="login + JWT" type="hot" />
           <Arr />
@@ -730,7 +1048,7 @@ function ArchDiagram() {
       </Group>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Group label="Audit & Governance" type="audit">
+        <Group label="Audit & Governance" type="audit" iac="cloudtrail · kms">
           <Row>
             <Node label="CloudTrail" sub="multi-region · 7-year Glacier" type="audit" />
             <Arr />
@@ -747,7 +1065,7 @@ function ArchDiagram() {
             <Node label="devices DDB + Shadow" type="audit" />
           </Row>
         </Group>
-        <Group label="Central Observability" type="obs" note="metrics only · no PHI">
+        <Group label="Central Observability" type="obs" note="metrics only · no PHI" iac="observability">
           <Row>
             <Node label="Reconciler" sub="TelemetryDivergence" type="query" />
             <Arr />
@@ -918,6 +1236,28 @@ export default function CloudPage() {
               {item.label}
             </button>
           ))}
+        </div>
+
+        <div className="nav-section">
+          <p className="nav-label">Resources</p>
+          <a
+            href="https://github.com/ambientintel/ambientcloud/blob/main/docs/control-plane-setup.md"
+            target="_blank"
+            rel="noreferrer"
+            className="nav-item"
+            style={{ textDecoration: 'none' }}
+          >
+            Control Plane Setup ↗
+          </a>
+          <a
+            href="https://github.com/ambientintel/ambientcloud"
+            target="_blank"
+            rel="noreferrer"
+            className="nav-item"
+            style={{ textDecoration: 'none' }}
+          >
+            ambientcloud repo ↗
+          </a>
         </div>
 
         <div style={{ marginTop: 'auto' }}>
