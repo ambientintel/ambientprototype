@@ -2,7 +2,7 @@
 import { useState, useId, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
-  GameState, StrategyCard as StrategyCardType, Allocation, RoundResult, PositionResult,
+  GameState, StrategyCard as StrategyCardType, Allocation, RoundResult,
 } from "./_types";
 import {
   nextRegime, randomStartRegime, generateCards, simulateRound,
@@ -15,407 +15,435 @@ import "../moneymatrix.css";
 const sage = "#3DCC91";
 const red  = "#FF5A5A";
 const gold = "#FFB347";
-const bot  = "#C77DFF"; // bot purple
+const botC = "#C77DFF";
 
-// ── Animated balance counter ──────────────────────────────────────────────────
-function BalanceCounter({ value, color }: { value: number; color?: string }) {
+// ── Category short codes ──────────────────────────────────────────────────────
+const CAT_CODE: Record<string, string> = {
+  prediction: "PRED MKT", crypto: "CRYPTO", equity: "EQUITY",
+  quant: "ALGO", macro: "MACRO",
+};
+
+// ── Animated counter ──────────────────────────────────────────────────────────
+function Counter({ value, prefix = "$", decimals = 2 }: { value: number; prefix?: string; decimals?: number }) {
   const [display, setDisplay] = useState(value);
   const prev = useRef(value);
   useEffect(() => {
     if (value === prev.current) return;
-    const start = prev.current;
-    const t0 = performance.now();
-    const dur = 700;
+    const start = prev.current; const end = value; const t0 = performance.now(); const dur = 600;
     function tick(now: number) {
       const t = Math.min((now - t0) / dur, 1);
       const ease = 1 - Math.pow(1 - t, 3);
-      setDisplay(start + (start + (value - start) * ease - start) * 1 + start);
+      setDisplay(start + (end - start) * ease);
       if (t < 1) requestAnimationFrame(tick);
-      else { setDisplay(value); prev.current = value; }
+      else { setDisplay(end); prev.current = end; }
     }
     requestAnimationFrame(tick);
   }, [value]);
-  return (
-    <span style={color ? { color } : undefined}>
-      ${display.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-    </span>
-  );
+  return <>{prefix}{display.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}</>;
 }
 
-// ── Portfolio sparkline ───────────────────────────────────────────────────────
-function Sparkline({ history }: { history: RoundResult[] }) {
-  const uid = useId();
-  const pid = `sp-${uid}`;
-  const bid = `sb-${uid}`;
-  if (history.length < 2) return null;
-  const pts    = [STARTING_BALANCE, ...history.map(r => r.endBalance)];
-  const botPts = [STARTING_BALANCE, ...history.map(r => r.botEndBalance)];
-  const cap = Math.max(TARGET_BALANCE, ...pts, ...botPts) * 1.1;
-  const W = 400; const H = 60; const P = 4;
-  const toCoords = (vals: number[]) => vals.map((v, i) => [
-    P + (i / (vals.length - 1)) * (W - P * 2),
-    H - P - (v / cap) * (H - P * 2),
-  ]);
-  const path = (coords: number[][], close = false) => {
-    const d = coords.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-    if (!close) return d;
-    const [lx, ly] = coords[coords.length - 1];
-    const [fx] = coords[0];
-    return `${d} L${lx.toFixed(1)},${(H - P).toFixed(1)} L${fx.toFixed(1)},${(H - P).toFixed(1)} Z`;
-  };
-  const pCoords = toCoords(pts);
-  const bCoords = toCoords(botPts);
-  const tY = H - P - (TARGET_BALANCE / cap) * (H - P * 2);
+// ── Ambient network SVG (from landing page) ───────────────────────────────────
+function NetworkAmbient() {
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "100%", display: "block" }}>
-      <defs>
-        <linearGradient id={pid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={sage} stopOpacity="0.22" />
-          <stop offset="100%" stopColor={sage} stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id={bid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={bot} stopOpacity="0.14" />
-          <stop offset="100%" stopColor={bot} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <line x1={P} y1={tY} x2={W - P} y2={tY} stroke={gold} strokeWidth="1" strokeDasharray="3,3" opacity="0.35" />
-      <path d={path(bCoords, true)} fill={`url(#${bid})`} />
-      <path d={path(bCoords)} fill="none" stroke={bot} strokeWidth="1.5" strokeDasharray="4,3" strokeLinejoin="round" strokeLinecap="round" opacity="0.7" />
-      <path d={path(pCoords, true)} fill={`url(#${pid})`} />
-      <path d={path(pCoords)} fill="none" stroke={sage} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      {pCoords.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="2.5" fill={sage} />)}
+    <svg style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}
+      viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+      <style>{`
+        .gb { stroke: rgba(61,204,145,1); stroke-width: 0.5; fill: none; opacity: 0.04; }
+        .gl { stroke: rgba(61,204,145,1); stroke-width: 1.0; fill: none; stroke-dasharray: 16 700; }
+        .gl1 { animation: gf  9.0s linear infinite; opacity: 0.18; }
+        .gl2 { animation: gf 12.0s linear infinite; animation-delay:-5s; opacity: 0.14; }
+        .gl3 { animation: gf  8.0s linear infinite; animation-delay:-2s; opacity: 0.16; }
+        .gl4 { animation: gf 11.0s linear infinite; animation-delay:-7s; opacity: 0.12; }
+        .gl5 { animation: gf 10.0s linear infinite; animation-delay:-3s; opacity: 0.14; }
+        @keyframes gf { from { stroke-dashoffset: 716; } to { stroke-dashoffset: 0; } }
+        .gn { fill: rgba(61,204,145,1); opacity: 0.10; }
+      `}</style>
+      <line x1="180"  y1="720" x2="520"  y2="580" className="gb" />
+      <line x1="520"  y1="580" x2="380"  y2="420" className="gb" />
+      <line x1="380"  y1="420" x2="700"  y2="350" className="gb" />
+      <line x1="700"  y1="350" x2="980"  y2="480" className="gb" />
+      <line x1="980"  y1="480" x2="1200" y2="360" className="gb" />
+      <line x1="1200" y1="360" x2="1380" y2="480" className="gb" />
+      <line x1="700"  y1="350" x2="1200" y2="360" className="gb" />
+      <line x1="180"  y1="720" x2="520"  y2="580" className="gl gl1" />
+      <line x1="520"  y1="580" x2="380"  y2="420" className="gl gl2" />
+      <line x1="380"  y1="420" x2="700"  y2="350" className="gl gl3" />
+      <line x1="700"  y1="350" x2="980"  y2="480" className="gl gl4" />
+      <line x1="980"  y1="480" x2="1200" y2="360" className="gl gl5" />
+      <circle cx="380"  cy="420" r="2.5" className="gn" />
+      <circle cx="700"  cy="350" r="3"   className="gn" />
+      <circle cx="980"  cy="480" r="2.5" className="gn" />
+      <circle cx="1200" cy="360" r="3"   className="gn" />
     </svg>
   );
 }
 
-// ── Confidence bar ────────────────────────────────────────────────────────────
-function ConfidenceBar({ pct }: { pct: number }) {
-  const color = pct >= 80 ? sage : pct >= 60 ? "#7FFFB8" : pct >= 45 ? gold : "#FF9B9B";
+// ── Sparkline with bot curve ──────────────────────────────────────────────────
+function Sparkline({ history }: { history: RoundResult[] }) {
+  const uid = useId();
+  if (history.length < 2) return null;
+  const pts    = [STARTING_BALANCE, ...history.map(r => r.endBalance)];
+  const botPts = [STARTING_BALANCE, ...history.map(r => r.botEndBalance)];
+  const cap = Math.max(TARGET_BALANCE, ...pts, ...botPts) * 1.08;
+  const W = 480; const H = 56; const P = 6;
+  const toC = (vals: number[]) => vals.map((v, i) => [
+    P + (i / (vals.length - 1)) * (W - P * 2),
+    H - P - (v / cap) * (H - P * 2),
+  ]);
+  const pathD = (coords: number[][], close = false) => {
+    let d = coords.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    if (close) d += ` L${coords[coords.length-1][0].toFixed(1)},${(H-P).toFixed(1)} L${P},${(H-P).toFixed(1)} Z`;
+    return d;
+  };
+  const pC = toC(pts); const bC = toC(botPts);
+  const tY = H - P - (TARGET_BALANCE / cap) * (H - P * 2);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ flex: 1, height: 5, background: "var(--surface-3)", borderRadius: 99, overflow: "hidden" }}>
-        <div style={{
-          height: "100%", width: `${pct}%`, borderRadius: 99,
-          background: `linear-gradient(90deg, ${color}80, ${color})`,
-          boxShadow: pct >= 75 ? `0 0 8px ${color}60` : "none",
-        }} />
-      </div>
-      <span style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700, color, minWidth: 32, textAlign: "right" }}>{pct}%</span>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "100%", display: "block" }}>
+      <defs>
+        <linearGradient id={`pg-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={sage} stopOpacity="0.18" />
+          <stop offset="100%" stopColor={sage} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <line x1={P} y1={tY} x2={W-P} y2={tY} stroke={gold} strokeWidth="0.8" strokeDasharray="3,4" opacity="0.3" />
+      <path d={pathD(pC, true)} fill={`url(#pg-${uid})`} />
+      <path d={pathD(bC)} fill="none" stroke={botC} strokeWidth="1.2" strokeDasharray="4,3" opacity="0.55" />
+      <path d={pathD(pC)} fill="none" stroke={sage} strokeWidth="1.8" strokeLinejoin="round" />
+      {pC.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="2" fill={sage} />)}
+    </svg>
+  );
+}
+
+// ── Thin data bar ─────────────────────────────────────────────────────────────
+function DataBar({ pct, color = sage }: { pct: number; color?: string }) {
+  return (
+    <div style={{ height: 2, background: "rgba(255,255,255,0.06)", position: "relative" }}>
+      <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${Math.max(0, Math.min(100, pct))}%`, background: color, transition: "width 0.3s" }} />
     </div>
   );
 }
 
-// ── Kelly sizing bar ──────────────────────────────────────────────────────────
-// Shows: player input vs Kelly optimal on a single track.
-function KellySizingBar({ kellyAmt, playerAmt }: { kellyAmt: number; playerAmt: number }) {
-  if (kellyAmt <= 0) return null;
+// ── Kelly sizing indicator ────────────────────────────────────────────────────
+function KellyBar({ kellyAmt, playerAmt }: { kellyAmt: number; playerAmt: number }) {
+  if (kellyAmt <= 0 || playerAmt <= 0) return null;
   const ratio = playerAmt / kellyAmt;
-  const clampedRatio = Math.min(ratio, 2);
-  // bar width: Kelly = 50% of bar, 2x Kelly = 100%
-  const playerWidth = Math.min((clampedRatio / 2) * 100, 100);
-  const kellyPos = 50; // Kelly marker always at 50% of the bar
-  const isAtKelly  = ratio >= 0.85 && ratio <= 1.15;
-  const isOver     = ratio > 1.15;
-  const fillColor  = isAtKelly ? sage : isOver ? red : gold;
-
+  const pct = Math.min((ratio / 2) * 100, 100);
+  const color = ratio >= 0.85 && ratio <= 1.15 ? sage : ratio > 1.5 ? red : gold;
+  const label = ratio >= 0.85 && ratio <= 1.15 ? "AT KELLY" : ratio > 1.5 ? "OVERSIZED" : ratio < 0.5 ? "UNDERSIZED" : "NEAR KELLY";
   return (
-    <div style={{ marginTop: 6 }}>
-      <div style={{ position: "relative", height: 4, background: "var(--surface-3)", borderRadius: 99, overflow: "visible" }}>
-        {/* Player fill */}
-        <div style={{
-          position: "absolute", left: 0, top: 0, height: "100%",
-          width: `${playerWidth}%`, background: fillColor,
-          borderRadius: 99, transition: "width 0.2s, background 0.2s",
-          opacity: playerAmt > 0 ? 1 : 0,
-        }} />
-        {/* Kelly marker */}
-        <div style={{
-          position: "absolute", left: `${kellyPos}%`, top: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 2, height: 10, background: sage, borderRadius: 1,
-          boxShadow: `0 0 4px ${sage}`,
-        }} />
+    <div style={{ marginTop: 4 }}>
+      <div style={{ position: "relative", height: 2, background: "rgba(255,255,255,0.06)" }}>
+        <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: color, transition: "width 0.2s, background 0.2s" }} />
+        <div style={{ position: "absolute", left: "50%", top: -3, height: 8, width: 1, background: sage, opacity: 0.6 }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 8, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-          Under
-        </span>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 8, color: sage, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-          ↑ Kelly
-        </span>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 8, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-          Over-sized
-        </span>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 7.5, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.1em" }}>0</span>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 7.5, color: color, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</span>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 7.5, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.1em" }}>2×</span>
       </div>
-    </div>
-  );
-}
-
-// ── Return range display ──────────────────────────────────────────────────────
-function ReturnRange({ min, max, isBinary, payoutMultiplier }: {
-  min?: number; max?: number; isBinary?: boolean; payoutMultiplier?: number;
-}) {
-  if (isBinary) {
-    const win = Math.round(((payoutMultiplier ?? 1.9) - 1) * 100);
-    return (
-      <div style={{ display: "flex", gap: 8, fontFamily: "var(--mono)", fontSize: 10 }}>
-        <span style={{ padding: "2px 7px", background: "rgba(255,90,90,0.12)", borderRadius: 4, color: red }}>Loss: −100%</span>
-        <span style={{ padding: "2px 7px", background: "rgba(61,204,145,0.12)", borderRadius: 4, color: sage }}>Win: +{win}%</span>
-      </div>
-    );
-  }
-  return (
-    <div style={{ display: "flex", gap: 6, fontFamily: "var(--mono)", fontSize: 10, alignItems: "center" }}>
-      <span style={{ color: (min ?? 0) < 0 ? red : sage }}>{(min ?? 0) > 0 ? "+" : ""}{min ?? 0}%</span>
-      <span style={{ flex: 1, height: 2, background: "linear-gradient(90deg, rgba(255,90,90,0.5), rgba(61,204,145,0.5))", borderRadius: 99, display: "block" }} />
-      <span style={{ color: sage }}>+{max ?? 0}%</span>
     </div>
   );
 }
 
 // ── Strategy card ─────────────────────────────────────────────────────────────
-function StrategyCard({
-  card, amount, balance, onAmount, onKelly, onMax,
-}: {
-  card: StrategyCardType;
-  amount: string;
-  balance: number;
-  onAmount: (v: string) => void;
-  onKelly: () => void;
-  onMax: () => void;
+function StrategyCard({ card, amount, balance, onAmount, onKelly, onMax }: {
+  card: StrategyCardType; amount: string; balance: number;
+  onAmount: (v: string) => void; onKelly: () => void; onMax: () => void;
 }) {
   const amt = parseFloat(amount) || 0;
   const active = amt > 0;
   const disabled = balance < card.minCapital;
   const kellyAmt = card.kellyFraction * balance;
-  const riskColor = RISK_COLOR[card.riskTier] ?? gold;
   const hasKelly = card.kellyFraction > 0.01;
+  const riskColor = RISK_COLOR[card.riskTier] ?? gold;
+  const confColor = card.confidence >= 78 ? sage : card.confidence >= 58 ? gold : "var(--text-3)";
 
   return (
     <div style={{
-      background: active ? "var(--surface-2)" : "var(--surface-1)",
-      border: `1px solid ${card.isRecommended ? "rgba(61,204,145,0.55)" : active ? "rgba(61,204,145,0.25)" : "var(--line)"}`,
-      borderRadius: 16, padding: "18px 18px 16px",
-      display: "flex", flexDirection: "column", gap: 11,
-      opacity: disabled ? 0.4 : 1,
+      background: active ? "rgba(61,204,145,0.03)" : "rgba(255,255,255,0.02)",
+      border: `1px solid ${card.isRecommended ? "rgba(61,204,145,0.4)" : active ? "rgba(61,204,145,0.18)" : "rgba(255,255,255,0.07)"}`,
+      borderRadius: 2,
+      display: "flex", flexDirection: "column",
+      opacity: disabled ? 0.35 : 1,
       transition: "background 0.2s, border-color 0.2s",
-      boxShadow: card.isRecommended ? "0 0 28px rgba(61,204,145,0.14), 0 0 0 1px rgba(61,204,145,0.2)" : active ? "0 0 18px rgba(61,204,145,0.06)" : "none",
-      position: "relative",
+      boxShadow: card.isRecommended ? "0 0 40px rgba(61,204,145,0.08)" : "none",
+      overflow: "hidden",
     }}>
+
+      {/* Recommended stripe */}
       {card.isRecommended && (
-        <div style={{
-          position: "absolute", top: -1, right: 14,
-          background: sage, color: "#0C0D0F",
-          fontFamily: "var(--mono)", fontSize: 8.5, fontWeight: 700,
-          textTransform: "uppercase", letterSpacing: "0.12em",
-          padding: "3px 9px", borderRadius: "0 0 7px 7px",
-        }}>★ AI Pick</div>
+        <div style={{ height: 2, background: `linear-gradient(90deg, ${sage}, transparent)` }} />
       )}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.13em", color: "var(--text-4)", padding: "2px 7px", background: "var(--surface-3)", borderRadius: 4 }}>
-          {CATEGORY_LABEL[card.category]}
-        </span>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.1em", color: riskColor }}>
-          {RISK_LABEL[card.riskTier]}
-        </span>
-      </div>
+      {/* Card body */}
+      <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 26, lineHeight: 1 }}>{card.emoji}</span>
-        <span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.3, letterSpacing: "-0.01em" }}>{card.name}</span>
-      </div>
-
-      <div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-          <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-4)" }}>AI Confidence</span>
-        </div>
-        <ConfidenceBar pct={card.confidence} />
-      </div>
-
-      <p style={{ fontSize: 11.5, color: "var(--text-3)", lineHeight: 1.55, margin: 0, flex: 1 }}>
-        "{card.thesis}"
-      </p>
-
-      <ReturnRange min={card.minReturn} max={card.maxReturn} isBinary={card.isBinary} payoutMultiplier={card.payoutMultiplier} />
-
-      {/* Kelly optimal */}
-      {!disabled && hasKelly && (
-        <div style={{
-          padding: "8px 10px", background: "rgba(61,204,145,0.06)",
-          border: "1px solid rgba(61,204,145,0.18)", borderRadius: 8,
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.12em", color: sage }}>
-              Kelly Optimal
-            </span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700, color: sage }}>
-              ${kellyAmt.toFixed(2)} <span style={{ fontWeight: 400, color: "var(--text-4)", fontSize: 9 }}>({(card.kellyFraction * 100).toFixed(1)}%)</span>
-            </span>
-          </div>
-          {amt > 0 && <KellySizingBar kellyAmt={kellyAmt} playerAmt={amt} />}
-        </div>
-      )}
-      {!disabled && !hasKelly && (
-        <div style={{ padding: "6px 10px", background: "rgba(255,90,90,0.06)", border: "1px solid rgba(255,90,90,0.15)", borderRadius: 8 }}>
-          <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, color: red, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-            No Edge · Kelly = $0
+        {/* Top: category + risk */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--text-4)" }}>
+            {CAT_CODE[card.category]}
+          </span>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.12em", color: riskColor }}>
+            {RISK_LABEL[card.riskTier].toUpperCase()} RISK
           </span>
         </div>
-      )}
+
+        {/* Confidence + name */}
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+          {/* Confidence number */}
+          <div style={{ flexShrink: 0, width: 54 }}>
+            <div style={{
+              fontFamily: "var(--mono)", fontSize: 48, fontWeight: 700, lineHeight: 1,
+              letterSpacing: "-0.04em", color: confColor,
+            }}>
+              {card.confidence}
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 7.5, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--text-4)", marginTop: 4 }}>
+              SIGNAL
+            </div>
+            <div style={{ marginTop: 5 }}>
+              <DataBar pct={card.confidence} color={confColor} />
+            </div>
+          </div>
+          {/* Name block */}
+          <div style={{ flex: 1, paddingTop: 4 }}>
+            <div style={{
+              fontFamily: "var(--serif)", fontWeight: 600, fontSize: 18,
+              lineHeight: 1.25, letterSpacing: "-0.02em", marginBottom: 6,
+            }}>
+              {card.name}
+            </div>
+            {card.isRecommended && (
+              <div style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.14em", color: sage, marginBottom: 4 }}>
+                ● RECOMMENDED SIGNAL
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Thesis */}
+        <p style={{
+          fontSize: 11.5, color: "var(--text-4)", lineHeight: 1.6, margin: 0,
+          fontStyle: "italic", borderLeft: "2px solid rgba(255,255,255,0.07)",
+          paddingLeft: 10,
+        }}>
+          {card.thesis}
+        </p>
+
+        {/* Separator */}
+        <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+
+        {/* Range row */}
+        {card.isBinary ? (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--text-4)", marginBottom: 3 }}>OUTCOME</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 12, color: red }}>LOSS −100%</span>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, color: "var(--text-4)", alignSelf: "center" }}>·</span>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 12, color: sage }}>WIN +{Math.round(((card.payoutMultiplier ?? 1.9) - 1) * 100)}%</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--text-4)", marginBottom: 6 }}>RETURN RANGE</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: (card.minReturn ?? 0) < 0 ? red : sage, minWidth: 42 }}>
+                {(card.minReturn ?? 0) > 0 ? "+" : ""}{card.minReturn ?? 0}%
+              </span>
+              <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(255,90,90,0.4), rgba(61,204,145,0.4))" }} />
+              <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: sage, minWidth: 42, textAlign: "right" }}>
+                +{card.maxReturn ?? 0}%
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Kelly row */}
+        {!disabled && (
+          <div style={{
+            padding: "10px 12px",
+            background: hasKelly ? "rgba(61,204,145,0.04)" : "rgba(255,90,90,0.04)",
+            border: `1px solid ${hasKelly ? "rgba(61,204,145,0.12)" : "rgba(255,90,90,0.10)"}`,
+            borderRadius: 2,
+          }}>
+            {hasKelly ? (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.14em", color: sage }}>KELLY OPTIMAL</span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 13, fontWeight: 700, color: sage }}>${kellyAmt.toFixed(2)}</span>
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--text-4)" }}>{(card.kellyFraction * 100).toFixed(1)}%</span>
+                  </div>
+                </div>
+                {amt > 0 && <KellyBar kellyAmt={kellyAmt} playerAmt={amt} />}
+              </>
+            ) : (
+              <span style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.14em", color: red }}>
+                NO EDGE · KELLY = $0.00
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Separator */}
+      <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
 
       {/* Allocation input */}
       {!disabled ? (
-        <div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
-            <div style={{ position: "relative", flex: 1 }}>
-              <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontFamily: "var(--mono)", fontSize: 12, color: "var(--text-4)", pointerEvents: "none" }}>$</span>
-              <input
-                type="number" min="0" step="0.01" placeholder="0"
-                value={amount}
-                onChange={e => onAmount(e.target.value)}
-                style={{
-                  width: "100%", background: "var(--surface-3)", color: "var(--text)",
-                  border: `1px solid ${active ? "rgba(61,204,145,0.4)" : "var(--line-strong)"}`,
-                  borderRadius: 8, padding: "7px 8px 7px 22px",
-                  fontFamily: "var(--mono)", fontSize: 12, outline: "none", boxSizing: "border-box",
-                  boxShadow: active ? "0 0 0 2px rgba(61,204,145,0.12)" : "none",
-                  transition: "border-color 0.15s, box-shadow 0.15s",
-                }}
-              />
-            </div>
-            {hasKelly && (
-              <button onClick={onKelly} style={{
-                fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em",
-                color: sage, background: "rgba(61,204,145,0.1)", border: "1px solid rgba(61,204,145,0.3)",
-                borderRadius: 6, padding: "6px 8px", cursor: "pointer", whiteSpace: "nowrap",
-              }}>Kelly</button>
-            )}
-            <button onClick={onMax} style={{
-              fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em",
-              color: "var(--text-4)", background: "none", border: "none", cursor: "pointer", padding: "0 2px", whiteSpace: "nowrap",
-            }}>Max</button>
+        <div style={{ padding: "12px 20px", display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ flex: 1, position: "relative" }}>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontFamily: "var(--mono)", fontSize: 12, color: "var(--text-4)", pointerEvents: "none" }}>$</span>
+            <input
+              type="number" min="0" step="0.01" placeholder="0.00"
+              value={amount}
+              onChange={e => onAmount(e.target.value)}
+              style={{
+                width: "100%", background: "rgba(255,255,255,0.04)", color: "var(--text)",
+                border: `1px solid ${active ? "rgba(61,204,145,0.35)" : "rgba(255,255,255,0.08)"}`,
+                borderRadius: 2, padding: "8px 10px 8px 24px",
+                fontFamily: "var(--mono)", fontSize: 13, outline: "none", boxSizing: "border-box",
+                transition: "border-color 0.15s",
+              }}
+            />
           </div>
+          {hasKelly && (
+            <button onClick={onKelly} style={{
+              fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em",
+              color: sage, background: "rgba(61,204,145,0.08)", border: "1px solid rgba(61,204,145,0.25)",
+              borderRadius: 2, padding: "8px 10px", cursor: "pointer", whiteSpace: "nowrap",
+              transition: "background 0.15s",
+            }}>Kelly</button>
+          )}
+          <button onClick={onMax} style={{
+            fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em",
+            color: "var(--text-4)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 2, padding: "8px 10px", cursor: "pointer", whiteSpace: "nowrap",
+          }}>All</button>
         </div>
       ) : (
-        <p style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
-          Min ${card.minCapital}
-        </p>
+        <div style={{ padding: "12px 20px" }}>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-4)" }}>
+            MIN CAPITAL ${card.minCapital}
+          </span>
+        </div>
       )}
     </div>
   );
 }
 
 // ── Allocation phase ──────────────────────────────────────────────────────────
-function AllocationPhase({ game, onSimulate }: { game: GameState; onSimulate: (allocs: Allocation[]) => void }) {
+function AllocationPhase({ game, onSimulate }: { game: GameState; onSimulate: (a: Allocation[]) => void }) {
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const total = Object.values(amounts).reduce((s, v) => s + (parseFloat(v) || 0), 0);
   const remaining = Math.round((game.balance - total) * 100) / 100;
   const over = remaining < -0.01;
   const regimeColor = REGIME_COLOR[game.regime];
 
-  function setAmount(id: string, val: string) {
-    setAmounts(p => ({ ...p, [id]: val }));
-  }
-  function handleMaxFor(id: string) {
+  function setAmt(id: string, val: string) { setAmounts(p => ({ ...p, [id]: val })); }
+  function handleMax(id: string) {
     const others = Object.entries(amounts).filter(([k]) => k !== id).reduce((s, [, v]) => s + (parseFloat(v) || 0), 0);
     setAmounts(p => ({ ...p, [id]: String(Math.max(0, Math.round((game.balance - others) * 100) / 100)) }));
   }
-  function handleKellyFor(id: string, fraction: number) {
-    const kellyAmt = Math.min(game.balance, Math.round(fraction * game.balance * 100) / 100);
-    setAmounts(p => ({ ...p, [id]: String(kellyAmt) }));
+  function handleKelly(id: string, fraction: number) {
+    setAmounts(p => ({ ...p, [id]: String(Math.min(game.balance, Math.round(fraction * game.balance * 100) / 100)) }));
   }
   function submit() {
-    const allocs = game.cards
-      .map(c => ({ strategyId: c.id, amount: parseFloat(amounts[c.id] ?? "") || 0 }))
-      .filter(a => a.amount > 0);
+    const allocs = game.cards.map(c => ({ strategyId: c.id, amount: parseFloat(amounts[c.id] ?? "") || 0 })).filter(a => a.amount > 0);
     if (!allocs.length || over) return;
     onSimulate(allocs);
     setAmounts({});
   }
 
-  // Kelly total for footer guidance
-  const kellyTotal = game.cards.reduce((s, c) => s + Math.min(c.kellyFraction, 1) * game.balance, 0);
-  const kellyNorm = kellyTotal > game.balance ? game.balance : kellyTotal;
+  const kellyTotal = Math.min(game.balance, game.cards.reduce((s, c) => s + c.kellyFraction * game.balance, 0));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-      {/* Regime banner */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 16, padding: "16px 22px", background: `${regimeColor}0D`, border: `1px solid ${regimeColor}30`, borderRadius: 14 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: regimeColor, marginTop: 6, boxShadow: `0 0 8px ${regimeColor}`, flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <span style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: regimeColor }}>Market Regime</span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700, color: regimeColor }}>{REGIME_LABEL[game.regime]}</span>
-          </div>
-          <p style={{ fontSize: 12.5, color: "var(--text-3)", margin: 0, lineHeight: 1.5 }}>{REGIME_DESCRIPTION[game.regime]}</p>
+      {/* Regime strip */}
+      <div style={{ borderLeft: `3px solid ${regimeColor}`, paddingLeft: 20, paddingTop: 4, paddingBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 14, marginBottom: 4 }}>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.2em", color: regimeColor }}>
+            MARKET REGIME
+          </span>
+          <span style={{ fontFamily: "var(--serif)", fontStyle: "italic", fontSize: 22, fontWeight: 300, color: regimeColor, letterSpacing: "-0.01em" }}>
+            {REGIME_LABEL[game.regime]}
+          </span>
+          {game.aiTotal > 0 && (
+            <span style={{ marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-4)" }}>
+              AI ACCURACY <span style={{ color: sage, fontWeight: 700 }}>{Math.round((game.aiCorrect / game.aiTotal) * 100)}%</span>
+            </span>
+          )}
         </div>
-        {game.aiTotal > 0 && (
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-4)", margin: "0 0 2px" }}>AI Accuracy</p>
-            <p style={{ fontFamily: "var(--mono)", fontSize: 14, fontWeight: 700, color: sage, margin: 0 }}>
-              {Math.round((game.aiCorrect / game.aiTotal) * 100)}%
-              <span style={{ fontSize: 9, color: "var(--text-4)", fontWeight: 400 }}> ({game.aiCorrect}/{game.aiTotal})</span>
-            </p>
-          </div>
-        )}
+        <p style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: "var(--text-4)", margin: 0, lineHeight: 1.5 }}>
+          {REGIME_DESCRIPTION[game.regime]}
+        </p>
       </div>
 
-      <div>
-        <p style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--text-4)", margin: "0 0 5px" }}>Round {game.round} · Neural Net Analysis</p>
-        <h2 style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 26, letterSpacing: "-0.02em", margin: 0, lineHeight: 1.2 }}>
-          Pick your <em>positions</em>
-        </h2>
+      {/* Section header */}
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <div>
+          <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.2em", color: "var(--text-4)", margin: "0 0 6px" }}>
+            RND {String(game.round).padStart(2, "0")} · NEURAL SIGNAL ANALYSIS
+          </p>
+          <h2 style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 30, letterSpacing: "-0.03em", margin: 0 }}>
+            Position <em>Entry</em>
+          </h2>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--text-4)", margin: "0 0 2px" }}>CAPITAL AVAILABLE</p>
+          <p style={{ fontFamily: "var(--mono)", fontSize: 22, fontWeight: 700, margin: 0, color: sage }}>
+            ${game.balance.toFixed(2)}
+          </p>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+      {/* Strategy grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
         {game.cards.map(card => (
-          <StrategyCard
-            key={card.id}
-            card={card}
-            amount={amounts[card.id] ?? ""}
-            balance={game.balance}
-            onAmount={val => setAmount(card.id, val)}
-            onKelly={() => handleKellyFor(card.id, card.kellyFraction)}
-            onMax={() => handleMaxFor(card.id)}
+          <StrategyCard key={card.id} card={card} amount={amounts[card.id] ?? ""} balance={game.balance}
+            onAmount={v => setAmt(card.id, v)}
+            onKelly={() => handleKelly(card.id, card.kellyFraction)}
+            onMax={() => handleMax(card.id)}
           />
         ))}
       </div>
 
-      {/* Footer bar */}
+      {/* Order bar */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "16px 22px", background: "var(--surface-1)", border: "1px solid var(--line)", borderRadius: 12,
+        padding: "16px 24px", background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2,
         position: "sticky", bottom: 24,
-        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+        backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
       }}>
-        <div style={{ display: "flex", gap: 24 }}>
+        <div style={{ display: "flex", gap: 32 }}>
           {[
-            { label: "Allocated", val: `$${total.toFixed(2)}`, color: total > 0 ? "var(--text)" : "var(--text-4)" },
-            { label: "Available", val: `$${game.balance.toFixed(2)}`, color: sage },
-            { label: "Kelly Total", val: `$${kellyNorm.toFixed(2)}`, color: bot },
+            { label: "COMMITTED", val: `$${total.toFixed(2)}`, color: total > 0 ? "var(--text)" : "var(--text-4)" },
+            { label: "AVAILABLE", val: `$${game.balance.toFixed(2)}`, color: sage },
+            { label: "KELLY TOTAL", val: `$${kellyTotal.toFixed(2)}`, color: botC },
+            { label: "RESERVE", val: `$${remaining.toFixed(2)}`, color: over ? red : "var(--text-4)" },
           ].map(m => (
             <div key={m.label}>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.12em", margin: "0 0 2px" }}>{m.label}</p>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 14, fontWeight: 700, margin: 0, color: m.color }}>{m.val}</p>
+              <p style={{ fontFamily: "var(--mono)", fontSize: 7.5, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.16em", margin: "0 0 3px" }}>{m.label}</p>
+              <p style={{ fontFamily: "var(--mono)", fontSize: 15, fontWeight: 700, margin: 0, color: m.color }}>{m.val}</p>
             </div>
           ))}
         </div>
-        {over && <p style={{ fontFamily: "var(--mono)", fontSize: 11, color: red, margin: 0 }}>Over by ${(-remaining).toFixed(2)}</p>}
+        {over && <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: red, margin: 0, textTransform: "uppercase", letterSpacing: "0.1em" }}>OVER BY ${(-remaining).toFixed(2)}</p>}
         <button
-          onClick={submit}
-          disabled={total <= 0 || over}
+          onClick={submit} disabled={total <= 0 || over}
           style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            padding: "12px 30px", borderRadius: 999, border: "none",
+            padding: "12px 32px", borderRadius: 2, border: "none",
             cursor: total <= 0 || over ? "not-allowed" : "pointer",
-            background: total <= 0 || over ? "var(--surface-3)" : sage,
-            color: total <= 0 || over ? "var(--text-4)" : "#0C0D0F",
-            fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: "0.12em", transition: "all 0.15s",
+            background: total <= 0 || over ? "rgba(255,255,255,0.05)" : sage,
+            color: total <= 0 || over ? "var(--text-4)" : "#0A0B0D",
+            fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: "0.16em", transition: "all 0.15s",
           }}
-        >Run Simulation →</button>
+        >EXECUTE ORDER</button>
       </div>
     </div>
   );
@@ -427,176 +455,171 @@ function ResultsPhase({ round, game, won, broke, onContinue }: {
 }) {
   const pnl = round.totalProfit;
   const regimeColor = REGIME_COLOR[round.regime];
-  const playerAhead = round.endBalance >= round.botEndBalance;
-  const delta = Math.abs(game.balance - game.botBalance);
+
+  if (won) return (
+    <div style={{ padding: "60px 48px", textAlign: "center", border: "1px solid rgba(61,204,145,0.2)", borderRadius: 2, background: "rgba(61,204,145,0.03)" }}>
+      <p style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.24em", color: sage, margin: "0 0 16px" }}>
+        ACCOUNT TARGET REACHED · {round.round} ROUND{round.round !== 1 ? "S" : ""}
+      </p>
+      <p className="mm-shimmer-text" style={{ display: "block", fontSize: "clamp(56px,7vw,96px)", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 16px", lineHeight: 1 }}>
+        $1,000
+      </p>
+      <p style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 18, color: "var(--text-3)", margin: "0 0 8px" }}>
+        You turned $20 into ${round.endBalance.toFixed(2)}.
+      </p>
+      <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-4)", margin: "0 0 36px" }}>
+        KELLY BOT ENDED AT ${round.botEndBalance.toFixed(2)} · {game.balance >= game.botBalance ? "YOU BEAT THE BOT" : "BOT WON"}
+      </p>
+      <button onClick={onContinue} style={{ padding: "12px 40px", borderRadius: 2, border: `1px solid ${sage}`, background: "transparent", color: sage, fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", cursor: "pointer" }}>
+        NEW GAME
+      </button>
+    </div>
+  );
+
+  if (broke) return (
+    <div style={{ padding: "60px 48px", textAlign: "center", border: "1px solid rgba(255,90,90,0.2)", borderRadius: 2, background: "rgba(255,90,90,0.03)" }}>
+      <p style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.24em", color: red, margin: "0 0 16px" }}>
+        ACCOUNT LIQUIDATED · {round.round} ROUND{round.round !== 1 ? "S" : ""}
+      </p>
+      <p style={{ fontFamily: "var(--mono)", fontSize: 80, fontWeight: 700, letterSpacing: "-0.05em", color: red, margin: "0 0 16px", lineHeight: 1 }}>
+        $0.00
+      </p>
+      <p style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 16, color: "var(--text-4)", margin: "0 0 8px" }}>
+        Kelly bot ended at ${round.botEndBalance.toFixed(2)}.
+      </p>
+      <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-4)", margin: "0 0 36px" }}>
+        POOR POSITION SIZING IS HOW RETAIL LOSES. FOLLOW KELLY.
+      </p>
+      <button onClick={onContinue} style={{ padding: "12px 40px", borderRadius: 2, border: `1px solid ${red}`, background: "transparent", color: red, fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", cursor: "pointer" }}>
+        RETRY
+      </button>
+    </div>
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {won && (
-        <div style={{ padding: "40px 32px", background: "rgba(61,204,145,0.06)", border: "1px solid rgba(61,204,145,0.3)", borderRadius: 18, textAlign: "center" }}>
-          <div style={{ fontSize: 56, marginBottom: 14, filter: "drop-shadow(0 0 20px rgba(61,204,145,0.5))" }}>🎉</div>
-          <p className="mm-shimmer-text" style={{ fontSize: "clamp(36px,5vw,60px)", fontWeight: 800, letterSpacing: "-0.03em", display: "block", marginBottom: 10 }}>You hit $1,000!</p>
-          <p style={{ fontSize: 14, color: "var(--text-3)", margin: "0 0 6px" }}>$20 → ${round.endBalance.toFixed(2)} in {round.round} round{round.round !== 1 ? "s" : ""}</p>
-          <p style={{ fontSize: 13, color: "var(--text-4)", margin: "0 0 28px" }}>
-            You {playerAhead ? "beat" : "lost to"} the Kelly bot · Bot ended at ${round.botEndBalance.toFixed(2)}
-          </p>
-          <button onClick={onContinue} style={{ padding: "13px 36px", borderRadius: 999, border: "none", background: sage, color: "#0C0D0F", fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", cursor: "pointer" }}>Play Again →</button>
-        </div>
-      )}
-
-      {broke && !won && (
-        <div style={{ padding: "40px 32px", background: "rgba(255,90,90,0.06)", border: "1px solid rgba(255,90,90,0.3)", borderRadius: 18, textAlign: "center" }}>
-          <div style={{ fontSize: 56, marginBottom: 14 }}>💀</div>
-          <p style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 48, letterSpacing: "-0.03em", color: red, margin: "0 0 10px" }}>Liquidated.</p>
-          <p style={{ fontSize: 14, color: "var(--text-3)", margin: "0 0 4px" }}>You made it {round.round} round{round.round !== 1 ? "s" : ""}.</p>
-          <p style={{ fontSize: 13, color: "var(--text-4)", margin: "0 0 28px" }}>The Kelly bot ended at ${round.botEndBalance.toFixed(2)}.</p>
-          <button onClick={onContinue} style={{ padding: "13px 36px", borderRadius: 999, border: "none", background: red, color: "#fff", fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", cursor: "pointer" }}>Try Again →</button>
-        </div>
-      )}
-
-      {!won && !broke && (
-        <>
-          {/* Regime pill */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", background: `${regimeColor}0D`, border: `1px solid ${regimeColor}25`, borderRadius: 10 }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: regimeColor, boxShadow: `0 0 6px ${regimeColor}`, flexShrink: 0 }} />
-            <span style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.16em", color: regimeColor }}>{REGIME_LABEL[round.regime]}</span>
+      {/* Settlement header */}
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: regimeColor, boxShadow: `0 0 6px ${regimeColor}` }} />
+            <span style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.18em", color: regimeColor }}>{REGIME_LABEL[round.regime]}</span>
           </div>
+          <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.2em", color: "var(--text-4)", margin: "0 0 5px" }}>
+            RND {String(round.round).padStart(2, "0")} · SETTLEMENT
+          </p>
+          <h2 style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 28, letterSpacing: "-0.03em", margin: 0 }}>
+            Position <em>Breakdown</em>
+          </h2>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--text-4)", margin: "0 0 4px" }}>YOUR P&L</p>
+          <p style={{ fontFamily: "var(--mono)", fontSize: 36, fontWeight: 700, margin: 0, letterSpacing: "-0.04em", color: pnl >= 0 ? sage : red }}>
+            {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
+          </p>
+        </div>
+      </div>
 
-          {/* Header */}
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-            <div>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--text-4)", margin: "0 0 4px" }}>Round {round.round} · Results</p>
-              <h2 style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 26, letterSpacing: "-0.02em", margin: 0 }}>Position <em>Breakdown</em></h2>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-4)", margin: "0 0 3px" }}>Your P&L</p>
-              <p style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 32, letterSpacing: "-0.03em", margin: 0, color: pnl >= 0 ? sage : red }}>
-                {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
+      {/* Trade table */}
+      <div style={{ border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2, overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 110px 110px 80px", gap: 0, padding: "8px 20px", background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          {["STRATEGY", "CAPITAL", "RETURN", "P&L", "SIGNAL"].map((h, i) => (
+            <span key={h} style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--text-4)", textAlign: i > 0 ? "right" : "left" }}>{h}</span>
+          ))}
+        </div>
+        {/* Rows */}
+        {round.positions.map((pos, idx) => {
+          const prof = pos.profit >= 0;
+          const color = prof ? sage : red;
+          return (
+            <div key={pos.strategyId} style={{
+              display: "grid", gridTemplateColumns: "1fr 100px 110px 110px 80px",
+              gap: 0, padding: "14px 20px", alignItems: "center",
+              borderBottom: idx < round.positions.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+              background: prof ? "rgba(61,204,145,0.025)" : "rgba(255,90,90,0.025)",
+            }}>
+              <div>
+                <p style={{ fontFamily: "var(--serif)", fontSize: 14, fontWeight: 600, margin: "0 0 2px", letterSpacing: "-0.01em" }}>{pos.name}</p>
+                <p style={{ fontFamily: "var(--mono)", fontSize: 8, color: "var(--text-4)", margin: 0, textTransform: "uppercase", letterSpacing: "0.12em" }}>{CAT_CODE[pos.category]}</p>
+              </div>
+              <p style={{ textAlign: "right", fontFamily: "var(--mono)", fontSize: 12, margin: 0, color: "var(--text-3)" }}>${pos.amountInvested.toFixed(2)}</p>
+              {pos.isBinary ? (
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 2, background: pos.wasWin ? "rgba(61,204,145,0.12)" : "rgba(255,90,90,0.12)", color: pos.wasWin ? sage : red }}>
+                    {pos.wasWin ? "WIN" : "LOSS"}
+                  </span>
+                </div>
+              ) : (
+                <p style={{ textAlign: "right", fontFamily: "var(--mono)", fontSize: 13, fontWeight: 700, margin: 0, color }}>{pos.returnPct >= 0 ? "+" : ""}{pos.returnPct.toFixed(1)}%</p>
+              )}
+              <p style={{ textAlign: "right", fontFamily: "var(--mono)", fontSize: 13, fontWeight: 700, margin: 0, color }}>{pos.profit >= 0 ? "+" : ""}${pos.profit.toFixed(2)}</p>
+              <p style={{ textAlign: "right", fontFamily: "var(--mono)", fontSize: 8.5, margin: 0, textTransform: "uppercase", letterSpacing: "0.06em", color: pos.aiWasRight ? sage : "var(--text-4)" }}>
+                {pos.aiWasRight ? "✓ CORRECT" : "✗ WRONG"}
               </p>
             </div>
-          </div>
+          );
+        })}
+      </div>
 
-          {/* Table header */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 100px 80px", gap: 12, padding: "6px 18px", fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-4)" }}>
-            <span>Position</span><span style={{ textAlign: "right" }}>Invested</span><span style={{ textAlign: "right" }}>Return</span><span style={{ textAlign: "right" }}>P&L</span><span style={{ textAlign: "right" }}>AI</span>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {round.positions.map(pos => {
-              const prof = pos.profit >= 0;
-              const color = prof ? sage : red;
-              return (
-                <div key={pos.strategyId} style={{
-                  display: "grid", gridTemplateColumns: "1fr 90px 90px 100px 80px",
-                  gap: 12, padding: "14px 18px", borderRadius: 10, alignItems: "center",
-                  background: prof ? "rgba(61,204,145,0.04)" : "rgba(255,90,90,0.04)",
-                  border: `1px solid ${prof ? "rgba(61,204,145,0.14)" : "rgba(255,90,90,0.14)"}`,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 22 }}>{pos.emoji}</span>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 2px", lineHeight: 1 }}>{pos.name}</p>
-                      <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, color: "var(--text-4)", margin: 0, textTransform: "uppercase", letterSpacing: "0.1em" }}>{CATEGORY_LABEL[pos.category]}</p>
-                    </div>
-                  </div>
-                  <p style={{ textAlign: "right", fontFamily: "var(--mono)", fontSize: 12, margin: 0, color: "var(--text-3)" }}>${pos.amountInvested.toFixed(2)}</p>
-                  {pos.isBinary ? (
-                    <div style={{ textAlign: "right" }}>
-                      <span style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: pos.wasWin ? "rgba(61,204,145,0.15)" : "rgba(255,90,90,0.15)", color: pos.wasWin ? sage : red }}>
-                        {pos.wasWin ? "WIN" : "LOSS"}
-                      </span>
-                    </div>
-                  ) : (
-                    <p style={{ textAlign: "right", fontFamily: "var(--mono)", fontSize: 13, fontWeight: 700, margin: 0, color }}>{pos.returnPct >= 0 ? "+" : ""}{pos.returnPct.toFixed(1)}%</p>
-                  )}
-                  <p style={{ textAlign: "right", fontFamily: "var(--mono)", fontSize: 13, fontWeight: 700, margin: 0, color }}>{pos.profit >= 0 ? "+" : ""}${pos.profit.toFixed(2)}</p>
-                  <div style={{ textAlign: "right" }}>
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: pos.aiWasRight ? sage : "var(--text-4)" }}>
-                      {pos.aiWasRight ? "✓ Right" : "✗ Wrong"}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* You vs Bot */}
-          <div style={{ padding: "20px 24px", background: "var(--surface-1)", border: "1px solid var(--line)", borderRadius: 14 }}>
-            <p style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.16em", color: "var(--text-4)", margin: "0 0 14px" }}>
-              You vs Kelly Bot · This Round
+      {/* You vs Bot */}
+      <div style={{ border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2 }}>
+        <div style={{ padding: "10px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.2em", color: "var(--text-4)" }}>YOU VS KELLY BOT · ROUND {round.round}</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", padding: 0 }}>
+          {/* You */}
+          <div style={{ padding: "20px 24px" }}>
+            <p style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.18em", color: sage, margin: "0 0 8px" }}>YOUR POSITION</p>
+            <p style={{ fontFamily: "var(--mono)", fontSize: 32, fontWeight: 700, letterSpacing: "-0.04em", margin: "0 0 4px", color: pnl >= 0 ? sage : red }}>
+              {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 0, alignItems: "start" }}>
-              {/* You */}
-              <div>
-                <p style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: sage, margin: "0 0 4px" }}>You</p>
-                <p style={{ fontFamily: "var(--mono)", fontSize: 26, fontWeight: 700, margin: "0 0 4px", color: pnl >= 0 ? sage : red }}>
-                  {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
-                </p>
-                <p style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-4)", margin: 0 }}>
-                  Balance: ${round.endBalance.toFixed(2)}
-                </p>
-              </div>
-              {/* Divider */}
-              <div style={{ width: 1, background: "var(--line)", margin: "0 20px", alignSelf: "stretch" }} />
-              {/* Bot */}
-              <div>
-                <p style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: bot, margin: "0 0 4px" }}>Kelly Bot</p>
-                <p style={{ fontFamily: "var(--mono)", fontSize: 26, fontWeight: 700, margin: "0 0 4px", color: round.botProfit >= 0 ? bot : red }}>
-                  {round.botProfit >= 0 ? "+" : ""}${round.botProfit.toFixed(2)}
-                </p>
-                <p style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-4)", margin: 0 }}>
-                  Balance: ${round.botEndBalance.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            {/* Round verdict */}
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
-              {pnl > round.botProfit ? (
-                <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: sage, margin: 0 }}>
-                  ↑ You beat the bot by ${(pnl - round.botProfit).toFixed(2)} this round. Nice sizing.
-                </p>
-              ) : pnl < round.botProfit ? (
-                <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-4)", margin: 0 }}>
-                  Bot outperformed by ${(round.botProfit - pnl).toFixed(2)}. Kelly sizing was more precise.
-                </p>
-              ) : (
-                <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-4)", margin: 0 }}>
-                  Tied with the bot this round.
-                </p>
-              )}
-            </div>
+            <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-4)", margin: 0 }}>BALANCE ${round.endBalance.toFixed(2)}</p>
           </div>
-
-          {/* AI accuracy */}
-          {game.aiTotal > 0 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: "var(--surface-1)", border: "1px solid var(--line)", borderRadius: 10 }}>
-              <div>
-                <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--text-4)", margin: "0 0 6px" }}>Neural Net · Running Accuracy</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 120, height: 4, background: "var(--surface-3)", borderRadius: 99, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${Math.round((game.aiCorrect / game.aiTotal) * 100)}%`, background: `linear-gradient(90deg, ${sage}80, ${sage})`, borderRadius: 99 }} />
-                  </div>
-                  <span style={{ fontFamily: "var(--mono)", fontSize: 13, fontWeight: 700, color: sage }}>{Math.round((game.aiCorrect / game.aiTotal) * 100)}%</span>
-                  <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-4)" }}>{game.aiCorrect}/{game.aiTotal} calls correct</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Continue bar */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 22px", background: "var(--surface-1)", border: "1px solid var(--line)", borderRadius: 12 }}>
-            <div>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.12em", margin: "0 0 2px" }}>New Balance</p>
-              <p style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: 26, letterSpacing: "-0.02em", margin: 0 }}>${round.endBalance.toFixed(2)}</p>
-            </div>
-            <button onClick={onContinue} style={{ padding: "11px 28px", borderRadius: 999, border: "none", background: sage, color: "#0C0D0F", fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", cursor: "pointer" }}>
-              Round {round.round + 1} →
-            </button>
+          {/* Divider */}
+          <div style={{ background: "rgba(255,255,255,0.07)" }} />
+          {/* Bot */}
+          <div style={{ padding: "20px 24px" }}>
+            <p style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.18em", color: botC, margin: "0 0 8px" }}>KELLY BOT</p>
+            <p style={{ fontFamily: "var(--mono)", fontSize: 32, fontWeight: 700, letterSpacing: "-0.04em", margin: "0 0 4px", color: round.botProfit >= 0 ? botC : red }}>
+              {round.botProfit >= 0 ? "+" : ""}${round.botProfit.toFixed(2)}
+            </p>
+            <p style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-4)", margin: 0 }}>BALANCE ${round.botEndBalance.toFixed(2)}</p>
           </div>
-        </>
+        </div>
+        <div style={{ padding: "12px 24px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.01)" }}>
+          {pnl > round.botProfit
+            ? <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: sage }}>YOU OUTPERFORMED THE BOT BY ${(pnl - round.botProfit).toFixed(2)} THIS ROUND. DISCIPLINED SIZING.</span>
+            : pnl < round.botProfit
+              ? <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "var(--text-4)" }}>BOT OUTPERFORMED BY ${(round.botProfit - pnl).toFixed(2)}. KELLY CRITERION WOULD HAVE SIZED DIFFERENTLY.</span>
+              : <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "var(--text-4)" }}>MATCHED THE BOT THIS ROUND.</span>
+          }
+        </div>
+      </div>
+
+      {/* AI accuracy */}
+      {game.aiTotal > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "14px 20px", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2 }}>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.16em", color: "var(--text-4)" }}>NEURAL NET ACCURACY</span>
+          <div style={{ flex: 1, height: 2, background: "rgba(255,255,255,0.06)" }}>
+            <div style={{ height: "100%", width: `${Math.round((game.aiCorrect / game.aiTotal) * 100)}%`, background: sage }} />
+          </div>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 13, fontWeight: 700, color: sage }}>{Math.round((game.aiCorrect / game.aiTotal) * 100)}%</span>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--text-4)" }}>{game.aiCorrect}/{game.aiTotal}</span>
+        </div>
       )}
+
+      {/* Continue bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2 }}>
+        <div>
+          <p style={{ fontFamily: "var(--mono)", fontSize: 8, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.16em", margin: "0 0 3px" }}>NEW BALANCE</p>
+          <p style={{ fontFamily: "var(--mono)", fontSize: 22, fontWeight: 700, letterSpacing: "-0.03em", margin: 0 }}>${round.endBalance.toFixed(2)}</p>
+        </div>
+        <button onClick={onContinue} style={{ padding: "12px 32px", borderRadius: 2, border: `1px solid ${sage}`, background: "transparent", color: sage, fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", cursor: "pointer" }}>
+          ROUND {round.round + 1}
+        </button>
+      </div>
     </div>
   );
 }
@@ -612,16 +635,14 @@ function initGame(): GameState {
   };
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function GamePage() {
   const [game, setGame] = useState<GameState>(initGame);
   const [lastRound, setLastRound] = useState<RoundResult | null>(null);
   const [won, setWon] = useState(false);
   const [broke, setBroke] = useState(false);
 
-  const reset = useCallback(() => {
-    setGame(initGame()); setLastRound(null); setWon(false); setBroke(false);
-  }, []);
+  const reset = useCallback(() => { setGame(initGame()); setLastRound(null); setWon(false); setBroke(false); }, []);
 
   function handleSimulate(allocs: Allocation[]) {
     const result = simulateRound(game.round, game.regime, game.balance, game.botBalance, game.cards, allocs);
@@ -634,8 +655,7 @@ export default function GamePage() {
     setBroke(result.endBalance < 0.01);
     setGame(prev => ({
       ...prev, phase: "results",
-      balance: result.endBalance,
-      botBalance: result.botEndBalance,
+      balance: result.endBalance, botBalance: result.botEndBalance,
       history: [...prev.history, result],
       aiCorrect: prev.aiCorrect + (hasRec && aiRight ? 1 : 0),
       aiTotal: prev.aiTotal + (hasRec ? 1 : 0),
@@ -645,88 +665,84 @@ export default function GamePage() {
   function handleContinue() {
     if (won || broke) { reset(); return; }
     const newRegime = nextRegime(game.regime);
-    setGame(prev => ({
-      ...prev, phase: "allocate", round: prev.round + 1,
-      regime: newRegime, cards: generateCards(newRegime),
-    }));
+    setGame(prev => ({ ...prev, phase: "allocate", round: prev.round + 1, regime: newRegime, cards: generateCards(newRegime) }));
     setLastRound(null);
   }
 
-  const pct = Math.min((game.balance / TARGET_BALANCE) * 100, 100);
+  const pct    = Math.min((game.balance / TARGET_BALANCE) * 100, 100);
   const botPct = Math.min((game.botBalance / TARGET_BALANCE) * 100, 100);
-  const playerAhead = game.balance >= game.botBalance;
-  const delta = Math.abs(game.balance - game.botBalance);
+  const delta  = game.balance - game.botBalance;
 
   return (
-    <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "var(--sans)", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{
+      background: "var(--bg)", color: "var(--text)", fontFamily: "var(--sans)", minHeight: "100vh",
+      display: "flex", flexDirection: "column", position: "relative",
+      backgroundImage: "linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px)",
+      backgroundSize: "72px 72px",
+    }}>
+      <NetworkAmbient />
+
+      {/* Aurora orbs */}
+      <div style={{ position: "fixed", top: "15%", right: "8%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(61,204,145,0.055) 0%, transparent 70%)", filter: "blur(80px)", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "fixed", bottom: "20%", left: "5%", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(199,125,255,0.04) 0%, transparent 70%)", filter: "blur(60px)", pointerEvents: "none", zIndex: 0 }} />
 
       {/* HUD */}
-      <header style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(12,13,15,0.92)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: "1px solid var(--line)" }}>
-        <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 32px" }}>
-          <div style={{ display: "flex", alignItems: "center", padding: "12px 0 10px" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(10,11,13,0.94)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ maxWidth: 1120, margin: "0 auto", padding: "0 32px" }}>
+          <div style={{ display: "flex", alignItems: "center", padding: "11px 0 9px", gap: 0 }}>
+
             <Link href="/moneymatrix" style={{ textDecoration: "none", marginRight: "auto" }}>
               <span style={{ fontFamily: "var(--serif)", fontSize: 15, fontWeight: 400, letterSpacing: "-0.01em", color: "var(--text)" }}>
                 Money<em className="mm-shimmer-em">Matrix</em>
               </span>
             </Link>
 
-            <div style={{ textAlign: "center", padding: "0 20px", borderLeft: "1px solid var(--line)" }}>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.16em", color: "var(--text-4)", margin: "0 0 1px" }}>Round</p>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 15, fontWeight: 700, margin: 0 }}>{game.round}</p>
-            </div>
+            {[
+              { label: "ROUND", val: String(game.round).padStart(2, "0"), color: "var(--text)" },
+              { label: "YOU", val: null, color: sage },
+              { label: "KELLY BOT", val: null, color: botC },
+              { label: delta >= 0 ? "AHEAD" : "BEHIND", val: `${delta >= 0 ? "+" : "−"}$${Math.abs(delta).toFixed(2)}`, color: delta >= 0 ? sage : red },
+            ].map((item, i) => (
+              <div key={item.label} style={{ textAlign: "right", padding: "0 22px", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "var(--mono)", fontSize: 7.5, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--text-4)", margin: "0 0 2px" }}>{item.label}</p>
+                <p style={{ fontFamily: "var(--mono)", fontSize: 14, fontWeight: 700, margin: 0, color: item.color }}>
+                  {i === 1 ? <Counter value={game.balance} /> : i === 2 ? <Counter value={game.botBalance} /> : item.val}
+                </p>
+              </div>
+            ))}
 
-            <div style={{ textAlign: "center", padding: "0 20px", borderLeft: "1px solid var(--line)" }}>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.16em", color: "var(--text-4)", margin: "0 0 1px" }}>You</p>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 15, fontWeight: 700, margin: 0, color: sage }}>
-                <BalanceCounter value={game.balance} />
-              </p>
-            </div>
-
-            <div style={{ textAlign: "center", padding: "0 20px", borderLeft: "1px solid var(--line)" }}>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.16em", color: "var(--text-4)", margin: "0 0 1px" }}>Kelly Bot</p>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 15, fontWeight: 700, margin: 0, color: bot }}>
-                <BalanceCounter value={game.botBalance} color={bot} />
-              </p>
-            </div>
-
-            <div style={{ textAlign: "center", padding: "0 20px", borderLeft: "1px solid var(--line)" }}>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.16em", color: "var(--text-4)", margin: "0 0 1px" }}>
-                {playerAhead ? "Ahead" : "Behind"}
-              </p>
-              <p style={{ fontFamily: "var(--mono)", fontSize: 15, fontWeight: 700, margin: 0, color: playerAhead ? sage : red }}>
-                {playerAhead ? "+" : "−"}${delta.toFixed(2)}
-              </p>
-            </div>
-
-            <div style={{ padding: "0 0 0 20px", borderLeft: "1px solid var(--line)" }}>
-              <button onClick={reset} style={{ fontFamily: "var(--mono)", fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-4)", background: "none", border: "1px solid var(--line)", borderRadius: 999, padding: "5px 14px", cursor: "pointer" }}>Reset</button>
+            <div style={{ paddingLeft: 22, borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+              <button onClick={reset} style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--text-4)", background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "5px 14px", cursor: "pointer" }}>
+                RESET
+              </button>
             </div>
           </div>
 
-          {/* Dual progress bars: you (green) and bot (purple) */}
-          <div style={{ position: "relative", height: 3, background: "var(--surface-3)", overflow: "hidden" }}>
-            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${botPct}%`, background: bot, opacity: 0.4, transition: "width 0.8s ease" }} />
-            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${sage}, ${gold})`, transition: "width 0.8s ease" }} />
+          {/* Dual progress bars */}
+          <div style={{ position: "relative", height: 2 }}>
+            <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.04)" }} />
+            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${botPct}%`, background: botC, opacity: 0.35, transition: "width 0.9s ease" }} />
+            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${sage}cc, ${sage})`, transition: "width 0.9s ease" }} />
           </div>
         </div>
       </header>
 
-      {/* Main */}
-      <div style={{ flex: 1 }}>
-        <div style={{ maxWidth: 1080, width: "100%", margin: "0 auto", padding: "32px 32px 100px", display: "flex", flexDirection: "column", gap: 22 }}>
+      {/* Content */}
+      <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
+        <div style={{ maxWidth: 1120, width: "100%", margin: "0 auto", padding: "36px 32px 100px", display: "flex", flexDirection: "column", gap: 24 }}>
 
-          {/* Sparkline — you (green) vs bot (purple) */}
+          {/* Sparkline */}
           {game.history.length >= 2 && (
-            <div style={{ padding: "16px 22px", background: "var(--surface-1)", border: "1px solid var(--line)", borderRadius: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <p style={{ fontFamily: "var(--mono)", fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--text-4)", margin: 0 }}>Portfolio History</p>
-                <div style={{ display: "flex", gap: 16, fontFamily: "var(--mono)", fontSize: 8.5, color: "var(--text-4)" }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 12, height: 2, background: sage, borderRadius: 2, display: "inline-block" }} />You</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 1, borderTop: `2px dashed ${bot}`, borderRadius: 2, display: "inline-block", opacity: 0.7 }} />Kelly Bot</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 10, height: 1, background: gold, borderRadius: 2, display: "inline-block", opacity: 0.5 }} />$1K goal</span>
+            <div style={{ padding: "16px 24px", background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--text-4)" }}>EQUITY CURVE</span>
+                <div style={{ display: "flex", gap: 18, fontFamily: "var(--mono)", fontSize: 8, color: "var(--text-4)" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 14, height: 2, background: sage, display: "inline-block" }} />YOU</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 1, borderTop: `1px dashed ${botC}`, display: "inline-block", opacity: 0.7 }} />KELLY BOT</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 1, background: gold, display: "inline-block", opacity: 0.4 }} />$1K TARGET</span>
                 </div>
               </div>
-              <div style={{ height: 60 }}><Sparkline history={game.history} /></div>
+              <div style={{ height: 56 }}><Sparkline history={game.history} /></div>
             </div>
           )}
 
