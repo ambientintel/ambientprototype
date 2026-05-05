@@ -7,23 +7,25 @@ export interface Strategy {
   name: string;
   emoji: string;
   category: StrategyCategory;
-  theses: string[];           // multiple theses, one picked per round
+  theses: string[];
   tags: string[];
   riskTier: RiskTier;
   minCapital: number;
-  // continuous strategies
   minReturn?: number;
   maxReturn?: number;
-  // binary (prediction markets)
   isBinary?: boolean;
-  baseWinProb?: number;       // 0–1
-  payoutMultiplier?: number;  // e.g. 1.9 = +90% on win
+  baseWinProb?: number;
+  payoutMultiplier?: number;
 }
 
 export interface StrategyCard extends Strategy {
-  confidence: number;         // 0–100 per round
-  thesis: string;             // selected this round
+  confidence: number;
+  thesis: string;
   isRecommended: boolean;
+  // Kelly & sealed outcome — computed at card generation, hidden until reveal
+  kellyFraction: number;     // optimal fraction of bankroll (0–1)
+  sealedReturnPct: number;   // pre-determined outcome for this round
+  sealedWin?: boolean;       // for binary strategies
 }
 
 export interface Allocation {
@@ -49,11 +51,14 @@ export interface RoundResult {
   round: number;
   regime: MarketRegime;
   startBalance: number;
+  botStartBalance: number;
   cards: StrategyCard[];
   allocations: Allocation[];
   positions: PositionResult[];
   endBalance: number;
   totalProfit: number;
+  botProfit: number;         // Kelly bot profit using same sealed outcomes
+  botEndBalance: number;
 }
 
 export type GamePhase = "allocate" | "results";
@@ -62,6 +67,7 @@ export interface GameState {
   phase: GamePhase;
   round: number;
   balance: number;
+  botBalance: number;        // Kelly bot's running balance
   regime: MarketRegime;
   cards: StrategyCard[];
   history: RoundResult[];

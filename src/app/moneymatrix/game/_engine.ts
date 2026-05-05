@@ -12,13 +12,12 @@ const TRANSITIONS: Record<MarketRegime, [MarketRegime, number][]> = {
 };
 
 export function nextRegime(current: MarketRegime): MarketRegime {
-  const options = TRANSITIONS[current];
   let r = Math.random();
-  for (const [regime, prob] of options) {
+  for (const [regime, prob] of TRANSITIONS[current]) {
     r -= prob;
     if (r <= 0) return regime;
   }
-  return options[options.length - 1][0];
+  return TRANSITIONS[current][TRANSITIONS[current].length - 1][0];
 }
 
 export function randomStartRegime(): MarketRegime {
@@ -42,7 +41,6 @@ const REGIME_WEIGHTS: Record<MarketRegime, Record<StrategyCategory, number>> = {
   capitulation: { macro: 3.0, quant: 2.0, prediction: 2.0, equity: 0.5, crypto: 0.5 },
 };
 
-// Regime confidence bonuses per category (percentage points)
 const CONFIDENCE_BONUS: Record<MarketRegime, Partial<Record<StrategyCategory, number>>> = {
   bull:         { equity: 14, crypto: 9 },
   bear:         { macro: 14, quant: 9 },
@@ -52,7 +50,6 @@ const CONFIDENCE_BONUS: Record<MarketRegime, Partial<Record<StrategyCategory, nu
   capitulation: { macro: 14, quant: 11 },
 };
 
-// Regime return bias per category (percentage points added to simulated return)
 const RETURN_BIAS: Record<MarketRegime, Partial<Record<StrategyCategory, number>>> = {
   bull:         { equity: 10, crypto: 15, macro: -5, prediction: 5 },
   bear:         { macro: 15, quant: 5, equity: -15, crypto: -20, prediction: -5 },
@@ -62,11 +59,59 @@ const RETURN_BIAS: Record<MarketRegime, Partial<Record<StrategyCategory, number>
   capitulation: { macro: 10, quant: 5, crypto: -25, equity: -20, prediction: -10 },
 };
 
-function rand(min: number, max: number): number {
+function rand(min: number, max: number) {
   return min + Math.random() * (max - min);
 }
 
-// Weighted sample without replacement
+// ── Kelly Criterion ───────────────────────────────────────────────────────────
+// Binary: f* = (p·b − q) / b   where b = net payout ratio, q = 1−p
+// Continuous: f* = μ / σ²      (half-Kelly applied to control over-betting)
+function computeKelly(s: Strategy, confidence: number, regime: MarketRegime): number {
+  const regimeBias = RETURN_BIAS[regime]?.[s.category] ?? 0;
+  const cf = (confidence - 50) / 50; // −1 to +1
+
+  if (s.isBinary) {
+    const p = Math.min(0.93, Math.max(0.07,
+      (s.baseWinProb ?? 0.5) + cf * 0.08 + regimeBias * 0.003,
+    ));
+    const b = (s.payoutMultiplier ?? 1.9) - 1;
+    const kelly = (p * b - (1 - p)) / b;
+    return Math.max(0, kelly); // full Kelly for prediction markets
+  } else {
+    const lo = s.minReturn ?? -50;
+    const hi = s.maxReturn ?? 50;
+    const half = (hi - lo) / 2;
+    const mu = ((lo + hi) / 2 + cf * half * 0.38 + regimeBias) / 100;
+    const sigma = (half * 0.7) / 100;
+    if (sigma <= 0 || mu <= 0) return 0;
+    // Half-Kelly for continuous — more conservative, less blow-up risk
+    return Math.max(0, Math.min(0.95, mu / (sigma * sigma) * 0.5));
+  }
+}
+
+// ── Sealed outcome (determined at card generation, revealed after bet) ────────
+function sealOutcome(s: Strategy, confidence: number, regime: MarketRegime): { returnPct: number; wasWin?: boolean } {
+  const regimeBias = RETURN_BIAS[regime]?.[s.category] ?? 0;
+  const cf = (confidence - 50) / 50;
+
+  if (s.isBinary) {
+    const p = Math.min(0.93, Math.max(0.07,
+      (s.baseWinProb ?? 0.5) + cf * 0.08 + regimeBias * 0.003,
+    ));
+    const wasWin = Math.random() < p;
+    return { returnPct: wasWin ? ((s.payoutMultiplier ?? 1.9) - 1) * 100 : -100, wasWin };
+  } else {
+    const lo = s.minReturn ?? -50;
+    const hi = s.maxReturn ?? 50;
+    const mid = (lo + hi) / 2;
+    const half = (hi - lo) / 2;
+    const bias = cf * half * 0.38 + regimeBias;
+    const noise = rand(-half * 0.55, half * 0.55);
+    return { returnPct: Math.max(lo * 1.4, Math.min(hi * 1.4, mid + bias + noise)) };
+  }
+}
+
+// ── Weighted sample without replacement ───────────────────────────────────────
 function weightedSampleN(strategies: Strategy[], weights: Record<StrategyCategory, number>, n: number): Strategy[] {
   const pool = strategies.map(s => ({ strategy: s, weight: weights[s.category] ?? 1 }));
   const selected: Strategy[] = [];
@@ -84,95 +129,93 @@ function weightedSampleN(strategies: Strategy[], weights: Record<StrategyCategor
   return selected;
 }
 
+// ── Card generation ───────────────────────────────────────────────────────────
 export function generateCards(regime: MarketRegime, count = 6): StrategyCard[] {
-  const weights = REGIME_WEIGHTS[regime];
+  const selected = weightedSampleN(STRATEGIES, REGIME_WEIGHTS[regime], count);
   const bonuses = CONFIDENCE_BONUS[regime];
-  const selected = weightedSampleN(STRATEGIES, weights, count);
 
   const cards: StrategyCard[] = selected.map(s => {
     const base = rand(40, 73);
     const bonus = bonuses[s.category] ?? 0;
     const confidence = Math.min(97, Math.max(32, Math.round(base + bonus + rand(-4, 4))));
     const thesis = s.theses[Math.floor(Math.random() * s.theses.length)];
-    return { ...s, confidence, thesis, isRecommended: false };
+    const sealed = sealOutcome(s, confidence, regime);
+    const kellyFraction = computeKelly(s, confidence, regime);
+    return {
+      ...s, confidence, thesis, isRecommended: false,
+      kellyFraction,
+      sealedReturnPct: sealed.returnPct,
+      sealedWin: sealed.wasWin,
+    };
   });
 
-  // Sort descending, mark top confidence as recommended
   cards.sort((a, b) => b.confidence - a.confidence);
   cards[0].isRecommended = true;
-
   return cards;
 }
 
-function simulatePosition(card: StrategyCard, amount: number, regime: MarketRegime): PositionResult {
-  const regimeBias = RETURN_BIAS[regime]?.[card.category] ?? 0;
-  const confidenceFactor = (card.confidence - 50) / 50; // –1 to +1
-
-  let returnPct: number;
-  let wasWin: boolean | undefined;
-
-  if (card.isBinary) {
-    const baseProb = card.baseWinProb ?? 0.5;
-    const effectiveProb = Math.min(0.93, Math.max(0.07,
-      baseProb + confidenceFactor * 0.08 + regimeBias * 0.003,
-    ));
-    wasWin = Math.random() < effectiveProb;
-    returnPct = wasWin ? ((card.payoutMultiplier ?? 1.9) - 1) * 100 : -100;
-  } else {
-    const lo = card.minReturn ?? -50;
-    const hi = card.maxReturn ?? 50;
-    const mid = (lo + hi) / 2;
-    const half = (hi - lo) / 2;
-    const bias = confidenceFactor * half * 0.38 + regimeBias;
-    const noise = rand(-half * 0.55, half * 0.55);
-    returnPct = Math.max(lo * 1.4, Math.min(hi * 1.4, mid + bias + noise));
-  }
-
-  const profit = amount * returnPct / 100;
-  const aiWasRight = card.isBinary ? wasWin === true : returnPct > 0;
-
-  return {
-    strategyId: card.id,
-    name: card.name,
-    emoji: card.emoji,
-    category: card.category,
-    amountInvested: amount,
-    confidence: card.confidence,
-    isBinary: card.isBinary ?? false,
-    wasWin,
-    returnPct,
-    profit,
-    aiWasRight,
-  };
+// ── Kelly bot allocation ──────────────────────────────────────────────────────
+// Allocates proportionally to Kelly fractions; normalises if total > 100%.
+function botAllocations(cards: StrategyCard[], balance: number): { card: StrategyCard; amount: number }[] {
+  const eligible = cards.filter(c => c.kellyFraction > 0 && balance >= c.minCapital);
+  const totalFraction = eligible.reduce((s, c) => s + c.kellyFraction, 0);
+  const scale = totalFraction > 1 ? 1 / totalFraction : 1;
+  return eligible.map(c => ({
+    card: c,
+    amount: Math.min(balance, Math.max(0, balance * c.kellyFraction * scale)),
+  }));
 }
 
+// ── Round simulation ──────────────────────────────────────────────────────────
 export function simulateRound(
   round: number,
   regime: MarketRegime,
   startBalance: number,
+  botStartBalance: number,
   cards: StrategyCard[],
   allocations: Allocation[],
 ): RoundResult {
   const cardMap = Object.fromEntries(cards.map(c => [c.id, c]));
-  const positions: PositionResult[] = [];
 
+  // Player positions — use sealed outcomes
+  const positions: PositionResult[] = [];
   for (const alloc of allocations) {
     const card = cardMap[alloc.strategyId];
     if (!card || alloc.amount <= 0) continue;
-    positions.push(simulatePosition(card, alloc.amount, regime));
+    const returnPct = card.sealedReturnPct;
+    const wasWin = card.sealedWin;
+    const profit = alloc.amount * returnPct / 100;
+    positions.push({
+      strategyId: card.id,
+      name: card.name,
+      emoji: card.emoji,
+      category: card.category,
+      amountInvested: alloc.amount,
+      confidence: card.confidence,
+      isBinary: card.isBinary ?? false,
+      wasWin,
+      returnPct,
+      profit,
+      aiWasRight: card.isBinary ? wasWin === true : returnPct > 0,
+    });
   }
 
-  const totalProfit = positions.reduce((sum, p) => sum + p.profit, 0);
+  const totalProfit = positions.reduce((s, p) => s + p.profit, 0);
+
+  // Bot positions — Kelly-optimal, same sealed outcomes
+  const botAllocs = botAllocations(cards, botStartBalance);
+  const botProfit = botAllocs.reduce((s, { card, amount }) => {
+    return s + amount * card.sealedReturnPct / 100;
+  }, 0);
 
   return {
-    round,
-    regime,
-    startBalance,
-    cards,
-    allocations,
-    positions,
+    round, regime,
+    startBalance, botStartBalance,
+    cards, allocations, positions,
     endBalance: startBalance + totalProfit,
     totalProfit,
+    botProfit,
+    botEndBalance: botStartBalance + botProfit,
   };
 }
 
