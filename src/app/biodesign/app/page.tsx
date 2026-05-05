@@ -306,9 +306,9 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
   return (
     <div>
     {/* Identify hero */}
-    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 28, borderRadius: 4, background: 'rgba(14,22,34,0.55)', border: '1px solid rgba(180,215,240,0.07)', minHeight: state.needs.length === 0 && !adding ? 268 : 114 }}>
+    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 28, borderRadius: 4, minHeight: state.needs.length === 0 && !adding ? 268 : 114 }}>
       <FlowCanvas accent="#E8A852" />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 18%, rgba(14,22,34,0.94) 78%)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
       <div style={{ position: 'relative', zIndex: 1, padding: state.needs.length === 0 && !adding ? '38px 38px 34px' : '22px 30px' }}>
         <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#E8A852', marginBottom: 12 }}>
           01 / Identify
@@ -559,9 +559,9 @@ function StakeholdersTab({ state, update }: { state: BiodesignState; update: (s:
   return (
     <div>
     {/* Identify hero — Stakeholders */}
-    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 24, borderRadius: 4, background: 'rgba(14,22,34,0.55)', border: '1px solid rgba(180,215,240,0.07)', minHeight: state.stakeholders.length === 0 && !adding ? 220 : 110 }}>
+    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 24, borderRadius: 4, minHeight: state.stakeholders.length === 0 && !adding ? 220 : 110 }}>
       <FlowCanvas accent="#E8A852" />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 18%, rgba(14,22,34,0.94) 78%)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
       <div style={{ position: 'relative', zIndex: 1, padding: state.stakeholders.length === 0 && !adding ? '34px 34px 28px' : '20px 28px' }}>
         <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#E8A852', marginBottom: 10 }}>01 / Identify · Stakeholders</div>
         {state.stakeholders.length === 0 && !adding ? (
@@ -731,9 +731,9 @@ function ConceptsTab({ state, update }: { state: BiodesignState; update: (s: Bio
   return (
     <div>
     {/* Invent hero — Concepts */}
-    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 24, borderRadius: 4, background: 'rgba(14,22,34,0.55)', border: '1px solid rgba(160,126,232,0.10)', minHeight: state.concepts.length === 0 && !adding ? 248 : 110 }}>
+    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 24, borderRadius: 4, minHeight: state.concepts.length === 0 && !adding ? 248 : 110 }}>
       <FlowCanvas accent="#A07EE8" />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 18%, rgba(14,22,34,0.94) 78%)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
       <div style={{ position: 'relative', zIndex: 1, padding: state.concepts.length === 0 && !adding ? '36px 36px 30px' : '20px 28px' }}>
         <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#A07EE8', marginBottom: 12 }}>02 / Invent</div>
         {state.concepts.length === 0 && !adding ? (

@@ -66,9 +66,9 @@ export function CompetitiveTab({ state, update }: { state: BiodesignState; updat
   return (
     <div>
       {/* Identify hero — Competitive */}
-      <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 20, borderRadius: 4, background: 'rgba(14,22,34,0.55)', border: '1px solid rgba(180,215,240,0.07)', minHeight: competitors.length === 0 && !adding ? 230 : 110 }}>
+      <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 20, borderRadius: 4, minHeight: competitors.length === 0 && !adding ? 230 : 110 }}>
         <FlowCanvas accent="#E8A852" />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 18%, rgba(14,22,34,0.94) 78%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
         <div style={{ position: 'relative', zIndex: 1, padding: competitors.length === 0 && !adding ? '34px 34px 28px' : '20px 28px' }}>
           <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#E8A852', marginBottom: 10 }}>01 / Identify · Competitive</div>
           {competitors.length === 0 && !adding ? (
