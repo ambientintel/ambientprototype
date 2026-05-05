@@ -373,6 +373,38 @@ export const DEFAULT_REIMBURSEMENT: ReimbursementStrategy = {
   notes: '',
 };
 
+// ── Submission Tracker ────────────────────────────────────────────────────────
+
+export type SubmissionType = '510k' | 'pma' | 'denovo' | 'ide' | 'ide-supplement' | 'pma-supplement' | 'q-sub' | 'breakthrough' | 'other';
+export type SubmissionStatus = 'preparing' | 'submitted' | 'accepted' | 'under-review' | 'ai-request' | 'ai-response' | 'cleared' | 'approved' | 'not-cleared' | 'withdrawn';
+export type CorrespondenceType = 'submission' | 'fda-letter' | 'ai-request' | 'ai-response' | 'meeting' | 'phone-call' | 'other';
+
+export interface SubmissionCorrespondence {
+  id: string;
+  date: string;
+  type: CorrespondenceType;
+  subject: string;
+  notes: string;
+  clockTolled: boolean;
+}
+
+export interface SubmissionRecord {
+  id: string;
+  type: SubmissionType;
+  title: string;
+  status: SubmissionStatus;
+  submissionNumber: string;
+  submittedDate: string;
+  acceptedDate: string;
+  clockStartDate: string;
+  targetDecisionDate: string;
+  actualDecisionDate: string;
+  clockDaysGoal: number | null;
+  aiRequestCount: number;
+  correspondence: SubmissionCorrespondence[];
+  notes: string;
+}
+
 // ── Timeline / Milestones ─────────────────────────────────────────────────────
 
 export type MilestoneCategory = 'regulatory' | 'clinical' | 'reimbursement' | 'ip' | 'commercial' | 'manufacturing' | 'operational';
@@ -509,6 +541,7 @@ export interface BiodesignState {
   ipFilings: IPFiling[];
   preSubmission: PreSubmissionPlan;
   collaboration: ProjectCollaboration;
+  submissions: SubmissionRecord[];
   reimbursement: ReimbursementStrategy;
   milestones: Milestone[];
   risks: Risk[];
@@ -573,6 +606,7 @@ export const DEFAULT_STATE: BiodesignState = {
   ipFilings: [],
   preSubmission: { meetings: [] },
   collaboration: { collaborators: [], comments: [] },
+  submissions: [],
   reimbursement: DEFAULT_REIMBURSEMENT,
   milestones: [],
   risks: [],

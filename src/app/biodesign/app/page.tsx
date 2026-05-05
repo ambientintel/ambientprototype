@@ -31,6 +31,11 @@ import { BudgetEstimatorTab } from '../budgetestimator';
 import { DataRoomOverlay } from '../dataroom';
 import { CollaborationOverlay } from '../collaboration';
 import { AIDraftDocsOverlay } from '../aidraftdocs';
+import { RegIntelTab } from '../regintel';
+import { SubmissionTrackerTab } from '../submissiontracker';
+import { GanttTab } from '../gantt';
+import { ExportSuiteOverlay } from '../exportsuite';
+import { BenchmarksTab } from '../benchmarks';
 import '../biodesign.css';
 
 function getPhaseCompletion(state: BiodesignState, phaseKey: string): number {
@@ -99,6 +104,7 @@ function parseRaw(raw: string): BiodesignState {
     designControls: { ...DEFAULT_STATE.designControls, ...(parsed.designControls ?? {}) },
     preSubmission: { meetings: parsed.preSubmission?.meetings ?? [] },
     collaboration: { collaborators: parsed.collaboration?.collaborators ?? [], comments: parsed.collaboration?.comments ?? [] },
+    submissions: parsed.submissions ?? [],
     milestones: parsed.milestones ?? [],
     risks: parsed.risks ?? [],
     competitors: parsed.competitors ?? [],
@@ -1484,7 +1490,7 @@ export default function BiodesignPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
-  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings' | 'presub' | 'fdaroadmap' | 'budget'>('needs');
+  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings' | 'presub' | 'fdaroadmap' | 'budget' | 'regintel' | 'submissiontracker' | 'gantt' | 'benchmarks'>('needs');
   const [showOnePager, setShowOnePager] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
@@ -1496,6 +1502,7 @@ export default function BiodesignPage() {
   const [showDataRoom, setShowDataRoom] = useState(false);
   const [showCollab, setShowCollab] = useState(false);
   const [showAIDocs, setShowAIDocs] = useState(false);
+  const [showExportSuite, setShowExportSuite] = useState(false);
   const [view, setView] = useState<'dashboard' | 'workspace'>('workspace');
   const [shareToast, setShareToast] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -1705,7 +1712,7 @@ export default function BiodesignPage() {
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
     identify:  ['needs', 'stakeholders', 'competitors'],
     invent:    ['concepts'],
-    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks', 'ipfilings', 'presub', 'fdaroadmap', 'budget'],
+    implement: ['regulatory', 'strategy', 'reimbursement', 'gantt', 'risks', 'ipfilings', 'presub', 'fdaroadmap', 'budget', 'regintel', 'submissiontracker', 'benchmarks'],
     comply:    ['profile', 'standards', 'designcontrols'],
   };
 
@@ -1726,6 +1733,10 @@ export default function BiodesignPage() {
     presub:         { label: 'FDA Pre-Sub',    icon: '⊕' },
     fdaroadmap:     { label: 'FDA Roadmap',    icon: '⊳' },
     budget:         { label: 'Budget',         icon: '◎' },
+    regintel:       { label: 'Reg Intel',      icon: '⊛' },
+    submissiontracker: { label: 'Submissions', icon: '⊙' },
+    gantt:          { label: 'Timeline',       icon: '▦' },
+    benchmarks:     { label: 'Benchmarks',     icon: '▸' },
   };
 
   function switchPhase(p: typeof phase) {
@@ -2101,6 +2112,17 @@ export default function BiodesignPage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
+            <button onClick={() => setShowExportSuite(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,232,180,0.09)', color: '#52E8B4',
+                border: '1px solid rgba(82,232,180,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Export</span>
+            </button>
             <button onClick={() => setShowAIDocs(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
@@ -2232,6 +2254,10 @@ export default function BiodesignPage() {
           {tab === 'presub'         && <PreSubTab state={state} update={update} />}
           {tab === 'fdaroadmap'     && <FDARoadmapTab state={state} update={update} />}
           {tab === 'budget'         && <BudgetEstimatorTab state={state} update={update} />}
+          {tab === 'regintel'       && <RegIntelTab state={state} update={update} />}
+          {tab === 'submissiontracker' && <SubmissionTrackerTab state={state} update={update} />}
+          {tab === 'gantt'          && <GanttTab state={state} update={update} />}
+          {tab === 'benchmarks'     && <BenchmarksTab state={state} update={update} />}
         </div>
       </div>
     </div>
@@ -2336,6 +2362,13 @@ export default function BiodesignPage() {
       <AIDraftDocsOverlay
         state={state}
         onClose={() => setShowAIDocs(false)}
+      />
+    )}
+    {showExportSuite && (
+      <ExportSuiteOverlay
+        state={state}
+        onOpenDataRoom={() => { setShowExportSuite(false); setShowDataRoom(true); }}
+        onClose={() => setShowExportSuite(false)}
       />
     )}
     </>
