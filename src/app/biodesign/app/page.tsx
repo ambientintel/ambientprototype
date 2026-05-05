@@ -22,6 +22,8 @@ import { FlowCanvas } from '../flowbg';
 import { CommandPalette } from '../cmdpalette';
 import { RegulatoryWizard } from '../regwizard';
 import { CrossPhaseThreads } from '../crossphase';
+import { ClinicalWizard } from '../clinicalwizard';
+import { ReadinessOverlay } from '../readiness';
 import '../biodesign.css';
 
 function getPhaseCompletion(state: BiodesignState, phaseKey: string): number {
@@ -1479,6 +1481,8 @@ export default function BiodesignPage() {
   const [showPalette, setShowPalette] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showThreads, setShowThreads] = useState(false);
+  const [showClinical, setShowClinical] = useState(false);
+  const [showReadiness, setShowReadiness] = useState(false);
   const [view, setView] = useState<'dashboard' | 'workspace'>('workspace');
   const [shareToast, setShareToast] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -2103,6 +2107,28 @@ export default function BiodesignPage() {
               }}>
               <span>Threads</span>
             </button>
+            <button onClick={() => setShowClinical(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,232,180,0.09)', color: '#52E8B4',
+                border: '1px solid rgba(82,232,180,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Clinical</span>
+            </button>
+            <button onClick={() => setShowReadiness(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,192,232,0.07)', color: 'var(--accent)',
+                border: '1px solid rgba(82,192,232,0.22)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Readiness</span>
+            </button>
             <button onClick={() => setShowPalette(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
@@ -2185,6 +2211,25 @@ export default function BiodesignPage() {
         state={state}
         onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); }}
         onClose={() => setShowThreads(false)}
+      />
+    )}
+    {showClinical && (
+      <ClinicalWizard
+        state={state}
+        onResult={(plan) => {
+          update({ ...state, clinical: { ...state.clinical, ...plan } });
+          setShowClinical(false);
+          switchPhase('implement');
+          setTab('strategy');
+        }}
+        onClose={() => setShowClinical(false)}
+      />
+    )}
+    {showReadiness && (
+      <ReadinessOverlay
+        state={state}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); setShowReadiness(false); }}
+        onClose={() => setShowReadiness(false)}
       />
     )}
     </>

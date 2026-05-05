@@ -50,6 +50,7 @@ export function IPFilingsTab({ state, update }: { state: BiodesignState; update:
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<IPFilingType | 'all'>('all');
   const [deadlineDraft, setDeadlineDraft] = useState({ label: '', date: '' });
+  const [showDeadlines, setShowDeadlines] = useState(false);
 
   const filings = state.ipFilings ?? [];
 
@@ -102,6 +103,17 @@ export function IPFilingsTab({ state, update }: { state: BiodesignState; update:
 
   function toggleDeadlineDone(id: string) {
     setDraft(x => ({ ...x, deadlines: (x.deadlines ?? []).map(d => d.id === id ? { ...d, done: !d.done } : d) }));
+  }
+
+  function toggleDeadlineDoneGlobal(filingId: string, deadlineId: string) {
+    update({
+      ...state,
+      ipFilings: (state.ipFilings ?? []).map(f =>
+        f.id === filingId
+          ? { ...f, deadlines: f.deadlines.map(d => d.id === deadlineId ? { ...d, done: !d.done } : d) }
+          : f
+      ),
+    });
   }
 
   // Deadlines across all filings, not done, sorted
@@ -177,6 +189,107 @@ export function IPFilingsTab({ state, update }: { state: BiodesignState; update:
         </div>
       )}
 
+      {/* View toggle */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+        {(['filings', 'deadlines'] as const).map(m => (
+          <button key={m} onClick={() => setShowDeadlines(m === 'deadlines')} style={{
+            padding: '4px 14px', borderRadius: 20, fontSize: 10, cursor: 'pointer',
+            fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+            background: (showDeadlines ? m === 'deadlines' : m === 'filings') ? 'rgba(82,232,180,0.10)' : 'transparent',
+            color: (showDeadlines ? m === 'deadlines' : m === 'filings') ? '#52E8B4' : 'var(--text-4)',
+            border: (showDeadlines ? m === 'deadlines' : m === 'filings') ? '1px solid rgba(82,232,180,0.25)' : '1px solid var(--line)',
+          }}>{m}</button>
+        ))}
+      </div>
+
+      {showDeadlines ? (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const allDeadlinesAll = filings
+          .flatMap(f => (f.deadlines ?? []).map(d => ({
+            ...d,
+            filingTitle: f.title || f.type,
+            filingType: f.type,
+            filingId: f.id,
+          })))
+          .sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+
+        const groups = {
+          overdue:  allDeadlinesAll.filter(d => !d.done && d.date && new Date(d.date) < today),
+          soon:     allDeadlinesAll.filter(d => !d.done && d.date && new Date(d.date) >= today && new Date(d.date) <= new Date(today.getTime() + 30 * 86400000)),
+          upcoming: allDeadlinesAll.filter(d => !d.done && d.date && new Date(d.date) > new Date(today.getTime() + 30 * 86400000) && new Date(d.date) <= new Date(today.getTime() + 90 * 86400000)),
+          later:    allDeadlinesAll.filter(d => !d.done && d.date && new Date(d.date) > new Date(today.getTime() + 90 * 86400000)),
+          done:     allDeadlinesAll.filter(d => d.done),
+          nodates:  allDeadlinesAll.filter(d => !d.date),
+        };
+
+        const groupDefs: { key: keyof typeof groups; label: string; color: string }[] = [
+          { key: 'overdue',  label: 'Overdue',          color: '#E87252' },
+          { key: 'soon',     label: 'Due Soon',         color: '#E8A852' },
+          { key: 'upcoming', label: 'Upcoming (30-90d)', color: '#52C0E8' },
+          { key: 'later',    label: 'Later',             color: 'var(--text-4)' },
+          { key: 'done',     label: 'Done',              color: 'var(--text-4)' },
+          { key: 'nodates',  label: 'No Date',           color: 'var(--text-4)' },
+        ];
+
+        return (
+          <div>
+            {/* Summary bar */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+              {[
+                { label: 'Overdue',  count: groups.overdue.length,  color: '#E87252' },
+                { label: 'Due Soon', count: groups.soon.length,     color: '#E8A852' },
+                { label: 'Upcoming', count: groups.upcoming.length, color: '#52C0E8' },
+                { label: 'Done',     count: groups.done.length,     color: 'var(--text-4)' },
+              ].map(({ label, count, color }) => (
+                <div key={label} style={{ flex: 1, padding: '8px 10px', background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 2 }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 600, color: count > 0 ? color : 'var(--text-4)' }}>{count}</div>
+                  <div style={{ fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--mono)', marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {allDeadlinesAll.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', color: 'var(--text-4)', fontSize: 12, border: '1px dashed var(--line)', borderRadius: 2, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>
+                No deadlines added yet. Open a filing to add prosecution deadlines.
+              </div>
+            ) : (
+              groupDefs.map(({ key, label, color }) => {
+                const group = groups[key];
+                if (group.length === 0) return null;
+                return (
+                  <div key={key}>
+                    <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color, textTransform: 'uppercase', letterSpacing: '0.14em', padding: '12px 0 6px' }}>
+                      {label} ({group.length})
+                    </div>
+                    {group.map(item => (
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 2, marginBottom: 4 }}>
+                        <button
+                          onClick={() => toggleDeadlineDoneGlobal(item.filingId, item.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: item.done ? '#3DCC91' : 'var(--text-4)', fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}
+                        >
+                          {item.done ? '✓' : '○'}
+                        </button>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color, width: 72, flexShrink: 0 }}>
+                          {item.date ? new Date(item.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '—'}
+                        </span>
+                        <span style={{ flex: 1, fontSize: 12, color: item.done ? 'var(--text-4)' : 'var(--text)', textDecoration: item.done ? 'line-through' : 'none' }}>
+                          {item.label}
+                        </span>
+                        <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)', padding: '2px 6px', border: '1px solid var(--line)', borderRadius: 2, flexShrink: 0, textTransform: 'uppercase' }}>
+                          {item.filingTitle.slice(0, 18)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        );
+      })() : (
+      <>
       {/* Type filter */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {(['all', ...types] as const).map(t => {
@@ -395,6 +508,8 @@ export function IPFilingsTab({ state, update }: { state: BiodesignState; update:
           style={{ width: '100%', padding: '10px', borderRadius: 2, fontSize: 12, cursor: 'pointer', background: 'none', color: 'var(--text-4)', border: '1px dashed var(--line)', marginTop: 8, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           + Add IP filing
         </button>
+      )}
+      </>
       )}
     </div>
   );
