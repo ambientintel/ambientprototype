@@ -38,6 +38,7 @@ export default authkitMiddleware({
       "/backgroundlab",
       "/accelerate",
       "/accelerate/(.*)",
+      "/api/accelerate/(.*)",
       "/cloud",
       "/bom",
       "/control",
