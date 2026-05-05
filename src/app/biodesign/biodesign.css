@@ -23,6 +23,13 @@
 
 .biodesign-root button  { border-radius: 2px !important; }
 .biodesign-root input   { border-radius: 2px !important; }
+
+/* Pill tabs — override border-radius from above */
+.bd-tab-scroll button { border-radius: 20px !important; }
+
+/* Hide scrollbar on tab strip */
+.bd-tab-scroll { scrollbar-width: none; }
+.bd-tab-scroll::-webkit-scrollbar { display: none; }
 .biodesign-root textarea { border-radius: 2px !important; }
 .biodesign-root select  { border-radius: 2px !important; }
 

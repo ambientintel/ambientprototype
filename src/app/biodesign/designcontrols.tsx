@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { FlowCanvas } from './flowbg';
 import {
   BiodesignState, DesignControls, DesignInput, DesignOutput,
   DesignVerification, DesignValidation,
@@ -61,9 +62,14 @@ export function DesignControlsTab({ state, update }: { state: BiodesignState; up
 
   return (
     <div>
-      <div style={{ marginBottom: 22, borderLeft: '3px solid var(--accent)', paddingLeft: 10 }}>
-        <h2 style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Design Controls (DHF)</h2>
-        <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--text-2)', fontWeight: 400 }}>21 CFR 820.30 scaffold — design inputs, outputs, verification, and validation.</p>
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+        <FlowCanvas accent="#E87252" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+        <div style={{ position: 'relative', padding: '22px 28px' }}>
+          <div style={{ fontSize: 9, color: '#E87252', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>04 / Comply · Design Controls</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Design Controls</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>21 CFR 820.30 — inputs, outputs, verification, and validation.</div>
+        </div>
       </div>
 
       {/* DHF meta */}

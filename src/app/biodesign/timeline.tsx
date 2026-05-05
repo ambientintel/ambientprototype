@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { FlowCanvas } from './flowbg';
 import { BiodesignState, Milestone, MilestoneCategory, MilestoneStatus } from './data';
 
 const CATEGORY_COLORS: Record<MilestoneCategory, string> = {
@@ -74,9 +75,14 @@ export function TimelineTab({ state, update }: { state: BiodesignState; update: 
 
   return (
     <div>
-      <div style={{ marginBottom: 22, borderLeft: '3px solid var(--accent)', paddingLeft: 10 }}>
-        <h2 style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Project Timeline</h2>
-        <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--text-2)', fontWeight: 400 }}>Track key milestones across regulatory, clinical, and commercial workstreams.</p>
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+        <FlowCanvas accent="#52E8B4" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+        <div style={{ position: 'relative', padding: '22px 28px' }}>
+          <div style={{ fontSize: 9, color: '#52E8B4', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>03 / Implement · Timeline</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Project Timeline</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>Milestones across regulatory, clinical, and commercial workstreams.</div>
+        </div>
       </div>
 
       {/* Status summary */}

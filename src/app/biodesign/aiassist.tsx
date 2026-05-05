@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-type AssistType = 'need' | 'concept' | 'regulatory' | 'clinical' | 'ip-filing';
+type AssistType = 'need' | 'concept' | 'regulatory' | 'clinical' | 'ip-filing' | 'competitive';
 
 interface AiDraftButtonProps {
   type: AssistType;
@@ -25,6 +25,10 @@ const FIELD_LABELS: Record<string, string> = {
   studyDesign:              'Study Design',
   inclusionCriteria:        'Inclusion Criteria',
   exclusionCriteria:        'Exclusion Criteria',
+  positioning:              'Positioning',
+  keyAdvantages:            'Key Advantages',
+  threats:                  'Threats',
+  marketInsight:            'Market Insight',
 };
 
 export function AiDraftButton({ type, context, onResult, label = 'Draft with AI' }: AiDraftButtonProps) {

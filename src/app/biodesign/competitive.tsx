@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { BiodesignState, Competitor } from './data';
+import { AiDraftButton } from './aiassist';
+import { FlowCanvas } from './flowbg';
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
@@ -13,6 +15,7 @@ export function CompetitiveTab({ state, update }: { state: BiodesignState; updat
   const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Competitor>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [landscapeInsight, setLandscapeInsight] = useState<Record<string, string> | null>(null);
 
   const competitors = state.competitors ?? [];
 
@@ -62,12 +65,44 @@ export function CompetitiveTab({ state, update }: { state: BiodesignState; updat
 
   return (
     <div>
-      <div style={{ marginBottom: 22, borderLeft: '3px solid var(--accent)', paddingLeft: 10 }}>
-        <h2 style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Competitive Landscape</h2>
-        <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--text-2)', fontWeight: 400 }}>Map existing solutions, predicate devices, and market incumbents.</p>
+      {/* Identify hero — Competitive */}
+      <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 20, borderRadius: 4, background: 'rgba(14,22,34,0.55)', border: '1px solid rgba(180,215,240,0.07)', minHeight: competitors.length === 0 && !adding ? 230 : 110 }}>
+        <FlowCanvas accent="#E8A852" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 18%, rgba(14,22,34,0.94) 78%)' }} />
+        <div style={{ position: 'relative', zIndex: 1, padding: competitors.length === 0 && !adding ? '34px 34px 28px' : '20px 28px' }}>
+          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#E8A852', marginBottom: 10 }}>01 / Identify · Competitive</div>
+          {competitors.length === 0 && !adding ? (
+            <>
+              <h2 style={{ margin: '0 0 10px', fontSize: 24, fontWeight: 800, color: 'var(--text)', lineHeight: 1.2, letterSpacing: '-0.02em' }}>Competitive Landscape</h2>
+              <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.8, maxWidth: 460 }}>
+                Map predicate devices, incumbents, and direct competitors. The landscape shapes your regulatory pathway, differentiation strategy, and market positioning.
+              </p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <AiDraftButton
+                  type="competitive"
+                  context={{ indication: state.indication, projectName: state.projectName, projectDescription: state.projectDescription }}
+                  onResult={r => setLandscapeInsight(r)}
+                  label="Analyze landscape"
+                />
+                <button onClick={() => setAdding(true)} style={{ padding: '6px 18px', borderRadius: 2, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', color: 'var(--text-3)', border: '1px solid rgba(180,215,240,0.10)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                  Add competitor
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Competitive Landscape</h2>
+              <div style={{ display: 'flex', gap: 14, fontFamily: 'var(--mono)', flexShrink: 0 }}>
+                <span><strong style={{ color: 'var(--text-2)', fontSize: 18, fontWeight: 700 }}>{competitors.length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>devices</span></span>
+                <span><strong style={{ color: '#E8A852', fontSize: 18, fontWeight: 700 }}>{new Set(competitors.map(c => c.company).filter(Boolean)).size}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>companies</span></span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Summary stats */}
+      {/* Summary stats — only when has competitors */}
+      {competitors.length > 0 && (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 20 }}>
         <div style={{ padding: '8px 12px', background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 2 }}>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 500, color: competitors.length > 0 ? 'var(--text)' : 'var(--text-4)' }}>{competitors.length}</div>
@@ -84,10 +119,37 @@ export function CompetitiveTab({ state, update }: { state: BiodesignState; updat
           </div>
         ))}
       </div>
+      )}
 
-      {competitors.length === 0 && !adding && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', color: 'var(--text-4)', fontSize: 12, border: '1px dashed var(--line)', borderRadius: 2, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          No competitors logged yet
+      {/* Landscape insight panel */}
+      {landscapeInsight && (
+        <div style={{ background: 'rgba(82,192,232,0.06)', border: '1px solid rgba(82,192,232,0.18)', borderRadius: 3, padding: '14px 16px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 9, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: 'var(--mono)', fontWeight: 700 }}>✦ AI Landscape Analysis</span>
+            <button onClick={() => setLandscapeInsight(null)} style={{ background: 'none', border: 'none', color: 'var(--text-4)', cursor: 'pointer', fontSize: 14, padding: '0 2px' }}>×</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {Object.entries(landscapeInsight).map(([k, v]) => (
+              <div key={k}>
+                <div style={{ fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--mono)', marginBottom: 2 }}>
+                  {k === 'positioning' ? 'Positioning' : k === 'keyAdvantages' ? 'Key Advantages' : k === 'threats' ? 'Threats' : 'Market Insight'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6 }}>{String(v)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* AI button when competitors already exist */}
+      {competitors.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <AiDraftButton
+            type="competitive"
+            context={{ indication: state.indication, projectName: state.projectName, competitorCount: String(competitors.length), companies: competitors.map(c => c.company).filter(Boolean).join(', ') }}
+            onResult={r => setLandscapeInsight(r)}
+            label="Analyze landscape"
+          />
         </div>
       )}
 

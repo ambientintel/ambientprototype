@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { FlowCanvas } from './flowbg';
 import { BiodesignState, Risk, RiskCategory, RiskStatus } from './data';
 
 const CATEGORY_COLORS: Record<RiskCategory, string> = {
@@ -94,9 +95,14 @@ export function RisksTab({ state, update }: { state: BiodesignState; update: (s:
 
   return (
     <div>
-      <div style={{ marginBottom: 22, borderLeft: '3px solid var(--accent)', paddingLeft: 10 }}>
-        <h2 style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Risk Register</h2>
-        <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--text-2)', fontWeight: 400 }}>Identify, score, and track project risks across technical, regulatory, and commercial dimensions.</p>
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+        <FlowCanvas accent="#52E8B4" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+        <div style={{ position: 'relative', padding: '22px 28px' }}>
+          <div style={{ fontSize: 9, color: '#52E8B4', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>03 / Implement · Risk</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Risk Register</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>Track technical, regulatory, and commercial risks.</div>
+        </div>
       </div>
 
       {/* Summary */}

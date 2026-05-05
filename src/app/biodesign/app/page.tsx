@@ -18,6 +18,7 @@ import { InvestorOnePager } from '../onepager';
 import { AiDraftButton } from '../aiassist';
 import { ProjectDashboard } from '../dashboard';
 import { HistoryModal } from '../history';
+import { FlowCanvas } from '../flowbg';
 import '../biodesign.css';
 
 // ── Storage ────────────────────────────────────────────────────────────────────
@@ -259,15 +260,53 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
 
   return (
     <div>
-      <SectionHeader
-        title="Need Statements"
-        subtitle="A way to [solve problem] for [population] in [setting] so that [outcome]."
-      />
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
-        <StatMini label="Total needs" value={state.needs.length} />
-        <StatMini label="Selected" value={state.needs.filter(n => n.status === 'selected').length} accent="#3DCC91" />
+    {/* Identify hero */}
+    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 28, borderRadius: 4, background: 'rgba(14,22,34,0.55)', border: '1px solid rgba(180,215,240,0.07)', minHeight: state.needs.length === 0 && !adding ? 268 : 114 }}>
+      <FlowCanvas accent="#E8A852" />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 18%, rgba(14,22,34,0.94) 78%)' }} />
+      <div style={{ position: 'relative', zIndex: 1, padding: state.needs.length === 0 && !adding ? '38px 38px 34px' : '22px 30px' }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#E8A852', marginBottom: 12 }}>
+          01 / Identify
+        </div>
+        {state.needs.length === 0 && !adding ? (
+          <>
+            <h2 style={{ margin: '0 0 12px', fontSize: 28, fontWeight: 800, color: 'var(--text)', lineHeight: 1.15, letterSpacing: '-0.025em' }}>
+              Clinical Need<br/>Discovery
+            </h2>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.8, maxWidth: 460 }}>
+              Observe before inventing. Capture unmet clinical needs using the Stanford Biodesign framework before exploring solutions — needs drive concepts, regulatory strategy, and market fit.
+            </p>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'rgba(232,168,82,0.62)', fontFamily: 'var(--mono)', marginBottom: 26 }}>
+              "A way to [problem] for [population] in [setting] so that [outcome]."
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <AiDraftButton
+                type="need"
+                context={{ indication: state.indication }}
+                onResult={r => { setDraft(d => ({ ...d, ...r })); setAdding(true); }}
+                label="Draft first need"
+              />
+              <button onClick={() => setAdding(true)} style={{ padding: '6px 18px', borderRadius: 2, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', color: 'var(--text-3)', border: '1px solid rgba(180,215,240,0.10)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                Add manually
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Clinical Need Discovery</h2>
+              <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(232,168,82,0.58)', fontFamily: 'var(--mono)', fontStyle: 'italic' }}>
+                "A way to [problem] for [population] in [setting] so that [outcome]."
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 16, fontFamily: 'var(--mono)', flexShrink: 0 }}>
+              <span><strong style={{ color: 'var(--text-2)', fontSize: 18, fontWeight: 700 }}>{state.needs.length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>needs</span></span>
+              <span><strong style={{ color: '#3DCC91', fontSize: 18, fontWeight: 700 }}>{state.needs.filter(n => n.status === 'selected').length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>selected</span></span>
+            </div>
+          </div>
+        )}
       </div>
+    </div>
 
       {state.needs.map(n => {
         const score = needScore(n);
@@ -408,12 +447,12 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
             <button onClick={() => setAdding(false)} style={{ padding: '6px 14px', borderRadius: 2, fontSize: 12, cursor: 'pointer', background: 'none', color: 'var(--text-3)', border: '1px solid var(--line)' }}>Cancel</button>
           </div>
         </Card>
-      ) : (
+      ) : state.needs.length > 0 ? (
         <button onClick={() => setAdding(true)}
           style={{ width: '100%', padding: '10px', borderRadius: 2, fontSize: 12, cursor: 'pointer', background: 'none', color: 'var(--text-4)', border: '1px dashed var(--line)', marginTop: 4, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           + Add need statement
         </button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -474,7 +513,33 @@ function StakeholdersTab({ state, update }: { state: BiodesignState; update: (s:
 
   return (
     <div>
-      <SectionHeader title="Stakeholder Map" subtitle="Identify all parties who influence adoption and use." />
+    {/* Identify hero — Stakeholders */}
+    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 24, borderRadius: 4, background: 'rgba(14,22,34,0.55)', border: '1px solid rgba(180,215,240,0.07)', minHeight: state.stakeholders.length === 0 && !adding ? 220 : 110 }}>
+      <FlowCanvas accent="#E8A852" />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 18%, rgba(14,22,34,0.94) 78%)' }} />
+      <div style={{ position: 'relative', zIndex: 1, padding: state.stakeholders.length === 0 && !adding ? '34px 34px 28px' : '20px 28px' }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#E8A852', marginBottom: 10 }}>01 / Identify · Stakeholders</div>
+        {state.stakeholders.length === 0 && !adding ? (
+          <>
+            <h2 style={{ margin: '0 0 10px', fontSize: 24, fontWeight: 800, color: 'var(--text)', lineHeight: 1.2, letterSpacing: '-0.02em' }}>Stakeholder Mapping</h2>
+            <p style={{ margin: '0 0 22px', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.8, maxWidth: 460 }}>
+              Map everyone who influences adoption, reimbursement, and outcomes. Competing priorities define your design constraints before a solution exists.
+            </p>
+            <button onClick={() => setAdding(true)} style={{ padding: '7px 20px', borderRadius: 2, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)', border: '1px solid rgba(180,215,240,0.12)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              Add stakeholder
+            </button>
+          </>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Stakeholder Mapping</h2>
+            <div style={{ display: 'flex', gap: 16, fontFamily: 'var(--mono)', flexShrink: 0 }}>
+              <span><strong style={{ color: 'var(--text-2)', fontSize: 18, fontWeight: 700 }}>{state.stakeholders.length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>mapped</span></span>
+              <span><strong style={{ color: '#E8A852', fontSize: 18, fontWeight: 700 }}>{new Set(state.stakeholders.map(s => s.role)).size}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>roles</span></span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 20 }}>
         {roles.map(role => {
@@ -619,23 +684,57 @@ function ConceptsTab({ state, update }: { state: BiodesignState; update: (s: Bio
 
   return (
     <div>
-      <SectionHeader title="Concept Inventory" subtitle="Generate and screen solution concepts against the active need." />
-
-      {state.selectedNeedId && (() => {
-        const n = state.needs.find(n => n.id === state.selectedNeedId);
-        return n ? (
-          <div style={{ padding: '10px 14px', background: 'rgba(45,114,210,0.08)', border: '1px solid rgba(45,114,210,0.2)', borderRadius: 2, marginBottom: 16, fontSize: 12, color: 'var(--text-2)' }}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>Active Need</span>
-            "A way to {n.problem} for {n.population}{n.setting ? ` in ${n.setting}` : ''} so that {n.outcome}"
+    {/* Invent hero — Concepts */}
+    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 24, borderRadius: 4, background: 'rgba(14,22,34,0.55)', border: '1px solid rgba(160,126,232,0.10)', minHeight: state.concepts.length === 0 && !adding ? 248 : 110 }}>
+      <FlowCanvas accent="#A07EE8" />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 18%, rgba(14,22,34,0.94) 78%)' }} />
+      <div style={{ position: 'relative', zIndex: 1, padding: state.concepts.length === 0 && !adding ? '36px 36px 30px' : '20px 28px' }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#A07EE8', marginBottom: 12 }}>02 / Invent</div>
+        {state.concepts.length === 0 && !adding ? (
+          <>
+            <h2 style={{ margin: '0 0 10px', fontSize: 26, fontWeight: 800, color: 'var(--text)', lineHeight: 1.2, letterSpacing: '-0.025em' }}>
+              Concept Generation
+            </h2>
+            <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.8, maxWidth: 460 }}>
+              From validated needs to creative solutions. Generate diverse device concepts and screen them rigorously before committing resources to development.
+            </p>
+            {state.selectedNeedId && (() => {
+              const n = state.needs.find(n => n.id === state.selectedNeedId);
+              return n ? (
+                <div style={{ fontStyle: 'italic', fontSize: 12, color: 'rgba(160,126,232,0.6)', fontFamily: 'var(--mono)', marginBottom: 22 }}>
+                  "A way to {n.problem} for {n.population}{n.setting ? ` in ${n.setting}` : ''} so that {n.outcome}"
+                </div>
+              ) : null;
+            })()}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <AiDraftButton
+                type="concept"
+                context={{ indication: state.indication, need: state.needs.find(n => n.id === state.selectedNeedId)?.problem ?? '' }}
+                onResult={r => { setDraft(d => ({ ...d, ...r })); setAdding(true); }}
+                label="Draft first concept"
+              />
+              <button onClick={() => setAdding(true)} style={{ padding: '6px 18px', borderRadius: 2, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', color: 'var(--text-3)', border: '1px solid rgba(160,126,232,0.15)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                Add manually
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Concept Generation</h2>
+              {state.selectedNeedId && (() => {
+                const n = state.needs.find(n => n.id === state.selectedNeedId);
+                return n ? <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(160,126,232,0.55)', fontFamily: 'var(--mono)', fontStyle: 'italic' }}>Active: {n.problem.slice(0, 55)}{n.problem.length > 55 ? '…' : ''}</p> : null;
+              })()}
+            </div>
+            <div style={{ display: 'flex', gap: 14, fontFamily: 'var(--mono)', flexShrink: 0 }}>
+              <span><strong style={{ color: 'var(--text-2)', fontSize: 18, fontWeight: 700 }}>{state.concepts.length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>concepts</span></span>
+              <span><strong style={{ color: '#A07EE8', fontSize: 18, fontWeight: 700 }}>{state.concepts.filter(c => c.status === 'development' || c.status === 'selected').length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>active</span></span>
+            </div>
           </div>
-        ) : null;
-      })()}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 20 }}>
-        <StatMini label="Total concepts" value={state.concepts.length} />
-        <StatMini label="In development" value={state.concepts.filter(c => c.status === 'development').length} accent="#2D72D2" />
-        <StatMini label="Selected" value={state.concepts.filter(c => c.status === 'selected').length} accent="#3DCC91" />
+        )}
       </div>
+    </div>
 
       {sorted.map(c => {
         const score = conceptScore(c);
@@ -792,7 +891,15 @@ function RegulatoryTab({ state, update }: { state: BiodesignState; update: (s: B
 
   return (
     <div>
-      <SectionHeader title="Regulatory Strategy" subtitle="Define FDA classification, pathway, and submission plan." />
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+        <FlowCanvas accent="#52E8B4" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+        <div style={{ position: 'relative', padding: '22px 28px' }}>
+          <div style={{ fontSize: 9, color: '#52E8B4', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>03 / Implement · Regulatory</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Regulatory Strategy</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>FDA classification, pathway, and submission plan.</div>
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
         <div>
@@ -968,7 +1075,15 @@ function StrategyTab({ state, update }: { state: BiodesignState; update: (s: Bio
 
   return (
     <div>
-      <SectionHeader title="Implementation Strategy" subtitle="Clinical evidence, IP landscape, and business model." />
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+        <FlowCanvas accent="#52E8B4" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+        <div style={{ position: 'relative', padding: '22px 28px' }}>
+          <div style={{ fontSize: 9, color: '#52E8B4', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>03 / Implement · Strategy</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Implementation Strategy</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>Clinical evidence, IP landscape, and business model.</div>
+        </div>
+      </div>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 20 }}>
         {(['clinical', 'ip', 'business'] as const).map(s => (
@@ -1149,10 +1264,10 @@ function StatMini({ label, value, accent }: { label: string; value: number | str
 // ── Phase definitions ─────────────────────────────────────────────────────────
 
 const PHASES = [
-  { key: 'identify',  label: 'Identify',  sub: 'Needs finding & filtering' },
-  { key: 'invent',    label: 'Invent',    sub: 'Concept generation & screening' },
-  { key: 'implement', label: 'Implement', sub: 'Strategy & commercialization' },
-  { key: 'comply',    label: 'Comply',    sub: 'Standards & compliance tracking' },
+  { key: 'identify',  label: 'Identify',  sub: 'Needs finding & filtering',      color: '#E8A852' },
+  { key: 'invent',    label: 'Invent',    sub: 'Concept generation & screening',  color: '#A07EE8' },
+  { key: 'implement', label: 'Implement', sub: 'Strategy & commercialization',    color: '#52E8B4' },
+  { key: 'comply',    label: 'Comply',    sub: 'Standards & compliance tracking', color: '#E87252' },
 ] as const;
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -1381,26 +1496,51 @@ export default function BiodesignPage() {
     comply:    ['profile', 'standards', 'designcontrols'],
   };
 
-  const tabMeta: Record<typeof tab, { label: string }> = {
-    needs:          { label: 'Needs' },
-    stakeholders:   { label: 'Stakeholders' },
-    concepts:       { label: 'Concepts' },
-    regulatory:     { label: 'Regulatory' },
-    strategy:       { label: 'Strategy' },
-    reimbursement:  { label: 'Reimbursement' },
-    profile:        { label: 'Device Profile' },
-    standards:      { label: 'Standards' },
-    competitors:    { label: 'Competitive' },
-    timeline:       { label: 'Timeline' },
-    risks:          { label: 'Risks' },
-    designcontrols: { label: 'Design Controls' },
-    ipfilings:      { label: 'IP Portfolio' },
+  const tabMeta: Record<typeof tab, { label: string; icon: string }> = {
+    needs:          { label: 'Needs',          icon: '◎' },
+    stakeholders:   { label: 'Stakeholders',   icon: '◉' },
+    competitors:    { label: 'Competitive',    icon: '⊡' },
+    concepts:       { label: 'Concepts',       icon: '◆' },
+    regulatory:     { label: 'Regulatory',     icon: '⬡' },
+    strategy:       { label: 'Strategy',       icon: '▸' },
+    reimbursement:  { label: 'Reimbursement',  icon: '⊛' },
+    timeline:       { label: 'Timeline',       icon: '⊙' },
+    risks:          { label: 'Risks',          icon: '△' },
+    profile:        { label: 'Device Profile', icon: '▣' },
+    standards:      { label: 'Standards',      icon: '≡' },
+    designcontrols: { label: 'Design Controls',icon: '⊞' },
+    ipfilings:      { label: 'IP Portfolio',   icon: '◈' },
   };
 
   function switchPhase(p: typeof phase) {
     setPhase(p);
     setTab(phaseTabMap[p][0]);
   }
+
+  useEffect(() => {
+    if (view !== 'workspace') return;
+    function onKey(e: KeyboardEvent) {
+      const el = e.target as HTMLElement;
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return;
+      const tabs = phaseTabMap[phase];
+      const num = parseInt(e.key);
+      if (!isNaN(num) && num >= 1 && num <= tabs.length) {
+        e.preventDefault();
+        setTab(tabs[num - 1]);
+        return;
+      }
+      if (e.key === '[') {
+        const idx = PHASES.findIndex(p => p.key === phase);
+        if (idx > 0) switchPhase(PHASES[idx - 1].key as typeof phase);
+      }
+      if (e.key === ']') {
+        const idx = PHASES.findIndex(p => p.key === phase);
+        if (idx < PHASES.length - 1) switchPhase(PHASES[idx + 1].key as typeof phase);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!loaded) return null;
 
@@ -1470,17 +1610,17 @@ export default function BiodesignPage() {
                   padding: '10px 20px',
                   paddingLeft: active ? 17 : 20,
                   borderRadius: 0, cursor: 'pointer', textAlign: 'left', width: '100%',
-                  background: active ? 'rgba(45,114,210,0.09)' : 'transparent',
+                  background: active ? p.color + '10' : 'transparent',
                   border: 'none',
-                  borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent',
+                  borderLeft: active ? `3px solid ${p.color}` : '3px solid transparent',
                   transition: 'background 0.1s',
                 }}>
                 <div style={{
                   width: 20, height: 20, borderRadius: 2,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, flexShrink: 0,
-                  background: active ? 'var(--accent)' : 'var(--surface-2)',
-                  color: active ? '#fff' : 'var(--text-4)',
+                  background: active ? p.color : 'var(--surface-2)',
+                  color: active ? '#0E1622' : 'var(--text-4)',
                   letterSpacing: 0,
                 }}>{i + 1}</div>
                 <div>
@@ -1681,33 +1821,55 @@ export default function BiodesignPage() {
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Tab bar */}
-        <div style={{ borderBottom: '1px solid var(--line)', padding: '0 28px', display: 'flex', alignItems: 'stretch', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: 0 }}>
-            {phaseTabMap[phase].map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                style={{
-                  padding: '12px 18px 10px', fontSize: 11, cursor: 'pointer',
-                  fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.09em',
-                  background: 'transparent',
-                  color: tab === t ? 'var(--text)' : 'var(--text-4)',
-                  border: 'none',
-                  borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
-                  borderRadius: 0,
-                  marginBottom: -1,
-                  transition: 'color 0.1s',
-                  whiteSpace: 'nowrap',
-                }}>{tabMeta[t].label}</button>
-            ))}
+        <div style={{ background: 'var(--surface-1)', borderBottom: '1px solid var(--line)', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, height: 58, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+            {/* Phase badge */}
+            {(() => {
+              const pm = PHASES.find(p => p.key === phase)!;
+              const phaseIdx = PHASES.findIndex(p => p.key === phase);
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--text-4)', letterSpacing: '0.08em' }}>
+                    {String(phaseIdx + 1).padStart(2, '0')}
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.14em', color: pm.color, padding: '4px 10px', borderRadius: 3, background: pm.color + '14', border: `1px solid ${pm.color}30` }}>
+                    {pm.label}
+                  </span>
+                </div>
+              );
+            })()}
+            {/* Divider */}
+            <div style={{ width: 1, height: 18, background: 'var(--line)', flexShrink: 0 }} />
+            {/* Pill tabs */}
+            <div className="bd-tab-scroll" style={{ display: 'flex', gap: 3, overflowX: 'auto', alignItems: 'center', paddingBottom: 1 }}>
+              {phaseTabMap[phase].map(t => (
+                <button key={t} onClick={() => setTab(t)}
+                  style={{
+                    padding: '8px 18px', borderRadius: 20,
+                    fontSize: 11, cursor: 'pointer',
+                    fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.10em',
+                    background: tab === t ? 'rgba(82,192,232,0.12)' : 'transparent',
+                    color: tab === t ? 'var(--accent)' : 'var(--text-4)',
+                    border: tab === t ? '1px solid rgba(82,192,232,0.28)' : '1px solid transparent',
+                    transition: 'all 0.15s',
+                    whiteSpace: 'nowrap', flexShrink: 0,
+                  }}>
+                  {tabMeta[t].label}
+                </button>
+              ))}
+            </div>
           </div>
           <button onClick={() => window.print()}
             style={{
-              padding: '8px 14px', margin: 'auto 0',
-              borderRadius: 2, fontSize: 10, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
               fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
-              background: 'var(--surface-2)', color: 'var(--text-4)',
+              background: 'transparent', color: 'var(--text-4)',
               border: '1px solid var(--line)',
-              flexShrink: 0,
-            }}>Export PDF</button>
+              flexShrink: 0, transition: 'all 0.15s',
+            }}>
+            <span>↓ PDF</span>
+          </button>
         </div>
 
         {/* Content */}
