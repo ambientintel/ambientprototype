@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 const C = {
   cream:     '#F5F0E8',
@@ -108,8 +108,125 @@ function MenuCard({ item, accent }: { item: typeof BEEF[0]; accent: string }) {
   );
 }
 
+type Particle = {
+  baseX: number; baseY: number; x: number; y: number;
+  size: number; speedX: number; speedY: number;
+  offsetX: number; offsetY: number; amplitude: number;
+  label?: string; isIngredient: boolean; opacity: number;
+};
+
 export default function PureBurger() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const LABELS = [
+      'grass-fed', 'free-range', 'aged cheddar', 'brioche',
+      'dill pickle', 'arugula', 'avocado', 'sea salt',
+      'sunflower oil', 'vine tomato', 'whole grain mustard',
+      'lemon', 'cane sugar', 'cold-pressed', 'pasture-raised',
+    ];
+
+    const particles: Particle[] = [];
+
+    const make = (isIngredient: boolean, label?: string): Particle => ({
+      baseX: Math.random() * canvas.width,
+      baseY: Math.random() * canvas.height,
+      x: 0, y: 0,
+      size: isIngredient ? 3.5 : 1.5 + Math.random() * 2,
+      speedX: 0.08 + Math.random() * 0.12,
+      speedY: 0.07 + Math.random() * 0.10,
+      offsetX: Math.random() * Math.PI * 2,
+      offsetY: Math.random() * Math.PI * 2,
+      amplitude: isIngredient ? 50 + Math.random() * 50 : 25 + Math.random() * 55,
+      label,
+      isIngredient,
+      opacity: isIngredient ? 0.45 + Math.random() * 0.3 : 0.12 + Math.random() * 0.18,
+    });
+
+    LABELS.forEach(l => particles.push(make(true, l)));
+    for (let i = 0; i < 55; i++) particles.push(make(false));
+
+    let t = 0;
+    let animId: number;
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      t += 0.006;
+
+      particles.forEach(p => {
+        p.x = p.baseX + Math.sin(t * p.speedX + p.offsetX) * p.amplitude;
+        p.y = p.baseY + Math.sin(t * p.speedY + p.offsetY) * p.amplitude * 0.55;
+      });
+
+      // connections
+      const DIST = 150;
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < DIST) {
+            const alpha = (1 - d / DIST) * 0.07;
+            const bothIngredient = particles[i].isIngredient && particles[j].isIngredient;
+            ctx.beginPath();
+            ctx.strokeStyle = bothIngredient
+              ? `rgba(42,90,36,${alpha * 1.8})`
+              : `rgba(28,26,23,${alpha})`;
+            ctx.lineWidth = bothIngredient ? 1 : 0.6;
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // nodes
+      particles.forEach(p => {
+        if (p.isIngredient) {
+          // outer ring
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size + 3, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(42,90,36,${p.opacity * 0.25})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          // filled dot
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(42,90,36,${p.opacity})`;
+          ctx.fill();
+          // label
+          ctx.font = '500 10px -apple-system, sans-serif';
+          ctx.fillStyle = `rgba(42,90,36,${p.opacity * 0.7})`;
+          ctx.fillText(p.label!, p.x + p.size + 6, p.y + 3.5);
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(28,26,23,${p.opacity})`;
+          ctx.fill();
+        }
+      });
+
+      animId = requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
 
   return (
     <>
@@ -247,12 +364,15 @@ export default function PureBurger() {
           padding: '120px 48px 80px',
           position: 'relative', overflow: 'hidden',
         }}>
-          {/* Texture grid faint */}
-          <div style={{
-            position: 'absolute', inset: 0, pointerEvents: 'none',
-            backgroundImage: `radial-gradient(circle, rgba(28,26,23,0.04) 1px, transparent 1px)`,
-            backgroundSize: '32px 32px',
-          }} />
+          {/* Animated ingredient network */}
+          <canvas
+            ref={canvasRef}
+            style={{
+              position: 'absolute', inset: 0,
+              width: '100%', height: '100%',
+              pointerEvents: 'none',
+            }}
+          />
 
           {/* Hero content */}
           <div style={{ maxWidth: 800, position: 'relative', zIndex: 1 }}>
