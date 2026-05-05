@@ -8,7 +8,7 @@ import {
   nextRegime, randomStartRegime, generateCards, simulateRound,
   REGIME_LABEL, REGIME_COLOR, REGIME_DESCRIPTION,
   CATEGORY_LABEL, RISK_COLOR, RISK_LABEL,
-  STARTING_BALANCE, TARGET_BALANCE,
+  STARTING_BALANCE, TARGET_BALANCE, regimeForecast,
 } from "./_engine";
 import "../moneymatrix.css";
 
@@ -81,9 +81,13 @@ function NetworkAmbient() {
 // ── Sparkline with bot curve ──────────────────────────────────────────────────
 function Sparkline({ history }: { history: RoundResult[] }) {
   const uid = useId();
-  if (history.length < 2) return null;
-  const pts    = [STARTING_BALANCE, ...history.map(r => r.endBalance)];
-  const botPts = [STARTING_BALANCE, ...history.map(r => r.botEndBalance)];
+  if (history.length < 1) return null;
+  const pts    = history.length === 1
+    ? [STARTING_BALANCE, history[0].endBalance]
+    : [STARTING_BALANCE, ...history.map(r => r.endBalance)];
+  const botPts = history.length === 1
+    ? [STARTING_BALANCE, history[0].botEndBalance]
+    : [STARTING_BALANCE, ...history.map(r => r.botEndBalance)];
   const cap = Math.max(TARGET_BALANCE, ...pts, ...botPts) * 1.08;
   const W = 480; const H = 56; const P = 6;
   const toC = (vals: number[]) => vals.map((v, i) => [
@@ -441,7 +445,8 @@ function AllocationPhase({ game, onSimulate }: { game: GameState; onSimulate: (a
             background: total <= 0 || over ? "rgba(255,255,255,0.05)" : sage,
             color: total <= 0 || over ? "var(--text-4)" : "#0A0B0D",
             fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: "0.16em", transition: "all 0.15s",
+            textTransform: "uppercase", letterSpacing: "0.16em", transition: "all 0.2s",
+            boxShadow: total > 0 && !over ? `0 0 28px ${sage}55` : "none",
           }}
         >EXECUTE ORDER</button>
       </div>
@@ -598,6 +603,38 @@ function ResultsPhase({ round, game, won, broke, onContinue }: {
         </div>
       </div>
 
+      {/* Regime forecast */}
+      {!won && !broke && (() => {
+        const forecasts = regimeForecast(round.regime);
+        return (
+          <div style={{ border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2 }}>
+            <div style={{ padding: "10px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.2em", color: "var(--text-4)" }}>NEXT REGIME FORECAST · MARKOV TRANSITION</span>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 8, color: "var(--text-4)", letterSpacing: "0.1em" }}>CURRENT: <span style={{ color: REGIME_COLOR[round.regime] }}>{REGIME_LABEL[round.regime].toUpperCase()}</span></span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${forecasts.length}, 1fr)`, padding: "16px 20px", gap: 12 }}>
+              {forecasts.map(({ regime, prob }) => {
+                const rc = REGIME_COLOR[regime];
+                return (
+                  <div key={regime}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                      <span style={{ fontFamily: "var(--serif)", fontSize: 12, fontStyle: "italic", color: rc }}>{REGIME_LABEL[regime]}</span>
+                      <span style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 700, color: rc }}>{Math.round(prob * 100)}%</span>
+                    </div>
+                    <div style={{ height: 2, background: "rgba(255,255,255,0.06)" }}>
+                      <div style={{ height: "100%", width: `${Math.round(prob * 100)}%`, background: rc, opacity: 0.7 }} />
+                    </div>
+                    <p style={{ fontFamily: "var(--mono)", fontSize: 8, color: "var(--text-4)", margin: "5px 0 0", lineHeight: 1.4, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      {REGIME_DESCRIPTION[regime].split(".")[0]}.
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* AI accuracy */}
       {game.aiTotal > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "14px 20px", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2 }}>
@@ -647,9 +684,10 @@ export default function GamePage() {
   function handleSimulate(allocs: Allocation[]) {
     const result = simulateRound(game.round, game.regime, game.balance, game.botBalance, game.cards, allocs);
     const recommended = game.cards.find(c => c.isRecommended);
-    const recResult = result.positions.find(p => p.strategyId === recommended?.id);
-    const aiRight = recResult?.aiWasRight ?? false;
-    const hasRec = Boolean(recResult);
+    const hasRec = Boolean(recommended);
+    const aiRight = recommended
+      ? (recommended.isBinary ? recommended.sealedWin === true : recommended.sealedReturnPct > 0)
+      : false;
     setLastRound(result);
     setWon(result.endBalance >= TARGET_BALANCE);
     setBroke(result.endBalance < 0.01);
@@ -732,7 +770,7 @@ export default function GamePage() {
         <div style={{ maxWidth: 1120, width: "100%", margin: "0 auto", padding: "36px 32px 100px", display: "flex", flexDirection: "column", gap: 24 }}>
 
           {/* Sparkline */}
-          {game.history.length >= 2 && (
+          {game.history.length >= 1 && (
             <div style={{ padding: "16px 24px", background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <span style={{ fontFamily: "var(--mono)", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--text-4)" }}>EQUITY CURVE</span>

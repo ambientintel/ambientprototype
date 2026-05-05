@@ -273,3 +273,11 @@ export const RISK_LABEL: Record<string, string> = {
 
 export const STARTING_BALANCE = 20;
 export const TARGET_BALANCE   = 1000;
+
+// ── Regime forecast (top transitions by probability) ──────────────────────────
+export function regimeForecast(regime: MarketRegime): { regime: MarketRegime; prob: number }[] {
+  return [...TRANSITIONS[regime]]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([r, p]) => ({ regime: r, prob: p }));
+}
