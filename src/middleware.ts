@@ -15,6 +15,8 @@ export default authkitMiddleware({
       "/biodesign/share/(.*)",
       "/api/biodesign/share/(.*)",
       "/invest",
+      "/digitalhealth",
+      "/digitalhealth/(.*)",
       "/moneymatrix",
       "/moneymatrix/(.*)",
       "/api/push/(.*)",
