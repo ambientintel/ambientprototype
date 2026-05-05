@@ -2060,23 +2060,24 @@ export default function BiodesignPage() {
             })()}
             {/* Divider */}
             <div style={{ width: 1, height: 18, background: 'var(--line)', flexShrink: 0 }} />
-            {/* Pill tabs */}
-            <div className="bd-tab-scroll" style={{ display: 'flex', gap: 3, overflowX: 'auto', alignItems: 'center', paddingBottom: 1 }}>
-              {phaseTabMap[phase].map(t => (
-                <button key={t} onClick={() => setTab(t)}
-                  style={{
-                    padding: '8px 18px', borderRadius: 20,
-                    fontSize: 11, cursor: 'pointer',
-                    fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.10em',
-                    background: tab === t ? 'rgba(82,192,232,0.12)' : 'transparent',
-                    color: tab === t ? 'var(--accent)' : 'var(--text-4)',
-                    border: tab === t ? '1px solid rgba(82,192,232,0.28)' : '1px solid transparent',
-                    transition: 'all 0.15s',
-                    whiteSpace: 'nowrap', flexShrink: 0,
-                  }}>
-                  {tabMeta[t].label}
-                </button>
-              ))}
+            {/* Flat underline tabs */}
+            <div className="bd-tab-scroll" style={{ display: 'flex', gap: 0, overflowX: 'auto', alignItems: 'stretch' }}>
+              {phaseTabMap[phase].map(t => {
+                const pm = PHASES.find(p => p.key === phase)!;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`bd-tab-btn${tab === t ? ' active' : ''}`}
+                    style={{
+                      '--tab-accent': pm.color,
+                      '--tab-glow': pm.color + '55',
+                    } as React.CSSProperties}
+                  >
+                    {tabMeta[t].label}
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
