@@ -25,6 +25,7 @@ import { CrossPhaseThreads } from '../crossphase';
 import { ClinicalWizard } from '../clinicalwizard';
 import { ReadinessOverlay } from '../readiness';
 import { PreSubTab } from '../presub';
+import { FDARoadmapTab } from '../fdaroadmap';
 import '../biodesign.css';
 
 function getPhaseCompletion(state: BiodesignState, phaseKey: string): number {
@@ -1477,7 +1478,7 @@ export default function BiodesignPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
-  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings' | 'presub'>('needs');
+  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings' | 'presub' | 'fdaroadmap'>('needs');
   const [showOnePager, setShowOnePager] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
@@ -1694,7 +1695,7 @@ export default function BiodesignPage() {
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
     identify:  ['needs', 'stakeholders', 'competitors'],
     invent:    ['concepts'],
-    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks', 'ipfilings', 'presub'],
+    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks', 'ipfilings', 'presub', 'fdaroadmap'],
     comply:    ['profile', 'standards', 'designcontrols'],
   };
 
@@ -1713,6 +1714,7 @@ export default function BiodesignPage() {
     designcontrols: { label: 'Design Controls',icon: '⊞' },
     ipfilings:      { label: 'IP Portfolio',   icon: '◈' },
     presub:         { label: 'FDA Pre-Sub',    icon: '⊕' },
+    fdaroadmap:     { label: 'FDA Roadmap',    icon: '⊳' },
   };
 
   function switchPhase(p: typeof phase) {
@@ -2173,6 +2175,7 @@ export default function BiodesignPage() {
           {tab === 'designcontrols' && <DesignControlsTab state={state} update={update} />}
           {tab === 'ipfilings'      && <IPFilingsTab state={state} update={update} />}
           {tab === 'presub'         && <PreSubTab state={state} update={update} />}
+          {tab === 'fdaroadmap'     && <FDARoadmapTab state={state} update={update} />}
         </div>
       </div>
     </div>
