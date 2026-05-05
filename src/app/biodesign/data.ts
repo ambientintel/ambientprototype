@@ -307,6 +307,24 @@ export interface PreSubmissionPlan {
   meetings: PreSubMeeting[];
 }
 
+// ── Collaboration ─────────────────────────────────────────────────────────────
+
+export interface ProjectComment {
+  id: string;
+  author: string;
+  role: string;
+  text: string;
+  phase: string;
+  tab: string;
+  createdAt: string;
+  resolved: boolean;
+}
+
+export interface ProjectCollaboration {
+  collaborators: string[];   // email addresses
+  comments: ProjectComment[];
+}
+
 // ── Reimbursement Strategy ────────────────────────────────────────────────────
 
 export type SiteOfService = 'inpatient' | 'outpatient-hospital' | 'asc' | 'physician-office' | 'home' | 'snf';
@@ -490,6 +508,7 @@ export interface BiodesignState {
   comply: ComplyState;
   ipFilings: IPFiling[];
   preSubmission: PreSubmissionPlan;
+  collaboration: ProjectCollaboration;
   reimbursement: ReimbursementStrategy;
   milestones: Milestone[];
   risks: Risk[];
@@ -553,6 +572,7 @@ export const DEFAULT_STATE: BiodesignState = {
   },
   ipFilings: [],
   preSubmission: { meetings: [] },
+  collaboration: { collaborators: [], comments: [] },
   reimbursement: DEFAULT_REIMBURSEMENT,
   milestones: [],
   risks: [],

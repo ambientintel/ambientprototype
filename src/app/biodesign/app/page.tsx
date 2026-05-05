@@ -26,6 +26,11 @@ import { ClinicalWizard } from '../clinicalwizard';
 import { ReadinessOverlay } from '../readiness';
 import { PreSubTab } from '../presub';
 import { FDARoadmapTab } from '../fdaroadmap';
+import { PredicateSearchOverlay } from '../predicatesearch';
+import { BudgetEstimatorTab } from '../budgetestimator';
+import { DataRoomOverlay } from '../dataroom';
+import { CollaborationOverlay } from '../collaboration';
+import { AIDraftDocsOverlay } from '../aidraftdocs';
 import '../biodesign.css';
 
 function getPhaseCompletion(state: BiodesignState, phaseKey: string): number {
@@ -93,6 +98,7 @@ function parseRaw(raw: string): BiodesignState {
     comply: { ...DEFAULT_STATE.comply, ...(parsed.comply ?? {}) },
     designControls: { ...DEFAULT_STATE.designControls, ...(parsed.designControls ?? {}) },
     preSubmission: { meetings: parsed.preSubmission?.meetings ?? [] },
+    collaboration: { collaborators: parsed.collaboration?.collaborators ?? [], comments: parsed.collaboration?.comments ?? [] },
     milestones: parsed.milestones ?? [],
     risks: parsed.risks ?? [],
     competitors: parsed.competitors ?? [],
@@ -1478,7 +1484,7 @@ export default function BiodesignPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
-  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings' | 'presub' | 'fdaroadmap'>('needs');
+  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings' | 'presub' | 'fdaroadmap' | 'budget'>('needs');
   const [showOnePager, setShowOnePager] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
@@ -1486,6 +1492,10 @@ export default function BiodesignPage() {
   const [showThreads, setShowThreads] = useState(false);
   const [showClinical, setShowClinical] = useState(false);
   const [showReadiness, setShowReadiness] = useState(false);
+  const [showPredSearch, setShowPredSearch] = useState(false);
+  const [showDataRoom, setShowDataRoom] = useState(false);
+  const [showCollab, setShowCollab] = useState(false);
+  const [showAIDocs, setShowAIDocs] = useState(false);
   const [view, setView] = useState<'dashboard' | 'workspace'>('workspace');
   const [shareToast, setShareToast] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -1695,7 +1705,7 @@ export default function BiodesignPage() {
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
     identify:  ['needs', 'stakeholders', 'competitors'],
     invent:    ['concepts'],
-    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks', 'ipfilings', 'presub', 'fdaroadmap'],
+    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks', 'ipfilings', 'presub', 'fdaroadmap', 'budget'],
     comply:    ['profile', 'standards', 'designcontrols'],
   };
 
@@ -1715,6 +1725,7 @@ export default function BiodesignPage() {
     ipfilings:      { label: 'IP Portfolio',   icon: '◈' },
     presub:         { label: 'FDA Pre-Sub',    icon: '⊕' },
     fdaroadmap:     { label: 'FDA Roadmap',    icon: '⊳' },
+    budget:         { label: 'Budget',         icon: '◎' },
   };
 
   function switchPhase(p: typeof phase) {
@@ -2090,6 +2101,50 @@ export default function BiodesignPage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
+            <button onClick={() => setShowAIDocs(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(232,168,82,0.09)', color: '#E8A852',
+                border: '1px solid rgba(232,168,82,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>AI Docs</span>
+            </button>
+            <button onClick={() => setShowPredSearch(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,192,232,0.07)', color: 'var(--accent)',
+                border: '1px solid rgba(82,192,232,0.22)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Predicate</span>
+            </button>
+            <button onClick={() => setShowDataRoom(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,232,180,0.09)', color: '#52E8B4',
+                border: '1px solid rgba(82,232,180,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Data Room</span>
+            </button>
+            <button onClick={() => setShowCollab(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(160,126,232,0.09)', color: '#A07EE8',
+                border: '1px solid rgba(160,126,232,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Team</span>
+            </button>
             <button onClick={() => setShowWizard(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
@@ -2176,6 +2231,7 @@ export default function BiodesignPage() {
           {tab === 'ipfilings'      && <IPFilingsTab state={state} update={update} />}
           {tab === 'presub'         && <PreSubTab state={state} update={update} />}
           {tab === 'fdaroadmap'     && <FDARoadmapTab state={state} update={update} />}
+          {tab === 'budget'         && <BudgetEstimatorTab state={state} update={update} />}
         </div>
       </div>
     </div>
@@ -2237,6 +2293,49 @@ export default function BiodesignPage() {
         state={state}
         onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); setShowReadiness(false); }}
         onClose={() => setShowReadiness(false)}
+      />
+    )}
+    {showPredSearch && (
+      <PredicateSearchOverlay
+        state={state}
+        onSelect={(predicateNumber, deviceName, _applicant, productCode) => {
+          update({
+            ...state,
+            regulatory: {
+              ...state.regulatory,
+              predicateNumber,
+              predicateDevice: deviceName,
+              productCode: productCode || state.regulatory.productCode,
+            },
+          });
+          setShowPredSearch(false);
+          switchPhase('implement');
+          setTab('regulatory');
+        }}
+        onClose={() => setShowPredSearch(false)}
+      />
+    )}
+    {showDataRoom && (
+      <DataRoomOverlay
+        state={state}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); setShowDataRoom(false); }}
+        onClose={() => setShowDataRoom(false)}
+      />
+    )}
+    {showCollab && (
+      <CollaborationOverlay
+        state={state}
+        update={update}
+        currentPhase={phase}
+        currentTab={tab}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); }}
+        onClose={() => setShowCollab(false)}
+      />
+    )}
+    {showAIDocs && (
+      <AIDraftDocsOverlay
+        state={state}
+        onClose={() => setShowAIDocs(false)}
       />
     )}
     </>
