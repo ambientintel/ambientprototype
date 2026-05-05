@@ -86,6 +86,57 @@ const STATS = [
   { value: '∞', label: 'Products' },
 ];
 
+const PRODUCT_TYPES = [
+  {
+    id: 'samd',
+    color: '#8B5CF6',
+    abbr: 'SaMD',
+    name: 'Software as a Medical Device',
+    desc: 'FDA-regulated software that performs a medical purpose without being part of a hardware medical device.',
+    features: ['FDA 510(k) / De Novo pathway', 'IEC 62304 lifecycle', 'Clinical evidence required'],
+  },
+  {
+    id: 'dtx',
+    color: '#10B981',
+    abbr: 'DTx',
+    name: 'Digital Therapeutics',
+    desc: 'Evidence-based therapeutic interventions driven by high-quality software programs to treat or manage disease.',
+    features: ['Prescription or OTC classification', 'DTx Alliance standards', 'RCT-grade clinical evidence'],
+  },
+  {
+    id: 'rpm',
+    color: '#3B82F6',
+    abbr: 'RPM',
+    name: 'Remote Patient Monitoring',
+    desc: 'Continuous collection and transmission of physiologic data from patients outside of conventional clinical settings.',
+    features: ['CPT 99453–99458 billing', 'FHIR-based data streams', 'Chronic care reimbursement'],
+  },
+  {
+    id: 'telehealth',
+    color: '#F59E0B',
+    abbr: 'Telehealth',
+    name: 'Virtual Care Platform',
+    desc: 'Technology-enabled delivery of healthcare services, including synchronous video visits and asynchronous messaging.',
+    features: ['State licensing + federal framework', 'HIPAA-compliant video/audio', 'Cross-state practice rules'],
+  },
+  {
+    id: 'ai',
+    color: '#F43F5E',
+    abbr: 'Health AI',
+    name: 'AI / ML Clinical Tools',
+    desc: 'Artificial intelligence and machine learning algorithms that support clinical decision-making or diagnosis.',
+    features: ['FDA AI/ML action plan', 'Algorithmic validation & bias testing', 'Predetermined change control plan'],
+  },
+  {
+    id: 'wellness',
+    color: '#A78BFA',
+    abbr: 'Wellness',
+    name: 'Consumer Health App',
+    desc: 'General wellness applications that help users maintain or encourage a healthy lifestyle, outside FDA device definition.',
+    features: ['Wellness exemption analysis', 'GDPR / CCPA compliance', 'App store health guidelines'],
+  },
+];
+
 export default function DigitalHealthLanding() {
   const [activePhase, setActivePhase] = useState(0);
 
@@ -121,7 +172,7 @@ export default function DigitalHealthLanding() {
             textTransform: 'uppercase', letterSpacing: '0.12em',
             textDecoration: 'none', borderRadius: 2,
             boxShadow: '0 0 24px var(--accent-glow)',
-          }}>Launch →</Link>
+          }}>Launch Studio →</Link>
         </div>
       </nav>
 
@@ -408,10 +459,84 @@ export default function DigitalHealthLanding() {
         </div>
       </section>
 
-      {/* ── How it works ──────────────────────────────────────────────────── */}
+      {/* ── Built For ─────────────────────────────────────────────────────── */}
       <section style={{
         padding: '120px 40px',
         background: 'var(--sidebar-bg)',
+        borderTop: '1px solid var(--line)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 0,
+          background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(139,92,246,0.04) 0%, transparent 70%)',
+        }} />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1160, margin: '0 auto' }}>
+          <div style={{ marginBottom: 72 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 18 }}>Built For</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+              <h2 style={{ margin: 0, fontSize: 'clamp(28px, 3.5vw, 48px)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1, maxWidth: 540 }}>
+                Every Digital Health<br />Product Type.
+              </h2>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-3)', maxWidth: 340, lineHeight: 1.7 }}>
+                Purpose-built workflows for each category of digital health product — from FDA-regulated SaMD to consumer wellness apps.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, border: '1px solid var(--line)' }}>
+            {PRODUCT_TYPES.map((pt, i) => (
+              <div key={pt.id} style={{
+                position: 'relative',
+                padding: '32px 28px 28px',
+                background: 'var(--surface-1)',
+                borderRight: (i % 3) < 2 ? '1px solid var(--line)' : 'none',
+                borderBottom: i < 3 ? '1px solid var(--line)' : 'none',
+                overflow: 'hidden',
+                transition: 'background 0.18s',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-2)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-1)'; }}
+              >
+                {/* Color accent top bar */}
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+                  background: `linear-gradient(90deg, ${pt.color}, ${pt.color}44, transparent)`,
+                }} />
+                {/* Product type abbr */}
+                <div style={{
+                  fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.14em',
+                  color: pt.color, marginBottom: 8,
+                }}>{pt.abbr}</div>
+                {/* Full name */}
+                <div style={{
+                  fontSize: 15, fontWeight: 600, color: 'var(--text)',
+                  marginBottom: 10, lineHeight: 1.3,
+                }}>{pt.name}</div>
+                {/* Description */}
+                <p style={{ margin: '0 0 20px', fontSize: 12, color: 'var(--text-3)', lineHeight: 1.65 }}>{pt.desc}</p>
+                {/* Feature bullets */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {pt.features.map((f, fi) => (
+                    <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                      <div style={{
+                        width: 4, height: 4, borderRadius: '50%', flexShrink: 0,
+                        background: pt.color, opacity: 0.7,
+                      }} />
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.04em' }}>{f}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ──────────────────────────────────────────────────── */}
+      <section style={{
+        padding: '120px 40px',
         borderTop: '1px solid var(--line)',
       }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
