@@ -104,9 +104,9 @@ function CircleGauge({ value, label, color }: { value: number; label: string; co
 
 function ReturnChart() {
   const bars = [
-    { label:'Seed Post-Money', amount:'$18.5M', pct:9.25, color:'#4A5568', note:'2026 · Baseline' },
-    { label:'Series A Pre-Money', amount:'$55M', pct:27.5, color:'#2D72D2', note:'~18 months · ~3× seed' },
-    { label:'5-Year Exit Target', amount:'$200M+', pct:100, color:'#3DCC91', note:'Acquisition / IPO · 10–15× seed' },
+    { label:'Seed Post-Money', amount:'$12M', pct:8, color:'#4A5568', note:'2026 · Baseline' },
+    { label:'Series A Pre-Money', amount:'$35M', pct:23, color:'#2D72D2', note:'~18 months · ~3× seed' },
+    { label:'5-Year Exit Target', amount:'$150M+', pct:100, color:'#3DCC91', note:'Acquisition / IPO · 12–15× seed' },
   ];
   return (
     <div style={{ background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:14, padding:'28px 32px' }}>
@@ -651,16 +651,16 @@ export default function InvestPage() {
                 Investment Terms <em>&amp; Return Path</em>
               </h2>
               <p style={{ fontSize:15, lineHeight:1.7, color:'var(--text-2)', marginBottom:32 }}>
-                Raising $4.5M to complete the Minneapolis pilot, achieve first revenue,
+                Raising $2M to complete the Minneapolis pilot, achieve first revenue,
                 and position for FDA Breakthrough Device Designation — with a clear 18-month
                 path to Series A at demonstrated clinical outcomes.
               </p>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
                 {[
-                  { value:'$4.5M', label:'Target Raise', sub:'Seed round' },
-                  { value:'$14M', label:'Pre-Money', sub:'Valuation' },
-                  { value:'$18.5M', label:'Post-Money', sub:'Valuation' },
-                  { value:'~24%', label:'Investor Equity', sub:'Priced round' },
+                  { value:'$2M', label:'Target Raise', sub:'Seed round' },
+                  { value:'$10M', label:'Pre-Money', sub:'Valuation' },
+                  { value:'$12M', label:'Post-Money', sub:'Valuation' },
+                  { value:'~17%', label:'Investor Equity', sub:'Priced round' },
                 ].map(s => (
                   <div key={s.label} style={{ padding:'18px 20px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:12 }}>
                     <p style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:30, letterSpacing:'-0.03em', margin:'0 0 4px', lineHeight:1 }}>{s.value}</p>
@@ -674,10 +674,10 @@ export default function InvestPage() {
               <p style={{ fontFamily:'var(--mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'0.12em', color:'var(--text-3)', marginBottom:16 }}>Use of Funds</p>
               <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
                 {[
-                  { label:'Engineering & AI Platform', pct:40, color:'#2D72D2', amount:'$1.8M' },
-                  { label:'Clinical Pilot & Operations', pct:30, color:'#3DCC91', amount:'$1.35M' },
-                  { label:'Regulatory & IP Prosecution', pct:20, color:'#FFC940', amount:'$0.9M' },
-                  { label:'G&A, Legal & Compliance', pct:10, color:'#FF6B6B', amount:'$0.45M' },
+                  { label:'Engineering & AI Platform', pct:35, color:'#2D72D2', amount:'$700K' },
+                  { label:'Clinical Pilot & Operations', pct:35, color:'#3DCC91', amount:'$700K' },
+                  { label:'Regulatory & IP Prosecution', pct:20, color:'#FFC940', amount:'$400K' },
+                  { label:'G&A, Legal & Compliance', pct:10, color:'#FF6B6B', amount:'$200K' },
                 ].map(f => (
                   <div key={f.label}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
@@ -692,7 +692,7 @@ export default function InvestPage() {
               </div>
               <div style={{ marginTop:24, padding:'16px 18px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:10 }}>
                 <p style={{ fontFamily:'var(--mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'0.12em', color:'var(--text-3)', margin:'0 0 5px' }}>Lead Investor</p>
-                <p style={{ fontSize:13, color:'var(--text-2)', margin:0, lineHeight:1.6 }}>Seeking a $1M–$2.5M lead check. Strategic partners with digital health, medtech, or senior care experience preferred.</p>
+                <p style={{ fontSize:13, color:'var(--text-2)', margin:0, lineHeight:1.6 }}>Seeking a $500K–$1.5M lead check. Strategic partners with digital health, medtech, or senior care experience preferred.</p>
               </div>
             </div>
           </div>
@@ -701,9 +701,9 @@ export default function InvestPage() {
             <p style={{ fontFamily:'var(--mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'0.12em', color:'var(--text-3)', marginBottom:20 }}>Valuation Path &amp; Investor Returns</p>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:20 }}>
               {[
-                { label:'Seed Post-Money', value:'$18.5M', sub:'2026 · Baseline', mult:'1×', color:'var(--text-2)' },
-                { label:'Series A Pre-Money', value:'$55M', sub:'18 months post-seed', mult:'~3× seed', color:'var(--accent)' },
-                { label:'Exit Target (Yr 5)', value:'$200M+', sub:'Acquisition or IPO', mult:'10–15× seed', color:'var(--sage)' },
+                { label:'Seed Post-Money', value:'$12M', sub:'2026 · Baseline', mult:'1×', color:'var(--text-2)' },
+                { label:'Series A Pre-Money', value:'$35M', sub:'18 months post-seed', mult:'~3× seed', color:'var(--accent)' },
+                { label:'Exit Target (Yr 5)', value:'$150M+', sub:'Acquisition or IPO', mult:'12–15× seed', color:'var(--sage)' },
               ].map(v => (
                 <div key={v.label} style={{ padding:'24px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:14, textAlign:'center' }}>
                   <p style={{ fontFamily:'var(--mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'0.12em', color:'var(--text-3)', margin:'0 0 10px' }}>{v.label}</p>
@@ -725,7 +725,7 @@ export default function InvestPage() {
                 { q:'Q1 2027', title:'FDA Filing', body:'Breakthrough Device Designation application submitted. 510(k) de novo pathway initiated.', color:'#FFC940', icon:'◈' },
                 { q:'Q2 2027', title:'Mfg. Scale-Up', body:'Sensor node manufacturing partner selected. Per-unit cost locked at volume pricing.', color:'#FF6B6B', icon:'⬡' },
                 { q:'Q2 2027', title:'IP Prosecution', body:'PCT national phase entries filed: US, EU, Japan. Co-filing with University of Minnesota OTC.', color:'#3DCC91', icon:'◎' },
-                { q:'Q3 2027', title:'Series A Raise', body:'$15M at $55M pre-money. Triggered by $1M+ ARR and peer-reviewed clinical validation.', color:'#2D72D2', icon:'◆' },
+                { q:'Q3 2027', title:'Series A Raise', body:'$10M at $35M pre-money. Triggered by $1M+ ARR and peer-reviewed clinical validation.', color:'#2D72D2', icon:'◆' },
                 { q:'Q4 2027', title:'Multi-State Ops', body:'10+ facilities across MN, WI, and IA. Channel partnerships with regional SNF operators.', color:'#FFC940', icon:'◉' },
                 { q:'2028', title:'510(k) Clearance', body:'FDA device clearance unlocks hospital-grade deployment and CMS reimbursement pathways.', color:'#FF6B6B', icon:'◈' },
               ].map((m, i) => (
