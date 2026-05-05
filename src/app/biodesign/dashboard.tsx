@@ -2,6 +2,32 @@
 import { useState } from 'react';
 import { BiodesignState, DEFAULT_STATE, PATHWAY_META } from './data';
 
+function calcHealthScore(s: BiodesignState): number {
+  const checks = [
+    !!s.projectName,
+    !!s.indication,
+    s.needs.length > 0,
+    s.needs.length >= 3,
+    s.needs.some(n => n.status === 'selected' || n.status === 'validated'),
+    s.stakeholders.length > 0,
+    s.competitors.length > 0,
+    s.concepts.length > 0,
+    s.concepts.length >= 2,
+    s.concepts.some(c => c.status === 'selected' || c.status === 'development'),
+    s.regulatory.pathway !== 'tbd',
+    s.regulatory.deviceClass !== 'TBD',
+    s.milestones.length > 0,
+    s.risks.length > 0,
+    (s.ipFilings ?? []).length > 0,
+    (s.reimbursement.cptCodes.length > 0 || !!s.reimbursement.siteOfService),
+    (s.comply.profile.targetMarkets ?? []).length > 0,
+    Object.keys(s.comply.compliance ?? {}).length > 0,
+    s.designControls.inputs.length > 0,
+    !!(s.business.revenueModel),
+  ];
+  return Math.round(checks.filter(Boolean).length / checks.length * 100);
+}
+
 const PROJECT_KEY = (id: string) => `ambient-biodesign-project-${id}`;
 
 function loadState(id: string): BiodesignState {
@@ -122,6 +148,8 @@ function ProjectCard({ meta, state, shareUrl, sharing, onOpen, onDelete, onShare
   const selectedNeeds = state.needs.filter(n => n.status === 'selected' || n.status === 'validated').length;
   const selectedConcepts = state.concepts.filter(c => c.status === 'selected' || c.status === 'development').length;
   const updated = new Date(meta.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const health = calcHealthScore(state);
+  const healthColor = health >= 75 ? '#52E8B4' : health >= 40 ? '#E8A852' : '#E87252';
 
   return (
     <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 3, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -137,11 +165,17 @@ function ProjectCard({ meta, state, shareUrl, sharing, onOpen, onDelete, onShare
               <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.indication}</div>
             )}
           </div>
-          {pathwayMeta && (
-            <span style={{ fontSize: 9, padding: '3px 7px', borderRadius: 2, background: pathwayMeta.color + '18', color: pathwayMeta.color, border: `1px solid ${pathwayMeta.color}44`, fontFamily: 'var(--mono)', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {pathwayMeta.label}
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {pathwayMeta && (
+              <span style={{ fontSize: 9, padding: '3px 7px', borderRadius: 2, background: pathwayMeta.color + '18', color: pathwayMeta.color, border: `1px solid ${pathwayMeta.color}44`, fontFamily: 'var(--mono)', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                {pathwayMeta.label}
+              </span>
+            )}
+            <div title="Project health score (0–100)" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+              <span style={{ fontSize: 16, fontWeight: 900, fontFamily: 'var(--mono)', color: healthColor, lineHeight: 1 }}>{health}</span>
+              <span style={{ fontSize: 7, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>health</span>
+            </div>
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', marginTop: 12 }}>

@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { FlowCanvas } from './flowbg';
 import './biodesign.css';
 
 const PHASES = [
@@ -134,8 +135,7 @@ export default function BiodesignLanding() {
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* Dot grid */}
-        <div className="biodesign-dots" style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
+        <FlowCanvas accent="#52C0E8" style={{ zIndex: 0 }} />
         {/* Radial glow */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,

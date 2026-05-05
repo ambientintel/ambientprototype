@@ -19,7 +19,51 @@ import { AiDraftButton } from '../aiassist';
 import { ProjectDashboard } from '../dashboard';
 import { HistoryModal } from '../history';
 import { FlowCanvas } from '../flowbg';
+import { CommandPalette } from '../cmdpalette';
+import { RegulatoryWizard } from '../regwizard';
 import '../biodesign.css';
+
+function getPhaseCompletion(state: BiodesignState, phaseKey: string): number {
+  let pts: boolean[];
+  switch (phaseKey) {
+    case 'identify':
+      pts = [
+        state.needs.length > 0,
+        state.needs.some(n => n.status === 'selected' || n.status === 'validated'),
+        state.stakeholders.length > 0,
+        state.competitors.length > 0,
+      ];
+      break;
+    case 'invent':
+      pts = [
+        state.concepts.length > 0,
+        state.concepts.length >= 2,
+        state.concepts.some(c => c.status === 'selected' || c.status === 'development'),
+      ];
+      break;
+    case 'implement':
+      pts = [
+        state.regulatory.pathway !== 'tbd',
+        state.regulatory.deviceClass !== 'TBD',
+        state.milestones.length > 0,
+        state.risks.length > 0,
+        (state.ipFilings ?? []).length > 0,
+        (state.reimbursement.cptCodes.length > 0 || !!state.reimbursement.siteOfService),
+      ];
+      break;
+    case 'comply':
+      pts = [
+        (state.comply.profile.targetMarkets ?? []).length > 0,
+        Object.keys(state.comply.compliance ?? {}).length > 0,
+        Object.values(state.comply.compliance ?? {}).some(s => s.status === 'complete'),
+        state.designControls.inputs.length > 0,
+      ];
+      break;
+    default:
+      return 0;
+  }
+  return Math.round(pts.filter(Boolean).length / pts.length * 100);
+}
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 
@@ -1283,6 +1327,8 @@ export default function BiodesignPage() {
   const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings'>('needs');
   const [showOnePager, setShowOnePager] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showPalette, setShowPalette] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [view, setView] = useState<'dashboard' | 'workspace'>('workspace');
   const [shareToast, setShareToast] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -1520,6 +1566,11 @@ export default function BiodesignPage() {
   useEffect(() => {
     if (view !== 'workspace') return;
     function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowPalette(p => !p);
+        return;
+      }
       const el = e.target as HTMLElement;
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return;
       const tabs = phaseTabMap[phase];
@@ -1820,6 +1871,25 @@ export default function BiodesignPage() {
 
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Phase completion rail */}
+        <div style={{ background: 'var(--bg)', borderBottom: '1px solid var(--line)', padding: '7px 24px', display: 'flex', gap: 8, flexShrink: 0 }}>
+          {PHASES.map(p => {
+            const pct = getPhaseCompletion(state, p.key);
+            const isActive = p.key === phase;
+            return (
+              <button key={p.key} onClick={() => switchPhase(p.key as typeof phase)} style={{ flex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ fontSize: 8, fontFamily: 'var(--mono)', color: isActive ? p.color : 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', transition: 'color 0.2s' }}>{p.label}</span>
+                  <span style={{ fontSize: 8, fontFamily: 'var(--mono)', color: pct === 100 ? p.color : 'var(--text-4)' }}>{pct}%</span>
+                </div>
+                <div style={{ height: 3, background: 'var(--line)', borderRadius: 2 }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: p.color, borderRadius: 2, transition: 'width 0.5s, opacity 0.2s', opacity: isActive ? 1 : 0.4 }} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Tab bar */}
         <div style={{ background: 'var(--surface-1)', borderBottom: '1px solid var(--line)', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, height: 58, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
@@ -1859,21 +1929,45 @@ export default function BiodesignPage() {
               ))}
             </div>
           </div>
-          <button onClick={() => window.print()}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
-              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
-              background: 'transparent', color: 'var(--text-4)',
-              border: '1px solid var(--line)',
-              flexShrink: 0, transition: 'all 0.15s',
-            }}>
-            <span>↓ PDF</span>
-          </button>
+          <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
+            <button onClick={() => setShowWizard(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(168,126,232,0.10)', color: '#A07EE8',
+                border: '1px solid rgba(168,126,232,0.28)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Reg Wizard</span>
+            </button>
+            <button onClick={() => setShowPalette(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'transparent', color: 'var(--text-4)',
+                border: '1px solid var(--line)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span style={{ opacity: 0.5, fontSize: 9 }}>⌘K</span>
+            </button>
+            <button onClick={() => window.print()}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 16px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'transparent', color: 'var(--text-4)',
+                border: '1px solid var(--line)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>↓ PDF</span>
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, padding: '28px 40px', overflowY: 'auto' }}>
+        <div key={`${phase}-${tab}`} className="bd-tab-in" style={{ flex: 1, padding: '28px 40px', overflowY: 'auto' }}>
           {tab === 'needs'          && <NeedsTab state={state} update={update} />}
           {tab === 'stakeholders'   && <StakeholdersTab state={state} update={update} />}
           {tab === 'competitors'    && <CompetitiveTab state={state} update={update} />}
@@ -1893,6 +1987,37 @@ export default function BiodesignPage() {
 
     {showOnePager && <InvestorOnePager state={state} onClose={() => setShowOnePager(false)} />}
     {showHistory && <HistoryModal projectId={activeId} currentState={state} onRestore={s => { update(s); setShowHistory(false); }} onClose={() => setShowHistory(false)} />}
+    {showPalette && (
+      <CommandPalette
+        state={state}
+        phase={phase}
+        tab={tab}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); }}
+        onClose={() => setShowPalette(false)}
+      />
+    )}
+    {showWizard && (
+      <RegulatoryWizard
+        state={state}
+        onResult={(pathway, deviceClass, reasoning) => {
+          update({
+            ...state,
+            regulatory: {
+              ...state.regulatory,
+              pathway: pathway as typeof state.regulatory.pathway,
+              deviceClass: deviceClass as typeof state.regulatory.deviceClass,
+              notes: state.regulatory.notes
+                ? state.regulatory.notes + '\n\n[Wizard] ' + reasoning
+                : '[Wizard] ' + reasoning,
+            },
+          });
+          setShowWizard(false);
+          switchPhase('implement');
+          setTab('regulatory');
+        }}
+        onClose={() => setShowWizard(false)}
+      />
+    )}
     </>
   );
 }
