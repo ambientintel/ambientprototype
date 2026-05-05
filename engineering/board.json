@@ -146,7 +146,8 @@
       "Thu": "yes",
       "Fri": "yes",
       "SU": "yes",
-      "M": "yes"
+      "M": "yes",
+      "T": "yes"
     },
     "Hanna": {
       "Mon": null
