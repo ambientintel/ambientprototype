@@ -24,6 +24,7 @@ import { RegulatoryWizard } from '../regwizard';
 import { CrossPhaseThreads } from '../crossphase';
 import { ClinicalWizard } from '../clinicalwizard';
 import { ReadinessOverlay } from '../readiness';
+import { PreSubTab } from '../presub';
 import '../biodesign.css';
 
 function getPhaseCompletion(state: BiodesignState, phaseKey: string): number {
@@ -90,6 +91,7 @@ function parseRaw(raw: string): BiodesignState {
     ...parsed,
     comply: { ...DEFAULT_STATE.comply, ...(parsed.comply ?? {}) },
     designControls: { ...DEFAULT_STATE.designControls, ...(parsed.designControls ?? {}) },
+    preSubmission: { meetings: parsed.preSubmission?.meetings ?? [] },
     milestones: parsed.milestones ?? [],
     risks: parsed.risks ?? [],
     competitors: parsed.competitors ?? [],
@@ -1475,7 +1477,7 @@ export default function BiodesignPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
-  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings'>('needs');
+  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings' | 'presub'>('needs');
   const [showOnePager, setShowOnePager] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
@@ -1692,7 +1694,7 @@ export default function BiodesignPage() {
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
     identify:  ['needs', 'stakeholders', 'competitors'],
     invent:    ['concepts'],
-    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks', 'ipfilings'],
+    implement: ['regulatory', 'strategy', 'reimbursement', 'timeline', 'risks', 'ipfilings', 'presub'],
     comply:    ['profile', 'standards', 'designcontrols'],
   };
 
@@ -1710,6 +1712,7 @@ export default function BiodesignPage() {
     standards:      { label: 'Standards',      icon: '≡' },
     designcontrols: { label: 'Design Controls',icon: '⊞' },
     ipfilings:      { label: 'IP Portfolio',   icon: '◈' },
+    presub:         { label: 'FDA Pre-Sub',    icon: '⊕' },
   };
 
   function switchPhase(p: typeof phase) {
@@ -2169,6 +2172,7 @@ export default function BiodesignPage() {
           {tab === 'standards'      && <StandardsTab state={state} update={update} />}
           {tab === 'designcontrols' && <DesignControlsTab state={state} update={update} />}
           {tab === 'ipfilings'      && <IPFilingsTab state={state} update={update} />}
+          {tab === 'presub'         && <PreSubTab state={state} update={update} />}
         </div>
       </div>
     </div>

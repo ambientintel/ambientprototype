@@ -253,6 +253,60 @@ export interface IPFiling {
   createdAt: string;
 }
 
+// ── Pre-Submission ────────────────────────────────────────────────────────────
+
+export type PreSubMeetingType =
+  'q-sub' | 'pre-ide' | 'pre-pma' | 'pre-510k' | 'de-novo-pre' |
+  'breakthrough' | 'study-risk' | 'sap-review';
+
+export type PreSubStatus =
+  'planning' | 'drafting' | 'submitted' | 'acknowledged' |
+  'scheduled' | 'meeting-held' | 'written-response';
+
+export type PreSubDocStatus = 'not-started' | 'in-progress' | 'complete' | 'na';
+
+export type PreSubQuestionCategory =
+  'regulatory' | 'clinical' | 'technical' | 'manufacturing' | 'labeling';
+
+export interface PreSubQuestion {
+  id: string;
+  text: string;
+  category: PreSubQuestionCategory;
+  priority: 1 | 2 | 3;
+  fdaResponse: string;
+  status: 'draft' | 'final' | 'answered';
+}
+
+export interface PreSubDocument {
+  id: string;
+  name: string;
+  section: string;
+  required: boolean;
+  status: PreSubDocStatus;
+  notes: string;
+}
+
+export interface PreSubMeeting {
+  id: string;
+  type: PreSubMeetingType;
+  title: string;
+  status: PreSubStatus;
+  meetingFormat: 'in-person' | 'teleconference' | 'written-only';
+  submittedDate: string;
+  acknowledgedDate: string;
+  meetingDate: string;
+  responseDate: string;
+  qSubNumber: string;
+  fdaContact: string;
+  questions: PreSubQuestion[];
+  documents: PreSubDocument[];
+  notes: string;
+}
+
+export interface PreSubmissionPlan {
+  meetings: PreSubMeeting[];
+}
+
 // ── Reimbursement Strategy ────────────────────────────────────────────────────
 
 export type SiteOfService = 'inpatient' | 'outpatient-hospital' | 'asc' | 'physician-office' | 'home' | 'snf';
@@ -435,6 +489,7 @@ export interface BiodesignState {
   business: BusinessModel;
   comply: ComplyState;
   ipFilings: IPFiling[];
+  preSubmission: PreSubmissionPlan;
   reimbursement: ReimbursementStrategy;
   milestones: Milestone[];
   risks: Risk[];
@@ -497,6 +552,7 @@ export const DEFAULT_STATE: BiodesignState = {
     certifications: [],
   },
   ipFilings: [],
+  preSubmission: { meetings: [] },
   reimbursement: DEFAULT_REIMBURSEMENT,
   milestones: [],
   risks: [],
