@@ -158,24 +158,34 @@
 /* ── Print / PDF export ──────────────────────────────────────────────────────── */
 
 @media print {
-  /* Hide the app chrome */
-  .biodesign-root > div:first-child,
-  .biodesign-root > div:nth-child(2) {
+  /* ── One-pager is open: render only the document ──────────────────────────── */
+  body:has(.bd-onepager-print) * {
+    visibility: hidden !important;
+  }
+  body:has(.bd-onepager-print) .bd-onepager-print,
+  body:has(.bd-onepager-print) .bd-onepager-print * {
+    visibility: visible !important;
+  }
+  body:has(.bd-onepager-print) .bd-onepager-print {
+    position: fixed !important;
+    inset: 0 !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* ── No modal: hide app chrome, print content pane ───────────────────────── */
+  body:not(:has(.bd-onepager-print)) .biodesign-root > div:first-child,
+  body:not(:has(.bd-onepager-print)) .biodesign-root > div:nth-child(2) > div:first-child {
     display: none !important;
   }
-
-  /* Show the print overlay */
-  .bd-print-only {
-    display: block !important;
-  }
-
-  /* Reset page appearance for print */
-  .biodesign-root {
+  body:not(:has(.bd-onepager-print)) .biodesign-root {
     background: #fff !important;
     color: #1a1a1a !important;
   }
-
-  .biodesign-root::before {
+  body:not(:has(.bd-onepager-print)) .biodesign-root::before {
     display: none !important;
   }
 

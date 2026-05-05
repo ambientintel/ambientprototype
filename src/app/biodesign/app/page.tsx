@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   BiodesignState, DEFAULT_STATE, NeedStatement, Stakeholder, Concept,
   Patent, NeedStatus, ConceptStatus, StakeholderRole, RegulatoryPathway,
@@ -16,6 +16,8 @@ import { DesignControlsTab } from '../designcontrols';
 import { IPFilingsTab } from '../ipfilings';
 import { InvestorOnePager } from '../onepager';
 import { AiDraftButton } from '../aiassist';
+import { ProjectDashboard } from '../dashboard';
+import { HistoryModal } from '../history';
 import '../biodesign.css';
 
 // ── Storage ────────────────────────────────────────────────────────────────────
@@ -929,6 +931,7 @@ function StrategyTab({ state, update }: { state: BiodesignState; update: (s: Bio
   const biz = state.business;
   const clin = state.clinical;
 
+  const reg = state.regulatory;
   function setBiz(patch: Partial<typeof biz>) { update({ ...state, business: { ...biz, ...patch } }); }
   function setClin(patch: Partial<typeof clin>) { update({ ...state, clinical: { ...clin, ...patch } }); }
 
@@ -982,6 +985,12 @@ function StrategyTab({ state, update }: { state: BiodesignState; update: (s: Bio
 
       {section === 'clinical' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <AiDraftButton
+            type="clinical"
+            context={{ indication: state.indication, deviceClass: reg.deviceClass, pathway: reg.pathway, primaryEndpoint: clin.primaryEndpoint, studyDesign: clin.studyDesign }}
+            onResult={r => setClin({ primaryEndpoint: r.primaryEndpoint ?? clin.primaryEndpoint, studyDesign: r.studyDesign ?? clin.studyDesign, inclusionCriteria: r.inclusionCriteria ?? clin.inclusionCriteria, exclusionCriteria: r.exclusionCriteria ?? clin.exclusionCriteria })}
+            label="Draft clinical plan"
+          />
           <Field label="Primary Endpoint" value={clin.primaryEndpoint} onChange={v => setClin({ primaryEndpoint: v })} multiline placeholder="e.g. Reduction in 30-day readmission rate vs. standard of care (non-inferiority margin 5%)" />
 
           <div>
@@ -1148,6 +1157,8 @@ const PHASES = [
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
+interface AuthUser { email: string; firstName: string | null; lastName: string | null; profilePictureUrl: string | null; }
+
 export default function BiodesignPage() {
   const [state, setStateRaw] = useState<BiodesignState>(DEFAULT_STATE);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
@@ -1156,25 +1167,114 @@ export default function BiodesignPage() {
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
   const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings'>('needs');
   const [showOnePager, setShowOnePager] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard');
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Stable refs for use inside callbacks without stale closures
+  const authUserRef = useRef<AuthUser | null>(null);
+  const activeIdRef = useRef<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { authUserRef.current = authUser; }, [authUser]);
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+
+  // ── Cloud sync helpers ────────────────────────────────────────────────────────
+
+  async function cloudSave(projectId: string, projectState: BiodesignState) {
+    setSyncStatus('saving');
+    try {
+      const res = await fetch('/api/biodesign/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: projectId, state: projectState }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setSyncStatus('saved');
+      setTimeout(() => setSyncStatus(s => s === 'saved' ? 'idle' : s), 2500);
+    } catch {
+      setSyncStatus('error');
+    }
+  }
+
+  async function cloudDelete(projectId: string) {
+    try {
+      await fetch(`/api/biodesign/projects/${projectId}`, { method: 'DELETE' });
+    } catch { /* best-effort */ }
+  }
+
+  // ── Bootstrap: auth + cloud merge ─────────────────────────────────────────────
 
   useEffect(() => {
-    const { projects: ps, activeId: aid } = loadProjectsAndActive();
-    setProjects(ps);
-    if (aid) {
-      setActiveId(aid);
-      setStateRaw(loadProjectData(aid));
-    } else {
-      // No projects yet — create the first one
+    // 1. Load local state immediately
+    const { projects: localPs, activeId: localAid } = loadProjectsAndActive();
+    let localProjects = localPs;
+    let initialActiveId = localAid;
+
+    if (!localAid) {
       const id = uid();
       const meta: ProjectMeta = { id, name: '', indication: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-      const newProjects = [meta];
-      localStorage.setItem(PROJECTS_KEY, JSON.stringify(newProjects));
+      localProjects = [meta];
+      initialActiveId = id;
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(localProjects));
       localStorage.setItem(ACTIVE_KEY, id);
-      setProjects(newProjects);
-      setActiveId(id);
     }
+
+    setProjects(localProjects);
+    setActiveId(initialActiveId);
+    setStateRaw(initialActiveId ? loadProjectData(initialActiveId) : DEFAULT_STATE);
     setLoaded(true);
+
+    // 2. Fetch auth user
+    fetch('/api/biodesign/me')
+      .then(r => r.json())
+      .then(async d => {
+        if (!d.user) return;
+        setAuthUser(d.user);
+        authUserRef.current = d.user;
+
+        // 3. Merge cloud projects
+        try {
+          const cloudRes = await fetch('/api/biodesign/projects');
+          if (!cloudRes.ok) return;
+          const { projects: cloudMetas } = await cloudRes.json() as {
+            projects: { id: string; name: string; indication: string; updatedAt: string; blobUrl: string }[]
+          };
+
+          const localIds = new Set(localProjects.map(p => p.id));
+          const cloudIds = new Set(cloudMetas.map(p => p.id));
+
+          // Download cloud projects not yet in localStorage
+          const toDownload = cloudMetas.filter(p => !localIds.has(p.id));
+          for (const meta of toDownload) {
+            try {
+              const stateRes = await fetch(meta.blobUrl, { cache: 'no-store' });
+              const cloudState = await stateRes.json();
+              const parsed = parseRaw(JSON.stringify(cloudState));
+              const pm: ProjectMeta = { id: meta.id, name: meta.name, indication: meta.indication, createdAt: meta.updatedAt, updatedAt: meta.updatedAt };
+              localProjects = [...localProjects, pm];
+              localStorage.setItem(PROJECT_KEY(meta.id), JSON.stringify(parsed));
+            } catch { /* skip bad blob */ }
+          }
+
+          // Upload local projects not yet in cloud
+          const toUpload = localProjects.filter(p => !cloudIds.has(p.id));
+          for (const pm of toUpload) {
+            const s = loadProjectData(pm.id);
+            fetch('/api/biodesign/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: pm.id, state: s }) }).catch(() => {});
+          }
+
+          if (toDownload.length > 0) {
+            localStorage.setItem(PROJECTS_KEY, JSON.stringify(localProjects));
+            setProjects(localProjects);
+          }
+        } catch { /* cloud unavailable, stay local */ }
+      })
+      .catch(() => {});
   }, []);
+
+  // ── State update + debounced cloud save ────────────────────────────────────────
 
   const update = useCallback((next: BiodesignState) => {
     setStateRaw(next);
@@ -1182,6 +1282,14 @@ export default function BiodesignPage() {
       if (!id) return id;
       setProjects(ps => persistProject(id, next, ps));
       localStorage.setItem(ACTIVE_KEY, id);
+
+      // Debounced cloud save
+      if (authUserRef.current) {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        setSyncStatus('saving');
+        saveTimerRef.current = setTimeout(() => cloudSave(id, next), 2000);
+      }
+
       return id;
     });
   }, []);
@@ -1199,14 +1307,70 @@ export default function BiodesignPage() {
     setStateRaw(DEFAULT_STATE);
     setPhase('identify');
     setTab('needs');
+    if (authUserRef.current) cloudSave(id, DEFAULT_STATE);
+  }
+
+  function deleteProject(id: string) {
+    setProjects(ps => {
+      const updated = ps.filter(p => p.id !== id);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(updated));
+      localStorage.removeItem(PROJECT_KEY(id));
+      return updated;
+    });
+    if (authUserRef.current) cloudDelete(id);
+    // Switch to another project or create new
+    setActiveId(prev => {
+      if (prev !== id) return prev;
+      const remaining = projects.filter(p => p.id !== id);
+      if (remaining.length > 0) {
+        const next = remaining[0];
+        localStorage.setItem(ACTIVE_KEY, next.id);
+        setStateRaw(loadProjectData(next.id));
+        return next.id;
+      }
+      const newId = uid();
+      const meta: ProjectMeta = { id: newId, name: '', indication: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      setProjects([meta]);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify([meta]));
+      localStorage.setItem(ACTIVE_KEY, newId);
+      setStateRaw(DEFAULT_STATE);
+      return newId;
+    });
+    setPhase('identify');
+    setTab('needs');
   }
 
   function switchProject(id: string) {
+    // Auto-checkpoint current project before switching (if authenticated and has content)
+    if (authUserRef.current && activeIdRef.current && activeIdRef.current !== id) {
+      const cur = loadProjectData(activeIdRef.current);
+      if (cur.needs.length > 0 || cur.concepts.length > 0) {
+        fetch(`/api/biodesign/projects/${activeIdRef.current}/history`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: cur }),
+        }).catch(() => {});
+      }
+    }
     localStorage.setItem(ACTIVE_KEY, id);
     setActiveId(id);
     setStateRaw(loadProjectData(id));
+    setSyncStatus('idle');
     setPhase('identify');
     setTab('needs');
+  }
+
+  async function shareProject(id: string): Promise<string | null> {
+    const projectState = loadProjectData(id);
+    try {
+      const res = await fetch('/api/biodesign/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: projectState }),
+      });
+      const { url } = await res.json();
+      return url ?? null;
+    } catch { return null; }
   }
 
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
@@ -1239,6 +1403,23 @@ export default function BiodesignPage() {
 
   if (!loaded) return null;
 
+  if (view === 'dashboard') {
+    return (
+      <>
+        <ProjectDashboard
+          projects={projects}
+          authUser={authUser}
+          syncStatus={syncStatus}
+          onOpen={id => { switchProject(id); setView('workspace'); }}
+          onNew={() => { newProject(); setView('workspace'); }}
+          onDelete={deleteProject}
+          onShare={shareProject}
+        />
+        {showHistory && <HistoryModal projectId={activeId} currentState={state} onRestore={s => { update(s); setShowHistory(false); }} onClose={() => setShowHistory(false)} />}
+      </>
+    );
+  }
+
   return (
     <>
     <div className="biodesign-root" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
@@ -1251,9 +1432,11 @@ export default function BiodesignPage() {
       }}>
         {/* Logo / project */}
         <div style={{ padding: '0 20px', marginBottom: 28 }}>
-          <Link href="/biodesign" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', marginBottom: 18 }}>
-            <span className="brand-name">Ambient <em>Intelligence</em></span>
-          </Link>
+          <button onClick={() => setView('dashboard')} style={{
+            display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em',
+            padding: '0 0 12px', marginBottom: 6,
+          }}>← All Projects</button>
           <input
             value={state.projectName}
             onChange={e => update({ ...state, projectName: e.target.value })}
@@ -1320,7 +1503,20 @@ export default function BiodesignPage() {
         {/* Projects list */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: '20px 0 0', borderTop: '1px solid var(--line)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 6px' }}>
-            <span style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.14em', fontFamily: 'var(--mono)' }}>Projects</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.14em', fontFamily: 'var(--mono)' }}>Projects</span>
+              {authUser && syncStatus !== 'idle' && (
+                <span style={{
+                  fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                  color: syncStatus === 'saving' ? '#d9a020' : syncStatus === 'saved' ? '#3DCC91' : '#c04040',
+                }}>
+                  {syncStatus === 'saving' ? '↑ Saving…' : syncStatus === 'saved' ? '✓ Saved' : '✗ Error'}
+                </span>
+              )}
+              {authUser && syncStatus === 'idle' && (
+                <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)', opacity: 0.5 }}>☁</span>
+              )}
+            </div>
             <button onClick={newProject} style={{
               display: 'flex', alignItems: 'center', gap: 4,
               padding: '3px 8px', borderRadius: 2, cursor: 'pointer',
@@ -1333,36 +1529,84 @@ export default function BiodesignPage() {
             {projects.map(p => {
               const isActive = p.id === activeId;
               return (
-                <button key={p.id} onClick={() => switchProject(p.id)} style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '8px 20px', paddingLeft: isActive ? 17 : 20,
-                  background: isActive ? 'rgba(82,192,232,0.08)' : 'transparent',
-                  border: 'none',
-                  borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
-                  cursor: 'pointer', transition: 'background 0.1s',
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {p.name || 'Untitled Project'}
-                  </div>
-                  {p.indication && (
-                    <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {p.indication}
+                <div key={p.id} style={{ display: 'flex', alignItems: 'stretch', borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent' }}>
+                  <button onClick={() => switchProject(p.id)} style={{
+                    flex: 1, textAlign: 'left', minWidth: 0,
+                    padding: '8px 8px 8px 17px',
+                    background: isActive ? 'rgba(82,192,232,0.08)' : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer', transition: 'background 0.1s',
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {p.name || 'Untitled Project'}
                     </div>
+                    {p.indication && (
+                      <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {p.indication}
+                      </div>
+                    )}
+                  </button>
+                  {projects.length > 1 && (
+                    <button onClick={() => { if (confirm(`Delete "${p.name || 'Untitled Project'}"?`)) deleteProject(p.id); }}
+                      title="Delete project"
+                      style={{ padding: '0 8px', background: 'transparent', border: 'none', color: 'var(--text-4)', cursor: 'pointer', fontSize: 14, flexShrink: 0, opacity: 0.5 }}>
+                      ×
+                    </button>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
         </div>
 
-        {/* One-pager button */}
-        <div style={{ padding: '10px 20px 0', borderTop: '1px solid var(--line)' }}>
+        {/* One-pager + export/import */}
+        <div style={{ padding: '10px 20px 0', borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <button onClick={() => setShowOnePager(true)} style={{
             width: '100%', padding: '8px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
             background: 'rgba(82,192,232,0.08)', color: 'var(--accent)',
             border: '1px solid rgba(82,192,232,0.25)',
             fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.09em',
           }}>✦ Investor One-Pager</button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => {
+              const name = (state.projectName || 'biodesign-project').toLowerCase().replace(/\s+/g, '-');
+              const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = `${name}.json`; a.click();
+              URL.revokeObjectURL(url);
+            }} style={{
+              flex: 1, padding: '6px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+              background: 'var(--surface-1)', color: 'var(--text-3)',
+              border: '1px solid var(--line)',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+            }}>↓ Export</button>
+            <label style={{
+              flex: 1, padding: '6px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+              background: 'var(--surface-1)', color: 'var(--text-3)',
+              border: '1px solid var(--line)',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+              textAlign: 'center',
+            }}>
+              ↑ Import
+              <input type="file" accept=".json" style={{ display: 'none' }} onChange={e => {
+                const file = e.target.files?.[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => {
+                  try {
+                    const imported = parseRaw(ev.target?.result as string);
+                    const id = uid();
+                    const meta: ProjectMeta = { id, name: imported.projectName || 'Imported Project', indication: imported.indication, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+                    setProjects(ps => { const updated = [...ps, meta]; localStorage.setItem(PROJECTS_KEY, JSON.stringify(updated)); return updated; });
+                    localStorage.setItem(PROJECT_KEY(id), JSON.stringify(imported));
+                    localStorage.setItem(ACTIVE_KEY, id);
+                    setActiveId(id); setStateRaw(imported); setPhase('identify'); setTab('needs');
+                  } catch { alert('Invalid project file.'); }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+              }} />
+            </label>
+          </div>
         </div>
 
         {/* Footer stats */}
@@ -1381,6 +1625,25 @@ export default function BiodesignPage() {
             </>}
           </div>
         </div>
+
+        {/* User identity */}
+        {authUser && (
+          <div style={{ padding: '10px 20px', borderTop: '1px solid var(--line)', marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {authUser.profilePictureUrl ? (
+              <img src={authUser.profilePictureUrl} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                {(authUser.firstName?.[0] ?? authUser.email[0]).toUpperCase()}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {authUser.firstName ? `${authUser.firstName}${authUser.lastName ? ' ' + authUser.lastName : ''}` : authUser.email}
+              </div>
+              <a href="/api/auth/signout" style={{ fontSize: 10, color: 'var(--text-4)', textDecoration: 'none', fontFamily: 'var(--mono)' }}>Sign out</a>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main */}
@@ -1404,15 +1667,27 @@ export default function BiodesignPage() {
                 }}>{tabMeta[t].label}</button>
             ))}
           </div>
-          <button onClick={() => window.print()}
-            style={{
-              padding: '8px 14px', margin: 'auto 0',
-              borderRadius: 2, fontSize: 10, cursor: 'pointer',
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: 'auto 0' }}>
+            <button onClick={() => setShowHistory(true)} style={{
+              padding: '6px 12px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
               fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
-              background: 'var(--surface-2)', color: 'var(--text-4)',
-              border: '1px solid var(--line)',
-              flexShrink: 0,
+              background: 'var(--surface-2)', color: 'var(--text-4)', border: '1px solid var(--line)',
+            }}>History</button>
+            <button onClick={async () => {
+              if (!activeId) return;
+              const url = await shareProject(activeId);
+              if (url) { navigator.clipboard.writeText(url).catch(() => {}); alert(`Share link copied!\n\n${url}`); }
+            }} style={{
+              padding: '6px 12px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+              background: 'var(--surface-2)', color: 'var(--text-4)', border: '1px solid var(--line)',
+            }}>↗ Share</button>
+            <button onClick={() => window.print()} style={{
+              padding: '6px 12px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+              background: 'var(--surface-2)', color: 'var(--text-4)', border: '1px solid var(--line)',
             }}>Export PDF</button>
+          </div>
         </div>
 
         {/* Content */}
@@ -1435,6 +1710,7 @@ export default function BiodesignPage() {
     </div>
 
     {showOnePager && <InvestorOnePager state={state} onClose={() => setShowOnePager(false)} />}
+    {showHistory && <HistoryModal projectId={activeId} currentState={state} onRestore={s => { update(s); setShowHistory(false); }} onClose={() => setShowHistory(false)} />}
     </>
   );
 }

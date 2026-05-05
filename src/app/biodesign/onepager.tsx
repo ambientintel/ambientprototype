@@ -44,7 +44,7 @@ export function InvestorOnePager({ state, onClose }: Props) {
     }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{ width: '100%', maxWidth: 760, background: '#fff', borderRadius: 2, overflow: 'hidden' }}>
+      <div className="bd-onepager-print" style={{ width: '100%', maxWidth: 760, background: '#fff', borderRadius: 2, overflow: 'hidden' }}>
         {/* Modal toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', background: '#131E2C', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'rgba(214,233,248,0.6)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Investor One-Pager</span>
