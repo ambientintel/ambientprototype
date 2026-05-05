@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useState, useCallback, useEffect } from 'react';
-import '../../digitalhealth.css';
+import '../digitalhealth.css';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
