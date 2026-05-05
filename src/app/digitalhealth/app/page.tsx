@@ -9,6 +9,10 @@ type ProductType = 'samd' | 'dtx' | 'wellness' | 'rpm' | 'telehealth' | 'ai-ml' 
 type RegulatoryPathway = 'fda-510k' | 'fda-pma' | 'fda-de-novo' | 'fda-exempt' | 'ce-mark' | 'dtx-alliance' | 'wellness-exempt' | 'tbd';
 type EvidenceType = 'rct' | 'rwe' | 'single-arm' | 'registry' | 'retrospective' | 'none';
 type PrivacyFramework = 'hipaa' | 'gdpr' | 'both' | 'neither';
+type RiskCategory = 'clinical' | 'security' | 'privacy' | 'operational' | 'regulatory';
+type RiskStatus = 'open' | 'mitigated' | 'accepted' | 'closed';
+type ResidualLevel = 'low' | 'medium' | 'high' | 'unacceptable';
+type StandardStatus = 'not-started' | 'in-progress' | 'compliant' | 'not-applicable';
 
 interface Persona {
   id: string;
@@ -25,6 +29,35 @@ interface Milestone {
   phase: 'discover' | 'define' | 'develop' | 'deploy';
   status: 'planned' | 'in-progress' | 'complete' | 'blocked';
   targetDate: string;
+  notes: string;
+}
+
+interface SoftwareRisk {
+  id: string;
+  description: string;
+  category: RiskCategory;
+  severity: 1 | 2 | 3 | 4 | 5;
+  probability: 1 | 2 | 3 | 4 | 5;
+  mitigation: string;
+  residualLevel: ResidualLevel;
+  status: RiskStatus;
+  createdAt: string;
+}
+
+interface AdverseEvent {
+  id: string;
+  date: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'investigating' | 'resolved' | 'reported-to-fda';
+}
+
+interface Improvement {
+  id: string;
+  title: string;
+  type: 'bug' | 'enhancement' | 'safety' | 'compliance';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'backlog' | 'planned' | 'in-progress' | 'done';
   notes: string;
 }
 
@@ -89,6 +122,28 @@ interface DHState {
   };
 
   milestones: Milestone[];
+
+  interop: {
+    fhirResources: string[];
+    ehrTargets: string[];
+    integrationMethods: string[];
+    authMethod: string;
+    apiBaseUrl: string;
+    notes: string;
+  };
+
+  risks: SoftwareRisk[];
+
+  postMarket: {
+    adverseEvents: AdverseEvent[];
+    improvements: Improvement[];
+    adoptionNotes: string;
+    outcomesNotes: string;
+    surveillancePlan: string;
+  };
+
+  standards: Record<string, StandardStatus>;
+  standardNotes: Record<string, string>;
 }
 
 const DEFAULT_STATE: DHState = {
@@ -103,6 +158,11 @@ const DEFAULT_STATE: DHState = {
   privacy: { framework: 'hipaa', phiElements: '', dataResidency: '', encryptionAtRest: true, encryptionInTransit: true, soc2Target: false, hipaaBusinessAssociate: true, gdprDPA: false, notes: '' },
   reimbursement: { cptCodes: '', hcpcsCodes: '', targetPayers: '', valueProposition: '', healthEconomics: '', rtmStrategy: '', notes: '' },
   milestones: [],
+  interop: { fhirResources: [], ehrTargets: [], integrationMethods: [], authMethod: '', apiBaseUrl: '', notes: '' },
+  risks: [],
+  postMarket: { adverseEvents: [], improvements: [], adoptionNotes: '', outcomesNotes: '', surveillancePlan: '' },
+  standards: {},
+  standardNotes: {},
 };
 
 // ── Storage ────────────────────────────────────────────────────────────────────
@@ -134,7 +194,21 @@ function loadProjectData(id: string): DHState {
     const raw = localStorage.getItem(PROJECT_KEY(id));
     if (!raw) return DEFAULT_STATE;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_STATE, ...parsed, problem: { ...DEFAULT_STATE.problem, ...(parsed.problem ?? {}) }, regulatory: { ...DEFAULT_STATE.regulatory, ...(parsed.regulatory ?? {}) }, evidence: { ...DEFAULT_STATE.evidence, ...(parsed.evidence ?? {}) }, privacy: { ...DEFAULT_STATE.privacy, ...(parsed.privacy ?? {}) }, reimbursement: { ...DEFAULT_STATE.reimbursement, ...(parsed.reimbursement ?? {}) }, milestones: parsed.milestones ?? [] };
+    return {
+      ...DEFAULT_STATE,
+      ...parsed,
+      problem: { ...DEFAULT_STATE.problem, ...(parsed.problem ?? {}) },
+      regulatory: { ...DEFAULT_STATE.regulatory, ...(parsed.regulatory ?? {}) },
+      evidence: { ...DEFAULT_STATE.evidence, ...(parsed.evidence ?? {}) },
+      privacy: { ...DEFAULT_STATE.privacy, ...(parsed.privacy ?? {}) },
+      reimbursement: { ...DEFAULT_STATE.reimbursement, ...(parsed.reimbursement ?? {}) },
+      milestones: parsed.milestones ?? [],
+      interop: { ...DEFAULT_STATE.interop, ...(parsed.interop ?? {}) },
+      risks: parsed.risks ?? [],
+      postMarket: { ...DEFAULT_STATE.postMarket, ...(parsed.postMarket ?? {}), adverseEvents: parsed.postMarket?.adverseEvents ?? [], improvements: parsed.postMarket?.improvements ?? [] },
+      standards: parsed.standards ?? {},
+      standardNotes: parsed.standardNotes ?? {},
+    };
   } catch { return DEFAULT_STATE; }
 }
 
@@ -228,7 +302,36 @@ function Stat({ label, value, color }: { label: string; value: string | number; 
   );
 }
 
-// ── Product type options ───────────────────────────────────────────────────────
+function Badge({ label, bg, color }: { label: string; bg: string; color: string }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '2px 8px', borderRadius: 2,
+      fontSize: 10, fontWeight: 600, fontFamily: 'var(--mono)',
+      textTransform: 'uppercase', letterSpacing: '0.07em',
+      background: bg, color,
+    }}>{label}</span>
+  );
+}
+
+function CheckItem({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
+  return (
+    <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '5px 0' }}>
+      <div style={{
+        width: 14, height: 14, borderRadius: 2, flexShrink: 0,
+        background: checked ? 'var(--accent)' : 'transparent',
+        border: `1px solid ${checked ? 'var(--accent)' : 'var(--line-strong)'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.15s',
+      }}>
+        {checked && <span style={{ color: '#fff', fontSize: 9, lineHeight: 1 }}>✓</span>}
+      </div>
+      <span style={{ fontSize: 12, color: checked ? 'var(--text-2)' : 'var(--text-3)' }}>{label}</span>
+    </div>
+  );
+}
+
+// ── Static data ────────────────────────────────────────────────────────────────
 
 const PRODUCT_TYPES: { value: ProductType; label: string }[] = [
   { value: 'samd', label: 'Software as a Medical Device (SaMD)' },
@@ -271,6 +374,50 @@ const MILESTONE_PHASES = ['discover', 'define', 'develop', 'deploy'] as const;
 const MILESTONE_STATUSES = ['planned', 'in-progress', 'complete', 'blocked'] as const;
 const STATUS_COLOR: Record<string, string> = { planned: '#8B5CF6', 'in-progress': '#3B82F6', complete: '#10B981', blocked: '#F43F5E' };
 const STATUS_BG: Record<string, string> = { planned: 'rgba(139,92,246,0.12)', 'in-progress': 'rgba(59,130,246,0.12)', complete: 'rgba(16,185,129,0.12)', blocked: 'rgba(244,63,94,0.12)' };
+const PHASE_COLOR: Record<string, string> = { discover: '#10B981', define: '#8B5CF6', develop: '#3B82F6', deploy: '#F59E0B' };
+
+const FHIR_RESOURCES = ['Patient', 'Observation', 'Condition', 'MedicationRequest', 'DiagnosticReport', 'Encounter', 'Procedure', 'AllergyIntolerance', 'ImmunizationRecord', 'CarePlan', 'Device', 'DocumentReference'];
+const EHR_TARGETS = ['Epic', 'Oracle Cerner', 'MEDITECH', 'Allscripts', 'athenahealth', 'eClinicalWorks', 'NextGen', 'Veradigm'];
+const INTEGRATION_METHODS = ['SMART on FHIR', 'CDS Hooks', 'Direct API', 'HL7 v2 Interface', 'C-CDA / CCD', 'X12 EDI', 'DICOM Web', 'Bulk FHIR'];
+
+const RISK_CATEGORY_COLOR: Record<RiskCategory, string> = {
+  clinical: '#F43F5E', security: '#F59E0B', privacy: '#8B5CF6', operational: '#3B82F6', regulatory: '#10B981',
+};
+const RISK_CATEGORY_BG: Record<RiskCategory, string> = {
+  clinical: 'rgba(244,63,94,0.12)', security: 'rgba(245,158,11,0.12)', privacy: 'rgba(139,92,246,0.12)', operational: 'rgba(59,130,246,0.12)', regulatory: 'rgba(16,185,129,0.12)',
+};
+
+const RESIDUAL_COLOR: Record<ResidualLevel, string> = { low: '#10B981', medium: '#F59E0B', high: '#F43F5E', unacceptable: '#8B5CF6' };
+const RESIDUAL_BG: Record<ResidualLevel, string> = { low: 'rgba(16,185,129,0.12)', medium: 'rgba(245,158,11,0.12)', high: 'rgba(244,63,94,0.12)', unacceptable: 'rgba(139,92,246,0.12)' };
+
+const SEV_COLOR = (score: number) => score >= 15 ? '#F43F5E' : score >= 8 ? '#F59E0B' : '#10B981';
+
+const SEVERITY_COLOR: Record<string, string> = { low: '#10B981', medium: '#F59E0B', high: '#F43F5E', critical: '#8B5CF6' };
+const SEVERITY_BG: Record<string, string> = { low: 'rgba(16,185,129,0.12)', medium: 'rgba(245,158,11,0.12)', high: 'rgba(244,63,94,0.12)', critical: 'rgba(139,92,246,0.12)' };
+
+const STANDARDS_LIST = [
+  { id: 'iec62304', name: 'IEC 62304', desc: 'Medical device software — software lifecycle processes' },
+  { id: 'iec82304', name: 'IEC 82304-1', desc: 'Health software — general requirements for product safety' },
+  { id: 'iso13485', name: 'ISO 13485', desc: 'Medical devices — quality management system requirements' },
+  { id: 'iso14971', name: 'ISO 14971', desc: 'Application of risk management to medical devices' },
+  { id: 'iec62443', name: 'IEC 62443', desc: 'Industrial cybersecurity — operational technology security' },
+  { id: 'nistcsf', name: 'NIST CSF 2.0', desc: 'Cybersecurity framework for critical infrastructure' },
+  { id: 'soc2', name: 'SOC 2 Type II', desc: 'Service organization controls for security and availability' },
+  { id: 'hipaa-security', name: 'HIPAA Security Rule', desc: 'Administrative, physical, and technical safeguards for ePHI' },
+  { id: 'fda-samd', name: 'FDA SaMD Guidance', desc: 'FDA guidance on software as a medical device (2019)' },
+  { id: 'fda-aiml', name: 'FDA AI/ML Action Plan', desc: 'Predetermined change control plan for AI/ML-based SaMD' },
+  { id: 'uscdi', name: 'ONC USCDI v3', desc: 'United States Core Data for Interoperability standard dataset' },
+  { id: 'fhir-r4', name: 'HL7 FHIR R4', desc: 'Fast Healthcare Interoperability Resources — data exchange standard' },
+  { id: 'dicom', name: 'DICOM', desc: 'Digital imaging and communications in medicine standard' },
+  { id: 'loinc', name: 'LOINC / SNOMED CT', desc: 'Clinical terminology standards for observations and diagnoses' },
+];
+
+const STANDARD_STATUS_COLOR: Record<StandardStatus, string> = {
+  'not-started': 'var(--text-4)',
+  'in-progress': '#3B82F6',
+  'compliant': '#10B981',
+  'not-applicable': 'var(--text-4)',
+};
 
 // ── Tab: Problem ───────────────────────────────────────────────────────────────
 
@@ -316,10 +463,7 @@ function UserResearchTab({ state, update }: { state: DHState; update: (s: DHStat
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-4)' }}>{state.personas.length} persona{state.personas.length !== 1 ? 's' : ''} defined</span>
-        <button onClick={() => setAdding(true)} style={{
-          padding: '7px 16px', background: 'var(--accent)', color: '#fff', border: 'none',
-          fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', borderRadius: 2,
-        }}>+ Add Persona</button>
+        <button onClick={() => setAdding(true)} style={{ padding: '7px 16px', background: 'var(--accent)', color: '#fff', border: 'none', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', borderRadius: 2 }}>+ Add Persona</button>
       </div>
 
       {adding && (
@@ -393,7 +537,6 @@ function RegulatoryTab({ state, update }: { state: DHState; update: (s: DHState)
         <Field label="Notes & Open Questions" value={r.notes} onChange={setR('notes')} multiline placeholder="Key uncertainties, pending FDA guidance, regulatory counsel notes..." />
       </div>
 
-      {/* Pathway reference */}
       <Card style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)' }}>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Pathway Quick Reference</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
@@ -434,6 +577,77 @@ function EvidenceTab({ state, update }: { state: DHState; update: (s: DHState) =
       <Card>
         <Toggle label="IRB / Ethics Board approval required" value={e.irbRequired} onChange={v => setE('irbRequired')(v)} />
       </Card>
+    </div>
+  );
+}
+
+// ── Tab: Standards ─────────────────────────────────────────────────────────────
+
+function StandardsTab({ state, update }: { state: DHState; update: (s: DHState) => void }) {
+  const compliantCount = STANDARDS_LIST.filter(s => (state.standards[s.id] ?? 'not-started') === 'compliant').length;
+
+  function setStatus(id: string, val: StandardStatus) {
+    update({ ...state, standards: { ...state.standards, [id]: val } });
+  }
+
+  function setNote(id: string, val: string) {
+    update({ ...state, standardNotes: { ...state.standardNotes, [id]: val } });
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <SectionHeader title="Standards & Compliance" accent="#10B981" />
+
+      <Card style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, color: '#10B981', lineHeight: 1 }}>{compliantCount}</span>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.12em' }}>of {STANDARDS_LIST.length} compliant</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Update each standard as you complete certification or assessment</div>
+          </div>
+        </div>
+      </Card>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 1, border: '1px solid var(--line)' }}>
+        {STANDARDS_LIST.map((std, i) => {
+          const status: StandardStatus = state.standards[std.id] ?? 'not-started';
+          const note = state.standardNotes[std.id] ?? '';
+          return (
+            <div key={std.id} style={{
+              display: 'grid', gridTemplateColumns: '1fr auto',
+              gap: 12, padding: '14px 18px',
+              background: i % 2 === 0 ? 'var(--surface-1)' : 'var(--surface-2)',
+              borderBottom: i < STANDARDS_LIST.length - 1 ? '1px solid var(--line)' : 'none',
+              alignItems: 'start',
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>{std.name}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: STANDARD_STATUS_COLOR[status], textTransform: 'uppercase', letterSpacing: '0.1em' }}>{status.replace(/-/g, ' ')}</span>
+                </div>
+                <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>{std.desc}</p>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={e => setNote(std.id, e.target.value)}
+                  placeholder="Notes..."
+                  style={{ ...fieldStyle, height: 30, fontSize: 11, padding: '4px 10px' }}
+                />
+              </div>
+              <select
+                value={status}
+                onChange={e => setStatus(std.id, e.target.value as StandardStatus)}
+                style={{ ...fieldStyle, height: 34, fontSize: 11, width: 160, cursor: 'pointer', color: STANDARD_STATUS_COLOR[status] }}
+              >
+                <option value="not-started">Not Started</option>
+                <option value="in-progress">In Progress</option>
+                <option value="compliant">Compliant</option>
+                <option value="not-applicable">Not Applicable</option>
+              </select>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -486,6 +700,206 @@ function PrivacyTab({ state, update }: { state: DHState; update: (s: DHState) =>
   );
 }
 
+// ── Tab: Interop ───────────────────────────────────────────────────────────────
+
+function InteropTab({ state, update }: { state: DHState; update: (s: DHState) => void }) {
+  const io = state.interop;
+
+  function toggleArr(arr: string[], item: string): string[] {
+    return arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
+  }
+
+  function setIo<K extends keyof typeof io>(k: K, v: typeof io[K]) {
+    update({ ...state, interop: { ...io, [k]: v } });
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <SectionHeader title="Interoperability & Data Standards" accent="#3B82F6" />
+
+      <Card style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#3B82F6' }}>
+          {io.fhirResources.length} FHIR resources · {io.ehrTargets.length} EHR targets · {io.integrationMethods.length} integration methods
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>FHIR Resources</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
+          {FHIR_RESOURCES.map(r => (
+            <CheckItem
+              key={r} label={r}
+              checked={io.fhirResources.includes(r)}
+              onToggle={() => setIo('fhirResources', toggleArr(io.fhirResources, r))}
+            />
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>EHR Target Systems</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 0 }}>
+          {EHR_TARGETS.map(r => (
+            <CheckItem
+              key={r} label={r}
+              checked={io.ehrTargets.includes(r)}
+              onToggle={() => setIo('ehrTargets', toggleArr(io.ehrTargets, r))}
+            />
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Integration Methods</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 0 }}>
+          {INTEGRATION_METHODS.map(r => (
+            <CheckItem
+              key={r} label={r}
+              checked={io.integrationMethods.includes(r)}
+              onToggle={() => setIo('integrationMethods', toggleArr(io.integrationMethods, r))}
+            />
+          ))}
+        </div>
+      </Card>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <Field label="API Base URL" value={io.apiBaseUrl} onChange={v => setIo('apiBaseUrl', v)} placeholder="https://api.yourplatform.com/fhir/R4" />
+        <Field label="Auth Method" value={io.authMethod} onChange={v => setIo('authMethod', v)} placeholder="e.g. SMART on FHIR OAuth 2.0, API Key, mTLS" />
+      </div>
+      <Field label="Notes" value={io.notes} onChange={v => setIo('notes', v)} multiline placeholder="Integration notes, data mapping decisions, known limitations..." />
+    </div>
+  );
+}
+
+// ── Tab: Risk ──────────────────────────────────────────────────────────────────
+
+function RiskTab({ state, update }: { state: DHState; update: (s: DHState) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState<Omit<SoftwareRisk, 'id' | 'createdAt'>>({
+    description: '', category: 'clinical', severity: 3, probability: 3,
+    mitigation: '', residualLevel: 'medium', status: 'open',
+  });
+
+  function addRisk() {
+    if (!draft.description) return;
+    const r: SoftwareRisk = { id: uid(), ...draft, createdAt: new Date().toISOString() };
+    update({ ...state, risks: [...state.risks, r] });
+    setDraft({ description: '', category: 'clinical', severity: 3, probability: 3, mitigation: '', residualLevel: 'medium', status: 'open' });
+    setAdding(false);
+  }
+
+  function deleteRisk(id: string) { update({ ...state, risks: state.risks.filter(r => r.id !== id) }); }
+  function updateRiskStatus(id: string, status: RiskStatus) {
+    update({ ...state, risks: state.risks.map(r => r.id === id ? { ...r, status } : r) });
+  }
+
+  const counts: Record<ResidualLevel, number> = { low: 0, medium: 0, high: 0, unacceptable: 0 };
+  state.risks.forEach(r => counts[r.residualLevel]++);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <SectionHeader title="Software Risk Management" subtitle="ISO 14971 / IEC 62304 — identify, assess, and mitigate software risks." accent="#F43F5E" />
+
+      <Card style={{ background: 'rgba(244,63,94,0.05)', border: '1px solid rgba(244,63,94,0.15)' }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#F43F5E', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Risk Matrix Summary</div>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {(Object.entries(counts) as [ResidualLevel, number][]).map(([level, count]) => (
+            <div key={level} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: RESIDUAL_COLOR[level] }} />
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: RESIDUAL_COLOR[level], fontWeight: 700 }}>{count}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{level}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-4)' }}>{state.risks.length} risk{state.risks.length !== 1 ? 's' : ''} identified</span>
+        <button onClick={() => setAdding(true)} style={{ padding: '7px 16px', background: '#F43F5E', color: '#fff', border: 'none', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', borderRadius: 2 }}>+ Add Risk</button>
+      </div>
+
+      {adding && (
+        <Card>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <Field label="Description" value={draft.description} onChange={v => setDraft(d => ({ ...d, description: v }))} placeholder="Describe the risk scenario and potential harm..." />
+            </div>
+            <SelectField label="Category" value={draft.category} onChange={v => setDraft(d => ({ ...d, category: v as RiskCategory }))} options={[
+              { value: 'clinical', label: 'Clinical' },
+              { value: 'security', label: 'Security' },
+              { value: 'privacy', label: 'Privacy' },
+              { value: 'operational', label: 'Operational' },
+              { value: 'regulatory', label: 'Regulatory' },
+            ]} />
+            <SelectField label="Residual Level" value={draft.residualLevel} onChange={v => setDraft(d => ({ ...d, residualLevel: v as ResidualLevel }))} options={[
+              { value: 'low', label: 'Low' },
+              { value: 'medium', label: 'Medium' },
+              { value: 'high', label: 'High' },
+              { value: 'unacceptable', label: 'Unacceptable' },
+            ]} />
+            <SelectField label="Severity (1–5)" value={String(draft.severity)} onChange={v => setDraft(d => ({ ...d, severity: Number(v) as SoftwareRisk['severity'] }))} options={[1,2,3,4,5].map(n => ({ value: String(n), label: String(n) }))} />
+            <SelectField label="Probability (1–5)" value={String(draft.probability)} onChange={v => setDraft(d => ({ ...d, probability: Number(v) as SoftwareRisk['probability'] }))} options={[1,2,3,4,5].map(n => ({ value: String(n), label: String(n) }))} />
+            <SelectField label="Status" value={draft.status} onChange={v => setDraft(d => ({ ...d, status: v as RiskStatus }))} options={[
+              { value: 'open', label: 'Open' },
+              { value: 'mitigated', label: 'Mitigated' },
+              { value: 'accepted', label: 'Accepted' },
+              { value: 'closed', label: 'Closed' },
+            ]} />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <Field label="Mitigation" value={draft.mitigation} onChange={v => setDraft(d => ({ ...d, mitigation: v }))} multiline placeholder="Describe the mitigation measures and controls..." />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={addRisk} style={{ padding: '7px 16px', background: '#F43F5E', color: '#fff', border: 'none', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', borderRadius: 2 }}>Save Risk</button>
+            <button onClick={() => setAdding(false)} style={{ padding: '7px 14px', background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', borderRadius: 2 }}>Cancel</button>
+          </div>
+        </Card>
+      )}
+
+      {state.risks.length === 0 && !adding && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', color: 'var(--text-4)', fontSize: 12, border: '1px dashed var(--line)', borderRadius: 2, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          No risks identified yet
+        </div>
+      )}
+
+      {state.risks.map(risk => {
+        const score = risk.severity * risk.probability;
+        return (
+          <Card key={risk.id}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <Badge label={risk.category} bg={RISK_CATEGORY_BG[risk.category]} color={RISK_CATEGORY_COLOR[risk.category]} />
+                <Badge label={risk.residualLevel} bg={RESIDUAL_BG[risk.residualLevel]} color={RESIDUAL_COLOR[risk.residualLevel]} />
+                <Badge label={risk.status} bg="var(--surface-2)" color="var(--text-3)" />
+                <span style={{
+                  fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
+                  color: SEV_COLOR(score), padding: '2px 8px',
+                  background: `${SEV_COLOR(score)}14`, borderRadius: 2,
+                }}>
+                  {risk.severity} × {risk.probability} = {score}
+                </span>
+              </div>
+              <button onClick={() => deleteRisk(risk.id)} style={{ color: 'var(--text-4)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '2px 6px', flexShrink: 0 }}>✕</button>
+            </div>
+            <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--text)', fontWeight: 500, lineHeight: 1.5 }}>{risk.description}</p>
+            {risk.mitigation && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Mitigation</div>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>{risk.mitigation}</p>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {(['open', 'mitigated', 'accepted', 'closed'] as RiskStatus[]).filter(s => s !== risk.status).map(s => (
+                <button key={s} onClick={() => updateRiskStatus(risk.id, s)} style={{ padding: '2px 8px', background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-4)', fontFamily: 'var(--mono)', fontSize: 9, cursor: 'pointer', borderRadius: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>→ {s}</button>
+              ))}
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Tab: Reimbursement ─────────────────────────────────────────────────────────
 
 function ReimbursementTab({ state, update }: { state: DHState; update: (s: DHState) => void }) {
@@ -507,11 +921,186 @@ function ReimbursementTab({ state, update }: { state: DHState; update: (s: DHSta
   );
 }
 
+// ── Tab: Post-Market ───────────────────────────────────────────────────────────
+
+function PostMarketTab({ state, update }: { state: DHState; update: (s: DHState) => void }) {
+  const pm = state.postMarket;
+  const [addingEvent, setAddingEvent] = useState(false);
+  const [addingImprove, setAddingImprove] = useState(false);
+  const [eventDraft, setEventDraft] = useState<Omit<AdverseEvent, 'id'>>({ date: '', description: '', severity: 'low', status: 'open' });
+  const [improveDraft, setImproveDraft] = useState<Omit<Improvement, 'id'>>({ title: '', type: 'bug', priority: 'medium', status: 'backlog', notes: '' });
+
+  function setPm<K extends keyof typeof pm>(k: K, v: typeof pm[K]) {
+    update({ ...state, postMarket: { ...pm, [k]: v } });
+  }
+
+  function addEvent() {
+    if (!eventDraft.description) return;
+    const e: AdverseEvent = { id: uid(), ...eventDraft };
+    setPm('adverseEvents', [...pm.adverseEvents, e]);
+    setEventDraft({ date: '', description: '', severity: 'low', status: 'open' });
+    setAddingEvent(false);
+  }
+
+  function deleteEvent(id: string) { setPm('adverseEvents', pm.adverseEvents.filter(e => e.id !== id)); }
+
+  function addImprovement() {
+    if (!improveDraft.title) return;
+    const imp: Improvement = { id: uid(), ...improveDraft };
+    setPm('improvements', [...pm.improvements, imp]);
+    setImproveDraft({ title: '', type: 'bug', priority: 'medium', status: 'backlog', notes: '' });
+    setAddingImprove(false);
+  }
+
+  function deleteImprovement(id: string) { setPm('improvements', pm.improvements.filter(i => i.id !== id)); }
+
+  function cycleImprovementStatus(id: string) {
+    const order: Improvement['status'][] = ['backlog', 'planned', 'in-progress', 'done'];
+    setPm('improvements', pm.improvements.map(i => {
+      if (i.id !== id) return i;
+      const idx = order.indexOf(i.status);
+      return { ...i, status: order[(idx + 1) % order.length] };
+    }));
+  }
+
+  const TYPE_COLOR: Record<string, string> = { bug: '#F43F5E', enhancement: '#3B82F6', safety: '#F59E0B', compliance: '#10B981' };
+  const TYPE_BG: Record<string, string> = { bug: 'rgba(244,63,94,0.12)', enhancement: 'rgba(59,130,246,0.12)', safety: 'rgba(245,158,11,0.12)', compliance: 'rgba(16,185,129,0.12)' };
+  const IMP_STATUS_COLOR: Record<string, string> = { backlog: 'var(--text-4)', planned: '#8B5CF6', 'in-progress': '#3B82F6', done: '#10B981' };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <SectionHeader title="Post-Market Surveillance" accent="#F59E0B" />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <Field label="Adoption & Engagement Notes" value={pm.adoptionNotes} onChange={v => setPm('adoptionNotes', v)} multiline placeholder="Active users, engagement rates, retention metrics, NPS..." />
+        <Field label="Clinical Outcomes Notes" value={pm.outcomesNotes} onChange={v => setPm('outcomesNotes', v)} multiline placeholder="Real-world outcome data, registry findings, comparative effectiveness..." />
+        <div style={{ gridColumn: '1 / -1' }}>
+          <Field label="Surveillance Plan" value={pm.surveillancePlan} onChange={v => setPm('surveillancePlan', v)} multiline placeholder="Describe your post-market surveillance methodology, data sources, review cadence, and FDA MDR reporting triggers..." />
+        </div>
+      </div>
+
+      {/* Adverse Events */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ borderLeft: '3px solid #F43F5E', paddingLeft: 10 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Adverse Events</div>
+          </div>
+          <button onClick={() => setAddingEvent(true)} style={{ padding: '6px 14px', background: '#F43F5E', color: '#fff', border: 'none', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', borderRadius: 2 }}>+ Add Event</button>
+        </div>
+
+        {addingEvent && (
+          <Card style={{ marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <Field label="Date" value={eventDraft.date} onChange={v => setEventDraft(d => ({ ...d, date: v }))} placeholder="e.g. 2026-04-15" />
+              <SelectField label="Severity" value={eventDraft.severity} onChange={v => setEventDraft(d => ({ ...d, severity: v as AdverseEvent['severity'] }))} options={[
+                { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' },
+                { value: 'high', label: 'High' }, { value: 'critical', label: 'Critical' },
+              ]} />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Field label="Description" value={eventDraft.description} onChange={v => setEventDraft(d => ({ ...d, description: v }))} multiline placeholder="Describe the adverse event, patient impact, and initial assessment..." />
+              </div>
+              <SelectField label="Status" value={eventDraft.status} onChange={v => setEventDraft(d => ({ ...d, status: v as AdverseEvent['status'] }))} options={[
+                { value: 'open', label: 'Open' }, { value: 'investigating', label: 'Investigating' },
+                { value: 'resolved', label: 'Resolved' }, { value: 'reported-to-fda', label: 'Reported to FDA' },
+              ]} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={addEvent} style={{ padding: '7px 16px', background: '#F43F5E', color: '#fff', border: 'none', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', borderRadius: 2 }}>Save</button>
+              <button onClick={() => setAddingEvent(false)} style={{ padding: '7px 14px', background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', borderRadius: 2 }}>Cancel</button>
+            </div>
+          </Card>
+        )}
+
+        {pm.adverseEvents.length === 0 && !addingEvent && (
+          <div style={{ padding: '20px', border: '1px dashed var(--line)', borderRadius: 2, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>No adverse events recorded</div>
+        )}
+
+        {pm.adverseEvents.map(ev => (
+          <Card key={ev.id} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <Badge label={ev.severity} bg={SEVERITY_BG[ev.severity]} color={SEVERITY_COLOR[ev.severity]} />
+                  <Badge label={ev.status.replace(/-/g, ' ')} bg="var(--surface-2)" color="var(--text-3)" />
+                  {ev.date && <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)' }}>{ev.date}</span>}
+                </div>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>{ev.description}</p>
+              </div>
+              <button onClick={() => deleteEvent(ev.id)} style={{ color: 'var(--text-4)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '2px 6px', flexShrink: 0 }}>✕</button>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Continuous Improvement */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ borderLeft: '3px solid #10B981', paddingLeft: 10 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Continuous Improvement</div>
+          </div>
+          <button onClick={() => setAddingImprove(true)} style={{ padding: '6px 14px', background: '#10B981', color: '#000', border: 'none', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', borderRadius: 2 }}>+ Add Item</button>
+        </div>
+
+        {addingImprove && (
+          <Card style={{ marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Field label="Title" value={improveDraft.title} onChange={v => setImproveDraft(d => ({ ...d, title: v }))} placeholder="Brief description of the improvement item..." />
+              </div>
+              <SelectField label="Type" value={improveDraft.type} onChange={v => setImproveDraft(d => ({ ...d, type: v as Improvement['type'] }))} options={[
+                { value: 'bug', label: 'Bug' }, { value: 'enhancement', label: 'Enhancement' },
+                { value: 'safety', label: 'Safety' }, { value: 'compliance', label: 'Compliance' },
+              ]} />
+              <SelectField label="Priority" value={improveDraft.priority} onChange={v => setImproveDraft(d => ({ ...d, priority: v as Improvement['priority'] }))} options={[
+                { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' },
+                { value: 'high', label: 'High' }, { value: 'critical', label: 'Critical' },
+              ]} />
+              <SelectField label="Status" value={improveDraft.status} onChange={v => setImproveDraft(d => ({ ...d, status: v as Improvement['status'] }))} options={[
+                { value: 'backlog', label: 'Backlog' }, { value: 'planned', label: 'Planned' },
+                { value: 'in-progress', label: 'In Progress' }, { value: 'done', label: 'Done' },
+              ]} />
+              <Field label="Notes" value={improveDraft.notes} onChange={v => setImproveDraft(d => ({ ...d, notes: v }))} placeholder="Additional context or acceptance criteria..." />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={addImprovement} style={{ padding: '7px 16px', background: '#10B981', color: '#000', border: 'none', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', borderRadius: 2 }}>Save</button>
+              <button onClick={() => setAddingImprove(false)} style={{ padding: '7px 14px', background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', borderRadius: 2 }}>Cancel</button>
+            </div>
+          </Card>
+        )}
+
+        {pm.improvements.length === 0 && !addingImprove && (
+          <div style={{ padding: '20px', border: '1px dashed var(--line)', borderRadius: 2, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>No improvement items yet</div>
+        )}
+
+        {pm.improvements.map(imp => (
+          <Card key={imp.id} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <Badge label={imp.type} bg={TYPE_BG[imp.type]} color={TYPE_COLOR[imp.type]} />
+                  <Badge label={imp.priority} bg={SEVERITY_BG[imp.priority]} color={SEVERITY_COLOR[imp.priority]} />
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: IMP_STATUS_COLOR[imp.status], textTransform: 'uppercase', letterSpacing: '0.08em' }}>{imp.status.replace(/-/g, ' ')}</span>
+                </div>
+                <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{imp.title}</p>
+                {imp.notes && <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)' }}>{imp.notes}</p>}
+              </div>
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                <button onClick={() => cycleImprovementStatus(imp.id)} style={{ padding: '3px 8px', background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 9, cursor: 'pointer', borderRadius: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Next →</button>
+                <button onClick={() => deleteImprovement(imp.id)} style={{ color: 'var(--text-4)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '2px 6px' }}>✕</button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Tab: Milestones ────────────────────────────────────────────────────────────
 
 function MilestonesTab({ state, update }: { state: DHState; update: (s: DHState) => void }) {
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState<Omit<Milestone, 'id' | 'createdAt'>>({ title: '', phase: 'discover', status: 'planned', targetDate: '', notes: '' });
+  const [draft, setDraft] = useState<Omit<Milestone, 'id'>>({ title: '', phase: 'discover', status: 'planned', targetDate: '', notes: '' });
 
   function addMilestone() {
     if (!draft.title) return;
@@ -533,8 +1122,6 @@ function MilestonesTab({ state, update }: { state: DHState; update: (s: DHState)
     phase,
     items: state.milestones.filter(m => m.phase === phase),
   }));
-
-  const PHASE_COLOR: Record<string, string> = { discover: '#10B981', define: '#8B5CF6', develop: '#3B82F6', deploy: '#F59E0B' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -603,6 +1190,14 @@ function MilestonesTab({ state, update }: { state: DHState; update: (s: DHState)
 
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
+function ProgressBar({ pct, color }: { pct: number; color: string }) {
+  return (
+    <div style={{ height: 3, background: 'var(--line)', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.5s' }} />
+    </div>
+  );
+}
+
 function Dashboard({ state }: { state: DHState }) {
   const productMeta = PRODUCT_TYPES.find(p => p.value === state.productType);
   const pathwayMeta = PATHWAYS.find(p => p.value === state.regulatory.pathway);
@@ -610,16 +1205,26 @@ function Dashboard({ state }: { state: DHState }) {
   const evidenceMeta = EVIDENCE_TYPES.find(p => p.value === state.evidence.type);
   const complete = state.milestones.filter(m => m.status === 'complete').length;
   const total = state.milestones.length;
-  const pct = total > 0 ? Math.round((complete / total) * 100) : 0;
+  const openRisks = state.risks.filter(r => r.status === 'open').length;
+  const compliantStandards = STANDARDS_LIST.filter(s => (state.standards[s.id] ?? 'not-started') === 'compliant').length;
 
-  const filled = [
-    !!state.problem.patientProblem,
-    state.personas.length > 0,
-    state.regulatory.pathway !== 'tbd',
-    !!state.evidence.primaryEndpoint,
-    !!state.privacy.phiElements,
-    !!state.reimbursement.targetPayers,
-  ].filter(Boolean).length;
+  // Section progress percentages
+  const problemFields = [state.problem.patientProblem, state.problem.clinicalContext, state.problem.targetPopulation, state.problem.currentSolutions, state.problem.unmetNeed, state.problem.jobToBeDone];
+  const problemPct = Math.round((problemFields.filter(Boolean).length / 6) * 100);
+  const regulatoryPct = Math.round(([(state.regulatory.pathway !== 'tbd' ? 1 : 0), (state.regulatory.intendedUse ? 1 : 0)].reduce((a, b) => a + b, 0) / 2) * 100);
+  const evidencePct = state.evidence.primaryEndpoint ? 100 : 0;
+  const privacyPct = Math.round(([(state.privacy.framework !== 'hipaa' || state.privacy.phiElements ? 1 : 0), (state.privacy.phiElements ? 1 : 0)].reduce((a, b) => a + b, 0) / 2) * 100);
+  const reimbPct = state.reimbursement.targetPayers ? 100 : 0;
+  const interopPct = state.interop.fhirResources.length > 0 ? 100 : 0;
+
+  const sections = [
+    { label: 'Problem', pct: problemPct, color: '#10B981' },
+    { label: 'Regulatory', pct: regulatoryPct, color: '#8B5CF6' },
+    { label: 'Evidence', pct: evidencePct, color: '#3B82F6' },
+    { label: 'Privacy', pct: privacyPct, color: '#F59E0B' },
+    { label: 'Reimbursement', pct: reimbPct, color: '#F43F5E' },
+    { label: 'Interop', pct: interopPct, color: '#3B82F6' },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -627,9 +1232,9 @@ function Dashboard({ state }: { state: DHState }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, border: '1px solid var(--line)' }}>
         <div style={{ padding: '20px 18px', background: 'var(--surface-1)', borderRight: '1px solid var(--line)' }}><Stat label="Milestones" value={`${complete}/${total}`} color="#8B5CF6" /></div>
-        <div style={{ padding: '20px 18px', background: 'var(--surface-1)', borderRight: '1px solid var(--line)' }}><Stat label="% Complete" value={`${pct}%`} color="#10B981" /></div>
-        <div style={{ padding: '20px 18px', background: 'var(--surface-1)', borderRight: '1px solid var(--line)' }}><Stat label="Personas" value={state.personas.length} color="#3B82F6" /></div>
-        <div style={{ padding: '20px 18px', background: 'var(--surface-1)' }}><Stat label="Modules Filled" value={`${filled}/6`} color="#F59E0B" /></div>
+        <div style={{ padding: '20px 18px', background: 'var(--surface-1)', borderRight: '1px solid var(--line)' }}><Stat label="Open Risks" value={openRisks} color="#F43F5E" /></div>
+        <div style={{ padding: '20px 18px', background: 'var(--surface-1)', borderRight: '1px solid var(--line)' }}><Stat label="Standards" value={`${compliantStandards}/14`} color="#10B981" /></div>
+        <div style={{ padding: '20px 18px', background: 'var(--surface-1)' }}><Stat label="Personas" value={state.personas.length} color="#3B82F6" /></div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -641,17 +1246,32 @@ function Dashboard({ state }: { state: DHState }) {
         ].map((item, i) => (
           <Card key={i}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>{item.label}</div>
-            <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{item.value}</div>
-            <div style={{ marginTop: 10, height: 2, background: 'var(--line)' }}>
+            <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500, marginBottom: 10 }}>{item.value}</div>
+            <div style={{ height: 2, background: 'var(--line)' }}>
               <div style={{ height: '100%', width: item.value !== '—' && item.value !== 'To be determined' ? '100%' : '0%', background: item.color, transition: 'width 0.5s', borderRadius: 1 }} />
             </div>
           </Card>
         ))}
       </div>
 
+      <Card>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>Section Progress</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {sections.map(s => (
+            <div key={s.label}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: s.pct === 100 ? s.color : 'var(--text-4)' }}>{s.pct}%</span>
+              </div>
+              <ProgressBar pct={s.pct} color={s.color} />
+            </div>
+          ))}
+        </div>
+      </Card>
+
       {state.problem.patientProblem && (
         <Card>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Patient Problem</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Patient Problem Statement</div>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>{state.problem.patientProblem}</p>
         </Card>
       )}
@@ -659,20 +1279,55 @@ function Dashboard({ state }: { state: DHState }) {
   );
 }
 
-// ── Main App ───────────────────────────────────────────────────────────────────
+// ── Tab type & nav structure ───────────────────────────────────────────────────
 
-type Tab = 'dashboard' | 'problem' | 'users' | 'regulatory' | 'evidence' | 'privacy' | 'reimbursement' | 'milestones';
+type Tab = 'dashboard' | 'problem' | 'users' | 'regulatory' | 'evidence' | 'standards' | 'privacy' | 'interop' | 'risks' | 'reimbursement' | 'postmarket' | 'milestones';
 
-const TABS: { id: Tab; label: string; phase: string; color: string }[] = [
-  { id: 'dashboard', label: 'Dashboard', phase: '', color: 'var(--accent)' },
-  { id: 'problem', label: 'Problem', phase: 'Discover', color: '#10B981' },
-  { id: 'users', label: 'User Research', phase: 'Discover', color: '#10B981' },
-  { id: 'regulatory', label: 'Regulatory', phase: 'Define', color: '#8B5CF6' },
-  { id: 'evidence', label: 'Evidence', phase: 'Define', color: '#3B82F6' },
-  { id: 'privacy', label: 'Privacy & Security', phase: 'Develop', color: '#F59E0B' },
-  { id: 'reimbursement', label: 'Reimbursement', phase: 'Deploy', color: '#F43F5E' },
-  { id: 'milestones', label: 'Milestones', phase: '', color: 'var(--accent)' },
+const NAV_GROUPS: { heading: string; color?: string; items: { id: Tab; label: string; color: string }[] }[] = [
+  {
+    heading: 'Overview',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', color: 'var(--accent)' },
+      { id: 'milestones', label: 'Milestones', color: 'var(--accent)' },
+    ],
+  },
+  {
+    heading: 'Discover',
+    color: '#10B981',
+    items: [
+      { id: 'problem', label: 'Problem Framework', color: '#10B981' },
+      { id: 'users', label: 'User Research', color: '#10B981' },
+    ],
+  },
+  {
+    heading: 'Define',
+    color: '#8B5CF6',
+    items: [
+      { id: 'regulatory', label: 'Regulatory', color: '#8B5CF6' },
+      { id: 'evidence', label: 'Clinical Evidence', color: '#8B5CF6' },
+      { id: 'standards', label: 'Standards', color: '#10B981' },
+    ],
+  },
+  {
+    heading: 'Develop',
+    color: '#3B82F6',
+    items: [
+      { id: 'privacy', label: 'Privacy & Security', color: '#F59E0B' },
+      { id: 'interop', label: 'Interoperability', color: '#3B82F6' },
+      { id: 'risks', label: 'Risk Management', color: '#F43F5E' },
+    ],
+  },
+  {
+    heading: 'Deploy',
+    color: '#F59E0B',
+    items: [
+      { id: 'reimbursement', label: 'Reimbursement', color: '#F43F5E' },
+      { id: 'postmarket', label: 'Post-Market', color: '#F59E0B' },
+    ],
+  },
 ];
+
+// ── Main App ───────────────────────────────────────────────────────────────────
 
 export default function DigitalHealthApp() {
   const [tab, setTab] = useState<Tab>('dashboard');
@@ -737,7 +1392,7 @@ export default function DigitalHealthApp() {
 
   if (!hydrated) return null;
 
-  const SIDEBAR_W = 216;
+  const SIDEBAR_W = 220;
   const CONTENT_MAX = 820;
 
   return (
@@ -754,7 +1409,7 @@ export default function DigitalHealthApp() {
       }}>
         {/* Logo */}
         <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid var(--line)' }}>
-          <Link href="/biodesign/digitalhealth" style={{ textDecoration: 'none' }}>
+          <Link href="/digitalhealth" style={{ textDecoration: 'none' }}>
             <span className="brand-name" style={{ fontSize: 14 }}>Ambient <em>Intelligence</em></span>
           </Link>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.16em', marginTop: 5 }}>Digital Health Studio</div>
@@ -808,26 +1463,35 @@ export default function DigitalHealthApp() {
           )}
         </div>
 
-        {/* Nav tabs */}
+        {/* Nav groups */}
         <div style={{ padding: '12px 12px', flex: 1 }}>
-          {TABS.map(t => {
-            const isActive = tab === t.id;
-            return (
-              <button key={t.id} onClick={() => setTab(t.id)} className="dh-sidebar-tab" style={{
-                width: '100%', marginBottom: 1,
-                background: isActive ? 'rgba(139,92,246,0.12)' : 'transparent',
-              }}>
-                <div style={{
-                  width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
-                  background: isActive ? t.color : 'transparent',
-                  border: isActive ? 'none' : '1px solid var(--line)',
-                  boxShadow: isActive ? `0 0 6px ${t.color}` : 'none',
-                }} />
-                <span style={{ fontSize: 13, color: isActive ? 'var(--text)' : 'var(--text-3)', fontWeight: isActive ? 600 : 400, flex: 1 }}>{t.label}</span>
-                {t.phase && <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: isActive ? t.color : 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t.phase}</span>}
-              </button>
-            );
-          })}
+          {NAV_GROUPS.map(group => (
+            <div key={group.heading} style={{ marginBottom: 16 }}>
+              <div style={{
+                fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.14em',
+                color: group.color ?? 'var(--text-4)',
+                padding: '0 6px', marginBottom: 4,
+              }}>{group.heading}</div>
+              {group.items.map(t => {
+                const isActive = tab === t.id;
+                return (
+                  <button key={t.id} onClick={() => setTab(t.id)} className="dh-sidebar-tab" style={{
+                    width: '100%', marginBottom: 1,
+                    background: isActive ? 'rgba(139,92,246,0.12)' : 'transparent',
+                  }}>
+                    <div style={{
+                      width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
+                      background: isActive ? t.color : 'transparent',
+                      border: isActive ? 'none' : '1px solid var(--line)',
+                      boxShadow: isActive ? `0 0 6px ${t.color}` : 'none',
+                    }} />
+                    <span style={{ fontSize: 13, color: isActive ? 'var(--text)' : 'var(--text-3)', fontWeight: isActive ? 600 : 400, flex: 1 }}>{t.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         {/* Bottom status */}
@@ -894,14 +1558,18 @@ export default function DigitalHealthApp() {
         {/* Tab content */}
         {activeId && (
           <div style={{ maxWidth: CONTENT_MAX, margin: '0 auto', padding: '40px 40px' }}>
-            {tab === 'dashboard' && <Dashboard state={state} />}
-            {tab === 'problem' && <ProblemTab state={state} update={update} />}
-            {tab === 'users' && <UserResearchTab state={state} update={update} />}
-            {tab === 'regulatory' && <RegulatoryTab state={state} update={update} />}
-            {tab === 'evidence' && <EvidenceTab state={state} update={update} />}
-            {tab === 'privacy' && <PrivacyTab state={state} update={update} />}
+            {tab === 'dashboard'     && <Dashboard state={state} />}
+            {tab === 'problem'       && <ProblemTab state={state} update={update} />}
+            {tab === 'users'         && <UserResearchTab state={state} update={update} />}
+            {tab === 'regulatory'    && <RegulatoryTab state={state} update={update} />}
+            {tab === 'evidence'      && <EvidenceTab state={state} update={update} />}
+            {tab === 'standards'     && <StandardsTab state={state} update={update} />}
+            {tab === 'privacy'       && <PrivacyTab state={state} update={update} />}
+            {tab === 'interop'       && <InteropTab state={state} update={update} />}
+            {tab === 'risks'         && <RiskTab state={state} update={update} />}
             {tab === 'reimbursement' && <ReimbursementTab state={state} update={update} />}
-            {tab === 'milestones' && <MilestonesTab state={state} update={update} />}
+            {tab === 'postmarket'    && <PostMarketTab state={state} update={update} />}
+            {tab === 'milestones'    && <MilestonesTab state={state} update={update} />}
           </div>
         )}
       </div>
