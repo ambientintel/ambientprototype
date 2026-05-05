@@ -242,9 +242,9 @@ export default function AgenticStudioPage() {
             agentic AI features — for Claude, GPT-4, Gemini, and beyond.
           </p>
           <div className="as-hero-actions">
-            <a href="#features" className="as-btn-primary">
-              Explore features →
-            </a>
+            <Link href="/agenticstudio/app" className="as-btn-primary">
+              Open Agent Builder →
+            </Link>
             <a
               href="https://github.com/john3913/agenticstudio"
               target="_blank"
@@ -374,17 +374,17 @@ export default function AgenticStudioPage() {
             AgenticStudio evolves — new features ship every week.
           </p>
           <div className="as-hero-actions">
+            <Link href="/agenticstudio/app" className="as-btn-primary">
+              Open Agent Builder →
+            </Link>
             <a
               href="https://github.com/john3913/agenticstudio"
               target="_blank"
               rel="noopener"
-              className="as-btn-primary"
+              className="as-btn-secondary"
             >
-              Star on GitHub →
+              Star on GitHub
             </a>
-            <Link href="/biodesign" className="as-btn-secondary">
-              See other tools
-            </Link>
           </div>
         </div>
       </section>
