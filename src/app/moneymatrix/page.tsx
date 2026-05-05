@@ -3,6 +3,7 @@ import { useState, useId } from "react";
 import { GameState, Allocation, GameRound, InvestmentType } from "./_lib/types";
 import { simulateRound } from "./_lib/engine";
 import { INVESTMENT_LIST } from "./_lib/investments";
+import "./moneymatrix.css";
 
 const START = 20;
 const TARGET = 1000;
@@ -300,7 +301,7 @@ export default function MoneyMatrixPage() {
     <nav style={{ position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid var(--line)", background: "rgba(28,33,39,0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", padding: "0 44px" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0" }}>
         <span style={{ fontFamily: "var(--serif)", fontSize: 17, fontWeight: 400, letterSpacing: "-0.01em" }}>
-          Money<em style={{ fontStyle: "italic", color: sage, fontWeight: 300 }}>Matrix</em>
+          Money<em className="mm-shimmer-em">Matrix</em>
         </span>
         {game.phase === "intro" ? (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -336,16 +337,22 @@ export default function MoneyMatrixPage() {
             <FinancialNetworkSVG />
           </div>
           <div style={{ maxWidth: 1280, margin: "0 auto", position: "relative" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 14px", borderRadius: 999, border: "1px solid var(--line-strong)", background: "var(--surface-1)", marginBottom: 24 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: sage, boxShadow: "0 0 0 3px rgba(61,204,145,0.18)" }} />
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 14px", borderRadius: 999, border: "1px solid rgba(61,204,145,0.25)", background: "rgba(61,204,145,0.06)", marginBottom: 32 }}>
+              <span className="mm-pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: sage, display: "inline-block" }} />
               <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.14em" }}>Investing Simulation · $20 → $1,000</span>
             </div>
-            <h1 className="page-title" style={{ marginBottom: 20, fontSize: "clamp(36px,5vw,64px)" }}>
-              Turn Twenty Dollars<br /><em>into One Thousand</em>
-            </h1>
-            <p style={{ maxWidth: 560, fontSize: 17, lineHeight: 1.65, color: "var(--text-2)", marginBottom: 40 }}>
-              MoneyMatrix is a round-based investing game. Allocate capital across five asset classes,
-              survive random market events, and compound your $20 into $1,000.
+
+            <div style={{ marginBottom: 8 }}>
+              <span className="mm-shimmer-text" style={{ fontSize: "clamp(56px, 8vw, 108px)", fontWeight: 800, display: "block", lineHeight: 0.95, letterSpacing: "-0.03em" }}>
+                MoneyMatrix
+              </span>
+            </div>
+            <h2 style={{ fontFamily: "var(--serif)", fontWeight: 300, fontSize: "clamp(22px, 3vw, 36px)", letterSpacing: "-0.015em", color: "var(--text-2)", margin: "0 0 24px", lineHeight: 1.2 }}>
+              Turn twenty dollars <em>into one thousand</em>
+            </h2>
+            <p style={{ maxWidth: 520, fontSize: 16, lineHeight: 1.7, color: "var(--text-3)", marginBottom: 40 }}>
+              A round-based investing game. Allocate capital across five asset classes,
+              survive random market events, and compound your way to $1,000.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 56 }}>
               <button onClick={startGame} className="btn btn-light" style={{ padding: "11px 28px", fontSize: 14, borderRadius: 999 }}>Start with $20 →</button>
@@ -460,7 +467,7 @@ export default function MoneyMatrixPage() {
 
         <footer style={{ borderTop: "1px solid var(--line)", padding: "24px 44px" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-            <span style={{ fontFamily: "var(--serif)", fontSize: 14 }}>Money<em style={{ fontStyle: "italic", color: sage }}>Matrix</em></span>
+            <span style={{ fontFamily: "var(--serif)", fontSize: 14 }}>Money<em className="mm-shimmer-em">Matrix</em></span>
             <p className="agent-note" style={{ margin: 0 }}>Simulated investing · Not financial advice · All returns are fictional</p>
             <a href="/invest" style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--text-3)", textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.1em" }}>← Invest Page</a>
           </div>
