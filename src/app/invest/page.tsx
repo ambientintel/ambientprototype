@@ -153,6 +153,7 @@ export default function InvestPage() {
               { id:'pilot', label:'Pilot' },
               { id:'ip', label:'Patent IP' },
               { id:'engineering', label:'Engineering' },
+              { id:'backing', label:'Backed' },
               { id:'raise', label:'Raise' },
             ].map(s => (
               <a key={s.id} href={`#${s.id}`} className="invest-nav-link">{s.label}</a>
@@ -637,6 +638,151 @@ export default function InvestPage() {
                 <p style={{ fontSize:12, color:'var(--text-3)', margin:0 }}>{t.label}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── INSTITUTIONAL BACKING ── */}
+      <section id="backing" style={{ position:'relative', borderBottom:'1px solid var(--line)', background:'var(--bg)', padding:'72px 44px', overflow:'hidden' }}>
+        {/* Subtle grid */}
+        <div style={{ pointerEvents:'none', position:'absolute', inset:0, opacity:0.02,
+          backgroundImage:'linear-gradient(rgba(246,247,248,1) 1px, transparent 1px), linear-gradient(90deg, rgba(246,247,248,1) 1px, transparent 1px)',
+          backgroundSize:'48px 48px' }} />
+        {/* Ambient orbs — lime left, maroon right */}
+        <div style={{ pointerEvents:'none', position:'absolute', inset:0, overflow:'hidden' }}>
+          <div style={{ position:'absolute', left:'-8%', top:'5%', width:520, height:520, borderRadius:'50%', background:'radial-gradient(circle, rgba(163,230,53,0.055) 0%, transparent 65%)', filter:'blur(80px)' }} />
+          <div style={{ position:'absolute', right:'-8%', top:'5%', width:520, height:520, borderRadius:'50%', background:'radial-gradient(circle, rgba(122,0,25,0.08) 0%, transparent 65%)', filter:'blur(80px)' }} />
+        </div>
+        {/* Dual-brand gradient top accent line */}
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
+          background:'linear-gradient(90deg, transparent 0%, rgba(163,230,53,0.6) 18%, rgba(163,230,53,0.12) 38%, rgba(26,82,118,0.12) 62%, rgba(36,113,163,0.6) 82%, transparent 100%)' }} />
+
+        <div style={{ maxWidth:1280, margin:'0 auto', position:'relative' }}>
+          <p className="crumb" style={{ marginBottom:12, textAlign:'center' }}>Institutional Validation</p>
+          <h2 className="section-title" style={{ fontSize:32, textAlign:'center', marginBottom:12 }}>
+            Backed by <em>Institutions That Matter</em>
+          </h2>
+          <p style={{ fontSize:15, color:'var(--text-2)', textAlign:'center', maxWidth:600, margin:'0 auto 48px', lineHeight:1.7 }}>
+            $348K in institutional capital — top-tier accelerator investment and a tripartite
+            public-university research grant — validates our technology before a single seed dollar is raised.
+          </p>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, marginBottom:20 }}>
+
+            {/* GENER8TOR */}
+            <div style={{ position:'relative', overflow:'hidden', borderRadius:20, border:'1px solid rgba(163,230,53,0.2)', background:'var(--surface-1)' }}>
+              <div style={{ height:3, background:'linear-gradient(90deg, #A3E635 0%, #65A30D 100%)' }} />
+              <div style={{ pointerEvents:'none', position:'absolute', top:-100, right:-60, width:340, height:340, borderRadius:'50%', background:'radial-gradient(circle, rgba(163,230,53,0.09) 0%, transparent 65%)', filter:'blur(40px)' }} />
+              <div style={{ position:'relative', padding:'32px 32px 28px' }}>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:28 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ width:48, height:48, borderRadius:12, background:'rgba(10,12,8,0.95)', border:'1.5px solid rgba(163,230,53,0.32)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <span style={{ fontFamily:'var(--mono)', fontSize:13, fontWeight:700, color:'#A3E635', letterSpacing:'-0.02em' }}>g8r</span>
+                    </div>
+                    <div>
+                      <p style={{ fontSize:15, fontWeight:600, color:'var(--text)', margin:'0 0 2px', letterSpacing:'-0.01em' }}>gener8tor</p>
+                      <p style={{ fontSize:11.5, color:'var(--text-3)', margin:0 }}>National Startup Accelerator</p>
+                    </div>
+                  </div>
+                  <div style={{ padding:'4px 12px', borderRadius:999, background:'rgba(163,230,53,0.08)', border:'1px solid rgba(163,230,53,0.2)', flexShrink:0 }}>
+                    <span style={{ fontFamily:'var(--mono)', fontSize:10.5, color:'#A3E635', textTransform:'uppercase', letterSpacing:'0.1em' }}>Portfolio Co.</span>
+                  </div>
+                </div>
+                <p style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:60, letterSpacing:'-0.04em', color:'#A3E635', margin:'0 0 5px', lineHeight:1 }}>$100K</p>
+                <p style={{ fontFamily:'var(--mono)', fontSize:11.5, textTransform:'uppercase', letterSpacing:'0.14em', color:'var(--text-3)', margin:'0 0 24px' }}>Seed Investment · Accelerator Program</p>
+                <p style={{ fontSize:13, fontStyle:'italic', color:'var(--text-3)', margin:'0 0 16px', paddingLeft:14, borderLeft:'2px solid rgba(163,230,53,0.35)' }}>
+                  &ldquo;Accelerating the Best &amp; Brightest&rdquo;
+                </p>
+                <p style={{ fontSize:13.5, lineHeight:1.7, color:'var(--text-2)', margin:'0 0 24px' }}>
+                  Selected for the gener8tor accelerator program — one of the top-ranked startup accelerators
+                  in the United States, with 600+ portfolio companies spanning capital, coaching, and
+                  corporate innovation programs nationwide.
+                </p>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+                  {['Top 10 U.S. Accelerator', '600+ Portfolio Cos.', 'Capital & Coaching'].map(tag => (
+                    <span key={tag} style={{ padding:'4px 10px', borderRadius:6, background:'rgba(163,230,53,0.06)', border:'1px solid rgba(163,230,53,0.15)', fontSize:11, color:'rgba(163,230,53,0.65)', fontFamily:'var(--mono)' }}>{tag}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* MINNESOTA PARTNERSHIP */}
+            <div style={{ position:'relative', overflow:'hidden', borderRadius:20, border:'1px solid rgba(36,113,163,0.2)', background:'var(--surface-1)' }}>
+              {/* Three-institution color bar */}
+              <div style={{ height:3, display:'flex' }}>
+                <div style={{ flex:1, background:'#7A0019' }} />
+                <div style={{ flex:1, background:'#1A5276' }} />
+                <div style={{ flex:1, background:'#2471A3' }} />
+              </div>
+              <div style={{ pointerEvents:'none', position:'absolute', top:-100, right:-60, width:340, height:340, borderRadius:'50%', background:'radial-gradient(circle, rgba(36,113,163,0.09) 0%, transparent 65%)', filter:'blur(40px)' }} />
+              <div style={{ position:'relative', padding:'32px 32px 28px' }}>
+                {/* Institution badges */}
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:28, flexWrap:'wrap' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 10px', borderRadius:8, background:'rgba(122,0,25,0.12)', border:'1px solid rgba(122,0,25,0.28)' }}>
+                    <div style={{ width:18, height:18, borderRadius:3, background:'#7A0019', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <span style={{ fontFamily:'var(--serif)', fontSize:12, fontWeight:800, color:'#FFCC33', lineHeight:1 }}>M</span>
+                    </div>
+                    <span style={{ fontSize:11, color:'#c0392b', fontFamily:'var(--mono)', fontWeight:500, whiteSpace:'nowrap' }}>U of Minnesota</span>
+                  </div>
+                  <span style={{ color:'var(--line-strong)', fontSize:12, flexShrink:0 }}>·</span>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 10px', borderRadius:8, background:'rgba(26,82,118,0.12)', border:'1px solid rgba(26,82,118,0.28)' }}>
+                    <div style={{ width:18, height:18, borderRadius:3, background:'#1A5276', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M5 1v8M1 5h8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <span style={{ fontSize:11, color:'#2e86c1', fontFamily:'var(--mono)', fontWeight:500, whiteSpace:'nowrap' }}>Mayo Clinic</span>
+                  </div>
+                  <span style={{ color:'var(--line-strong)', fontSize:12, flexShrink:0 }}>·</span>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 10px', borderRadius:8, background:'rgba(36,113,163,0.12)', border:'1px solid rgba(36,113,163,0.28)' }}>
+                    <div style={{ width:18, height:18, borderRadius:3, background:'#2471A3', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <polygon points="5,1 6.2,3.8 9.5,4.1 7.2,6.2 8,9.5 5,7.8 2,9.5 2.8,6.2 0.5,4.1 3.8,3.8" fill="white"/>
+                      </svg>
+                    </div>
+                    <span style={{ fontSize:11, color:'#2471a3', fontFamily:'var(--mono)', fontWeight:500, whiteSpace:'nowrap' }}>State of MN</span>
+                  </div>
+                </div>
+                <p style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:60, letterSpacing:'-0.04em', color:'var(--text)', margin:'0 0 5px', lineHeight:1 }}>$248K</p>
+                <p style={{ fontFamily:'var(--mono)', fontSize:11.5, textTransform:'uppercase', letterSpacing:'0.14em', color:'var(--text-3)', margin:'0 0 24px' }}>Research Grant · Non-Dilutive</p>
+                <p style={{ fontSize:13, fontStyle:'italic', color:'var(--text-3)', margin:'0 0 16px', paddingLeft:14, borderLeft:'2px solid rgba(36,113,163,0.38)', lineHeight:1.55 }}>
+                  Minnesota Partnership for Biotechnology<br/>and Medical Genomics
+                </p>
+                <p style={{ fontSize:13.5, lineHeight:1.7, color:'var(--text-2)', margin:'0 0 24px' }}>
+                  Awarded by the Minnesota Partnership — a tripartite initiative of the University of Minnesota,
+                  Mayo Clinic, and the State of Minnesota — funding breakthrough innovation in
+                  biomedical technology and medical genomics.
+                </p>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+                  {['Non-Dilutive Capital', 'Medical Genomics', 'Public-University Grant'].map(tag => (
+                    <span key={tag} style={{ padding:'4px 10px', borderRadius:6, background:'rgba(36,113,163,0.06)', border:'1px solid rgba(36,113,163,0.15)', fontSize:11, color:'rgba(100,170,210,0.75)', fontFamily:'var(--mono)' }}>{tag}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Summary bar */}
+          <div style={{ padding:'18px 28px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:14, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ width:7, height:7, borderRadius:'50%', background:'var(--sage)', boxShadow:'0 0 0 3px rgba(61,204,145,0.18)', flexShrink:0, display:'inline-block' }} />
+              <span style={{ fontSize:13.5, color:'var(--text-2)' }}>
+                $348K in institutional capital secured before seed round opens — accelerator investment plus non-dilutive grant
+              </span>
+            </div>
+            <div style={{ display:'flex', gap:28, flexShrink:0 }}>
+              {[
+                { val:'$348K', label:'Secured' },
+                { val:'4', label:'Institutions' },
+                { val:'$248K', label:'Non-Dilutive' },
+              ].map(m => (
+                <div key={m.label} style={{ textAlign:'center' }}>
+                  <p style={{ fontFamily:'var(--mono)', fontSize:13, fontWeight:600, color:'var(--text)', margin:'0 0 1px', lineHeight:1 }}>{m.val}</p>
+                  <p style={{ fontSize:10, color:'var(--text-3)', fontFamily:'var(--mono)', textTransform:'uppercase', letterSpacing:'0.1em', margin:0 }}>{m.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
