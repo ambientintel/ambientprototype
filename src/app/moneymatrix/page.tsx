@@ -1,5 +1,6 @@
 "use client";
 import { useState, useId } from "react";
+import Link from "next/link";
 import { GameState, Allocation, GameRound, InvestmentType } from "./_lib/types";
 import { simulateRound } from "./_lib/engine";
 import { INVESTMENT_LIST } from "./_lib/investments";
@@ -308,7 +309,7 @@ export default function MoneyMatrixPage() {
             {[{ id: "how", label: "How to Play" }, { id: "assets", label: "Assets" }, { id: "start", label: "Play Now" }].map(s => (
               <a key={s.id} href={`#${s.id}`} className="invest-nav-link">{s.label}</a>
             ))}
-            <button onClick={startGame} className="btn btn-light" style={{ padding: "7px 18px", fontSize: 12.5 }}>Start Playing →</button>
+            <Link href="/moneymatrix/game" className="btn btn-light" style={{ padding: "7px 18px", fontSize: 12.5 }}>Start Playing →</Link>
           </div>
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
@@ -355,7 +356,7 @@ export default function MoneyMatrixPage() {
               survive random market events, and compound your way to $1,000.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 56 }}>
-              <button onClick={startGame} className="btn btn-light" style={{ padding: "11px 28px", fontSize: 14, borderRadius: 999 }}>Start with $20 →</button>
+              <Link href="/moneymatrix/game" className="btn btn-light" style={{ padding: "11px 28px", fontSize: 14, borderRadius: 999 }}>Start with $20 →</Link>
               <a href="#how" className="btn btn-ghost" style={{ padding: "11px 22px", fontSize: 13.5, borderRadius: 999 }}>How It Works</a>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, maxWidth: 800 }}>
@@ -461,7 +462,7 @@ export default function MoneyMatrixPage() {
             <p style={{ fontSize: 15, color: "var(--text-2)", lineHeight: 1.7, marginBottom: 32 }}>
               You have $20. The market is open. Every decision matters.
             </p>
-            <button onClick={startGame} className="btn btn-light" style={{ padding: "14px 40px", fontSize: 15, borderRadius: 999 }}>Start with $20 →</button>
+            <Link href="/moneymatrix/game" className="btn btn-light" style={{ padding: "14px 40px", fontSize: 15, borderRadius: 999 }}>Start with $20 →</Link>
           </div>
         </section>
 
