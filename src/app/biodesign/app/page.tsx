@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   BiodesignState, DEFAULT_STATE, NeedStatement, Stakeholder, Concept,
   Patent, NeedStatus, ConceptStatus, StakeholderRole, RegulatoryPathway,
@@ -21,6 +21,7 @@ import { HistoryModal } from '../history';
 import { FlowCanvas } from '../flowbg';
 import { CommandPalette } from '../cmdpalette';
 import { RegulatoryWizard } from '../regwizard';
+import { CrossPhaseThreads } from '../crossphase';
 import '../biodesign.css';
 
 function getPhaseCompletion(state: BiodesignState, phaseKey: string): number {
@@ -691,6 +692,7 @@ function ConceptsTab({ state, update }: { state: BiodesignState; update: (s: Bio
   const [expanded, setExpanded] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: '', description: '', mechanism: '' });
+  const [viewMode, setViewMode] = useState<'list' | 'matrix'>('list');
 
   function addConcept() {
     if (!draft.title) return;
@@ -780,7 +782,79 @@ function ConceptsTab({ state, update }: { state: BiodesignState; update: (s: Bio
       </div>
     </div>
 
-      {sorted.map(c => {
+      {state.concepts.length > 0 && (
+        <div style={{ display: 'flex', gap: 4, marginBottom: 10, justifyContent: 'flex-end' }}>
+          {(['list', 'matrix'] as const).map(m => (
+            <button key={m} onClick={() => setViewMode(m)} style={{
+              padding: '4px 12px', borderRadius: 20, fontSize: 10, cursor: 'pointer',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+              background: viewMode === m ? 'rgba(160,126,232,0.12)' : 'transparent',
+              color: viewMode === m ? '#A07EE8' : 'var(--text-4)',
+              border: viewMode === m ? '1px solid rgba(160,126,232,0.3)' : '1px solid var(--line)',
+            }}>{m}</button>
+          ))}
+        </div>
+      )}
+
+      {viewMode === 'matrix' && sorted.length > 0 && (() => {
+        const dots = (val: number | null) => val === null ? '—' : Array.from({ length: 5 }, (_, i) => i < val ? '●' : '○').join('');
+        const scoreColor = (s: number | null) => s === null ? 'var(--text-4)' : s >= 4 ? '#52E8B4' : s >= 3 ? '#E8A852' : '#E87252';
+        const cols = [
+          { key: 'concept', label: 'Concept' },
+          { key: 'technical', label: 'Technical' },
+          { key: 'ip', label: 'IP FTO' },
+          { key: 'reg', label: 'Reg Risk' },
+          { key: 'reimburse', label: 'Reimburse' },
+          { key: 'clinical', label: 'Clinical' },
+          { key: 'score', label: 'Score' },
+        ];
+        return (
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr 0.7fr' }}>
+              {cols.map(col => (
+                <div key={col.key} style={{ padding: '8px 10px', background: 'var(--surface-2)', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  {col.label}
+                </div>
+              ))}
+              {sorted.map(c => {
+                const score = conceptScore(c);
+                const meta = CONCEPT_STATUS_META[c.status];
+                const need = state.needs.find(n => n.id === c.needId);
+                return (
+                  <React.Fragment key={c.id}>
+                    <div style={{ padding: '9px 10px', borderTop: '1px solid var(--line)', cursor: 'pointer' }}
+                      onClick={() => { setViewMode('list'); setExpanded(c.id); }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{c.title}</div>
+                      <Badge label={meta.label} bg={meta.bg} color={meta.color} />
+                      {need && <div style={{ fontSize: 10, color: 'var(--text-4)', fontFamily: 'var(--mono)', marginTop: 3 }}>{need.problem.slice(0, 30)}{need.problem.length > 30 ? '…' : ''}</div>}
+                    </div>
+                    {([
+                      c.screening.technicalFeasibility,
+                      c.screening.ipFreedom,
+                      c.screening.regulatoryRisk,
+                      c.screening.reimbursementViability,
+                      c.screening.clinicalAdoption,
+                    ] as (number | null)[]).map((val, i) => (
+                      <div key={i} style={{ padding: '9px 10px', borderTop: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        onClick={() => { setViewMode('list'); setExpanded(c.id); }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)' }}>{dots(val)}</span>
+                      </div>
+                    ))}
+                    <div style={{ padding: '9px 10px', borderTop: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      onClick={() => { setViewMode('list'); setExpanded(c.id); }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: scoreColor(score) }}>
+                        {score !== null ? score.toFixed(1) : '—'}
+                      </span>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {viewMode === 'list' && sorted.map(c => {
         const score = conceptScore(c);
         const meta = CONCEPT_STATUS_META[c.status];
         const isOpen = expanded === c.id;
@@ -924,6 +998,7 @@ function RegulatoryTab({ state, update }: { state: BiodesignState; update: (s: B
   };
 
   const [addingControl, setAddingControl] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [controlDraft, setControlDraft] = useState('');
 
   function addControl() {
@@ -980,6 +1055,80 @@ function RegulatoryTab({ state, update }: { state: BiodesignState; update: (s: B
           <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>{pathwayInfo[reg.pathway]}</p>
         </div>
       </div>
+
+      {/* Pathway Comparison */}
+      {(() => {
+        const PATHWAY_COMPARE = [
+          { key: '510k',   label: '510(k)',    class: 'II',     timeline: '3–12 mo',   cost: '$10K–200K',  clinical: 'Bench or limited', rate: '~90%', ideal: 'Predicate exists, substantial equivalence' },
+          { key: 'denovo', label: 'De Novo',   class: 'I / II', timeline: '12–18 mo',  cost: '$50K–500K',  clinical: 'Bench + limited',  rate: '~80%', ideal: 'Novel low-risk, no predicate' },
+          { key: 'pma',    label: 'PMA',       class: 'III',    timeline: '2–5 yr',    cost: '$1M–100M+',  clinical: 'Pivotal trial',     rate: '~75%', ideal: 'High-risk, life-sustaining, new technology' },
+          { key: 'exempt', label: 'Exempt',    class: 'I',      timeline: '0',         cost: 'Minimal',    clinical: 'None',              rate: 'N/A',  ideal: 'Low-risk, listed exempt device' },
+        ];
+        const rows: { label: string; field: keyof typeof PATHWAY_COMPARE[0] }[] = [
+          { label: 'Timeline',          field: 'timeline' },
+          { label: 'Cost Range',        field: 'cost' },
+          { label: 'Clinical Evidence', field: 'clinical' },
+          { label: 'Approval Rate',     field: 'rate' },
+          { label: 'Ideal For',         field: 'ideal' },
+        ];
+        return (
+          <div style={{ marginBottom: 16 }}>
+            <button onClick={() => setShowComparison(s => !s)} style={{
+              padding: '5px 14px', borderRadius: 2, fontSize: 11, cursor: 'pointer',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+              background: 'none', color: 'var(--text-4)', border: '1px solid var(--line)',
+              marginBottom: showComparison ? 10 : 0,
+            }}>
+              Compare Pathways {showComparison ? '▲' : '▼'}
+            </button>
+            {showComparison && (
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px repeat(4, 1fr)' }}>
+                  {/* Header */}
+                  <div style={{ padding: '8px 10px', background: 'var(--surface-2)', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+                  {PATHWAY_COMPARE.map(p => {
+                    const pathwayMeta = PATHWAY_META[p.key as RegulatoryPathway];
+                    const isSelected = reg.pathway === p.key;
+                    return (
+                      <div key={p.key} style={{
+                        padding: '8px 10px', background: isSelected ? (pathwayMeta?.color ?? 'var(--accent)') + '18' : 'var(--surface-2)',
+                        fontSize: 10, fontFamily: 'var(--mono)', fontWeight: 700,
+                        color: isSelected ? (pathwayMeta?.color ?? 'var(--accent)') : 'var(--text-3)',
+                        textTransform: 'uppercase', letterSpacing: '0.08em',
+                        borderLeft: '1px solid var(--line)',
+                      }}>
+                        {p.label}
+                        {isSelected && <span style={{ fontSize: 8, marginLeft: 4, opacity: 0.7 }}>◀</span>}
+                      </div>
+                    );
+                  })}
+                  {/* Data rows */}
+                  {rows.map(row => (
+                    <React.Fragment key={row.field}>
+                      <div style={{ padding: '8px 10px', borderTop: '1px solid var(--line)', fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                        {row.label}
+                      </div>
+                      {PATHWAY_COMPARE.map(p => {
+                        const pathwayMeta = PATHWAY_META[p.key as RegulatoryPathway];
+                        const isSelected = reg.pathway === p.key;
+                        return (
+                          <div key={p.key} style={{
+                            padding: '8px 10px', borderTop: '1px solid var(--line)', borderLeft: '1px solid var(--line)',
+                            fontSize: 12, color: isSelected ? (pathwayMeta?.color ?? 'var(--text-3)') : 'var(--text-3)',
+                            background: isSelected ? (pathwayMeta?.color ?? 'var(--accent)') + '0a' : 'transparent',
+                          }}>
+                            {p[row.field]}
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
@@ -1329,6 +1478,7 @@ export default function BiodesignPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [showThreads, setShowThreads] = useState(false);
   const [view, setView] = useState<'dashboard' | 'workspace'>('workspace');
   const [shareToast, setShareToast] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -1941,6 +2091,17 @@ export default function BiodesignPage() {
               }}>
               <span>Reg Wizard</span>
             </button>
+            <button onClick={() => setShowThreads(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,192,232,0.07)', color: 'var(--accent)',
+                border: '1px solid rgba(82,192,232,0.22)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Threads</span>
+            </button>
             <button onClick={() => setShowPalette(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
@@ -2016,6 +2177,13 @@ export default function BiodesignPage() {
           setTab('regulatory');
         }}
         onClose={() => setShowWizard(false)}
+      />
+    )}
+    {showThreads && (
+      <CrossPhaseThreads
+        state={state}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); }}
+        onClose={() => setShowThreads(false)}
       />
     )}
     </>
