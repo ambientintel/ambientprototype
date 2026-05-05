@@ -261,6 +261,190 @@ export default function InvestPage() {
         </div>
       </section>
 
+      {/* ── KEVIN ELLICH PERSONAL ── */}
+      <section style={{ position:'relative', overflow:'hidden', height:340, borderBottom:'1px solid var(--line)' }}>
+        {/* Deep dark base — distinct from page bg */}
+        <div style={{ position:'absolute', inset:0, background:'#07080E' }} />
+
+        {/* Radial sensor network SVG */}
+        <svg style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%' }}
+          viewBox="0 0 1440 340" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <style>{`
+            .ksb { stroke:rgba(246,247,248,0.9); stroke-width:0.5; fill:none; opacity:0.06; }
+            .ksl { stroke:rgba(246,247,248,0.9); stroke-width:1.1; fill:none; stroke-dasharray:14 580; }
+            .ks1  { animation:ksp 7.2s linear infinite;                        opacity:0.24; }
+            .ks2  { animation:ksp 9.4s linear infinite; animation-delay:-1.8s; opacity:0.20; }
+            .ks3  { animation:ksp 6.6s linear infinite; animation-delay:-3.2s; opacity:0.22; }
+            .ks4  { animation:ksp 8.8s linear infinite; animation-delay:-0.6s; opacity:0.18; }
+            .ks5  { animation:ksp 7.6s linear infinite; animation-delay:-4.1s; opacity:0.22; }
+            .ks6  { animation:ksp 9.0s linear infinite; animation-delay:-2.5s; opacity:0.20; }
+            .ks7  { animation:ksp 6.9s linear infinite; animation-delay:-5.3s; opacity:0.24; }
+            .ks8  { animation:ksp 8.3s linear infinite; animation-delay:-1.2s; opacity:0.20; }
+            .ks9  { animation:ksp 7.0s linear infinite; animation-delay:-3.7s; opacity:0.22; }
+            .ks10 { animation:ksp 9.7s linear infinite; animation-delay:-0.3s; opacity:0.18; }
+            .ks11 { animation:ksp 6.3s linear infinite; animation-delay:-2.9s; opacity:0.24; }
+            .ks12 { animation:ksp 8.6s linear infinite; animation-delay:-4.4s; opacity:0.20; }
+            .ks13 { animation:ksp 7.4s linear infinite; animation-delay:-1.6s; opacity:0.22; }
+            .ks14 { animation:ksp 9.2s linear infinite; animation-delay:-5.8s; opacity:0.18; }
+            .ks15 { animation:ksp 6.7s linear infinite; animation-delay:-3.4s; opacity:0.22; }
+            .ks16 { animation:ksp 8.1s linear infinite; animation-delay:-2.2s; opacity:0.20; }
+            .ks17 { animation:ksp 7.8s linear infinite; animation-delay:-0.9s; opacity:0.24; }
+            .ks18 { animation:ksp 9.5s linear infinite; animation-delay:-4.7s; opacity:0.18; }
+            .ks19 { animation:ksp 6.4s linear infinite; animation-delay:-1.5s; opacity:0.22; }
+            .ks20 { animation:ksp 8.9s linear infinite; animation-delay:-3.1s; opacity:0.20; }
+            .ks21 { animation:ksp 7.1s linear infinite; animation-delay:-5.6s; opacity:0.24; }
+            .ks22 { animation:ksp 9.8s linear infinite; animation-delay:-2.0s; opacity:0.18; }
+            .ks23 { animation:ksp 6.8s linear infinite; animation-delay:-4.8s; opacity:0.22; }
+            .ks24 { animation:ksp 8.4s linear infinite; animation-delay:-1.1s; opacity:0.20; }
+            @keyframes ksp { from { stroke-dashoffset:594; } to { stroke-dashoffset:0; } }
+            .kr { fill:none; stroke:rgba(45,114,210,0.75); stroke-width:1.2;
+                  transform-box:fill-box; transform-origin:center; }
+            .kr1 { animation:krp 4.5s ease-out infinite; }
+            .kr2 { animation:krp 4.5s ease-out infinite; animation-delay:-1.5s; }
+            .kr3 { animation:krp 4.5s ease-out infinite; animation-delay:-3.0s; }
+            @keyframes krp {
+              0%   { transform:scale(0.25); opacity:0.7; }
+              100% { transform:scale(5.5);  opacity:0; }
+            }
+            .kca { animation:kcap 2.8s ease-in-out infinite; }
+            @keyframes kcap { 0%,100% { opacity:0.9; } 50% { opacity:0.4; } }
+          `}</style>
+
+          {/* Backbone — center C(1090,158), inner hex, outer ring, far extensions */}
+          {/* center → inner */}
+          <line x1="1090" y1="158" x2="1090" y2="74"  className="ksb"/>
+          <line x1="1090" y1="158" x2="1162" y2="102" className="ksb"/>
+          <line x1="1090" y1="158" x2="1172" y2="192" className="ksb"/>
+          <line x1="1090" y1="158" x2="1110" y2="248" className="ksb"/>
+          <line x1="1090" y1="158" x2="1032" y2="232" className="ksb"/>
+          <line x1="1090" y1="158" x2="1006" y2="148" className="ksb"/>
+          {/* inner hex perimeter */}
+          <line x1="1090" y1="74"  x2="1162" y2="102" className="ksb"/>
+          <line x1="1162" y1="102" x2="1172" y2="192" className="ksb"/>
+          <line x1="1172" y1="192" x2="1110" y2="248" className="ksb"/>
+          <line x1="1110" y1="248" x2="1032" y2="232" className="ksb"/>
+          <line x1="1032" y1="232" x2="1006" y2="148" className="ksb"/>
+          <line x1="1006" y1="148" x2="1090" y2="74"  className="ksb"/>
+          {/* inner → outer */}
+          <line x1="1090" y1="74"  x2="1090" y2="8"   className="ksb"/>
+          <line x1="1162" y1="102" x2="1224" y2="58"  className="ksb"/>
+          <line x1="1172" y1="192" x2="1258" y2="186" className="ksb"/>
+          <line x1="1110" y1="248" x2="1186" y2="310" className="ksb"/>
+          <line x1="1032" y1="232" x2="978"  y2="308" className="ksb"/>
+          <line x1="1006" y1="148" x2="916"  y2="155" className="ksb"/>
+          {/* outer ring arcs */}
+          <line x1="1090" y1="8"   x2="1224" y2="58"  className="ksb"/>
+          <line x1="1224" y1="58"  x2="1258" y2="186" className="ksb"/>
+          <line x1="1258" y1="186" x2="1186" y2="310" className="ksb"/>
+          <line x1="916"  y1="155" x2="978"  y2="308" className="ksb"/>
+          {/* far extensions — bleed off edges */}
+          <line x1="1224" y1="58"  x2="1318" y2="105" className="ksb"/>
+          <line x1="1258" y1="186" x2="1370" y2="245" className="ksb"/>
+          <line x1="1006" y1="148" x2="986"  y2="18"  className="ksb"/>
+          <line x1="1090" y1="74"  x2="986"  y2="18"  className="ksb"/>
+          <line x1="1090" y1="8"   x2="986"  y2="18"  className="ksb"/>
+          {/* density cross-links */}
+          <line x1="1090" y1="158" x2="916"  y2="155" className="ksb"/>
+          <line x1="1162" y1="102" x2="1318" y2="105" className="ksb"/>
+          <line x1="1224" y1="58"  x2="1258" y2="186" className="ksb"/>
+
+          {/* Sparks */}
+          <line x1="1090" y1="158" x2="1090" y2="74"  className="ksl ks1"/>
+          <line x1="1090" y1="158" x2="1162" y2="102" className="ksl ks2"/>
+          <line x1="1090" y1="158" x2="1172" y2="192" className="ksl ks3"/>
+          <line x1="1090" y1="158" x2="1110" y2="248" className="ksl ks4"/>
+          <line x1="1090" y1="158" x2="1032" y2="232" className="ksl ks5"/>
+          <line x1="1090" y1="158" x2="1006" y2="148" className="ksl ks6"/>
+          <line x1="1090" y1="74"  x2="1162" y2="102" className="ksl ks7"/>
+          <line x1="1162" y1="102" x2="1172" y2="192" className="ksl ks8"/>
+          <line x1="1172" y1="192" x2="1110" y2="248" className="ksl ks9"/>
+          <line x1="1110" y1="248" x2="1032" y2="232" className="ksl ks10"/>
+          <line x1="1032" y1="232" x2="1006" y2="148" className="ksl ks11"/>
+          <line x1="1006" y1="148" x2="1090" y2="74"  className="ksl ks12"/>
+          <line x1="1090" y1="74"  x2="1090" y2="8"   className="ksl ks13"/>
+          <line x1="1162" y1="102" x2="1224" y2="58"  className="ksl ks14"/>
+          <line x1="1172" y1="192" x2="1258" y2="186" className="ksl ks15"/>
+          <line x1="1110" y1="248" x2="1186" y2="310" className="ksl ks16"/>
+          <line x1="1032" y1="232" x2="978"  y2="308" className="ksl ks17"/>
+          <line x1="1006" y1="148" x2="916"  y2="155" className="ksl ks18"/>
+          <line x1="1224" y1="58"  x2="1318" y2="105" className="ksl ks19"/>
+          <line x1="1258" y1="186" x2="1370" y2="245" className="ksl ks20"/>
+          <line x1="1006" y1="148" x2="986"  y2="18"  className="ksl ks21"/>
+          <line x1="1090" y1="158" x2="916"  y2="155" className="ksl ks22"/>
+          <line x1="1162" y1="102" x2="1318" y2="105" className="ksl ks23"/>
+          <line x1="1224" y1="58"  x2="1258" y2="186" className="ksl ks24"/>
+
+          {/* Nodes — far */}
+          <circle cx="1318" cy="105" r="2"   fill="rgba(246,247,248,1)" opacity="0.08"/>
+          <circle cx="1370" cy="245" r="1.5" fill="rgba(246,247,248,1)" opacity="0.07"/>
+          <circle cx="986"  cy="18"  r="2"   fill="rgba(246,247,248,1)" opacity="0.08"/>
+          {/* Nodes — outer ring */}
+          <circle cx="1090" cy="8"   r="2"   fill="rgba(246,247,248,1)" opacity="0.10"/>
+          <circle cx="1224" cy="58"  r="2.5" fill="rgba(246,247,248,1)" opacity="0.12"/>
+          <circle cx="1258" cy="186" r="2.5" fill="rgba(246,247,248,1)" opacity="0.12"/>
+          <circle cx="1186" cy="310" r="2"   fill="rgba(246,247,248,1)" opacity="0.10"/>
+          <circle cx="978"  cy="308" r="2"   fill="rgba(246,247,248,1)" opacity="0.10"/>
+          <circle cx="916"  cy="155" r="2.5" fill="rgba(246,247,248,1)" opacity="0.12"/>
+          {/* Nodes — inner hex */}
+          <circle cx="1090" cy="74"  r="3"   fill="rgba(246,247,248,1)" opacity="0.18"/>
+          <circle cx="1162" cy="102" r="3"   fill="rgba(246,247,248,1)" opacity="0.18"/>
+          <circle cx="1172" cy="192" r="3"   fill="rgba(246,247,248,1)" opacity="0.18"/>
+          <circle cx="1110" cy="248" r="3"   fill="rgba(246,247,248,1)" opacity="0.18"/>
+          <circle cx="1032" cy="232" r="3"   fill="rgba(246,247,248,1)" opacity="0.18"/>
+          <circle cx="1006" cy="148" r="3"   fill="rgba(246,247,248,1)" opacity="0.18"/>
+
+          {/* Pulsing concentric rings — 3 phases */}
+          <circle cx="1090" cy="158" r="28" className="kr kr1"/>
+          <circle cx="1090" cy="158" r="28" className="kr kr2"/>
+          <circle cx="1090" cy="158" r="28" className="kr kr3"/>
+
+          {/* Center node */}
+          <circle cx="1090" cy="158" r="12" fill="rgba(45,114,210,0.12)"/>
+          <circle cx="1090" cy="158" r="7"  fill="#2D72D2" opacity="0.8" className="kca"/>
+          <circle cx="1090" cy="158" r="2.8" fill="rgba(246,247,248,0.95)"/>
+        </svg>
+
+        {/* Left-to-right fade — keeps text crisp over the network */}
+        <div style={{ position:'absolute', inset:0,
+          background:'linear-gradient(90deg, #07080E 34%, rgba(7,8,14,0.92) 50%, rgba(7,8,14,0.48) 66%, transparent 82%)' }} />
+
+        {/* Personalized text — vertically centered */}
+        <div style={{ position:'relative', height:'100%', maxWidth:1280, margin:'0 auto',
+          display:'flex', alignItems:'center', padding:'0 44px' }}>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:18 }}>
+              <span style={{ width:5, height:5, borderRadius:'50%', background:'var(--accent)',
+                display:'inline-block', boxShadow:'0 0 0 3px rgba(45,114,210,0.22)' }} />
+              <span style={{ fontFamily:'var(--mono)', fontSize:10.5, textTransform:'uppercase',
+                letterSpacing:'0.18em', color:'var(--accent)', opacity:0.88 }}>
+                Investor Presentation · Prepared Exclusively For
+              </span>
+            </div>
+            <h2 style={{ fontFamily:'var(--serif)', fontWeight:300,
+              fontSize:'clamp(44px, 5vw, 72px)', letterSpacing:'-0.03em',
+              color:'var(--text)', margin:'0 0 14px', lineHeight:1 }}>
+              Kevin Ellich
+            </h2>
+            <div style={{ width:56, height:2,
+              background:'linear-gradient(90deg, #2D72D2, rgba(45,114,210,0.22))',
+              borderRadius:1, marginBottom:22 }} />
+            <p style={{ fontSize:15, color:'var(--text-2)', lineHeight:1.65,
+              marginBottom:26, maxWidth:440 }}>
+              A complete investor brief for Ambient Intelligence — ambient IoT and AI for memory care,
+              prepared for your review.
+            </p>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              {['Seed Round · $2M', 'Minneapolis · 2026', 'PCT Protected', 'Confidential'].map(tag => (
+                <span key={tag} style={{ padding:'5px 13px', borderRadius:999,
+                  background:'rgba(45,114,210,0.1)', border:'1px solid rgba(45,114,210,0.22)',
+                  fontFamily:'var(--mono)', fontSize:11, color:'rgba(45,114,210,0.9)',
+                  letterSpacing:'0.04em' }}>{tag}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── OPPORTUNITY ── */}
       <section style={{ borderBottom:'1px solid var(--line)', padding:'72px 44px' }}>
         <div style={{ maxWidth:1280, margin:'0 auto' }}>
