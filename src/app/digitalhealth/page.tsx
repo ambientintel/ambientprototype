@@ -113,7 +113,7 @@ export default function DigitalHealthLanding() {
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>Digital Health Studio</span>
-          <Link href="/biodesign/digitalhealth/app" className="dh-cta-btn" style={{
+          <Link href="/digitalhealth/app" className="dh-cta-btn" style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
             padding: '7px 20px',
             background: 'var(--accent)', color: '#fff',
@@ -215,7 +215,7 @@ export default function DigitalHealthLanding() {
 
           {/* CTA */}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', marginBottom: 64 }}>
-            <Link href="/biodesign/digitalhealth/app" className="dh-cta-btn" style={{
+            <Link href="/digitalhealth/app" className="dh-cta-btn" style={{
               display: 'inline-flex', alignItems: 'center', gap: 12,
               padding: '15px 40px',
               background: 'var(--accent)',
@@ -506,7 +506,7 @@ export default function DigitalHealthLanding() {
             Free to use. All data stays in your browser.<br />No login, no setup. Autosaved as you work.
           </p>
 
-          <Link href="/biodesign/digitalhealth/app" className="dh-cta-btn" style={{
+          <Link href="/digitalhealth/app" className="dh-cta-btn" style={{
             display: 'inline-flex', alignItems: 'center', gap: 14,
             padding: '18px 56px',
             background: 'var(--accent)',
@@ -535,7 +535,7 @@ export default function DigitalHealthLanding() {
         <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
           Digital Health Studio · Built for SaMD, DTx, and Health AI Teams
         </span>
-        <Link href="/biodesign/digitalhealth/app" style={{
+        <Link href="/digitalhealth/app" style={{
           fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)',
           textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.12em',
         }}>Open Studio →</Link>
