@@ -1168,7 +1168,8 @@ export default function BiodesignPage() {
   const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings'>('needs');
   const [showOnePager, setShowOnePager] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'workspace'>('workspace');
+  const [shareToast, setShareToast] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -1432,11 +1433,16 @@ export default function BiodesignPage() {
       }}>
         {/* Logo / project */}
         <div style={{ padding: '0 20px', marginBottom: 28 }}>
-          <button onClick={() => setView('dashboard')} style={{
-            display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em',
-            padding: '0 0 12px', marginBottom: 6,
-          }}>← All Projects</button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <Link href="/biodesign" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <span className="brand-name">Ambient <em>Intelligence</em></span>
+            </Link>
+            <button onClick={() => setView('dashboard')} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)',
+              textTransform: 'uppercase', letterSpacing: '0.08em', padding: 0,
+            }}>⊞ All</button>
+          </div>
           <input
             value={state.projectName}
             onChange={e => update({ ...state, projectName: e.target.value })}
@@ -1609,6 +1615,32 @@ export default function BiodesignPage() {
           </div>
         </div>
 
+        {/* History + Share */}
+        <div style={{ padding: '8px 20px 0', borderTop: '1px solid var(--line)', display: 'flex', gap: 6 }}>
+          <button onClick={() => setShowHistory(true)} style={{
+            flex: 1, padding: '6px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+            background: 'var(--surface-1)', color: 'var(--text-3)',
+            border: '1px solid var(--line)',
+            fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+          }}>History</button>
+          <button onClick={async () => {
+            if (!activeId) return;
+            const url = await shareProject(activeId);
+            if (url) {
+              navigator.clipboard.writeText(url).catch(() => {});
+              setShareToast(true);
+              setTimeout(() => setShareToast(false), 2500);
+            }
+          }} style={{
+            flex: 1, padding: '6px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+            background: shareToast ? 'rgba(61,204,145,0.1)' : 'var(--surface-1)',
+            color: shareToast ? '#3DCC91' : 'var(--text-3)',
+            border: shareToast ? '1px solid rgba(61,204,145,0.3)' : '1px solid var(--line)',
+            fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+            transition: 'all 0.2s',
+          }}>{shareToast ? '✓ Copied' : '↗ Share'}</button>
+        </div>
+
         {/* Footer stats */}
         <div style={{ padding: '10px 20px 0', borderTop: '1px solid var(--line)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
@@ -1667,27 +1699,15 @@ export default function BiodesignPage() {
                 }}>{tabMeta[t].label}</button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: 'auto 0' }}>
-            <button onClick={() => setShowHistory(true)} style={{
-              padding: '6px 12px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+          <button onClick={() => window.print()}
+            style={{
+              padding: '8px 14px', margin: 'auto 0',
+              borderRadius: 2, fontSize: 10, cursor: 'pointer',
               fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
-              background: 'var(--surface-2)', color: 'var(--text-4)', border: '1px solid var(--line)',
-            }}>History</button>
-            <button onClick={async () => {
-              if (!activeId) return;
-              const url = await shareProject(activeId);
-              if (url) { navigator.clipboard.writeText(url).catch(() => {}); alert(`Share link copied!\n\n${url}`); }
-            }} style={{
-              padding: '6px 12px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
-              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
-              background: 'var(--surface-2)', color: 'var(--text-4)', border: '1px solid var(--line)',
-            }}>↗ Share</button>
-            <button onClick={() => window.print()} style={{
-              padding: '6px 12px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
-              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
-              background: 'var(--surface-2)', color: 'var(--text-4)', border: '1px solid var(--line)',
+              background: 'var(--surface-2)', color: 'var(--text-4)',
+              border: '1px solid var(--line)',
+              flexShrink: 0,
             }}>Export PDF</button>
-          </div>
         </div>
 
         {/* Content */}
