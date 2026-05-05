@@ -271,20 +271,27 @@ export default function InvestPage() {
           background:'radial-gradient(circle, rgba(45,114,210,0.09) 0%, transparent 65%)',
           filter:'blur(50px)' }} />
 
-        {/* Ambient data-stream waves */}
+        {/* Topographic contour — mathematical visualization */}
         <svg style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%' }}
           viewBox="0 0 1440 340" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
           <style>{`
-            .wsl { fill:none; stroke:rgba(246,247,248,0.9); stroke-dasharray:18 2200; }
-            .ws1 { animation:wsp 11.0s linear infinite;                        opacity:0.22; }
-            .ws2 { animation:wsp  8.5s linear infinite; animation-delay:-3.8s; opacity:0.18; }
-            .ws3 { animation:wsp 13.0s linear infinite; animation-delay:-6.2s; opacity:0.24; }
-            .ws4 { animation:wsp  9.5s linear infinite; animation-delay:-1.5s; opacity:0.20; }
-            .ws5 { animation:wsp 10.5s linear infinite; animation-delay:-4.4s; opacity:0.22; }
-            .ws6 { animation:wsp 12.5s linear infinite; animation-delay:-7.8s; opacity:0.18; }
-            .ws7 { animation:wsp  8.0s linear infinite; animation-delay:-2.3s; opacity:0.24; }
-            .ws8 { animation:wsp 14.0s linear infinite; animation-delay:-5.1s; opacity:0.20; }
-            @keyframes wsp { from { stroke-dashoffset:2218; } to { stroke-dashoffset:0; } }
+            .teb { fill:none; stroke:rgba(246,247,248,0.9); }
+            .te0 { fill:none; stroke:rgba(45,114,210,0.76); stroke-dasharray:14 96;   animation:te0a  5s linear infinite; }
+            .te1 { fill:none; stroke:rgba(45,114,210,0.68); stroke-dasharray:14 195;  animation:te1a  7s linear infinite; animation-delay:-2.1s; }
+            .te2 { fill:none; stroke:rgba(45,114,210,0.61); stroke-dasharray:14 302;  animation:te2a  9s linear infinite; animation-delay:-4.3s; }
+            .te3 { fill:none; stroke:rgba(45,114,210,0.55); stroke-dasharray:14 414;  animation:te3a 11s linear infinite; animation-delay:-1.7s; }
+            .te4 { fill:none; stroke:rgba(45,114,210,0.49); stroke-dasharray:14 544;  animation:te4a 13s linear infinite; animation-delay:-6.5s; }
+            .te5 { fill:none; stroke:rgba(45,114,210,0.43); stroke-dasharray:14 690;  animation:te5a 16s linear infinite; animation-delay:-3.2s; }
+            .te6 { fill:none; stroke:rgba(45,114,210,0.37); stroke-dasharray:14 854;  animation:te6a 19s linear infinite; animation-delay:-8.1s; }
+            .te7 { fill:none; stroke:rgba(45,114,210,0.31); stroke-dasharray:14 1037; animation:te7a 23s linear infinite; animation-delay:-5.4s; }
+            @keyframes te0a { from{stroke-dashoffset:110;}  to{stroke-dashoffset:0;} }
+            @keyframes te1a { from{stroke-dashoffset:209;}  to{stroke-dashoffset:0;} }
+            @keyframes te2a { from{stroke-dashoffset:316;}  to{stroke-dashoffset:0;} }
+            @keyframes te3a { from{stroke-dashoffset:428;}  to{stroke-dashoffset:0;} }
+            @keyframes te4a { from{stroke-dashoffset:558;}  to{stroke-dashoffset:0;} }
+            @keyframes te5a { from{stroke-dashoffset:704;}  to{stroke-dashoffset:0;} }
+            @keyframes te6a { from{stroke-dashoffset:868;}  to{stroke-dashoffset:0;} }
+            @keyframes te7a { from{stroke-dashoffset:1051;} to{stroke-dashoffset:0;} }
             .wr { fill:none; stroke:rgba(45,114,210,0.65); stroke-width:1;
                   transform-box:fill-box; transform-origin:center; }
             .wr1 { animation:wrp 4.8s ease-out infinite; }
@@ -298,35 +305,45 @@ export default function InvestPage() {
             @keyframes wcap { 0%,100% { opacity:0.85; } 50% { opacity:0.35; } }
           `}</style>
 
-          {/* Wave backbones — 4 sine streams at different heights */}
+          {/* Mathematical field — faint iso-curves spanning full width */}
           <path d="M 0,82 Q 105,62 210,82 T 420,82 T 630,82 T 840,82 T 1050,82 T 1260,82 T 1470,82"
-            fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.55" opacity="0.05"/>
+            fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.45" opacity="0.03"/>
           <path d="M 0,148 Q 120,133 240,148 T 480,148 T 720,148 T 960,148 T 1200,148 T 1440,148"
-            fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.6"  opacity="0.07"/>
-          <path d="M 0,205 Q 95,229 190,205 T 380,205 T 570,205 T 760,205 T 950,205 T 1140,205 T 1330,205 T 1520,205"
-            fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.55" opacity="0.05"/>
-          <path d="M 0,268 Q 113,280 225,268 T 450,268 T 675,268 T 900,268 T 1125,268 T 1350,268 T 1575,268"
             fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.5"  opacity="0.04"/>
-
-          {/* Traveling sparks — 2 per outer wave, 3 on the mid wave */}
-          <path d="M 0,82 Q 105,62 210,82 T 420,82 T 630,82 T 840,82 T 1050,82 T 1260,82 T 1470,82"
-            className="wsl ws1" strokeWidth="1.2"/>
-          <path d="M 0,82 Q 105,62 210,82 T 420,82 T 630,82 T 840,82 T 1050,82 T 1260,82 T 1470,82"
-            className="wsl ws2" strokeWidth="1.0"/>
-          <path d="M 0,148 Q 120,133 240,148 T 480,148 T 720,148 T 960,148 T 1200,148 T 1440,148"
-            className="wsl ws3" strokeWidth="1.3"/>
-          <path d="M 0,148 Q 120,133 240,148 T 480,148 T 720,148 T 960,148 T 1200,148 T 1440,148"
-            className="wsl ws4" strokeWidth="1.1"/>
-          <path d="M 0,148 Q 120,133 240,148 T 480,148 T 720,148 T 960,148 T 1200,148 T 1440,148"
-            className="wsl ws5" strokeWidth="1.0"/>
           <path d="M 0,205 Q 95,229 190,205 T 380,205 T 570,205 T 760,205 T 950,205 T 1140,205 T 1330,205 T 1520,205"
-            className="wsl ws6" strokeWidth="1.2"/>
-          <path d="M 0,205 Q 95,229 190,205 T 380,205 T 570,205 T 760,205 T 950,205 T 1140,205 T 1330,205 T 1520,205"
-            className="wsl ws7" strokeWidth="1.0"/>
+            fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.45" opacity="0.03"/>
           <path d="M 0,268 Q 113,280 225,268 T 450,268 T 675,268 T 900,268 T 1125,268 T 1350,268 T 1575,268"
-            className="wsl ws8" strokeWidth="1.1"/>
+            fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.4"  opacity="0.03"/>
 
-          {/* Sonar pulse — right side, intersects wave streams */}
+          {/* Topographic contour backbones — 8 nested tilted ellipses (outermost → innermost) */}
+          <ellipse cx="1060" cy="170" rx="196" ry="136" transform="rotate(-38,1060,170)"
+            className="teb" strokeWidth="0.5"  opacity="0.055"/>
+          <ellipse cx="1060" cy="170" rx="162" ry="112" transform="rotate(18,1060,170)"
+            className="teb" strokeWidth="0.5"  opacity="0.065"/>
+          <ellipse cx="1060" cy="170" rx="132" ry="90"  transform="rotate(-28,1060,170)"
+            className="teb" strokeWidth="0.55" opacity="0.075"/>
+          <ellipse cx="1060" cy="170" rx="104" ry="72"  transform="rotate(42,1060,170)"
+            className="teb" strokeWidth="0.55" opacity="0.085"/>
+          <ellipse cx="1060" cy="170" rx="80"  ry="55"  transform="rotate(-10,1060,170)"
+            className="teb" strokeWidth="0.6"  opacity="0.09"/>
+          <ellipse cx="1060" cy="170" rx="58"  ry="42"  transform="rotate(35,1060,170)"
+            className="teb" strokeWidth="0.6"  opacity="0.10"/>
+          <ellipse cx="1060" cy="170" rx="38"  ry="28"  transform="rotate(-20,1060,170)"
+            className="teb" strokeWidth="0.65" opacity="0.11"/>
+          <ellipse cx="1060" cy="170" rx="20"  ry="15"  transform="rotate(15,1060,170)"
+            className="teb" strokeWidth="0.65" opacity="0.12"/>
+
+          {/* Traveling sparks — one per contour ring, each orbiting its own ellipse */}
+          <ellipse cx="1060" cy="170" rx="20"  ry="15"  transform="rotate(15,1060,170)"  className="te0" strokeWidth="2.5"/>
+          <ellipse cx="1060" cy="170" rx="38"  ry="28"  transform="rotate(-20,1060,170)" className="te1" strokeWidth="2.2"/>
+          <ellipse cx="1060" cy="170" rx="58"  ry="42"  transform="rotate(35,1060,170)"  className="te2" strokeWidth="2.0"/>
+          <ellipse cx="1060" cy="170" rx="80"  ry="55"  transform="rotate(-10,1060,170)" className="te3" strokeWidth="1.8"/>
+          <ellipse cx="1060" cy="170" rx="104" ry="72"  transform="rotate(42,1060,170)"  className="te4" strokeWidth="1.6"/>
+          <ellipse cx="1060" cy="170" rx="132" ry="90"  transform="rotate(-28,1060,170)" className="te5" strokeWidth="1.4"/>
+          <ellipse cx="1060" cy="170" rx="162" ry="112" transform="rotate(18,1060,170)"  className="te6" strokeWidth="1.2"/>
+          <ellipse cx="1060" cy="170" rx="196" ry="136" transform="rotate(-38,1060,170)" className="te7" strokeWidth="1.0"/>
+
+          {/* Sonar pulse */}
           <circle cx="1060" cy="170" r="26" className="wr wr1"/>
           <circle cx="1060" cy="170" r="26" className="wr wr2"/>
           <circle cx="1060" cy="170" r="26" className="wr wr3"/>
