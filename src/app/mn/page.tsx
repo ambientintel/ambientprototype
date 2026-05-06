@@ -492,7 +492,7 @@ export default function MNPage() {
               to accelerate commercialization.
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.7, color: C.text2, margin: '0 0 20px' }}>
-              Greg Shultz — Gasket Studios<br/>
+              Greg Shultz — Gasket Studioss<br/>
               Dr. Simon Mittal, MD
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
@@ -729,10 +729,10 @@ export default function MNPage() {
               </div>
             </div>
 
-            {/* Gasket Studio */}
+            {/* Gasket Studios */}
             <div style={{ padding: '28px 32px', border: `1px solid ${C.lineStrg}`, borderRadius: 12, background: C.surf1 }}>
               <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: 'rgba(79,156,249,0.75)', margin: '0 0 14px' }}>Digital Engineering</p>
-              <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', color: C.text, margin: '0 0 16px', lineHeight: 1.2 }}>Gasket Studio</p>
+              <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', color: C.text, margin: '0 0 16px', lineHeight: 1.2 }}>Gasket Studios</p>
               <p style={{ fontSize: 14, fontStyle: 'italic', color: C.text3, paddingLeft: 14, borderLeft: `2px solid ${C.accentSoft}`, lineHeight: 1.65, margin: '0 0 20px' }}>
                 Partnering on digital product engineering — UI/UX design, software architecture, and technology delivery — ensuring Ambient Intelligence's platform meets the highest standards of clinical usability.
               </p>
