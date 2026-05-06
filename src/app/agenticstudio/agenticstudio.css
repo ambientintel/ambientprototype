@@ -573,6 +573,12 @@
   to   { stroke-dashoffset: -100; }
 }
 
+/* Floating label fade in/out */
+@keyframes as-label-fade {
+  0%, 12%, 88%, 100% { opacity: 0; }
+  28%, 72%            { opacity: 1; }
+}
+
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .as-nav-links { display: none; }
