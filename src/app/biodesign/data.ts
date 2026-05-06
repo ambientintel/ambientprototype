@@ -253,6 +253,78 @@ export interface IPFiling {
   createdAt: string;
 }
 
+// ── Pre-Submission ────────────────────────────────────────────────────────────
+
+export type PreSubMeetingType =
+  'q-sub' | 'pre-ide' | 'pre-pma' | 'pre-510k' | 'de-novo-pre' |
+  'breakthrough' | 'study-risk' | 'sap-review';
+
+export type PreSubStatus =
+  'planning' | 'drafting' | 'submitted' | 'acknowledged' |
+  'scheduled' | 'meeting-held' | 'written-response';
+
+export type PreSubDocStatus = 'not-started' | 'in-progress' | 'complete' | 'na';
+
+export type PreSubQuestionCategory =
+  'regulatory' | 'clinical' | 'technical' | 'manufacturing' | 'labeling';
+
+export interface PreSubQuestion {
+  id: string;
+  text: string;
+  category: PreSubQuestionCategory;
+  priority: 1 | 2 | 3;
+  fdaResponse: string;
+  status: 'draft' | 'final' | 'answered';
+}
+
+export interface PreSubDocument {
+  id: string;
+  name: string;
+  section: string;
+  required: boolean;
+  status: PreSubDocStatus;
+  notes: string;
+}
+
+export interface PreSubMeeting {
+  id: string;
+  type: PreSubMeetingType;
+  title: string;
+  status: PreSubStatus;
+  meetingFormat: 'in-person' | 'teleconference' | 'written-only';
+  submittedDate: string;
+  acknowledgedDate: string;
+  meetingDate: string;
+  responseDate: string;
+  qSubNumber: string;
+  fdaContact: string;
+  questions: PreSubQuestion[];
+  documents: PreSubDocument[];
+  notes: string;
+}
+
+export interface PreSubmissionPlan {
+  meetings: PreSubMeeting[];
+}
+
+// ── Collaboration ─────────────────────────────────────────────────────────────
+
+export interface ProjectComment {
+  id: string;
+  author: string;
+  role: string;
+  text: string;
+  phase: string;
+  tab: string;
+  createdAt: string;
+  resolved: boolean;
+}
+
+export interface ProjectCollaboration {
+  collaborators: string[];   // email addresses
+  comments: ProjectComment[];
+}
+
 // ── Reimbursement Strategy ────────────────────────────────────────────────────
 
 export type SiteOfService = 'inpatient' | 'outpatient-hospital' | 'asc' | 'physician-office' | 'home' | 'snf';
@@ -301,6 +373,156 @@ export const DEFAULT_REIMBURSEMENT: ReimbursementStrategy = {
   notes: '',
 };
 
+// ── Submission Tracker ────────────────────────────────────────────────────────
+
+export type SubmissionType = '510k' | 'pma' | 'denovo' | 'ide' | 'ide-supplement' | 'pma-supplement' | 'q-sub' | 'breakthrough' | 'other';
+export type SubmissionStatus = 'preparing' | 'submitted' | 'accepted' | 'under-review' | 'ai-request' | 'ai-response' | 'cleared' | 'approved' | 'not-cleared' | 'withdrawn';
+export type CorrespondenceType = 'submission' | 'fda-letter' | 'ai-request' | 'ai-response' | 'meeting' | 'phone-call' | 'other';
+
+export interface SubmissionCorrespondence {
+  id: string;
+  date: string;
+  type: CorrespondenceType;
+  subject: string;
+  notes: string;
+  clockTolled: boolean;
+}
+
+export interface SubmissionRecord {
+  id: string;
+  type: SubmissionType;
+  title: string;
+  status: SubmissionStatus;
+  submissionNumber: string;
+  submittedDate: string;
+  acceptedDate: string;
+  clockStartDate: string;
+  targetDecisionDate: string;
+  actualDecisionDate: string;
+  clockDaysGoal: number | null;
+  aiRequestCount: number;
+  correspondence: SubmissionCorrespondence[];
+  notes: string;
+}
+
+// ── Timeline / Milestones ─────────────────────────────────────────────────────
+
+export type MilestoneCategory = 'regulatory' | 'clinical' | 'reimbursement' | 'ip' | 'commercial' | 'manufacturing' | 'operational';
+export type MilestoneStatus = 'upcoming' | 'in-progress' | 'complete' | 'delayed' | 'at-risk';
+
+export interface Milestone {
+  id: string;
+  title: string;
+  category: MilestoneCategory;
+  targetDate: string;
+  completedDate: string;
+  status: MilestoneStatus;
+  owner: string;
+  critical: boolean;
+  notes: string;
+}
+
+// ── Risk Register ─────────────────────────────────────────────────────────────
+
+export type RiskCategory = 'technical' | 'regulatory' | 'clinical' | 'commercial' | 'ip' | 'manufacturing' | 'reimbursement' | 'cybersecurity';
+export type RiskStatus = 'open' | 'mitigated' | 'accepted' | 'closed';
+
+export interface Risk {
+  id: string;
+  title: string;
+  description: string;
+  category: RiskCategory;
+  probability: number; // 1–5
+  impact: number;      // 1–5
+  mitigation: string;
+  owner: string;
+  status: RiskStatus;
+  createdAt: string;
+}
+
+// ── Competitive Landscape ─────────────────────────────────────────────────────
+
+export interface Competitor {
+  id: string;
+  company: string;
+  device: string;
+  fdaStatus: string;
+  deviceClass: string;
+  indication: string;
+  clearanceNumber: string;
+  marketShare: string;
+  listPrice: string;
+  strengths: string;
+  weaknesses: string;
+  reimbursement: string;
+  notes: string;
+}
+
+// ── Design Controls (DHF) ─────────────────────────────────────────────────────
+
+export type DesignInputCategory = 'functional' | 'performance' | 'safety' | 'regulatory' | 'user' | 'interface' | 'labeling';
+export type DesignInputPriority = 'critical' | 'major' | 'minor';
+export type DesignControlStatus = 'planned' | 'in-progress' | 'complete' | 'approved' | 'failed';
+
+export interface DesignInput {
+  id: string;
+  requirement: string;
+  source: string;
+  category: DesignInputCategory;
+  priority: DesignInputPriority;
+  acceptanceCriteria: string;
+  notes: string;
+}
+
+export interface DesignOutput {
+  id: string;
+  title: string;
+  documentRef: string;
+  linkedInputIds: string[];
+  status: DesignControlStatus;
+  notes: string;
+}
+
+export interface DesignVerification {
+  id: string;
+  title: string;
+  method: string;
+  acceptanceCriteria: string;
+  linkedOutputIds: string[];
+  status: DesignControlStatus;
+  result: string;
+  notes: string;
+}
+
+export interface DesignValidation {
+  id: string;
+  title: string;
+  method: string;
+  population: string;
+  acceptanceCriteria: string;
+  status: DesignControlStatus;
+  result: string;
+  notes: string;
+}
+
+export interface DesignControls {
+  inputs: DesignInput[];
+  outputs: DesignOutput[];
+  verifications: DesignVerification[];
+  validations: DesignValidation[];
+  dhfLocation: string;
+  designReviewNotes: string;
+}
+
+export const DEFAULT_DESIGN_CONTROLS: DesignControls = {
+  inputs: [],
+  outputs: [],
+  verifications: [],
+  validations: [],
+  dhfLocation: '',
+  designReviewNotes: '',
+};
+
 // ── Root state ────────────────────────────────────────────────────────────────
 
 export interface BiodesignState {
@@ -317,7 +539,14 @@ export interface BiodesignState {
   business: BusinessModel;
   comply: ComplyState;
   ipFilings: IPFiling[];
+  preSubmission: PreSubmissionPlan;
+  collaboration: ProjectCollaboration;
+  submissions: SubmissionRecord[];
   reimbursement: ReimbursementStrategy;
+  milestones: Milestone[];
+  risks: Risk[];
+  competitors: Competitor[];
+  designControls: DesignControls;
 }
 
 export const DEFAULT_STATE: BiodesignState = {
@@ -375,7 +604,14 @@ export const DEFAULT_STATE: BiodesignState = {
     certifications: [],
   },
   ipFilings: [],
+  preSubmission: { meetings: [] },
+  collaboration: { collaborators: [], comments: [] },
+  submissions: [],
   reimbursement: DEFAULT_REIMBURSEMENT,
+  milestones: [],
+  risks: [],
+  competitors: [],
+  designControls: DEFAULT_DESIGN_CONTROLS,
 };
 
 export function needScore(n: NeedStatement): number | null {

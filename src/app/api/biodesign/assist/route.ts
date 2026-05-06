@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-type AssistType = 'need' | 'concept' | 'regulatory' | 'clinical' | 'ip-filing';
+type AssistType = 'need' | 'concept' | 'regulatory' | 'clinical' | 'ip-filing' | 'competitive';
 
 const SYSTEM = `You are an expert medical device development consultant with deep expertise in the Stanford Biodesign framework, FDA regulatory affairs, IP strategy, and clinical trial design. Provide concise, professionally worded, clinically grounded suggestions appropriate for medical device startup teams. Always respond with valid JSON only — no markdown, no explanation, just the JSON object.`;
 
@@ -75,6 +75,20 @@ Context:
 ${ctxLines}
 
 Return a JSON object where keys are section names and values are drafted content (1-3 sentences each). Include only sections relevant to the filing type. For patent filings include: "field", "background", "summary", "claims_preview". For trademarks include: "mark_description", "goods_services", "distinctiveness_argument". For copyrights include: "work_description", "authorship_statement". For trade secrets include: "identification", "commercial_value", "protection_measures".`;
+
+    case 'competitive':
+      return `Research and analyze the competitive landscape for this medical device.
+
+Context:
+${ctxLines}
+
+Return a JSON object:
+{
+  "positioning": "1-2 sentences on how this device is differentiated from likely competitors (focus on clinical workflow, patient outcomes, or regulatory pathway advantages)",
+  "keyAdvantages": "3 key competitive advantages, semicolon-separated",
+  "threats": "2-3 key competitive threats or market risks, semicolon-separated",
+  "marketInsight": "1-2 sentences on market dynamics, barriers to entry, or key trends relevant to this device space"
+}`;
 
     default:
       return '';

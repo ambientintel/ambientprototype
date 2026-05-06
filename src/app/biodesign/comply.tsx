@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { FlowCanvas } from './flowbg';
 import {
   BiodesignState, DeviceProfile, StandardCompliance, ChecklistItem,
   ComplianceStatus, TargetMarket, PatientContactType, PatientContactDuration,
@@ -259,10 +260,15 @@ export function ProfileTab({ state, update }: { state: BiodesignState; update: (
 
   return (
     <div>
-      <SectionHeader
-        title="Device Profile"
-        subtitle="Configure device attributes and target markets. The Standards tracker auto-updates to show only applicable standards."
-      />
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+        <FlowCanvas accent="#E87252" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+        <div style={{ position: 'relative', padding: '22px 28px' }}>
+          <div style={{ fontSize: 9, color: '#E87252', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>04 / Comply · Device Profile</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Device Profile</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>Device attributes and target markets — standards tracker auto-updates.</div>
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 20 }}>
         <div style={{ padding: '12px 16px', background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 2 }}>
@@ -446,10 +452,22 @@ export function StandardsTab({ state, update }: { state: BiodesignState; update:
 
   const categories = Array.from(new Set(applicable.map(s => s.category))) as StandardCategory[];
 
+  const standardsHero = (
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+      <FlowCanvas accent="#E87252" />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+      <div style={{ position: 'relative', padding: '22px 28px' }}>
+        <div style={{ fontSize: 9, color: '#E87252', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>04 / Comply · Standards</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Standards Tracker</div>
+        {applicable.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>{stats.total} applicable standards across {categories.length} categories.</div>}
+      </div>
+    </div>
+  );
+
   if (applicable.length === 0) {
     return (
       <div>
-        <SectionHeader title="Standards Tracker" />
+        {standardsHero}
         <div style={{ padding: '40px 20px', textAlign: 'center', border: '1px dashed var(--line)', borderRadius: 2, color: 'var(--text-4)', fontSize: 12, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           No standards applicable yet — configure your device profile first.
         </div>
@@ -459,7 +477,7 @@ export function StandardsTab({ state, update }: { state: BiodesignState; update:
 
   return (
     <div>
-      <SectionHeader title="Standards Tracker" subtitle={`${stats.total} applicable standards across ${categories.length} categories`} />
+      {standardsHero}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 16 }}>
         {([

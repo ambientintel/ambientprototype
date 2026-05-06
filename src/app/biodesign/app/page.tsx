@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   BiodesignState, DEFAULT_STATE, NeedStatement, Stakeholder, Concept,
   Patent, NeedStatus, ConceptStatus, StakeholderRole, RegulatoryPathway,
@@ -9,7 +9,76 @@ import {
 } from '../data';
 import { ProfileTab, StandardsTab } from '../comply';
 import { ReimbursementTab } from '../reimburse';
+import { TimelineTab } from '../timeline';
+import { RisksTab } from '../risks';
+import { CompetitiveTab } from '../competitive';
+import { DesignControlsTab } from '../designcontrols';
+import { IPFilingsTab } from '../ipfilings';
+import { InvestorOnePager } from '../onepager';
+import { AiDraftButton } from '../aiassist';
+import { ProjectDashboard } from '../dashboard';
+import { HistoryModal } from '../history';
+import { FlowCanvas } from '../flowbg';
+import { CommandPalette } from '../cmdpalette';
+import { RegulatoryWizard } from '../regwizard';
+import { CrossPhaseThreads } from '../crossphase';
+import { ClinicalWizard } from '../clinicalwizard';
+import { ReadinessOverlay } from '../readiness';
+import { PreSubTab } from '../presub';
+import { FDARoadmapTab } from '../fdaroadmap';
+import { PredicateSearchOverlay } from '../predicatesearch';
+import { BudgetEstimatorTab } from '../budgetestimator';
+import { DataRoomOverlay } from '../dataroom';
+import { CollaborationOverlay } from '../collaboration';
+import { AIDraftDocsOverlay } from '../aidraftdocs';
+import { RegIntelTab } from '../regintel';
+import { SubmissionTrackerTab } from '../submissiontracker';
+import { GanttTab } from '../gantt';
+import { ExportSuiteOverlay } from '../exportsuite';
+import { BenchmarksTab } from '../benchmarks';
 import '../biodesign.css';
+
+function getPhaseCompletion(state: BiodesignState, phaseKey: string): number {
+  let pts: boolean[];
+  switch (phaseKey) {
+    case 'identify':
+      pts = [
+        state.needs.length > 0,
+        state.needs.some(n => n.status === 'selected' || n.status === 'validated'),
+        state.stakeholders.length > 0,
+        state.competitors.length > 0,
+      ];
+      break;
+    case 'invent':
+      pts = [
+        state.concepts.length > 0,
+        state.concepts.length >= 2,
+        state.concepts.some(c => c.status === 'selected' || c.status === 'development'),
+      ];
+      break;
+    case 'implement':
+      pts = [
+        state.regulatory.pathway !== 'tbd',
+        state.regulatory.deviceClass !== 'TBD',
+        state.milestones.length > 0,
+        state.risks.length > 0,
+        (state.ipFilings ?? []).length > 0,
+        (state.reimbursement.cptCodes.length > 0 || !!state.reimbursement.siteOfService),
+      ];
+      break;
+    case 'comply':
+      pts = [
+        (state.comply.profile.targetMarkets ?? []).length > 0,
+        Object.keys(state.comply.compliance ?? {}).length > 0,
+        Object.values(state.comply.compliance ?? {}).some(s => s.status === 'complete'),
+        state.designControls.inputs.length > 0,
+      ];
+      break;
+    default:
+      return 0;
+  }
+  return Math.round(pts.filter(Boolean).length / pts.length * 100);
+}
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 
@@ -28,7 +97,18 @@ interface ProjectMeta {
 
 function parseRaw(raw: string): BiodesignState {
   const parsed = JSON.parse(raw);
-  return { ...DEFAULT_STATE, ...parsed, comply: { ...DEFAULT_STATE.comply, ...(parsed.comply ?? {}) } };
+  return {
+    ...DEFAULT_STATE,
+    ...parsed,
+    comply: { ...DEFAULT_STATE.comply, ...(parsed.comply ?? {}) },
+    designControls: { ...DEFAULT_STATE.designControls, ...(parsed.designControls ?? {}) },
+    preSubmission: { meetings: parsed.preSubmission?.meetings ?? [] },
+    collaboration: { collaborators: parsed.collaboration?.collaborators ?? [], comments: parsed.collaboration?.comments ?? [] },
+    submissions: parsed.submissions ?? [],
+    milestones: parsed.milestones ?? [],
+    risks: parsed.risks ?? [],
+    competitors: parsed.competitors ?? [],
+  };
 }
 
 function loadProjectData(id: string): BiodesignState {
@@ -242,15 +322,53 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
 
   return (
     <div>
-      <SectionHeader
-        title="Need Statements"
-        subtitle="A way to [solve problem] for [population] in [setting] so that [outcome]."
-      />
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
-        <StatMini label="Total needs" value={state.needs.length} />
-        <StatMini label="Selected" value={state.needs.filter(n => n.status === 'selected').length} accent="#3DCC91" />
+    {/* Identify hero */}
+    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 28, borderRadius: 4, minHeight: state.needs.length === 0 && !adding ? 268 : 114 }}>
+      <FlowCanvas accent="#E8A852" />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+      <div style={{ position: 'relative', zIndex: 1, padding: state.needs.length === 0 && !adding ? '38px 38px 34px' : '22px 30px' }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#E8A852', marginBottom: 12 }}>
+          01 / Identify
+        </div>
+        {state.needs.length === 0 && !adding ? (
+          <>
+            <h2 style={{ margin: '0 0 12px', fontSize: 28, fontWeight: 800, color: 'var(--text)', lineHeight: 1.15, letterSpacing: '-0.025em' }}>
+              Clinical Need<br/>Discovery
+            </h2>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.8, maxWidth: 460 }}>
+              Observe before inventing. Capture unmet clinical needs using the Stanford Biodesign framework before exploring solutions — needs drive concepts, regulatory strategy, and market fit.
+            </p>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'rgba(232,168,82,0.62)', fontFamily: 'var(--mono)', marginBottom: 26 }}>
+              "A way to [problem] for [population] in [setting] so that [outcome]."
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <AiDraftButton
+                type="need"
+                context={{ indication: state.indication }}
+                onResult={r => { setDraft(d => ({ ...d, ...r })); setAdding(true); }}
+                label="Draft first need"
+              />
+              <button onClick={() => setAdding(true)} style={{ padding: '6px 18px', borderRadius: 2, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', color: 'var(--text-3)', border: '1px solid rgba(180,215,240,0.10)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                Add manually
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Clinical Need Discovery</h2>
+              <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(232,168,82,0.58)', fontFamily: 'var(--mono)', fontStyle: 'italic' }}>
+                "A way to [problem] for [population] in [setting] so that [outcome]."
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 16, fontFamily: 'var(--mono)', flexShrink: 0 }}>
+              <span><strong style={{ color: 'var(--text-2)', fontSize: 18, fontWeight: 700 }}>{state.needs.length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>needs</span></span>
+              <span><strong style={{ color: '#3DCC91', fontSize: 18, fontWeight: 700 }}>{state.needs.filter(n => n.status === 'selected').length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>selected</span></span>
+            </div>
+          </div>
+        )}
       </div>
+    </div>
 
       {state.needs.map(n => {
         const score = needScore(n);
@@ -369,6 +487,14 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
 
       {adding ? (
         <Card style={{ marginBottom: 8 }}>
+          <div style={{ marginBottom: 12 }}>
+            <AiDraftButton
+              type="need"
+              context={{ problem: draft.problem, population: draft.population, setting: draft.setting, outcome: draft.outcome, indication: state.indication }}
+              onResult={r => setDraft(d => ({ ...d, ...r }))}
+              label="Draft need statement"
+            />
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
             <Field label="Problem" value={draft.problem} onChange={v => setDraft(d => ({ ...d, problem: v }))} placeholder="cannot do X / pain point" />
             <Field label="Population" value={draft.population} onChange={v => setDraft(d => ({ ...d, population: v }))} placeholder="patients with Y" />
@@ -383,12 +509,12 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
             <button onClick={() => setAdding(false)} style={{ padding: '6px 14px', borderRadius: 2, fontSize: 12, cursor: 'pointer', background: 'none', color: 'var(--text-3)', border: '1px solid var(--line)' }}>Cancel</button>
           </div>
         </Card>
-      ) : (
+      ) : state.needs.length > 0 ? (
         <button onClick={() => setAdding(true)}
           style={{ width: '100%', padding: '10px', borderRadius: 2, fontSize: 12, cursor: 'pointer', background: 'none', color: 'var(--text-4)', border: '1px dashed var(--line)', marginTop: 4, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           + Add need statement
         </button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -449,7 +575,33 @@ function StakeholdersTab({ state, update }: { state: BiodesignState; update: (s:
 
   return (
     <div>
-      <SectionHeader title="Stakeholder Map" subtitle="Identify all parties who influence adoption and use." />
+    {/* Identify hero — Stakeholders */}
+    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 24, borderRadius: 4, minHeight: state.stakeholders.length === 0 && !adding ? 220 : 110 }}>
+      <FlowCanvas accent="#E8A852" />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+      <div style={{ position: 'relative', zIndex: 1, padding: state.stakeholders.length === 0 && !adding ? '34px 34px 28px' : '20px 28px' }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#E8A852', marginBottom: 10 }}>01 / Identify · Stakeholders</div>
+        {state.stakeholders.length === 0 && !adding ? (
+          <>
+            <h2 style={{ margin: '0 0 10px', fontSize: 24, fontWeight: 800, color: 'var(--text)', lineHeight: 1.2, letterSpacing: '-0.02em' }}>Stakeholder Mapping</h2>
+            <p style={{ margin: '0 0 22px', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.8, maxWidth: 460 }}>
+              Map everyone who influences adoption, reimbursement, and outcomes. Competing priorities define your design constraints before a solution exists.
+            </p>
+            <button onClick={() => setAdding(true)} style={{ padding: '7px 20px', borderRadius: 2, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)', border: '1px solid rgba(180,215,240,0.12)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              Add stakeholder
+            </button>
+          </>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Stakeholder Mapping</h2>
+            <div style={{ display: 'flex', gap: 16, fontFamily: 'var(--mono)', flexShrink: 0 }}>
+              <span><strong style={{ color: 'var(--text-2)', fontSize: 18, fontWeight: 700 }}>{state.stakeholders.length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>mapped</span></span>
+              <span><strong style={{ color: '#E8A852', fontSize: 18, fontWeight: 700 }}>{new Set(state.stakeholders.map(s => s.role)).size}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>roles</span></span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 20 }}>
         {roles.map(role => {
@@ -557,6 +709,7 @@ function ConceptsTab({ state, update }: { state: BiodesignState; update: (s: Bio
   const [expanded, setExpanded] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: '', description: '', mechanism: '' });
+  const [viewMode, setViewMode] = useState<'list' | 'matrix'>('list');
 
   function addConcept() {
     if (!draft.title) return;
@@ -594,25 +747,131 @@ function ConceptsTab({ state, update }: { state: BiodesignState; update: (s: Bio
 
   return (
     <div>
-      <SectionHeader title="Concept Inventory" subtitle="Generate and screen solution concepts against the active need." />
-
-      {state.selectedNeedId && (() => {
-        const n = state.needs.find(n => n.id === state.selectedNeedId);
-        return n ? (
-          <div style={{ padding: '10px 14px', background: 'rgba(45,114,210,0.08)', border: '1px solid rgba(45,114,210,0.2)', borderRadius: 2, marginBottom: 16, fontSize: 12, color: 'var(--text-2)' }}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>Active Need</span>
-            "A way to {n.problem} for {n.population}{n.setting ? ` in ${n.setting}` : ''} so that {n.outcome}"
+    {/* Invent hero — Concepts */}
+    <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 24, borderRadius: 4, minHeight: state.concepts.length === 0 && !adding ? 248 : 110 }}>
+      <FlowCanvas accent="#A07EE8" />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+      <div style={{ position: 'relative', zIndex: 1, padding: state.concepts.length === 0 && !adding ? '36px 36px 30px' : '20px 28px' }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.22em', color: '#A07EE8', marginBottom: 12 }}>02 / Invent</div>
+        {state.concepts.length === 0 && !adding ? (
+          <>
+            <h2 style={{ margin: '0 0 10px', fontSize: 26, fontWeight: 800, color: 'var(--text)', lineHeight: 1.2, letterSpacing: '-0.025em' }}>
+              Concept Generation
+            </h2>
+            <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.8, maxWidth: 460 }}>
+              From validated needs to creative solutions. Generate diverse device concepts and screen them rigorously before committing resources to development.
+            </p>
+            {state.selectedNeedId && (() => {
+              const n = state.needs.find(n => n.id === state.selectedNeedId);
+              return n ? (
+                <div style={{ fontStyle: 'italic', fontSize: 12, color: 'rgba(160,126,232,0.6)', fontFamily: 'var(--mono)', marginBottom: 22 }}>
+                  "A way to {n.problem} for {n.population}{n.setting ? ` in ${n.setting}` : ''} so that {n.outcome}"
+                </div>
+              ) : null;
+            })()}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <AiDraftButton
+                type="concept"
+                context={{ indication: state.indication, need: state.needs.find(n => n.id === state.selectedNeedId)?.problem ?? '' }}
+                onResult={r => { setDraft(d => ({ ...d, ...r })); setAdding(true); }}
+                label="Draft first concept"
+              />
+              <button onClick={() => setAdding(true)} style={{ padding: '6px 18px', borderRadius: 2, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', color: 'var(--text-3)', border: '1px solid rgba(160,126,232,0.15)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                Add manually
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Concept Generation</h2>
+              {state.selectedNeedId && (() => {
+                const n = state.needs.find(n => n.id === state.selectedNeedId);
+                return n ? <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(160,126,232,0.55)', fontFamily: 'var(--mono)', fontStyle: 'italic' }}>Active: {n.problem.slice(0, 55)}{n.problem.length > 55 ? '…' : ''}</p> : null;
+              })()}
+            </div>
+            <div style={{ display: 'flex', gap: 14, fontFamily: 'var(--mono)', flexShrink: 0 }}>
+              <span><strong style={{ color: 'var(--text-2)', fontSize: 18, fontWeight: 700 }}>{state.concepts.length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>concepts</span></span>
+              <span><strong style={{ color: '#A07EE8', fontSize: 18, fontWeight: 700 }}>{state.concepts.filter(c => c.status === 'development' || c.status === 'selected').length}</strong><span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 4 }}>active</span></span>
+            </div>
           </div>
-        ) : null;
+        )}
+      </div>
+    </div>
+
+      {state.concepts.length > 0 && (
+        <div style={{ display: 'flex', gap: 4, marginBottom: 10, justifyContent: 'flex-end' }}>
+          {(['list', 'matrix'] as const).map(m => (
+            <button key={m} onClick={() => setViewMode(m)} style={{
+              padding: '4px 12px', borderRadius: 20, fontSize: 10, cursor: 'pointer',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+              background: viewMode === m ? 'rgba(160,126,232,0.12)' : 'transparent',
+              color: viewMode === m ? '#A07EE8' : 'var(--text-4)',
+              border: viewMode === m ? '1px solid rgba(160,126,232,0.3)' : '1px solid var(--line)',
+            }}>{m}</button>
+          ))}
+        </div>
+      )}
+
+      {viewMode === 'matrix' && sorted.length > 0 && (() => {
+        const dots = (val: number | null) => val === null ? '—' : Array.from({ length: 5 }, (_, i) => i < val ? '●' : '○').join('');
+        const scoreColor = (s: number | null) => s === null ? 'var(--text-4)' : s >= 4 ? '#52E8B4' : s >= 3 ? '#E8A852' : '#E87252';
+        const cols = [
+          { key: 'concept', label: 'Concept' },
+          { key: 'technical', label: 'Technical' },
+          { key: 'ip', label: 'IP FTO' },
+          { key: 'reg', label: 'Reg Risk' },
+          { key: 'reimburse', label: 'Reimburse' },
+          { key: 'clinical', label: 'Clinical' },
+          { key: 'score', label: 'Score' },
+        ];
+        return (
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr 0.7fr' }}>
+              {cols.map(col => (
+                <div key={col.key} style={{ padding: '8px 10px', background: 'var(--surface-2)', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  {col.label}
+                </div>
+              ))}
+              {sorted.map(c => {
+                const score = conceptScore(c);
+                const meta = CONCEPT_STATUS_META[c.status];
+                const need = state.needs.find(n => n.id === c.needId);
+                return (
+                  <React.Fragment key={c.id}>
+                    <div style={{ padding: '9px 10px', borderTop: '1px solid var(--line)', cursor: 'pointer' }}
+                      onClick={() => { setViewMode('list'); setExpanded(c.id); }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{c.title}</div>
+                      <Badge label={meta.label} bg={meta.bg} color={meta.color} />
+                      {need && <div style={{ fontSize: 10, color: 'var(--text-4)', fontFamily: 'var(--mono)', marginTop: 3 }}>{need.problem.slice(0, 30)}{need.problem.length > 30 ? '…' : ''}</div>}
+                    </div>
+                    {([
+                      c.screening.technicalFeasibility,
+                      c.screening.ipFreedom,
+                      c.screening.regulatoryRisk,
+                      c.screening.reimbursementViability,
+                      c.screening.clinicalAdoption,
+                    ] as (number | null)[]).map((val, i) => (
+                      <div key={i} style={{ padding: '9px 10px', borderTop: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        onClick={() => { setViewMode('list'); setExpanded(c.id); }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)' }}>{dots(val)}</span>
+                      </div>
+                    ))}
+                    <div style={{ padding: '9px 10px', borderTop: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      onClick={() => { setViewMode('list'); setExpanded(c.id); }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: scoreColor(score) }}>
+                        {score !== null ? score.toFixed(1) : '—'}
+                      </span>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+        );
       })()}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 20 }}>
-        <StatMini label="Total concepts" value={state.concepts.length} />
-        <StatMini label="In development" value={state.concepts.filter(c => c.status === 'development').length} accent="#2D72D2" />
-        <StatMini label="Selected" value={state.concepts.filter(c => c.status === 'selected').length} accent="#3DCC91" />
-      </div>
-
-      {sorted.map(c => {
+      {viewMode === 'list' && sorted.map(c => {
         const score = conceptScore(c);
         const meta = CONCEPT_STATUS_META[c.status];
         const isOpen = expanded === c.id;
@@ -697,6 +956,18 @@ function ConceptsTab({ state, update }: { state: BiodesignState; update: (s: Bio
 
       {adding ? (
         <Card style={{ marginTop: 8 }}>
+          <div style={{ marginBottom: 12 }}>
+            <AiDraftButton
+              type="concept"
+              context={{
+                title: draft.title, description: draft.description, mechanism: draft.mechanism,
+                indication: state.indication,
+                need: (() => { const n = state.needs.find(x => x.id === state.selectedNeedId); return n ? `${n.problem} for ${n.population}` : ''; })(),
+              }}
+              onResult={r => setDraft(d => ({ ...d, ...r }))}
+              label="Draft concept"
+            />
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
             <Field label="Concept Name" value={draft.title} onChange={v => setDraft(d => ({ ...d, title: v }))} placeholder="Short name for this solution idea" />
             <Field label="Description" value={draft.description} onChange={v => setDraft(d => ({ ...d, description: v }))} multiline placeholder="Brief description of what it does" />
@@ -744,6 +1015,7 @@ function RegulatoryTab({ state, update }: { state: BiodesignState; update: (s: B
   };
 
   const [addingControl, setAddingControl] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [controlDraft, setControlDraft] = useState('');
 
   function addControl() {
@@ -755,7 +1027,15 @@ function RegulatoryTab({ state, update }: { state: BiodesignState; update: (s: B
 
   return (
     <div>
-      <SectionHeader title="Regulatory Strategy" subtitle="Define FDA classification, pathway, and submission plan." />
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+        <FlowCanvas accent="#52E8B4" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+        <div style={{ position: 'relative', padding: '22px 28px' }}>
+          <div style={{ fontSize: 9, color: '#52E8B4', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>03 / Implement · Regulatory</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Regulatory Strategy</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>FDA classification, pathway, and submission plan.</div>
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
         <div>
@@ -793,12 +1073,115 @@ function RegulatoryTab({ state, update }: { state: BiodesignState; update: (s: B
         </div>
       </div>
 
+      {/* Pathway Comparison */}
+      {(() => {
+        const PATHWAY_COMPARE = [
+          { key: '510k',   label: '510(k)',    class: 'II',     timeline: '3–12 mo',   cost: '$10K–200K',  clinical: 'Bench or limited', rate: '~90%', ideal: 'Predicate exists, substantial equivalence' },
+          { key: 'denovo', label: 'De Novo',   class: 'I / II', timeline: '12–18 mo',  cost: '$50K–500K',  clinical: 'Bench + limited',  rate: '~80%', ideal: 'Novel low-risk, no predicate' },
+          { key: 'pma',    label: 'PMA',       class: 'III',    timeline: '2–5 yr',    cost: '$1M–100M+',  clinical: 'Pivotal trial',     rate: '~75%', ideal: 'High-risk, life-sustaining, new technology' },
+          { key: 'exempt', label: 'Exempt',    class: 'I',      timeline: '0',         cost: 'Minimal',    clinical: 'None',              rate: 'N/A',  ideal: 'Low-risk, listed exempt device' },
+        ];
+        const rows: { label: string; field: keyof typeof PATHWAY_COMPARE[0] }[] = [
+          { label: 'Timeline',          field: 'timeline' },
+          { label: 'Cost Range',        field: 'cost' },
+          { label: 'Clinical Evidence', field: 'clinical' },
+          { label: 'Approval Rate',     field: 'rate' },
+          { label: 'Ideal For',         field: 'ideal' },
+        ];
+        return (
+          <div style={{ marginBottom: 16 }}>
+            <button onClick={() => setShowComparison(s => !s)} style={{
+              padding: '5px 14px', borderRadius: 2, fontSize: 11, cursor: 'pointer',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+              background: 'none', color: 'var(--text-4)', border: '1px solid var(--line)',
+              marginBottom: showComparison ? 10 : 0,
+            }}>
+              Compare Pathways {showComparison ? '▲' : '▼'}
+            </button>
+            {showComparison && (
+              <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px repeat(4, 1fr)' }}>
+                  {/* Header */}
+                  <div style={{ padding: '8px 10px', background: 'var(--surface-2)', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+                  {PATHWAY_COMPARE.map(p => {
+                    const pathwayMeta = PATHWAY_META[p.key as RegulatoryPathway];
+                    const isSelected = reg.pathway === p.key;
+                    return (
+                      <div key={p.key} style={{
+                        padding: '8px 10px', background: isSelected ? (pathwayMeta?.color ?? 'var(--accent)') + '18' : 'var(--surface-2)',
+                        fontSize: 10, fontFamily: 'var(--mono)', fontWeight: 700,
+                        color: isSelected ? (pathwayMeta?.color ?? 'var(--accent)') : 'var(--text-3)',
+                        textTransform: 'uppercase', letterSpacing: '0.08em',
+                        borderLeft: '1px solid var(--line)',
+                      }}>
+                        {p.label}
+                        {isSelected && <span style={{ fontSize: 8, marginLeft: 4, opacity: 0.7 }}>◀</span>}
+                      </div>
+                    );
+                  })}
+                  {/* Data rows */}
+                  {rows.map(row => (
+                    <React.Fragment key={row.field}>
+                      <div style={{ padding: '8px 10px', borderTop: '1px solid var(--line)', fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                        {row.label}
+                      </div>
+                      {PATHWAY_COMPARE.map(p => {
+                        const pathwayMeta = PATHWAY_META[p.key as RegulatoryPathway];
+                        const isSelected = reg.pathway === p.key;
+                        return (
+                          <div key={p.key} style={{
+                            padding: '8px 10px', borderTop: '1px solid var(--line)', borderLeft: '1px solid var(--line)',
+                            fontSize: 12, color: isSelected ? (pathwayMeta?.color ?? 'var(--text-3)') : 'var(--text-3)',
+                            background: isSelected ? (pathwayMeta?.color ?? 'var(--accent)') + '0a' : 'transparent',
+                          }}>
+                            {p[row.field]}
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           <Field label="Product Code" value={reg.productCode} onChange={v => set({ productCode: v })} placeholder="e.g. DQO" />
           <Field label="Predicate Device" value={reg.predicateDevice} onChange={v => set({ predicateDevice: v })} placeholder="Device name" />
           <Field label="Predicate 510(k) #" value={reg.predicateNumber} onChange={v => set({ predicateNumber: v })} placeholder="e.g. K201234" />
         </div>
+
+        {/* FDA database quick links */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <a
+            href={reg.predicateNumber ? `https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=${reg.predicateNumber.replace(/\s/g, '')}` : 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm'}
+            target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--mono)', textDecoration: 'none', padding: '4px 10px', border: '1px solid rgba(82,192,232,0.3)', borderRadius: 2, background: 'rgba(82,192,232,0.06)' }}
+          >
+            {reg.predicateNumber ? `View ${reg.predicateNumber} on FDA ↗` : 'Search 510(k) DB ↗'}
+          </a>
+          <a
+            href={reg.productCode ? `https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpcd/classification.cfm?ID=${reg.productCode}` : 'https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpcd/classification.cfm'}
+            target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--mono)', textDecoration: 'none', padding: '4px 10px', border: '1px solid rgba(82,192,232,0.3)', borderRadius: 2, background: 'rgba(82,192,232,0.06)' }}
+          >
+            {reg.productCode ? `Product Code ${reg.productCode} ↗` : 'Product Code DB ↗'}
+          </a>
+          <a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm" target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--line)', borderRadius: 2 }}>
+            FDA 510(k) Search ↗
+          </a>
+        </div>
+
+        <AiDraftButton
+          type="regulatory"
+          context={{ deviceClass: reg.deviceClass, pathway: reg.pathway, predicateDevice: reg.predicateDevice, indication: state.indication, intendedUse: reg.intendedUse, indicationsForUse: reg.indicationsForUse }}
+          onResult={r => set({ intendedUse: r.intendedUse ?? reg.intendedUse, indicationsForUse: r.indicationsForUse ?? reg.indicationsForUse, substantialEquivalence: r.substantialEquivalence ?? reg.substantialEquivalence })}
+          label="Draft regulatory language"
+        />
 
         <Field label="Intended Use" value={reg.intendedUse} onChange={v => set({ intendedUse: v })} multiline placeholder="Describe the intended use of the device…" />
         <Field label="Indications for Use" value={reg.indicationsForUse} onChange={v => set({ indicationsForUse: v })} multiline placeholder="Specific conditions, populations, anatomical sites…" />
@@ -865,6 +1248,7 @@ function StrategyTab({ state, update }: { state: BiodesignState; update: (s: Bio
   const biz = state.business;
   const clin = state.clinical;
 
+  const reg = state.regulatory;
   function setBiz(patch: Partial<typeof biz>) { update({ ...state, business: { ...biz, ...patch } }); }
   function setClin(patch: Partial<typeof clin>) { update({ ...state, clinical: { ...clin, ...patch } }); }
 
@@ -901,7 +1285,15 @@ function StrategyTab({ state, update }: { state: BiodesignState; update: (s: Bio
 
   return (
     <div>
-      <SectionHeader title="Implementation Strategy" subtitle="Clinical evidence, IP landscape, and business model." />
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+        <FlowCanvas accent="#52E8B4" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+        <div style={{ position: 'relative', padding: '22px 28px' }}>
+          <div style={{ fontSize: 9, color: '#52E8B4', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>03 / Implement · Strategy</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Implementation Strategy</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>Clinical evidence, IP landscape, and business model.</div>
+        </div>
+      </div>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 20 }}>
         {(['clinical', 'ip', 'business'] as const).map(s => (
@@ -918,6 +1310,12 @@ function StrategyTab({ state, update }: { state: BiodesignState; update: (s: Bio
 
       {section === 'clinical' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <AiDraftButton
+            type="clinical"
+            context={{ indication: state.indication, deviceClass: reg.deviceClass, pathway: reg.pathway, primaryEndpoint: clin.primaryEndpoint, studyDesign: clin.studyDesign }}
+            onResult={r => setClin({ primaryEndpoint: r.primaryEndpoint ?? clin.primaryEndpoint, studyDesign: r.studyDesign ?? clin.studyDesign, inclusionCriteria: r.inclusionCriteria ?? clin.inclusionCriteria, exclusionCriteria: r.exclusionCriteria ?? clin.exclusionCriteria })}
+            label="Draft clinical plan"
+          />
           <Field label="Primary Endpoint" value={clin.primaryEndpoint} onChange={v => setClin({ primaryEndpoint: v })} multiline placeholder="e.g. Reduction in 30-day readmission rate vs. standard of care (non-inferiority margin 5%)" />
 
           <div>
@@ -1076,13 +1474,15 @@ function StatMini({ label, value, accent }: { label: string; value: number | str
 // ── Phase definitions ─────────────────────────────────────────────────────────
 
 const PHASES = [
-  { key: 'identify',  label: 'Identify',  sub: 'Needs finding & filtering' },
-  { key: 'invent',    label: 'Invent',    sub: 'Concept generation & screening' },
-  { key: 'implement', label: 'Implement', sub: 'Strategy & commercialization' },
-  { key: 'comply',    label: 'Comply',    sub: 'Standards & compliance tracking' },
+  { key: 'identify',  label: 'Identify',  sub: 'Needs finding & filtering',      color: '#E8A852' },
+  { key: 'invent',    label: 'Invent',    sub: 'Concept generation & screening',  color: '#A07EE8' },
+  { key: 'implement', label: 'Implement', sub: 'Strategy & commercialization',    color: '#52E8B4' },
+  { key: 'comply',    label: 'Comply',    sub: 'Standards & compliance tracking', color: '#E87252' },
 ] as const;
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+
+interface AuthUser { email: string; firstName: string | null; lastName: string | null; profilePictureUrl: string | null; }
 
 export default function BiodesignPage() {
   const [state, setStateRaw] = useState<BiodesignState>(DEFAULT_STATE);
@@ -1090,26 +1490,127 @@ export default function BiodesignPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState<'identify' | 'invent' | 'implement' | 'comply'>('identify');
-  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards'>('needs');
+  const [tab, setTab] = useState<'needs' | 'stakeholders' | 'concepts' | 'regulatory' | 'strategy' | 'reimbursement' | 'profile' | 'standards' | 'competitors' | 'timeline' | 'risks' | 'designcontrols' | 'ipfilings' | 'presub' | 'fdaroadmap' | 'budget' | 'regintel' | 'submissiontracker' | 'gantt' | 'benchmarks'>('needs');
+  const [showOnePager, setShowOnePager] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showPalette, setShowPalette] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
+  const [showThreads, setShowThreads] = useState(false);
+  const [showClinical, setShowClinical] = useState(false);
+  const [showReadiness, setShowReadiness] = useState(false);
+  const [showPredSearch, setShowPredSearch] = useState(false);
+  const [showDataRoom, setShowDataRoom] = useState(false);
+  const [showCollab, setShowCollab] = useState(false);
+  const [showAIDocs, setShowAIDocs] = useState(false);
+  const [showExportSuite, setShowExportSuite] = useState(false);
+  const [view, setView] = useState<'dashboard' | 'workspace'>('workspace');
+  const [shareToast, setShareToast] = useState(false);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Stable refs for use inside callbacks without stale closures
+  const authUserRef = useRef<AuthUser | null>(null);
+  const activeIdRef = useRef<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { authUserRef.current = authUser; }, [authUser]);
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+
+  // ── Cloud sync helpers ────────────────────────────────────────────────────────
+
+  async function cloudSave(projectId: string, projectState: BiodesignState) {
+    setSyncStatus('saving');
+    try {
+      const res = await fetch('/api/biodesign/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: projectId, state: projectState }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setSyncStatus('saved');
+      setTimeout(() => setSyncStatus(s => s === 'saved' ? 'idle' : s), 2500);
+    } catch {
+      setSyncStatus('error');
+    }
+  }
+
+  async function cloudDelete(projectId: string) {
+    try {
+      await fetch(`/api/biodesign/projects/${projectId}`, { method: 'DELETE' });
+    } catch { /* best-effort */ }
+  }
+
+  // ── Bootstrap: auth + cloud merge ─────────────────────────────────────────────
 
   useEffect(() => {
-    const { projects: ps, activeId: aid } = loadProjectsAndActive();
-    setProjects(ps);
-    if (aid) {
-      setActiveId(aid);
-      setStateRaw(loadProjectData(aid));
-    } else {
-      // No projects yet — create the first one
+    // 1. Load local state immediately
+    const { projects: localPs, activeId: localAid } = loadProjectsAndActive();
+    let localProjects = localPs;
+    let initialActiveId = localAid;
+
+    if (!localAid) {
       const id = uid();
       const meta: ProjectMeta = { id, name: '', indication: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-      const newProjects = [meta];
-      localStorage.setItem(PROJECTS_KEY, JSON.stringify(newProjects));
+      localProjects = [meta];
+      initialActiveId = id;
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(localProjects));
       localStorage.setItem(ACTIVE_KEY, id);
-      setProjects(newProjects);
-      setActiveId(id);
     }
+
+    setProjects(localProjects);
+    setActiveId(initialActiveId);
+    setStateRaw(initialActiveId ? loadProjectData(initialActiveId) : DEFAULT_STATE);
     setLoaded(true);
+
+    // 2. Fetch auth user
+    fetch('/api/biodesign/me')
+      .then(r => r.json())
+      .then(async d => {
+        if (!d.user) return;
+        setAuthUser(d.user);
+        authUserRef.current = d.user;
+
+        // 3. Merge cloud projects
+        try {
+          const cloudRes = await fetch('/api/biodesign/projects');
+          if (!cloudRes.ok) return;
+          const { projects: cloudMetas } = await cloudRes.json() as {
+            projects: { id: string; name: string; indication: string; updatedAt: string; blobUrl: string }[]
+          };
+
+          const localIds = new Set(localProjects.map(p => p.id));
+          const cloudIds = new Set(cloudMetas.map(p => p.id));
+
+          // Download cloud projects not yet in localStorage
+          const toDownload = cloudMetas.filter(p => !localIds.has(p.id));
+          for (const meta of toDownload) {
+            try {
+              const stateRes = await fetch(meta.blobUrl, { cache: 'no-store' });
+              const cloudState = await stateRes.json();
+              const parsed = parseRaw(JSON.stringify(cloudState));
+              const pm: ProjectMeta = { id: meta.id, name: meta.name, indication: meta.indication, createdAt: meta.updatedAt, updatedAt: meta.updatedAt };
+              localProjects = [...localProjects, pm];
+              localStorage.setItem(PROJECT_KEY(meta.id), JSON.stringify(parsed));
+            } catch { /* skip bad blob */ }
+          }
+
+          // Upload local projects not yet in cloud
+          const toUpload = localProjects.filter(p => !cloudIds.has(p.id));
+          for (const pm of toUpload) {
+            const s = loadProjectData(pm.id);
+            fetch('/api/biodesign/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: pm.id, state: s }) }).catch(() => {});
+          }
+
+          if (toDownload.length > 0) {
+            localStorage.setItem(PROJECTS_KEY, JSON.stringify(localProjects));
+            setProjects(localProjects);
+          }
+        } catch { /* cloud unavailable, stay local */ }
+      })
+      .catch(() => {});
   }, []);
+
+  // ── State update + debounced cloud save ────────────────────────────────────────
 
   const update = useCallback((next: BiodesignState) => {
     setStateRaw(next);
@@ -1117,6 +1618,14 @@ export default function BiodesignPage() {
       if (!id) return id;
       setProjects(ps => persistProject(id, next, ps));
       localStorage.setItem(ACTIVE_KEY, id);
+
+      // Debounced cloud save
+      if (authUserRef.current) {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        setSyncStatus('saving');
+        saveTimerRef.current = setTimeout(() => cloudSave(id, next), 2000);
+      }
+
       return id;
     });
   }, []);
@@ -1134,32 +1643,100 @@ export default function BiodesignPage() {
     setStateRaw(DEFAULT_STATE);
     setPhase('identify');
     setTab('needs');
+    if (authUserRef.current) cloudSave(id, DEFAULT_STATE);
   }
 
-  function switchProject(id: string) {
-    localStorage.setItem(ACTIVE_KEY, id);
-    setActiveId(id);
-    setStateRaw(loadProjectData(id));
+  function deleteProject(id: string) {
+    setProjects(ps => {
+      const updated = ps.filter(p => p.id !== id);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(updated));
+      localStorage.removeItem(PROJECT_KEY(id));
+      return updated;
+    });
+    if (authUserRef.current) cloudDelete(id);
+    // Switch to another project or create new
+    setActiveId(prev => {
+      if (prev !== id) return prev;
+      const remaining = projects.filter(p => p.id !== id);
+      if (remaining.length > 0) {
+        const next = remaining[0];
+        localStorage.setItem(ACTIVE_KEY, next.id);
+        setStateRaw(loadProjectData(next.id));
+        return next.id;
+      }
+      const newId = uid();
+      const meta: ProjectMeta = { id: newId, name: '', indication: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      setProjects([meta]);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify([meta]));
+      localStorage.setItem(ACTIVE_KEY, newId);
+      setStateRaw(DEFAULT_STATE);
+      return newId;
+    });
     setPhase('identify');
     setTab('needs');
   }
 
+  function switchProject(id: string) {
+    // Auto-checkpoint current project before switching (if authenticated and has content)
+    if (authUserRef.current && activeIdRef.current && activeIdRef.current !== id) {
+      const cur = loadProjectData(activeIdRef.current);
+      if (cur.needs.length > 0 || cur.concepts.length > 0) {
+        fetch(`/api/biodesign/projects/${activeIdRef.current}/history`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: cur }),
+        }).catch(() => {});
+      }
+    }
+    localStorage.setItem(ACTIVE_KEY, id);
+    setActiveId(id);
+    setStateRaw(loadProjectData(id));
+    setSyncStatus('idle');
+    setPhase('identify');
+    setTab('needs');
+  }
+
+  async function shareProject(id: string): Promise<string | null> {
+    const projectState = loadProjectData(id);
+    try {
+      const res = await fetch('/api/biodesign/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: projectState }),
+      });
+      const { url } = await res.json();
+      return url ?? null;
+    } catch { return null; }
+  }
+
   const phaseTabMap: Record<typeof phase, (typeof tab)[]> = {
-    identify:  ['needs', 'stakeholders'],
+    identify:  ['needs', 'stakeholders', 'competitors'],
     invent:    ['concepts'],
-    implement: ['regulatory', 'strategy', 'reimbursement'],
-    comply:    ['profile', 'standards'],
+    implement: ['regulatory', 'strategy', 'reimbursement', 'gantt', 'risks', 'ipfilings', 'presub', 'fdaroadmap', 'budget', 'regintel', 'submissiontracker', 'benchmarks'],
+    comply:    ['profile', 'standards', 'designcontrols'],
   };
 
-  const tabMeta: Record<typeof tab, { label: string }> = {
-    needs:        { label: 'Needs' },
-    stakeholders: { label: 'Stakeholders' },
-    concepts:     { label: 'Concepts' },
-    regulatory:   { label: 'Regulatory' },
-    strategy:      { label: 'Strategy' },
-    reimbursement: { label: 'Reimbursement' },
-    profile:       { label: 'Device Profile' },
-    standards:    { label: 'Standards' },
+  const tabMeta: Record<typeof tab, { label: string; icon: string }> = {
+    needs:          { label: 'Needs',          icon: '◎' },
+    stakeholders:   { label: 'Stakeholders',   icon: '◉' },
+    competitors:    { label: 'Competitive',    icon: '⊡' },
+    concepts:       { label: 'Concepts',       icon: '◆' },
+    regulatory:     { label: 'Regulatory',     icon: '⬡' },
+    strategy:       { label: 'Strategy',       icon: '▸' },
+    reimbursement:  { label: 'Reimbursement',  icon: '⊛' },
+    timeline:       { label: 'Timeline',       icon: '⊙' },
+    risks:          { label: 'Risks',          icon: '△' },
+    profile:        { label: 'Device Profile', icon: '▣' },
+    standards:      { label: 'Standards',      icon: '≡' },
+    designcontrols: { label: 'Design Controls',icon: '⊞' },
+    ipfilings:      { label: 'IP Portfolio',   icon: '◈' },
+    presub:         { label: 'FDA Pre-Sub',    icon: '⊕' },
+    fdaroadmap:     { label: 'FDA Roadmap',    icon: '⊳' },
+    budget:         { label: 'Budget',         icon: '◎' },
+    regintel:       { label: 'Reg Intel',      icon: '⊛' },
+    submissiontracker: { label: 'Submissions', icon: '⊙' },
+    gantt:          { label: 'Timeline',       icon: '▦' },
+    benchmarks:     { label: 'Benchmarks',     icon: '▸' },
   };
 
   function switchPhase(p: typeof phase) {
@@ -1167,9 +1744,57 @@ export default function BiodesignPage() {
     setTab(phaseTabMap[p][0]);
   }
 
+  useEffect(() => {
+    if (view !== 'workspace') return;
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowPalette(p => !p);
+        return;
+      }
+      const el = e.target as HTMLElement;
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return;
+      const tabs = phaseTabMap[phase];
+      const num = parseInt(e.key);
+      if (!isNaN(num) && num >= 1 && num <= tabs.length) {
+        e.preventDefault();
+        setTab(tabs[num - 1]);
+        return;
+      }
+      if (e.key === '[') {
+        const idx = PHASES.findIndex(p => p.key === phase);
+        if (idx > 0) switchPhase(PHASES[idx - 1].key as typeof phase);
+      }
+      if (e.key === ']') {
+        const idx = PHASES.findIndex(p => p.key === phase);
+        if (idx < PHASES.length - 1) switchPhase(PHASES[idx + 1].key as typeof phase);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view, phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!loaded) return null;
 
+  if (view === 'dashboard') {
+    return (
+      <>
+        <ProjectDashboard
+          projects={projects}
+          authUser={authUser}
+          syncStatus={syncStatus}
+          onOpen={id => { switchProject(id); setView('workspace'); }}
+          onNew={() => { newProject(); setView('workspace'); }}
+          onDelete={deleteProject}
+          onShare={shareProject}
+        />
+        {showHistory && <HistoryModal projectId={activeId} currentState={state} onRestore={s => { update(s); setShowHistory(false); }} onClose={() => setShowHistory(false)} />}
+      </>
+    );
+  }
+
   return (
+    <>
     <div className="biodesign-root" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Sidebar */}
       <div style={{
@@ -1180,9 +1805,16 @@ export default function BiodesignPage() {
       }}>
         {/* Logo / project */}
         <div style={{ padding: '0 20px', marginBottom: 28 }}>
-          <Link href="/biodesign" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', marginBottom: 18 }}>
-            <span className="brand-name">Ambient <em>Intelligence</em></span>
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <Link href="/biodesign" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <span className="brand-name">Ambient <em>Intelligence</em></span>
+            </Link>
+            <button onClick={() => setView('dashboard')} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)',
+              textTransform: 'uppercase', letterSpacing: '0.08em', padding: 0,
+            }}>⊞ All</button>
+          </div>
           <input
             value={state.projectName}
             onChange={e => update({ ...state, projectName: e.target.value })}
@@ -1210,17 +1842,17 @@ export default function BiodesignPage() {
                   padding: '10px 20px',
                   paddingLeft: active ? 17 : 20,
                   borderRadius: 0, cursor: 'pointer', textAlign: 'left', width: '100%',
-                  background: active ? 'rgba(45,114,210,0.09)' : 'transparent',
+                  background: active ? p.color + '10' : 'transparent',
                   border: 'none',
-                  borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent',
+                  borderLeft: active ? `3px solid ${p.color}` : '3px solid transparent',
                   transition: 'background 0.1s',
                 }}>
                 <div style={{
                   width: 20, height: 20, borderRadius: 2,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, flexShrink: 0,
-                  background: active ? 'var(--accent)' : 'var(--surface-2)',
-                  color: active ? '#fff' : 'var(--text-4)',
+                  background: active ? p.color : 'var(--surface-2)',
+                  color: active ? '#0E1622' : 'var(--text-4)',
                   letterSpacing: 0,
                 }}>{i + 1}</div>
                 <div>
@@ -1249,7 +1881,20 @@ export default function BiodesignPage() {
         {/* Projects list */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: '20px 0 0', borderTop: '1px solid var(--line)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 6px' }}>
-            <span style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.14em', fontFamily: 'var(--mono)' }}>Projects</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.14em', fontFamily: 'var(--mono)' }}>Projects</span>
+              {authUser && syncStatus !== 'idle' && (
+                <span style={{
+                  fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                  color: syncStatus === 'saving' ? '#d9a020' : syncStatus === 'saved' ? '#3DCC91' : '#c04040',
+                }}>
+                  {syncStatus === 'saving' ? '↑ Saving…' : syncStatus === 'saved' ? '✓ Saved' : '✗ Error'}
+                </span>
+              )}
+              {authUser && syncStatus === 'idle' && (
+                <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-4)', opacity: 0.5 }}>☁</span>
+              )}
+            </div>
             <button onClick={newProject} style={{
               display: 'flex', alignItems: 'center', gap: 4,
               padding: '3px 8px', borderRadius: 2, cursor: 'pointer',
@@ -1262,72 +1907,470 @@ export default function BiodesignPage() {
             {projects.map(p => {
               const isActive = p.id === activeId;
               return (
-                <button key={p.id} onClick={() => switchProject(p.id)} style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '8px 20px', paddingLeft: isActive ? 17 : 20,
-                  background: isActive ? 'rgba(82,192,232,0.08)' : 'transparent',
-                  border: 'none',
-                  borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
-                  cursor: 'pointer', transition: 'background 0.1s',
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {p.name || 'Untitled Project'}
-                  </div>
-                  {p.indication && (
-                    <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {p.indication}
+                <div key={p.id} style={{ display: 'flex', alignItems: 'stretch', borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent' }}>
+                  <button onClick={() => switchProject(p.id)} style={{
+                    flex: 1, textAlign: 'left', minWidth: 0,
+                    padding: '8px 8px 8px 17px',
+                    background: isActive ? 'rgba(82,192,232,0.08)' : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer', transition: 'background 0.1s',
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {p.name || 'Untitled Project'}
                     </div>
+                    {p.indication && (
+                      <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {p.indication}
+                      </div>
+                    )}
+                  </button>
+                  {projects.length > 1 && (
+                    <button onClick={() => { if (confirm(`Delete "${p.name || 'Untitled Project'}"?`)) deleteProject(p.id); }}
+                      title="Delete project"
+                      style={{ padding: '0 8px', background: 'transparent', border: 'none', color: 'var(--text-4)', cursor: 'pointer', fontSize: 14, flexShrink: 0, opacity: 0.5 }}>
+                      ×
+                    </button>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
         </div>
 
-        {/* Footer stats */}
-        <div style={{ padding: '12px 20px 0', borderTop: '1px solid var(--line)' }}>
-          <div style={{ display: 'flex', gap: 12, fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            <span>{state.needs.length} needs</span>
-            <span style={{ color: 'var(--line-strong)' }}>|</span>
-            <span>{state.concepts.length} concepts</span>
+        {/* One-pager + export/import */}
+        <div style={{ padding: '10px 20px 0', borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button onClick={() => setShowOnePager(true)} style={{
+            width: '100%', padding: '8px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+            background: 'rgba(82,192,232,0.08)', color: 'var(--accent)',
+            border: '1px solid rgba(82,192,232,0.25)',
+            fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.09em',
+          }}>✦ Investor One-Pager</button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => {
+              const name = (state.projectName || 'biodesign-project').toLowerCase().replace(/\s+/g, '-');
+              const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = `${name}.json`; a.click();
+              URL.revokeObjectURL(url);
+            }} style={{
+              flex: 1, padding: '6px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+              background: 'var(--surface-1)', color: 'var(--text-3)',
+              border: '1px solid var(--line)',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+            }}>↓ Export</button>
+            <label style={{
+              flex: 1, padding: '6px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+              background: 'var(--surface-1)', color: 'var(--text-3)',
+              border: '1px solid var(--line)',
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+              textAlign: 'center',
+            }}>
+              ↑ Import
+              <input type="file" accept=".json" style={{ display: 'none' }} onChange={e => {
+                const file = e.target.files?.[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => {
+                  try {
+                    const imported = parseRaw(ev.target?.result as string);
+                    const id = uid();
+                    const meta: ProjectMeta = { id, name: imported.projectName || 'Imported Project', indication: imported.indication, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+                    setProjects(ps => { const updated = [...ps, meta]; localStorage.setItem(PROJECTS_KEY, JSON.stringify(updated)); return updated; });
+                    localStorage.setItem(PROJECT_KEY(id), JSON.stringify(imported));
+                    localStorage.setItem(ACTIVE_KEY, id);
+                    setActiveId(id); setStateRaw(imported); setPhase('identify'); setTab('needs');
+                  } catch { alert('Invalid project file.'); }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+              }} />
+            </label>
           </div>
         </div>
+
+        {/* History + Share */}
+        <div style={{ padding: '8px 20px 0', borderTop: '1px solid var(--line)', display: 'flex', gap: 6 }}>
+          <button onClick={() => setShowHistory(true)} style={{
+            flex: 1, padding: '6px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+            background: 'var(--surface-1)', color: 'var(--text-3)',
+            border: '1px solid var(--line)',
+            fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+          }}>History</button>
+          <button onClick={async () => {
+            if (!activeId) return;
+            const url = await shareProject(activeId);
+            if (url) {
+              navigator.clipboard.writeText(url).catch(() => {});
+              setShareToast(true);
+              setTimeout(() => setShareToast(false), 2500);
+            }
+          }} style={{
+            flex: 1, padding: '6px', borderRadius: 2, fontSize: 10, cursor: 'pointer',
+            background: shareToast ? 'rgba(61,204,145,0.1)' : 'var(--surface-1)',
+            color: shareToast ? '#3DCC91' : 'var(--text-3)',
+            border: shareToast ? '1px solid rgba(61,204,145,0.3)' : '1px solid var(--line)',
+            fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.07em',
+            transition: 'all 0.2s',
+          }}>{shareToast ? '✓ Copied' : '↗ Share'}</button>
+        </div>
+
+        {/* Footer stats */}
+        <div style={{ padding: '10px 20px 0', borderTop: '1px solid var(--line)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            <span>{state.needs.length} needs</span>
+            <span style={{ color: 'var(--line-strong)' }}>·</span>
+            <span>{state.concepts.length} concepts</span>
+            {(state.risks?.length ?? 0) > 0 && <>
+              <span style={{ color: 'var(--line-strong)' }}>·</span>
+              <span style={{ color: (state.risks ?? []).some(r => r.status === 'open' && r.probability * r.impact >= 12) ? '#d9a020' : 'inherit' }}>{state.risks!.length} risks</span>
+            </>}
+            {(state.milestones?.length ?? 0) > 0 && <>
+              <span style={{ color: 'var(--line-strong)' }}>·</span>
+              <span>{state.milestones!.length} milestones</span>
+            </>}
+          </div>
+        </div>
+
+        {/* User identity */}
+        {authUser && (
+          <div style={{ padding: '10px 20px', borderTop: '1px solid var(--line)', marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {authUser.profilePictureUrl ? (
+              <img src={authUser.profilePictureUrl} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                {(authUser.firstName?.[0] ?? authUser.email[0]).toUpperCase()}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {authUser.firstName ? `${authUser.firstName}${authUser.lastName ? ' ' + authUser.lastName : ''}` : authUser.email}
+              </div>
+              <a href="/api/auth/signout" style={{ fontSize: 10, color: 'var(--text-4)', textDecoration: 'none', fontFamily: 'var(--mono)' }}>Sign out</a>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Phase completion rail */}
+        <div style={{ background: 'var(--bg)', borderBottom: '1px solid var(--line)', padding: '7px 24px', display: 'flex', gap: 8, flexShrink: 0 }}>
+          {PHASES.map(p => {
+            const pct = getPhaseCompletion(state, p.key);
+            const isActive = p.key === phase;
+            return (
+              <button key={p.key} onClick={() => switchPhase(p.key as typeof phase)} style={{ flex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ fontSize: 8, fontFamily: 'var(--mono)', color: isActive ? p.color : 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', transition: 'color 0.2s' }}>{p.label}</span>
+                  <span style={{ fontSize: 8, fontFamily: 'var(--mono)', color: pct === 100 ? p.color : 'var(--text-4)' }}>{pct}%</span>
+                </div>
+                <div style={{ height: 3, background: 'var(--line)', borderRadius: 2 }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: p.color, borderRadius: 2, transition: 'width 0.5s, opacity 0.2s', opacity: isActive ? 1 : 0.4 }} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Tab bar */}
-        <div style={{ borderBottom: '1px solid var(--line)', padding: '0 28px' }}>
-          <div style={{ display: 'flex', gap: 0 }}>
-            {phaseTabMap[phase].map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                style={{
-                  padding: '12px 20px 10px', fontSize: 11, cursor: 'pointer',
-                  fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.09em',
-                  background: 'transparent',
-                  color: tab === t ? 'var(--text)' : 'var(--text-4)',
-                  border: 'none',
-                  borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
-                  borderRadius: 0,
-                  marginBottom: -1,
-                  transition: 'color 0.1s',
-                }}>{tabMeta[t].label}</button>
-            ))}
+        <div style={{ background: 'var(--surface-1)', borderBottom: '1px solid var(--line)', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, height: 58, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+            {/* Phase badge */}
+            {(() => {
+              const pm = PHASES.find(p => p.key === phase)!;
+              const phaseIdx = PHASES.findIndex(p => p.key === phase);
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--text-4)', letterSpacing: '0.08em' }}>
+                    {String(phaseIdx + 1).padStart(2, '0')}
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 800, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.14em', color: pm.color, padding: '4px 10px', borderRadius: 3, background: pm.color + '14', border: `1px solid ${pm.color}30` }}>
+                    {pm.label}
+                  </span>
+                </div>
+              );
+            })()}
+            {/* Divider */}
+            <div style={{ width: 1, height: 18, background: 'var(--line)', flexShrink: 0 }} />
+            {/* Flat underline tabs */}
+            <div className="bd-tab-scroll" style={{ display: 'flex', gap: 0, overflowX: 'auto', alignItems: 'stretch' }}>
+              {phaseTabMap[phase].map(t => {
+                const pm = PHASES.find(p => p.key === phase)!;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`bd-tab-btn${tab === t ? ' active' : ''}`}
+                    style={{
+                      '--tab-accent': pm.color,
+                      '--tab-glow': pm.color + '55',
+                    } as React.CSSProperties}
+                  >
+                    {tabMeta[t].label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
+            <button onClick={() => setShowExportSuite(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,232,180,0.09)', color: '#52E8B4',
+                border: '1px solid rgba(82,232,180,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Export</span>
+            </button>
+            <button onClick={() => setShowAIDocs(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(232,168,82,0.09)', color: '#E8A852',
+                border: '1px solid rgba(232,168,82,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>AI Docs</span>
+            </button>
+            <button onClick={() => setShowPredSearch(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,192,232,0.07)', color: 'var(--accent)',
+                border: '1px solid rgba(82,192,232,0.22)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Predicate</span>
+            </button>
+            <button onClick={() => setShowDataRoom(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,232,180,0.09)', color: '#52E8B4',
+                border: '1px solid rgba(82,232,180,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Data Room</span>
+            </button>
+            <button onClick={() => setShowCollab(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(160,126,232,0.09)', color: '#A07EE8',
+                border: '1px solid rgba(160,126,232,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Team</span>
+            </button>
+            <button onClick={() => setShowWizard(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(168,126,232,0.10)', color: '#A07EE8',
+                border: '1px solid rgba(168,126,232,0.28)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Reg Wizard</span>
+            </button>
+            <button onClick={() => setShowThreads(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,192,232,0.07)', color: 'var(--accent)',
+                border: '1px solid rgba(82,192,232,0.22)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Threads</span>
+            </button>
+            <button onClick={() => setShowClinical(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,232,180,0.09)', color: '#52E8B4',
+                border: '1px solid rgba(82,232,180,0.26)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Clinical</span>
+            </button>
+            <button onClick={() => setShowReadiness(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'rgba(82,192,232,0.07)', color: 'var(--accent)',
+                border: '1px solid rgba(82,192,232,0.22)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>Readiness</span>
+            </button>
+            <button onClick={() => setShowPalette(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'transparent', color: 'var(--text-4)',
+                border: '1px solid var(--line)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span style={{ opacity: 0.5, fontSize: 9 }}>⌘K</span>
+            </button>
+            <button onClick={() => window.print()}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 16px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                background: 'transparent', color: 'var(--text-4)',
+                border: '1px solid var(--line)',
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+              <span>↓ PDF</span>
+            </button>
           </div>
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, padding: '28px 40px', overflowY: 'auto' }}>
-          {tab === 'needs'        && <NeedsTab state={state} update={update} />}
-          {tab === 'stakeholders' && <StakeholdersTab state={state} update={update} />}
-          {tab === 'concepts'     && <ConceptsTab state={state} update={update} />}
-          {tab === 'regulatory'   && <RegulatoryTab state={state} update={update} />}
+        <div key={`${phase}-${tab}`} className="bd-tab-in" style={{ flex: 1, padding: '28px 40px', overflowY: 'auto' }}>
+          {tab === 'needs'          && <NeedsTab state={state} update={update} />}
+          {tab === 'stakeholders'   && <StakeholdersTab state={state} update={update} />}
+          {tab === 'competitors'    && <CompetitiveTab state={state} update={update} />}
+          {tab === 'concepts'       && <ConceptsTab state={state} update={update} />}
+          {tab === 'regulatory'     && <RegulatoryTab state={state} update={update} />}
           {tab === 'strategy'       && <StrategyTab state={state} update={update} />}
           {tab === 'reimbursement'  && <ReimbursementTab state={state} update={update} />}
+          {tab === 'timeline'       && <TimelineTab state={state} update={update} />}
+          {tab === 'risks'          && <RisksTab state={state} update={update} />}
           {tab === 'profile'        && <ProfileTab state={state} update={update} />}
-          {tab === 'standards'    && <StandardsTab state={state} update={update} />}
+          {tab === 'standards'      && <StandardsTab state={state} update={update} />}
+          {tab === 'designcontrols' && <DesignControlsTab state={state} update={update} />}
+          {tab === 'ipfilings'      && <IPFilingsTab state={state} update={update} />}
+          {tab === 'presub'         && <PreSubTab state={state} update={update} />}
+          {tab === 'fdaroadmap'     && <FDARoadmapTab state={state} update={update} />}
+          {tab === 'budget'         && <BudgetEstimatorTab state={state} update={update} />}
+          {tab === 'regintel'       && <RegIntelTab state={state} update={update} />}
+          {tab === 'submissiontracker' && <SubmissionTrackerTab state={state} update={update} />}
+          {tab === 'gantt'          && <GanttTab state={state} update={update} />}
+          {tab === 'benchmarks'     && <BenchmarksTab state={state} update={update} />}
         </div>
       </div>
     </div>
+
+    {showOnePager && <InvestorOnePager state={state} onClose={() => setShowOnePager(false)} />}
+    {showHistory && <HistoryModal projectId={activeId} currentState={state} onRestore={s => { update(s); setShowHistory(false); }} onClose={() => setShowHistory(false)} />}
+    {showPalette && (
+      <CommandPalette
+        state={state}
+        phase={phase}
+        tab={tab}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); }}
+        onClose={() => setShowPalette(false)}
+      />
+    )}
+    {showWizard && (
+      <RegulatoryWizard
+        state={state}
+        onResult={(pathway, deviceClass, reasoning) => {
+          update({
+            ...state,
+            regulatory: {
+              ...state.regulatory,
+              pathway: pathway as typeof state.regulatory.pathway,
+              deviceClass: deviceClass as typeof state.regulatory.deviceClass,
+              notes: state.regulatory.notes
+                ? state.regulatory.notes + '\n\n[Wizard] ' + reasoning
+                : '[Wizard] ' + reasoning,
+            },
+          });
+          setShowWizard(false);
+          switchPhase('implement');
+          setTab('regulatory');
+        }}
+        onClose={() => setShowWizard(false)}
+      />
+    )}
+    {showThreads && (
+      <CrossPhaseThreads
+        state={state}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); }}
+        onClose={() => setShowThreads(false)}
+      />
+    )}
+    {showClinical && (
+      <ClinicalWizard
+        state={state}
+        onResult={(plan) => {
+          update({ ...state, clinical: { ...state.clinical, ...plan } });
+          setShowClinical(false);
+          switchPhase('implement');
+          setTab('strategy');
+        }}
+        onClose={() => setShowClinical(false)}
+      />
+    )}
+    {showReadiness && (
+      <ReadinessOverlay
+        state={state}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); setShowReadiness(false); }}
+        onClose={() => setShowReadiness(false)}
+      />
+    )}
+    {showPredSearch && (
+      <PredicateSearchOverlay
+        state={state}
+        onSelect={(predicateNumber, deviceName, _applicant, productCode) => {
+          update({
+            ...state,
+            regulatory: {
+              ...state.regulatory,
+              predicateNumber,
+              predicateDevice: deviceName,
+              productCode: productCode || state.regulatory.productCode,
+            },
+          });
+          setShowPredSearch(false);
+          switchPhase('implement');
+          setTab('regulatory');
+        }}
+        onClose={() => setShowPredSearch(false)}
+      />
+    )}
+    {showDataRoom && (
+      <DataRoomOverlay
+        state={state}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); setShowDataRoom(false); }}
+        onClose={() => setShowDataRoom(false)}
+      />
+    )}
+    {showCollab && (
+      <CollaborationOverlay
+        state={state}
+        update={update}
+        currentPhase={phase}
+        currentTab={tab}
+        onNavigate={(p, t) => { switchPhase(p as typeof phase); setTab(t as typeof tab); }}
+        onClose={() => setShowCollab(false)}
+      />
+    )}
+    {showAIDocs && (
+      <AIDraftDocsOverlay
+        state={state}
+        onClose={() => setShowAIDocs(false)}
+      />
+    )}
+    {showExportSuite && (
+      <ExportSuiteOverlay
+        state={state}
+        onOpenDataRoom={() => { setShowExportSuite(false); setShowDataRoom(true); }}
+        onClose={() => setShowExportSuite(false)}
+      />
+    )}
+    </>
   );
 }

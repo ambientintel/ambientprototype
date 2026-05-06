@@ -1,83 +1,223 @@
 'use client';
-import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import './agenticstudio.css';
 
-// ── Spark canvas background ──────────────────────────────────────────────────
+// ── Graph data ────────────────────────────────────────────────────────────────
+const GN = [
+  // col 0  (input layer)
+  { x: 70,  y: 120 }, { x: 70,  y: 290 }, { x: 70,  y: 460 },
+  // col 1
+  { x: 240, y: 75  }, { x: 240, y: 210 }, { x: 240, y: 345 }, { x: 240, y: 490 },
+  // col 2  (hub A: node 8)
+  { x: 430, y: 105 }, { x: 430, y: 250 }, { x: 430, y: 390 }, { x: 430, y: 520 },
+  // col 3  (hub B: node 13)
+  { x: 620, y: 70  }, { x: 620, y: 195 }, { x: 620, y: 330 }, { x: 620, y: 475 },
+  // col 4  (hub C: node 16)
+  { x: 810, y: 130 }, { x: 810, y: 275 }, { x: 810, y: 415 }, { x: 810, y: 535 },
+  // col 5  (hub D: node 20)
+  { x: 990, y: 115 }, { x: 990, y: 265 }, { x: 990, y: 435 },
+  // col 6  (output layer)
+  { x: 1140, y: 185 }, { x: 1140, y: 340 }, { x: 1140, y: 490 },
+];
+
+const HUB_NODES = new Set([8, 13, 16, 20]);
+
+const GE: [number, number][] = [
+  [0,3],[0,4],[1,4],[1,5],[2,5],[2,6],
+  [3,7],[4,7],[4,8],[5,8],[5,9],[6,9],[6,10],
+  [7,11],[7,12],[8,12],[8,13],[9,13],[9,14],[10,14],
+  [11,15],[12,15],[12,16],[13,16],[13,17],[14,17],[14,18],
+  [15,19],[16,19],[16,20],[17,20],[17,21],[18,21],
+  [19,22],[20,22],[20,23],[21,23],[21,24],
+  [0,7],[2,10],[8,16],[13,20],
+];
+
+// Dramatic long arcs that leap over / under the main graph
+const LONG_ARCS = [
+  { d: 'M 70 120 C 300 -160 900 -160 1140 185', color: '#FF6B35', bbColor: 'rgba(255,107,53,0.045)', dur: 8.5, begin: '-3.1s' },
+  { d: 'M 70 460 C 300 710 900 710 1140 490',   color: '#06B6D4', bbColor: 'rgba(6,182,212,0.04)',   dur: 9.8, begin: '-1.4s' },
+  { d: 'M 70 290 C 500 -60 750 640 1140 340',   color: '#F59E0B', bbColor: 'rgba(245,158,11,0.035)', dur: 11.2, begin: '-5.8s' },
+];
+
+// Floating labels on key nodes
+const LABELS = [
+  { i: 0,  text: 'user_task',      dx: 10, dy: -10, delay: '0s'    },
+  { i: 8,  text: 'orchestrate()',  dx: 10, dy: -14, delay: '-2.4s' },
+  { i: 13, text: 'tool:search',    dx: 10, dy: -14, delay: '-5.1s' },
+  { i: 16, text: 'memory.get()',   dx: 10, dy: -14, delay: '-1.7s' },
+  { i: 20, text: 'synthesize()',   dx: 10, dy: -14, delay: '-3.8s' },
+  { i: 22, text: '→ response',     dx: 10, dy: -10, delay: '-7.2s' },
+];
+
+// Traveling dot flows
+const DOTS = [
+  { path: [0,3,7,11,15,19,22], color: '#FF6B35', dur: 5.0, begin: '0s',    r: 3   },
+  { path: [1,4,8,12,16,20,23], color: '#F59E0B', dur: 5.6, begin: '-1.8s', r: 2.5 },
+  { path: [2,5,9,13,17,21,24], color: '#06B6D4', dur: 4.8, begin: '-3.2s', r: 2.5 },
+  { path: [0,4,8,13,17,20,23], color: '#FF6B35', dur: 6.1, begin: '-2.5s', r: 2   },
+  { path: [1,5,9,14,18,21,24], color: '#F59E0B', dur: 5.2, begin: '-4.1s', r: 2   },
+  { path: [2,6,10,14,17,20,22],color: '#06B6D4', dur: 4.4, begin: '-0.9s', r: 2.5 },
+  { path: [0,4,8,12,15,20,23], color: '#F59E0B', dur: 5.9, begin: '-3.6s', r: 2   },
+  { path: [1,5,8,13,16,19,22], color: '#FF6B35', dur: 4.2, begin: '-2.1s', r: 3   },
+  { path: [2,6,10,14,18,21,23],color: '#06B6D4', dur: 6.3, begin: '-0.4s', r: 2   },
+];
+
+function bezier(idxs: number[]) {
+  const pts = idxs.map(i => GN[i]);
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i - 1], c = pts[i];
+    const mx = (p.x + c.x) / 2;
+    d += ` C ${mx} ${p.y} ${mx} ${c.y} ${c.x} ${c.y}`;
+  }
+  return d;
+}
+
+function edgePath(a: number, b: number) {
+  const p = GN[a], c = GN[b];
+  const mx = (p.x + c.x) / 2;
+  return `M ${p.x} ${p.y} C ${mx} ${p.y} ${mx} ${c.y} ${c.x} ${c.y}`;
+}
+
+function trailBegin(begin: string, offsetSec: number): string {
+  return `${parseFloat(begin) + offsetSec}s`;
+}
+
+// ── Spark canvas background ────────────────────────────────────────────────────
 function SparkCanvas() {
-  const ref = useRef<SVGSVGElement>(null);
-
-  useEffect(() => {
-    const svg = ref.current;
-    if (!svg) return;
-
-    const W = svg.clientWidth || window.innerWidth;
-    const H = svg.clientHeight || 700;
-
-    // Backbone nodes
-    const nodes = [
-      { x: W * 0.12, y: H * 0.25 }, { x: W * 0.28, y: H * 0.18 },
-      { x: W * 0.42, y: H * 0.55 }, { x: W * 0.58, y: H * 0.22 },
-      { x: W * 0.50, y: H * 0.70 }, { x: W * 0.70, y: H * 0.45 },
-      { x: W * 0.82, y: H * 0.20 }, { x: W * 0.90, y: H * 0.65 },
-      { x: W * 0.22, y: H * 0.72 }, { x: W * 0.65, y: H * 0.78 },
-      { x: W * 0.35, y: H * 0.38 }, { x: W * 0.76, y: H * 0.32 },
-    ];
-
-    const edges = [
-      [0,1],[1,10],[10,2],[2,4],[1,3],[3,11],[11,5],[5,6],[5,7],
-      [9,7],[4,9],[0,8],[8,4],[3,5],[2,5],[6,11],
-    ];
-
-    // Backbone lines
-    edges.forEach(([a, b]) => {
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', String(nodes[a].x));
-      line.setAttribute('y1', String(nodes[a].y));
-      line.setAttribute('x2', String(nodes[b].x));
-      line.setAttribute('y2', String(nodes[b].y));
-      line.setAttribute('stroke', 'rgba(255,107,53,0.07)');
-      line.setAttribute('stroke-width', '1');
-      svg.appendChild(line);
-    });
-
-    // Spark lines
-    edges.forEach(([a, b], i) => {
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', String(nodes[a].x));
-      line.setAttribute('y1', String(nodes[a].y));
-      line.setAttribute('x2', String(nodes[b].x));
-      line.setAttribute('y2', String(nodes[b].y));
-      const colors = ['rgba(255,107,53,0.9)', 'rgba(245,158,11,0.9)', 'rgba(6,182,212,0.7)'];
-      line.setAttribute('stroke', colors[i % 3]);
-      line.setAttribute('stroke-width', '1.5');
-      line.setAttribute('stroke-linecap', 'round');
-      line.classList.add('as-spark-line');
-      const dur = 6 + (i % 5) * 0.8;
-      const delay = -(i * 1.1);
-      line.style.animationDuration = `${dur}s`;
-      line.style.animationDelay = `${delay}s`;
-      svg.appendChild(line);
-    });
-
-    // Nodes
-    nodes.forEach(({ x, y }) => {
-      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      c.setAttribute('cx', String(x));
-      c.setAttribute('cy', String(y));
-      c.setAttribute('r', '2.5');
-      c.setAttribute('fill', 'rgba(255,107,53,0.25)');
-      svg.appendChild(c);
-    });
-  }, []);
-
   return (
     <svg
-      ref={ref}
       className="as-hero-canvas"
+      viewBox="0 0 1200 560"
+      preserveAspectRatio="xMidYMid slice"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
-    />
+    >
+      <defs>
+        <filter id="as-bloom" x="-120%" y="-120%" width="340%" height="340%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="as-node-glow" x="-200%" y="-200%" width="500%" height="500%">
+          <feGaussianBlur stdDeviation="5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="as-arc-glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <radialGradient id="as-vig" cx="50%" cy="50%" r="58%">
+          <stop offset="0%" stopColor="transparent" />
+          <stop offset="100%" stopColor="#070A0F" />
+        </radialGradient>
+        {/* Motion paths for node flows */}
+        {DOTS.map((dot, i) => (
+          <path key={i} id={`as-mp-${i}`} d={bezier(dot.path)} fill="none" stroke="none" />
+        ))}
+        {/* Motion paths for long arcs */}
+        {LONG_ARCS.map((arc, i) => (
+          <path key={i} id={`as-arc-${i}`} d={arc.d} fill="none" stroke="none" />
+        ))}
+      </defs>
+
+      {/* Long arc backbones (very faint, dramatic curves) */}
+      {LONG_ARCS.map((arc, i) => (
+        <path key={`arcbb${i}`} d={arc.d} fill="none"
+          stroke={arc.bbColor} strokeWidth={1} />
+      ))}
+
+      {/* Faint backbone edges */}
+      {GE.map(([a, b], i) => (
+        <path key={`bb${i}`} d={edgePath(a, b)} fill="none"
+          stroke="rgba(255,107,53,0.065)" strokeWidth={1} />
+      ))}
+
+      {/* Idle spark traces */}
+      {GE.map(([a, b], i) => {
+        const color = i % 3 === 0 ? 'rgba(255,107,53,0.5)'
+                    : i % 3 === 1 ? 'rgba(245,158,11,0.44)'
+                    :               'rgba(6,182,212,0.38)';
+        return (
+          <path key={`sp${i}`} d={edgePath(a, b)} fill="none"
+            stroke={color} strokeWidth={1.2} strokeLinecap="round"
+            pathLength={100} strokeDasharray="5 95"
+            style={{
+              animation: `as-spark-fwd ${5.5 + (i % 8) * 0.55}s linear infinite`,
+              animationDelay: `-${(i * 1.37) % 7.5}s`,
+            }}
+          />
+        );
+      })}
+
+      {/* Regular nodes */}
+      {GN.map((n, i) => !HUB_NODES.has(i) && (
+        <circle key={`nd${i}`} cx={n.x} cy={n.y} r={2.5}
+          fill="rgba(255,107,53,0.22)" />
+      ))}
+
+      {/* Hub nodes — outer faint ring + glowing core */}
+      {[...HUB_NODES].map(i => (
+        <g key={`hub${i}`}>
+          <circle cx={GN[i].x} cy={GN[i].y} r={11}
+            fill="none" stroke="rgba(255,107,53,0.12)" strokeWidth={1} />
+          <circle cx={GN[i].x} cy={GN[i].y} r={4.5}
+            fill="rgba(255,107,53,0.55)" filter="url(#as-node-glow)" />
+        </g>
+      ))}
+
+      {/* Floating monospace labels on key nodes */}
+      {LABELS.map(({ i, text, dx, dy, delay }) => (
+        <text
+          key={`lbl${i}`}
+          x={GN[i].x + dx}
+          y={GN[i].y + dy}
+          fontSize={9}
+          fontFamily="'JetBrains Mono', 'Courier New', monospace"
+          fill="rgba(255,107,53,0.75)"
+          style={{
+            animation: 'as-label-fade 9s ease-in-out infinite',
+            animationDelay: delay,
+          }}
+        >
+          {text}
+        </text>
+      ))}
+
+      {/* Ghost trails (follow same path, lag behind) */}
+      {DOTS.map((dot, i) => (
+        <circle key={`ghost${i}`} r={dot.r * 0.5} fill={dot.color} opacity={0.28}
+          filter="url(#as-bloom)">
+          <animateMotion dur={`${dot.dur}s`} repeatCount="indefinite"
+            begin={trailBegin(dot.begin, 0.38)} calcMode="paced">
+            <mpath href={`#as-mp-${i}`} />
+          </animateMotion>
+        </circle>
+      ))}
+
+      {/* Primary traveling dots */}
+      {DOTS.map((dot, i) => (
+        <circle key={`td${i}`} r={dot.r} fill={dot.color} filter="url(#as-bloom)">
+          <animateMotion dur={`${dot.dur}s`} repeatCount="indefinite"
+            begin={dot.begin} calcMode="paced">
+            <mpath href={`#as-mp-${i}`} />
+          </animateMotion>
+        </circle>
+      ))}
+
+      {/* Long-arc traveling dots (slower, dramatic) */}
+      {LONG_ARCS.map((arc, i) => (
+        <circle key={`arcdot${i}`} r={2.5} fill={arc.color}
+          filter="url(#as-arc-glow)" opacity={0.85}>
+          <animateMotion dur={`${arc.dur}s`} repeatCount="indefinite"
+            begin={arc.begin} calcMode="paced">
+            <mpath href={`#as-arc-${i}`} />
+          </animateMotion>
+        </circle>
+      ))}
+
+      {/* Vignette */}
+      <rect x={0} y={0} width={1200} height={560} fill="url(#as-vig)" />
+    </svg>
   );
 }
 
@@ -149,6 +289,27 @@ const FEATURES = [
     tags: ['routing', 'cost', 'observability'],
     color: '#818CF8',
   },
+  {
+    num: '09',
+    title: 'Streaming Console',
+    desc: 'Visualize token-by-token streaming output from any model. See latency waterfall, time-to-first-token, and throughput — live, not in post-run analytics.',
+    tags: ['streaming', 'latency', 'real-time'],
+    color: '#22D3EE',
+  },
+  {
+    num: '10',
+    title: 'Debug Trace',
+    desc: 'Step through agent execution one action at a time. Set breakpoints on tool calls, inspect state at every node, replay any sub-sequence with modified inputs.',
+    tags: ['debugger', 'breakpoints', 'replay'],
+    color: '#FB923C',
+  },
+  {
+    num: '11',
+    title: 'Template Library',
+    desc: '60+ production-ready agent templates — research bots, data extractors, code reviewers, support agents. Fork, customize, and deploy in minutes.',
+    tags: ['templates', 'quickstart', 'community'],
+    color: '#A3E635',
+  },
 ] as const;
 
 const STEPS = [
@@ -214,7 +375,6 @@ export default function AgenticStudioPage() {
       {/* Nav */}
       <nav className="as-nav">
         <Link href="/agenticstudio" className="as-nav-logo">
-          <span className="as-nav-logo-mark">AS</span>
           AgenticStudio
         </Link>
         <ul className="as-nav-links">
@@ -242,9 +402,9 @@ export default function AgenticStudioPage() {
             agentic AI features — for Claude, GPT-4, Gemini, and beyond.
           </p>
           <div className="as-hero-actions">
-            <a href="#features" className="as-btn-primary">
-              Explore features →
-            </a>
+            <Link href="/agenticstudio/app" className="as-btn-primary">
+              Open Agent Builder →
+            </Link>
             <a
               href="https://github.com/john3913/agenticstudio"
               target="_blank"
@@ -374,17 +534,17 @@ export default function AgenticStudioPage() {
             AgenticStudio evolves — new features ship every week.
           </p>
           <div className="as-hero-actions">
+            <Link href="/agenticstudio/app" className="as-btn-primary">
+              Open Agent Builder →
+            </Link>
             <a
               href="https://github.com/john3913/agenticstudio"
               target="_blank"
               rel="noopener"
-              className="as-btn-primary"
+              className="as-btn-secondary"
             >
-              Star on GitHub →
+              Star on GitHub
             </a>
-            <Link href="/biodesign" className="as-btn-secondary">
-              See other tools
-            </Link>
           </div>
         </div>
       </section>

@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { FlowCanvas } from './flowbg';
 import {
   BiodesignState, ReimbursementStrategy, ReimbCode,
   SiteOfService, CoverageStatus, ReimbPathway,
@@ -333,10 +334,15 @@ export function ReimbursementTab({ state, update }: { state: BiodesignState; upd
 
   return (
     <div>
-      <SectionHeader
-        title="Reimbursement Strategy"
-        subtitle="Identify applicable codes, coverage pathways, and payer strategy. Recommendations update as you complete other sections."
-      />
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, marginBottom: 24, height: 114 }}>
+        <FlowCanvas accent="#52E8B4" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(19,30,44,0.88) 45%, transparent)' }} />
+        <div style={{ position: 'relative', padding: '22px 28px' }}>
+          <div style={{ fontSize: 9, color: '#52E8B4', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'var(--mono)', marginBottom: 8 }}>03 / Implement · Reimbursement</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Reimbursement Strategy</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>Codes, coverage pathways, and payer strategy.</div>
+        </div>
+      </div>
 
       {/* Recommendations — always visible, always fresh */}
       <RecommendationPanel state={state} />
