@@ -567,14 +567,10 @@
 .as-footer-links a:hover { color: var(--as-text); }
 
 /* ── Spark animation (canvas bg) ──────────────────────────────────────── */
-@keyframes as-spark {
-  to { stroke-dashoffset: -618; }
-}
-
-.as-spark-line {
-  stroke-dasharray: 18 600;
-  stroke-dashoffset: 618;
-  animation: as-spark linear infinite;
+/* pathLength=100 — dash travels start→end */
+@keyframes as-spark-fwd {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -100; }
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
