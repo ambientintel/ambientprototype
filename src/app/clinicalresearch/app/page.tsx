@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import '../clinicalresearch.css';
 import './app.css';
@@ -19,7 +19,7 @@ type MilestoneStatus = 'planned' | 'in-progress' | 'done' | 'blocked';
 type AESeverity   = 'grade-1' | 'grade-2' | 'grade-3' | 'grade-4' | 'grade-5';
 type AERelation   = 'unrelated' | 'unlikely' | 'possible' | 'probable' | 'definite';
 type AEStatus     = 'open' | 'resolved' | 'ongoing' | 'fatal';
-type Tab          = 'dashboard' | 'hypothesis' | 'endpoints' | 'design' | 'stats' | 'irb' | 'regulatory' | 'sites' | 'safety' | 'milestones';
+type Tab          = 'dashboard' | 'hypothesis' | 'endpoints' | 'design' | 'stats' | 'irb' | 'regulatory' | 'sites' | 'safety' | 'milestones' | 'diagram';
 
 interface StudyArm     { id: string; name: string; n: string; description: string; }
 interface Milestone    { id: string; title: string; targetDate: string; status: MilestoneStatus; phase: 'protocol' | 'regulatory' | 'operations' | 'close-out'; }
@@ -709,10 +709,296 @@ function MilestonesTab({ s, update }: { s: CRState; update: (v: CRState) => void
   );
 }
 
+// ── CONSORT Diagram ───────────────────────────────────────────────────────────
+
+function DiagramTab({ s }: { s: CRState }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const arms = s.design.arms.length > 0 ? s.design.arms : [
+    { id:'a', name:'Treatment Arm', n:'', description:'' },
+    { id:'b', name:'Control Arm',   n:'', description:'' },
+  ];
+  const enrollment = s.enrollment.target ? `N = ${s.enrollment.target}` : 'N = ?';
+  const isSingleArm = s.design.designType === 'single-arm' || s.design.designType === 'dose-escalation';
+
+  const W = 760, H = 520;
+  const CX = 380, BW = 200, BH = 48;
+  const A0X = 55, A1X = 505, AW = 195, AH = 58;
+  const a0cx = A0X + AW / 2, a1cx = A1X + AW / 2;
+
+  function downloadSvg() {
+    if (!svgRef.current) return;
+    const data = new XMLSerializer().serializeToString(svgRef.current);
+    const blob = new Blob([data], { type: 'image/svg+xml' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'consort-diagram.svg'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const Box = ({ x, y, w=BW, h=BH, lines, color='#10B981' }: {
+    x:number; y:number; w?:number; h?:number; lines:[string,string?]; color?:string;
+  }) => (
+    <g>
+      <rect x={x} y={y} width={w} height={h} rx={5}
+        fill="rgba(7,21,16,0.9)" stroke={color} strokeWidth={1.2} />
+      <text x={x+w/2} y={y+h/2-(lines[1]?7:0)} textAnchor="middle"
+        fill="#D1FAE5" fontSize={10.5} fontFamily="'SF Mono',monospace" fontWeight={500}>
+        {lines[0]}
+      </text>
+      {lines[1] && (
+        <text x={x+w/2} y={y+h/2+10} textAnchor="middle"
+          fill="#6B8F7E" fontSize={9.5} fontFamily="'SF Mono',monospace">
+          {lines[1]}
+        </text>
+      )}
+    </g>
+  );
+
+  const Arrow = ({ x1,y1,x2,y2 }: {x1:number;y1:number;x2:number;y2:number}) => (
+    <line x1={x1} y1={y1} x2={x2} y2={y2}
+      stroke="rgba(16,185,129,0.4)" strokeWidth={1.5} markerEnd="url(#arr)" />
+  );
+  const Conn = ({ x1,y1,x2,y2 }: {x1:number;y1:number;x2:number;y2:number}) => (
+    <line x1={x1} y1={y1} x2={x2} y2={y2}
+      stroke="rgba(16,185,129,0.25)" strokeWidth={1.5} />
+  );
+
+  const PhaseLabel = ({ label, y, color }: { label:string; y:number; color:string }) => (
+    <g>
+      <rect x={0} y={y} width={48} height={20} rx={3} fill={`${color}18`} />
+      <text x={24} y={y+13} textAnchor="middle" fill={color}
+        fontSize={8} fontFamily="'SF Mono',monospace" fontWeight={600} letterSpacing={1}>
+        {label}
+      </text>
+    </g>
+  );
+
+  return (
+    <div>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+        <p className="cra-section-title" style={{ margin:0 }}>CONSORT <em>Flow Diagram</em></p>
+        <button className="cra-ghost-btn" onClick={downloadSvg}>↓ Export SVG</button>
+      </div>
+      <p style={{ fontSize:11, color:'var(--text-4)', fontFamily:'var(--mono)', marginBottom:20 }}>
+        Auto-generated from your study design. Add arms in the Design tab to update.
+      </p>
+      <div className="cra-diagram-wrap">
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display:'block' }}
+          xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr" markerWidth={7} markerHeight={7} refX={4} refY={2} orient="auto">
+              <path d="M0,0 L0,4 L6,2 z" fill="rgba(16,185,129,0.5)" />
+            </marker>
+            <pattern id="dotgrid" x={0} y={0} width={20} height={20} patternUnits="userSpaceOnUse">
+              <circle cx={1} cy={1} r={0.6} fill="rgba(16,185,129,0.07)" />
+            </pattern>
+          </defs>
+
+          {/* Background */}
+          <rect width={W} height={H} fill="url(#dotgrid)" rx={8} />
+
+          {/* Phase band backgrounds */}
+          <rect x={0} y={0}   width={W} height={178} rx={0} fill="rgba(16,185,129,0.03)" />
+          <rect x={0} y={183} width={W} height={97}  fill="rgba(6,182,212,0.03)"   />
+          <rect x={0} y={285} width={W} height={115} fill="rgba(139,92,246,0.03)"  />
+          <rect x={0} y={405} width={W} height={115} fill="rgba(245,158,11,0.03)"  />
+
+          {/* Dividers */}
+          {[178,280,400].map(y => (
+            <line key={y} x1={0} y1={y} x2={W} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
+          ))}
+
+          {/* Phase labels */}
+          <PhaseLabel label="ENROLL" y={76}  color="#10B981" />
+          <PhaseLabel label="ALLOC"  y={218} color="#06B6D4" />
+          <PhaseLabel label="FOLLOW" y={322} color="#8B5CF6" />
+          <PhaseLabel label="ANAL"   y={440} color="#F59E0B" />
+
+          {isSingleArm ? (
+            /* ── Single-arm flow ── */
+            <>
+              <Box x={CX-100} y={18}  lines={[`Assessed for eligibility`, enrollment]} color="#10B981" />
+              <Arrow x1={CX} y1={66} x2={CX} y2={130} />
+              <Box x={CX-100} y={130} lines={[`Enrolled (${enrollment})`]}           color="#10B981" />
+              <Box x={CX-100} y={200} h={58} lines={[`Allocated to ${arms[0]?.name || 'Intervention'}`, arms[0]?.n ? `n = ${arms[0].n}` : 'n = ?']} color="#06B6D4" />
+              <Arrow x1={CX} y1={178} x2={CX} y2={200} />
+              <Box x={CX-100} y={320} lines={[`Lost to follow-up`, 'n = ?']}         color="#8B5CF6" />
+              <Arrow x1={CX} y1={258} x2={CX} y2={320} />
+              <Box x={CX-100} y={440} lines={[`Analysed`, 'n = ?']}                  color="#F59E0B" />
+              <Arrow x1={CX} y1={388} x2={CX} y2={440} />
+            </>
+          ) : (
+            /* ── Multi-arm flow ── */
+            <>
+              {/* ENROLLMENT */}
+              <Box x={CX-100} y={18} lines={['Assessed for eligibility', enrollment]} color="#10B981" />
+              {/* fork line down from assessed */}
+              <Conn x1={CX} y1={66} x2={CX} y2={100} />
+              {/* fork right to excluded */}
+              <Conn x1={CX} y1={100} x2={510} y2={100} />
+              <Arrow x1={510} y1={100} x2={510} y2={90} />
+              {/* excluded box */}
+              <rect x={510} y={66} width={220} height={68} rx={5}
+                fill="rgba(7,21,16,0.9)" stroke="rgba(244,63,94,0.5)" strokeWidth={1} />
+              <text x={620} y={88} textAnchor="middle" fill="#F43F5E"
+                fontSize={9.5} fontFamily="'SF Mono',monospace" fontWeight={600}>Excluded (n = ?)</text>
+              <text x={620} y={103} textAnchor="middle" fill="#6B4E52"
+                fontSize={9} fontFamily="'SF Mono',monospace">Not meeting criteria (n = ?)</text>
+              <text x={620} y={117} textAnchor="middle" fill="#6B4E52"
+                fontSize={9} fontFamily="'SF Mono',monospace">Declined participation (n = ?)</text>
+              {/* continue down from fork to randomized */}
+              <Arrow x1={CX} y1={100} x2={CX} y2={130} />
+              <Box x={CX-100} y={130} lines={['Randomized', enrollment]} color="#10B981" />
+
+              {/* ALLOCATION — split fork */}
+              <Conn x1={CX} y1={178} x2={CX} y2={198} />
+              <Conn x1={a0cx} y1={198} x2={a1cx} y2={198} />
+              <Arrow x1={a0cx} y1={198} x2={a0cx} y2={200} />
+              <Arrow x1={a1cx} y1={198} x2={a1cx} y2={200} />
+              <Box x={A0X} y={200} w={AW} h={AH}
+                lines={[arms[0]?.name || 'Arm A', arms[0]?.n ? `n = ${arms[0].n}` : 'n = ?']}
+                color="#06B6D4" />
+              <Box x={A1X} y={200} w={AW} h={AH}
+                lines={[arms[1]?.name || 'Arm B', arms[1]?.n ? `n = ${arms[1].n}` : 'n = ?']}
+                color="#06B6D4" />
+
+              {/* FOLLOW-UP */}
+              <Arrow x1={a0cx} y1={258} x2={a0cx} y2={312} />
+              <Arrow x1={a1cx} y1={258} x2={a1cx} y2={312} />
+              <Box x={A0X} y={312} w={AW} h={58}
+                lines={['Lost to follow-up', 'n = ?']} color="#8B5CF6" />
+              <Box x={A1X} y={312} w={AW} h={58}
+                lines={['Lost to follow-up', 'n = ?']} color="#8B5CF6" />
+
+              {/* ANALYSIS */}
+              <Arrow x1={a0cx} y1={370} x2={a0cx} y2={430} />
+              <Arrow x1={a1cx} y1={370} x2={a1cx} y2={430} />
+              <Box x={A0X} y={430} w={AW}
+                lines={['Analysed', arms[0]?.n ? `n = ${arms[0].n}` : 'n = ?']} color="#F59E0B" />
+              <Box x={A1X} y={430} w={AW}
+                lines={['Analysed', arms[1]?.n ? `n = ${arms[1].n}` : 'n = ?']} color="#F59E0B" />
+            </>
+          )}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ── AI Protocol Assistant ─────────────────────────────────────────────────────
+
+const QUICK_PROMPTS = [
+  'Draft my PICO statement',
+  'Suggest primary endpoints',
+  'Flag IRB risks',
+  'Generate inclusion/exclusion criteria',
+  'Review statistical plan',
+  'FDA submission strategy',
+  'Write consent language',
+  'CONSORT checklist',
+];
+
+function FloatingChat({ s, open, onClose }: { s: CRState; open: boolean; onClose: () => void }) {
+  const [messages, setMessages] = useState<{ role: 'user'|'assistant'; content: string }[]>([]);
+  const [input, setInput]       = useState('');
+  const [streaming, setStreaming] = useState(false);
+  const [current, setCurrent]   = useState('');
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, current]);
+
+  async function send(msg: string) {
+    if (!msg.trim() || streaming) return;
+    const userMsg = { role: 'user' as const, content: msg.trim() };
+    const next = [...messages, userMsg];
+    setMessages(next);
+    setInput('');
+    setStreaming(true);
+    setCurrent('');
+    try {
+      const res = await fetch('/api/clinicalresearch/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: next, context: s }),
+      });
+      if (!res.ok || !res.body) throw new Error('Stream error');
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let text = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        text += dec.decode(value, { stream: true });
+        setCurrent(text);
+      }
+      setMessages(prev => [...prev, { role: 'assistant', content: text }]);
+      setCurrent('');
+    } catch { /* noop */ } finally { setStreaming(false); }
+  }
+
+  return (
+    <div className={`cra-chat-drawer${open ? ' open' : ''}`}>
+      <div className="cra-chat-header">
+        <div>
+          <div className="cra-chat-title">Protocol <em>Assistant</em></div>
+          <div className="cra-chat-sub">Powered by Claude Opus</div>
+        </div>
+        <button className="cra-chat-close" onClick={onClose}>×</button>
+      </div>
+
+      <div className="cra-chat-messages">
+        {messages.length === 0 && !streaming && (
+          <div className="cra-chat-empty">
+            <div style={{ fontSize:28, opacity:.15, marginBottom:10 }}>◎</div>
+            <div style={{ fontSize:12, color:'var(--text-4)', fontFamily:'var(--mono)' }}>
+              Ask me anything about your protocol — design, endpoints, IRB, regulatory strategy.
+            </div>
+            <div className="cra-chat-quick-btns">
+              {QUICK_PROMPTS.map(p => (
+                <button key={p} className="cra-chat-quick" onClick={() => send(p)}>{p}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} className={`cra-chat-msg ${m.role}`}>
+            <div className="cra-chat-role">{m.role === 'user' ? 'You' : 'Assistant'}</div>
+            <div className="cra-chat-content">{m.content}</div>
+          </div>
+        ))}
+        {streaming && (
+          <div className="cra-chat-msg assistant">
+            <div className="cra-chat-role">Assistant</div>
+            <div className="cra-chat-content">{current || <span className="cra-chat-cursor" />}</div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      <div className="cra-chat-input-row">
+        <textarea
+          className="cra-chat-input"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); } }}
+          placeholder="Ask about design, endpoints, IRB, regulations…"
+          rows={2}
+          disabled={streaming}
+        />
+        <button className="cra-chat-send" onClick={() => send(input)} disabled={streaming || !input.trim()}>
+          {streaming ? '…' : '↑'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Nav config ────────────────────────────────────────────────────────────────
 
 const NAV: { heading: string; color: string; items: { id: Tab; label: string }[] }[] = [
-  { heading:'Overview',    color:'#10B981', items:[{ id:'dashboard',  label:'Dashboard' },    { id:'milestones', label:'Timeline' }] },
+  { heading:'Overview',    color:'#10B981', items:[{ id:'dashboard',  label:'Dashboard' }, { id:'milestones', label:'Timeline' }, { id:'diagram', label:'CONSORT Diagram' }] },
   { heading:'Discover',    color:'#06B6D4', items:[{ id:'hypothesis', label:'PICO / Hypothesis' }, { id:'endpoints', label:'Endpoints' }] },
   { heading:'Design',      color:'#8B5CF6', items:[{ id:'design',     label:'Study Design' }, { id:'stats',      label:'Statistical Plan' }] },
   { heading:'Regulatory',  color:'#F59E0B', items:[{ id:'irb',        label:'IRB & Ethics' }, { id:'regulatory', label:'FDA Pathway' }] },
@@ -731,6 +1017,7 @@ export default function ClinicalResearchApp() {
   const [creating,  setCreating]  = useState(false);
   const [newTitle,  setNewTitle]  = useState('');
   const [hydrated,  setHydrated]  = useState(false);
+  const [chatOpen,  setChatOpen]  = useState(false);
 
   useEffect(() => {
     const { projects: ps, activeId: aid } = loadProjects();
@@ -859,10 +1146,14 @@ export default function ClinicalResearchApp() {
             {state.irb.irbStatus === 'approved' && (
               <span className="cra-badge" style={{ color:'#10B981', background:'rgba(16,185,129,.12)' }}>IRB ✓</span>
             )}
+            <button className="cra-ai-btn" onClick={() => setChatOpen(o => !o)}>
+              ◎ AI Assistant
+            </button>
           </div>
         </header>
 
-        <main className="cra-main">
+        <FloatingChat s={state} open={chatOpen} onClose={() => setChatOpen(false)} />
+        <main className={`cra-main${chatOpen ? ' chat-open' : ''}`}>
           {!activeId ? (
             <div className="cra-empty-workspace">
               <div style={{ fontSize:48, opacity:.15 }}>◎</div>
@@ -912,6 +1203,7 @@ export default function ClinicalResearchApp() {
               {tab === 'sites'      && <SitesTab       s={state} update={update} />}
               {tab === 'safety'     && <SafetyTab      s={state} update={update} />}
               {tab === 'milestones' && <MilestonesTab  s={state} update={update} />}
+              {tab === 'diagram'    && <DiagramTab     s={state} />}
             </>
           )}
         </main>

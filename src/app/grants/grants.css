@@ -1,0 +1,301 @@
+/* Grants — "Funding Intelligence" — deep navy + amber gold */
+
+.gr-root {
+  --bg:      #05060E;
+  --accent:  #F59E0B;
+  --amber:   #F59E0B;
+  --emerald: #10B981;
+  --indigo:  #6366F1;
+  --violet:  #8B5CF6;
+  --rose:    #F43F5E;
+  --text:    #E8EDF5;
+  --text-2:  #A8B4C4;
+  --text-3:  #647287;
+  --text-4:  #3A4555;
+  --line:    rgba(245,158,11,0.1);
+  --line-strong: rgba(245,158,11,0.22);
+  --surface: rgba(245,158,11,0.05);
+  --surface-2: rgba(255,255,255,0.04);
+  --sans:    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --serif:   'Georgia', 'Times New Roman', serif;
+  --mono:    'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  position: relative;
+}
+
+/* ── Nav ────────────────────────────────────────────── */
+.gr-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px;
+  background: rgba(5,6,14,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+.gr-nav-logo {
+  font-family: var(--serif); font-size: 15px; font-weight: 300;
+  color: var(--text); text-decoration: none; letter-spacing: -0.01em;
+}
+.gr-nav-logo em { font-style: italic; color: var(--accent); }
+.gr-nav-links { display: flex; align-items: center; gap: 28px; }
+.gr-nav-link {
+  font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--text-3); text-decoration: none;
+  transition: color .15s;
+}
+.gr-nav-link:hover { color: var(--text); }
+.gr-nav-link.active { color: var(--accent); }
+
+/* ── Hero ───────────────────────────────────────────── */
+.gr-hero {
+  position: relative; z-index: 1;
+  padding: 140px 64px 80px;
+  max-width: 1200px; margin: 0 auto;
+}
+.gr-hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.14em; color: var(--accent);
+  border: 1px solid rgba(245,158,11,.25); border-radius: 20px;
+  padding: 4px 14px; margin-bottom: 32px;
+}
+.gr-hero-eyebrow::before {
+  content: ''; display: block; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent); animation: gr-pulse 2s infinite;
+}
+@keyframes gr-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.gr-hero-h1 {
+  font-family: var(--serif); font-size: clamp(44px,6vw,76px);
+  font-weight: 300; line-height: 1.06; letter-spacing: -0.03em;
+  color: var(--text); margin: 0 0 20px;
+}
+.gr-hero-h1 em { font-style: italic; color: var(--accent); }
+
+.gr-hero-sub {
+  font-size: 17px; color: var(--text-2); max-width: 580px;
+  line-height: 1.65; margin: 0 0 40px;
+}
+
+/* Search bar */
+.gr-search-bar {
+  display: flex; gap: 12px; max-width: 700px; margin-bottom: 24px;
+}
+.gr-search-input {
+  flex: 1; height: 50px; padding: 0 20px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--line-strong);
+  border-radius: 10px; color: var(--text); font-size: 14px; font-family: var(--sans);
+  transition: border-color .15s;
+}
+.gr-search-input:focus { outline: none; border-color: rgba(245,158,11,.5); }
+.gr-search-input::placeholder { color: var(--text-4); }
+.gr-search-btn {
+  height: 50px; padding: 0 28px; border-radius: 10px;
+  background: linear-gradient(135deg, #F59E0B, #F97316);
+  border: none; color: #000; font-family: var(--mono);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  cursor: pointer; transition: opacity .15s;
+}
+.gr-search-btn:hover { opacity: .88; }
+.gr-search-btn:disabled { opacity: .45; cursor: default; }
+
+/* Mechanism chips */
+.gr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.gr-chip {
+  padding: 5px 14px; border-radius: 20px; border: 1px solid;
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .07em;
+  cursor: pointer; transition: all .15s;
+}
+
+/* ── Stats bar ──────────────────────────────────────── */
+.gr-stats {
+  position: relative; z-index: 1;
+  display: flex; gap: 0;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  background: rgba(245,158,11,0.03);
+  padding: 0 64px;
+}
+.gr-stat {
+  flex: 1; padding: 24px 0; border-right: 1px solid var(--line);
+}
+.gr-stat:last-child { border-right: none; }
+.gr-stat-num {
+  font-family: var(--serif); font-size: 32px; font-weight: 300;
+  color: var(--accent); letter-spacing: -0.03em; line-height: 1;
+}
+.gr-stat-label {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--text-4); margin-top: 6px;
+}
+
+/* ── Section scaffold ───────────────────────────────── */
+.gr-section { position: relative; z-index: 1; padding: 72px 64px; max-width: 1200px; margin: 0 auto; }
+.gr-section-eyebrow {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .14em; color: var(--accent); margin-bottom: 10px;
+}
+.gr-section-h2 {
+  font-family: var(--serif); font-size: clamp(26px,3.5vw,40px);
+  font-weight: 300; letter-spacing: -0.025em; color: var(--text);
+  margin: 0 0 8px; line-height: 1.15;
+}
+.gr-section-h2 em { font-style: italic; color: var(--accent); }
+.gr-section-sub {
+  font-size: 14px; color: var(--text-3); margin: 0 0 44px; max-width: 520px;
+}
+
+/* ── Mechanism tiles ────────────────────────────────── */
+.gr-mechs { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+@media (max-width:900px) { .gr-mechs { grid-template-columns: repeat(2,1fr); } }
+
+.gr-mech {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px; padding: 22px 20px;
+  cursor: pointer; transition: border-color .18s, background .18s;
+  position: relative; overflow: hidden;
+}
+.gr-mech::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--mech-color, var(--accent));
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .3s ease;
+}
+.gr-mech:hover { border-color: var(--line-strong); background: rgba(245,158,11,0.06); }
+.gr-mech:hover::before { transform: scaleX(1); }
+.gr-mech.active { border-color: rgba(245,158,11,.4); background: rgba(245,158,11,0.08); }
+.gr-mech.active::before { transform: scaleX(1); }
+
+.gr-mech-code {
+  font-family: var(--serif); font-size: 22px; font-weight: 300; font-style: italic;
+  color: var(--mech-color, var(--accent)); margin-bottom: 6px;
+}
+.gr-mech-name {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--text-3); margin-bottom: 10px;
+}
+.gr-mech-desc { font-size: 11.5px; color: var(--text-3); line-height: 1.55; }
+.gr-mech-avg {
+  margin-top: 14px; font-family: var(--mono); font-size: 10px; color: var(--mech-color, var(--accent));
+}
+
+/* ── Grant result cards ─────────────────────────────── */
+.gr-results-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+@media (max-width:1000px) { .gr-results-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width:640px) { .gr-results-grid { grid-template-columns: 1fr; } }
+
+.gr-card {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 12px; padding: 20px; transition: border-color .18s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.gr-card:hover { border-color: rgba(245,158,11,.3); }
+
+.gr-card-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gr-card-code {
+  font-family: var(--mono); font-size: 9px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: 3px 8px; border-radius: 4px; white-space: nowrap;
+}
+.gr-card-fiscal {
+  font-family: var(--mono); font-size: 9px; color: var(--text-4);
+}
+.gr-card-cost {
+  margin-left: auto; font-family: var(--serif); font-size: 14px;
+  font-weight: 300; color: var(--accent);
+}
+.gr-card-title {
+  font-size: 12.5px; font-weight: 500; color: var(--text); line-height: 1.45;
+}
+.gr-card-org {
+  font-family: var(--mono); font-size: 9.5px; color: var(--text-4); text-transform: uppercase; letter-spacing: .05em;
+}
+.gr-card-pi { font-size: 11px; color: var(--text-3); }
+.gr-card-abstract { font-size: 11px; color: var(--text-3); line-height: 1.55; }
+.gr-card-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--accent); text-decoration: none;
+  margin-top: auto; padding-top: 6px;
+  transition: gap .15s;
+}
+.gr-card-link:hover { gap: 8px; }
+
+.gr-skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, rgba(245,158,11,0.06) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: gr-shimmer 1.4s infinite;
+  border-radius: 6px; height: 14px;
+}
+@keyframes gr-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── Institute grid ─────────────────────────────────── */
+.gr-inst-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+@media (max-width:800px) { .gr-inst-grid { grid-template-columns: repeat(2,1fr); } }
+.gr-inst {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 16px 18px;
+  transition: border-color .18s;
+}
+.gr-inst:hover { border-color: rgba(245,158,11,.3); }
+.gr-inst-abbr {
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  color: var(--accent); letter-spacing: .05em; margin-bottom: 4px;
+}
+.gr-inst-name { font-size: 11px; color: var(--text-3); line-height: 1.4; }
+.gr-inst-budget { font-family: var(--mono); font-size: 9.5px; color: var(--text-4); margin-top: 8px; }
+
+/* ── CTA ────────────────────────────────────────────── */
+.gr-cta {
+  position: relative; z-index: 1; overflow: hidden;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  background: rgba(245,158,11,0.04);
+  padding: 80px 64px;
+}
+.gr-cta-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: center; }
+.gr-cta-eyebrow { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .14em; color: var(--accent); margin-bottom: 12px; }
+.gr-cta-h2 { font-family: var(--serif); font-size: clamp(30px,4vw,52px); font-weight: 300; letter-spacing: -0.025em; color: var(--text); margin: 0 0 8px; }
+.gr-cta-h2 em { font-style: italic; color: var(--accent); }
+.gr-cta-sub { font-size: 15px; color: var(--text-3); }
+.gr-cta-actions { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+
+/* ── Buttons ────────────────────────────────────────── */
+.gr-btn-primary {
+  display: inline-flex; align-items: center; height: 46px; padding: 0 28px;
+  border-radius: 9px; background: linear-gradient(135deg, #F59E0B, #F97316);
+  border: none; color: #000; font-family: var(--mono); font-size: 11px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: .09em;
+  cursor: pointer; text-decoration: none; transition: opacity .15s;
+  white-space: nowrap;
+}
+.gr-btn-primary:hover { opacity: .88; }
+.gr-btn-secondary {
+  display: inline-flex; align-items: center; height: 46px; padding: 0 24px;
+  border-radius: 9px; background: transparent;
+  border: 1px solid rgba(245,158,11,.3); color: var(--accent);
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .09em;
+  cursor: pointer; text-decoration: none; transition: border-color .15s;
+}
+.gr-btn-secondary:hover { border-color: rgba(245,158,11,.6); }
+
+/* ── Footer ─────────────────────────────────────────── */
+.gr-footer {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 64px; border-top: 1px solid var(--line);
+}
+
+/* ── Error / empty states ───────────────────────────── */
+.gr-error {
+  background: rgba(244,63,94,.08); border: 1px solid rgba(244,63,94,.2);
+  border-radius: 10px; padding: 16px 20px;
+  font-family: var(--mono); font-size: 11px; color: #F87171;
+}
+.gr-empty { text-align: center; padding: 48px 20px; color: var(--text-4); font-size: 13px; }
