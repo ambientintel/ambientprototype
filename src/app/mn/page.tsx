@@ -188,6 +188,26 @@ export default function MNPage() {
         .mn-nav-link:hover{color:#E8F0FF}
         .mn-text-link{color:#4F9CF9;text-decoration:none}
         .mn-text-link:hover{text-decoration:underline}
+
+        /* Extra spark classes for lower network */
+        .sp9{animation:sdi 3.8s linear infinite;animation-delay:-0.9s}
+        .sp10{animation:sdj 5.2s linear infinite;animation-delay:-2.6s}
+        .sp11{animation:sdk 4.4s linear infinite;animation-delay:-1.3s}
+        .sp12{animation:sdl 6.6s linear infinite;animation-delay:-3.3s}
+        .sp13{animation:sdm 3.5s linear infinite;animation-delay:-0.5s}
+        .sp14{animation:sdn 5.8s linear infinite;animation-delay:-2s}
+        @keyframes sdi{from{stroke-dashoffset:56}to{stroke-dashoffset:0}}
+        @keyframes sdj{from{stroke-dashoffset:70}to{stroke-dashoffset:0}}
+        @keyframes sdk{from{stroke-dashoffset:42}to{stroke-dashoffset:0}}
+        @keyframes sdl{from{stroke-dashoffset:84}to{stroke-dashoffset:0}}
+        @keyframes sdm{from{stroke-dashoffset:42}to{stroke-dashoffset:0}}
+        @keyframes sdn{from{stroke-dashoffset:70}to{stroke-dashoffset:0}}
+        .mn-node-pulse.d4{animation-delay:-0.5s;animation-duration:4.5s}
+        .mn-node-pulse.d5{animation-delay:-1.5s;animation-duration:3.5s}
+
+        /* Third aurora orb */
+        @keyframes mn-orb-c{0%,100%{transform:translate(0,0)}28%{transform:translate(30px,50px)}65%{transform:translate(-42px,-25px)}88%{transform:translate(18px,14px)}}
+        .mn-orb-c{animation:mn-orb-c 38s ease-in-out infinite}
       `}</style>
 
       <div className="mn-top-bar" />
@@ -212,18 +232,35 @@ export default function MNPage() {
 
         {/* Orbs */}
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-          <div className="mn-orb-a" style={{ position: 'absolute', left: -180, top: -60, width: 620, height: 620, borderRadius: '50%', background: 'radial-gradient(circle, rgba(122,0,25,0.16), transparent 65%)', filter: 'blur(90px)' }}/>
-          <div className="mn-orb-b" style={{ position: 'absolute', right: -120, bottom: -60, width: 520, height: 520, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,156,249,0.12), transparent 65%)', filter: 'blur(90px)' }}/>
+          <div className="mn-orb-a" style={{ position: 'absolute', left: -180, top: -60, width: 680, height: 680, borderRadius: '50%', background: 'radial-gradient(circle, rgba(122,0,25,0.18), transparent 65%)', filter: 'blur(90px)' }}/>
+          <div className="mn-orb-b" style={{ position: 'absolute', right: -120, bottom: -60, width: 560, height: 560, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,156,249,0.14), transparent 65%)', filter: 'blur(90px)' }}/>
+          <div className="mn-orb-c" style={{ position: 'absolute', left: '45%', top: '30%', width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(130,100,240,0.09), transparent 65%)', filter: 'blur(100px)' }}/>
 
           {/* Network */}
-          <svg style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.7 }} viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice">
-            <line x1="200" y1="180" x2="520" y2="120" stroke="rgba(79,156,249,0.06)" strokeWidth="0.8"/>
-            <line x1="200" y1="180" x2="380" y2="420" stroke="rgba(79,156,249,0.06)" strokeWidth="0.8"/>
-            <line x1="520" y1="120" x2="760" y2="280" stroke="rgba(79,156,249,0.06)" strokeWidth="0.8"/>
-            <line x1="760" y1="280" x2="920" y2="140" stroke="rgba(79,156,249,0.06)" strokeWidth="0.8"/>
-            <line x1="920" y1="140" x2="1200" y2="200" stroke="rgba(79,156,249,0.06)" strokeWidth="0.8"/>
-            <line x1="760" y1="280" x2="1060" y2="400" stroke="rgba(79,156,249,0.06)" strokeWidth="0.8"/>
-            <line x1="1200" y1="200" x2="1380" y2="340" stroke="rgba(79,156,249,0.06)" strokeWidth="0.8"/>
+          <svg style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.8 }} viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice">
+            {/* Upper backbone */}
+            <line x1="200" y1="180" x2="520" y2="120" stroke="rgba(79,156,249,0.07)" strokeWidth="0.8"/>
+            <line x1="200" y1="180" x2="380" y2="420" stroke="rgba(79,156,249,0.07)" strokeWidth="0.8"/>
+            <line x1="520" y1="120" x2="760" y2="280" stroke="rgba(79,156,249,0.07)" strokeWidth="0.8"/>
+            <line x1="760" y1="280" x2="920" y2="140" stroke="rgba(79,156,249,0.07)" strokeWidth="0.8"/>
+            <line x1="920" y1="140" x2="1200" y2="200" stroke="rgba(79,156,249,0.07)" strokeWidth="0.8"/>
+            <line x1="760" y1="280" x2="1060" y2="400" stroke="rgba(79,156,249,0.07)" strokeWidth="0.8"/>
+            <line x1="1060" y1="400" x2="1200" y2="200" stroke="rgba(79,156,249,0.07)" strokeWidth="0.8"/>
+            <line x1="1200" y1="200" x2="1380" y2="340" stroke="rgba(79,156,249,0.07)" strokeWidth="0.8"/>
+            {/* Lower backbone */}
+            <line x1="200" y1="180" x2="100" y2="540" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="380" y1="420" x2="100" y2="540" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="380" y1="420" x2="600" y2="580" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="760" y1="280" x2="600" y2="580" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="760" y1="280" x2="880" y2="620" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="600" y1="580" x2="880" y2="620" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="1060" y1="400" x2="880" y2="620" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="1060" y1="400" x2="1100" y2="550" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="1200" y1="200" x2="1100" y2="550" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="880" y1="620" x2="1100" y2="550" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="1380" y1="340" x2="1350" y2="640" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            <line x1="1100" y1="550" x2="1350" y2="640" stroke="rgba(79,156,249,0.05)" strokeWidth="0.7"/>
+            {/* Upper animated sparks */}
             <line x1="200" y1="180" x2="520" y2="120" className="mn-spark-line sp1"/>
             <line x1="520" y1="120" x2="760" y2="280" className="mn-spark-line sp2"/>
             <line x1="380" y1="420" x2="760" y2="280" className="mn-spark-line sp3"/>
@@ -232,14 +269,42 @@ export default function MNPage() {
             <line x1="760" y1="280" x2="1060" y2="400" className="mn-spark-line sp6"/>
             <line x1="1060" y1="400" x2="1200" y2="200" className="mn-spark-line sp7"/>
             <line x1="1200" y1="200" x2="1380" y2="340" className="mn-spark-line sp8"/>
-            {[
-              [200,180,3.5],[380,420,3],[520,120,3.5],[760,280,5],[920,140,4],[1060,400,3.5],[1200,200,4.5],[1380,340,3]
-            ].map(([cx,cy,r],i) => (
+            {/* Lower animated sparks */}
+            <line x1="380" y1="420" x2="600" y2="580" className="mn-spark-line sp9"/>
+            <line x1="760" y1="280" x2="600" y2="580" className="mn-spark-line sp10"/>
+            <line x1="760" y1="280" x2="880" y2="620" className="mn-spark-line sp11"/>
+            <line x1="1060" y1="400" x2="880" y2="620" className="mn-spark-line sp12"/>
+            <line x1="1060" y1="400" x2="1100" y2="550" className="mn-spark-line sp13"/>
+            <line x1="1100" y1="550" x2="1350" y2="640" className="mn-spark-line sp14"/>
+            {/* All nodes */}
+            {([
+              [200,180,3.5],[380,420,3],[520,120,3.5],[760,280,5],[920,140,4],[1060,400,3.5],[1200,200,4.5],[1380,340,3],
+              [100,540,2.5],[600,580,3.5],[880,620,3],[1100,550,3.5],[1350,640,2.5]
+            ] as [number,number,number][]).map(([cx,cy,r],i) => (
               <circle key={i} cx={cx} cy={cy} r={r} fill="rgba(79,156,249,0.18)"/>
             ))}
+            {/* Pulse rings */}
             <circle cx="200"  cy="180" r="9" className="mn-node-pulse"/>
             <circle cx="760"  cy="280" r="9" className="mn-node-pulse d2"/>
             <circle cx="1200" cy="200" r="9" className="mn-node-pulse d3"/>
+            <circle cx="600"  cy="580" r="9" className="mn-node-pulse d4"/>
+            <circle cx="1100" cy="550" r="9" className="mn-node-pulse d5"/>
+            {/* Traveling dots */}
+            <circle r="2.5" fill="#4F9CF9" opacity="0.8"><animateMotion dur="4s" repeatCount="indefinite" path="M200,180 L520,120"/></circle>
+            <circle r="2"   fill="#4F9CF9" opacity="0.6"><animateMotion dur="6s" repeatCount="indefinite" begin="-2s" path="M520,120 L760,280"/></circle>
+            <circle r="2.5" fill="#3DCC91" opacity="0.7"><animateMotion dur="5s" repeatCount="indefinite" begin="-1s" path="M760,280 L920,140"/></circle>
+            <circle r="2"   fill="#4F9CF9" opacity="0.65"><animateMotion dur="7s" repeatCount="indefinite" begin="-3s" path="M920,140 L1200,200"/></circle>
+            <circle r="2.5" fill="#8264F0" opacity="0.6"><animateMotion dur="5.5s" repeatCount="indefinite" begin="-1.5s" path="M760,280 L1060,400"/></circle>
+            <circle r="2"   fill="#4F9CF9" opacity="0.55"><animateMotion dur="6.5s" repeatCount="indefinite" begin="-4s" path="M1060,400 L1200,200"/></circle>
+            <circle r="2"   fill="#F0B429" opacity="0.6"><animateMotion dur="8s" repeatCount="indefinite" begin="-2s" path="M1200,200 L1380,340"/></circle>
+            <circle r="2"   fill="#4F9CF9" opacity="0.45"><animateMotion dur="5.5s" repeatCount="indefinite" begin="-0.8s" path="M380,420 L600,580"/></circle>
+            <circle r="2.5" fill="#3DCC91" opacity="0.45"><animateMotion dur="7.5s" repeatCount="indefinite" begin="-3.5s" path="M760,280 L880,620"/></circle>
+            <circle r="2"   fill="#8264F0" opacity="0.4"><animateMotion dur="6s" repeatCount="indefinite" begin="-2.5s" path="M1060,400 L1100,550"/></circle>
+            <circle r="2"   fill="#4F9CF9" opacity="0.45"><animateMotion dur="8.5s" repeatCount="indefinite" begin="-5s" path="M1100,550 L1350,640"/></circle>
+            {/* Reverse-direction dots */}
+            <circle r="1.8" fill="#4F9CF9" opacity="0.4"><animateMotion dur="5.5s" repeatCount="indefinite" begin="-0.5s" path="M1060,400 L760,280"/></circle>
+            <circle r="1.8" fill="#3DCC91" opacity="0.35"><animateMotion dur="7s" repeatCount="indefinite" begin="-3s" path="M1200,200 L920,140"/></circle>
+            <circle r="1.8" fill="#4F9CF9" opacity="0.35"><animateMotion dur="9s" repeatCount="indefinite" begin="-4.5s" path="M880,620 L600,580"/></circle>
           </svg>
         </div>
 
@@ -619,6 +684,65 @@ export default function MNPage() {
               <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, color: C.green, textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: 0, fontWeight: 500 }}>Minneapolis Pilot · Summer 2026</p>
               <p style={{ fontSize: 12, color: C.text3, margin: 0 }}>IRB-guided · HIPAA-compliant · Real care facilities · Real outcomes</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <Divider/>
+
+      {/* ── OFFICE OF DISCOVERY AND TRANSLATION ── */}
+      <section style={{ padding: '80px 48px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: C.text4, margin: '0 0 20px' }}>University Ecosystem · Technology Partners</p>
+          <h2 style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 'clamp(40px, 5.5vw, 76px)', letterSpacing: '-0.035em', lineHeight: 1.05, margin: '0 0 10px' }}>
+            Office of Discovery<br/><em style={{ fontStyle: 'italic', color: C.text2 }}>and Translation</em>
+          </h2>
+          <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: C.text3, margin: '0 0 56px' }}>at the University of Minnesota</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 28 }}>
+
+            {/* UMN ODT */}
+            <div style={{ padding: '28px 32px', border: `1px solid ${C.lineStrg}`, borderRadius: 12, background: C.surf1 }}>
+              <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: 'rgba(122,0,25,0.75)', margin: '0 0 14px' }}>University of Minnesota</p>
+              <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', color: C.text, margin: '0 0 16px', lineHeight: 1.2 }}>Office of Discovery<br/>and Translation</p>
+              <p style={{ fontSize: 14, fontStyle: 'italic', color: C.text3, paddingLeft: 14, borderLeft: '2px solid rgba(122,0,25,0.4)', lineHeight: 1.65, margin: '0 0 20px' }}>
+                Facilitating the transfer of university-developed technologies into products and services that benefit society — and supporting Ambient Intelligence's PCT filing and commercialization strategy.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
+                {['Technology Transfer', 'PCT Management', 'Commercialization'].map(tag => (
+                  <Tag key={tag} color="rgba(122,0,25,0.7)" bg="rgba(122,0,25,0.10)">{tag}</Tag>
+                ))}
+              </div>
+            </div>
+
+            {/* EI Microcircuits */}
+            <div style={{ padding: '28px 32px', border: `1px solid ${C.lineStrg}`, borderRadius: 12, background: C.surf1 }}>
+              <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: 'rgba(240,180,41,0.75)', margin: '0 0 14px' }}>Manufacturing Partner</p>
+              <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', color: C.text, margin: '0 0 16px', lineHeight: 1.2 }}>EI Microcircuits</p>
+              <p style={{ fontSize: 14, fontStyle: 'italic', color: C.text3, paddingLeft: 14, borderLeft: '2px solid rgba(240,180,41,0.4)', lineHeight: 1.65, margin: '0 0 20px' }}>
+                Advanced electronic manufacturing, PCB assembly, and hardware fabrication services — bringing Ambient Intelligence's sensor and IoT hardware from prototype to production-ready.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
+                {['PCB Assembly', 'Hardware Fabrication', 'IoT Manufacturing'].map(tag => (
+                  <Tag key={tag} color="rgba(240,180,41,0.75)" bg="rgba(240,180,41,0.10)">{tag}</Tag>
+                ))}
+              </div>
+            </div>
+
+            {/* Gasket Studio */}
+            <div style={{ padding: '28px 32px', border: `1px solid ${C.lineStrg}`, borderRadius: 12, background: C.surf1 }}>
+              <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: 'rgba(79,156,249,0.75)', margin: '0 0 14px' }}>Digital Engineering</p>
+              <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', color: C.text, margin: '0 0 16px', lineHeight: 1.2 }}>Gasket Studio</p>
+              <p style={{ fontSize: 14, fontStyle: 'italic', color: C.text3, paddingLeft: 14, borderLeft: `2px solid ${C.accentSoft}`, lineHeight: 1.65, margin: '0 0 20px' }}>
+                Partnering on digital product engineering — UI/UX design, software architecture, and technology delivery — ensuring Ambient Intelligence's platform meets the highest standards of clinical usability.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
+                {['Product Engineering', 'UI/UX Design', 'Software Architecture'].map(tag => (
+                  <Tag key={tag} color="rgba(79,156,249,0.75)" bg="rgba(79,156,249,0.10)">{tag}</Tag>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
