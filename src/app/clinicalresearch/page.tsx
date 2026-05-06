@@ -633,7 +633,7 @@ export default function ClinicalResearchPage() {
               </div>
             </div>
             <div className="cr-cta-right">
-              <button className="cr-btn-primary">Get Early Access</button>
+              <Link href="/clinicalresearch/app" className="cr-btn-primary">Launch Workspace →</Link>
               <button className="cr-btn-secondary">View Templates</button>
             </div>
           </div>
