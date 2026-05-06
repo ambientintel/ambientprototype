@@ -382,7 +382,7 @@ export default function MNPage() {
 
       {/* ── MINNESOTA PARTNERSHIP grant ── */}
       <section style={{ padding: '80px 48px', background: C.surf1 }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 40, alignItems: 'center' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 40, alignItems: 'start' }}>
           <div>
             <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: C.text4, margin: '0 0 16px' }}>Research Grant · Non-Dilutive</p>
             <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 'clamp(56px, 7vw, 88px)', letterSpacing: '-0.04em', color: C.text, margin: '0 0 6px', lineHeight: 1 }}>$248K</p>
@@ -414,6 +414,25 @@ export default function MNPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
               {['Top 10 U.S. Accelerator', '600+ Portfolio Cos.', 'Capital & Coaching'].map(tag => (
                 <Tag key={tag} color="rgba(163,230,53,0.65)" bg="rgba(156,204,101,0.10)">{tag}</Tag>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: C.text4, margin: '0 0 16px' }}>Angel Investment · Early Stage</p>
+            <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 'clamp(56px, 7vw, 88px)', letterSpacing: '-0.04em', color: C.gold, margin: '0 0 6px', lineHeight: 1 }}>$50K</p>
+            <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: C.text3, margin: '0 0 28px' }}>Strategic Angel Investors</p>
+            <p style={{ fontSize: 14, fontStyle: 'italic', color: C.text3, margin: '0 0 16px', paddingLeft: 14, borderLeft: `2px solid rgba(240,180,41,0.4)`, lineHeight: 1.6 }}>
+              Backed by experienced operators and clinicians who bring capital, network, and domain expertise
+              to accelerate commercialization.
+            </p>
+            <p style={{ fontSize: 15, lineHeight: 1.7, color: C.text2, margin: '0 0 20px' }}>
+              Greg Shultz — Gasket Studios<br/>
+              Dr. Simon Mittal, MD
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
+              {['Angel Capital', 'Operator Network', 'Clinical Expertise'].map(tag => (
+                <Tag key={tag} color="rgba(240,180,41,0.75)" bg="rgba(240,180,41,0.10)">{tag}</Tag>
               ))}
             </div>
           </div>
