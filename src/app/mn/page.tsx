@@ -1,4 +1,96 @@
 'use client';
+import { useId } from 'react';
+
+// ── Data visualizations (from /invest Flagship Product section) ───────────────
+
+function toPoints(values: number[], w: number, h: number, max: number) {
+  return values.map((v, i) => `${(i / (values.length - 1)) * w},${h - (v / max) * h}`).join(' ');
+}
+
+function VitalsTrend() {
+  const id = useId();
+  const g1 = `vt-g1-${id}`; const g2 = `vt-g2-${id}`;
+  const a = [42, 58, 53, 67, 61, 75, 68, 82, 77, 89, 72, 80, 86, 78, 91];
+  const b = [30, 38, 34, 44, 40, 52, 47, 59, 54, 63, 50, 57, 62, 55, 67];
+  const w = 400; const h = 90; const max = 100;
+  const pa = toPoints(a, w, h, max); const pb = toPoints(b, w, h, max);
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+      <defs>
+        <linearGradient id={g1} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4F9CF9" stopOpacity="0.35"/><stop offset="100%" stopColor="#4F9CF9" stopOpacity="0"/>
+        </linearGradient>
+        <linearGradient id={g2} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#3DCC91" stopOpacity="0.22"/><stop offset="100%" stopColor="#3DCC91" stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${h} ${pa} ${w},${h}`} fill={`url(#${g1})`}/>
+      <polyline points={pa} fill="none" stroke="#4F9CF9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <polygon points={`0,${h} ${pb} ${w},${h}`} fill={`url(#${g2})`}/>
+      <polyline points={pb} fill="none" stroke="#3DCC91" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 2"/>
+    </svg>
+  );
+}
+
+function AnomalyChart() {
+  const id = useId(); const gid = `an-g-${id}`;
+  const base = [48,51,49,52,50,53,51,49,52,50,51,50,48,52,51];
+  const pts = base.map((v, i) => i === 9 ? 79 : i === 10 ? 83 : v);
+  const w = 400; const h = 90; const max = 100;
+  const path = toPoints(pts, w, h, max);
+  const markers = [9, 10].map(i => ({ cx: (i / (pts.length - 1)) * w, cy: h - ((pts[i] ?? 0) / max) * h }));
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(232,240,255,0.08)"/><stop offset="100%" stopColor="rgba(232,240,255,0)"/>
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${h} ${path} ${w},${h}`} fill={`url(#${gid})`}/>
+      <polyline points={path} fill="none" stroke="rgba(232,240,255,0.38)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      {markers.map((m, i) => <circle key={i} cx={m.cx} cy={m.cy} r="4.5" fill="#FF6680" stroke="#0E1830" strokeWidth="2"/>)}
+    </svg>
+  );
+}
+
+function ActivityHeatmap() {
+  const seed = [
+    [0.1,0.2,0.3,0.5,0.8,0.9,0.7,0.6,0.5,0.7,0.8,0.6,0.4,0.2],
+    [0.05,0.1,0.2,0.4,0.7,0.95,0.9,0.8,0.7,0.85,0.9,0.7,0.3,0.15],
+    [0.1,0.15,0.25,0.45,0.75,0.85,0.8,0.75,0.65,0.8,0.85,0.65,0.35,0.1],
+    [0.08,0.12,0.22,0.42,0.72,0.82,0.78,0.72,0.62,0.78,0.82,0.62,0.32,0.12],
+    [0.05,0.1,0.18,0.35,0.65,0.78,0.72,0.65,0.55,0.72,0.78,0.58,0.28,0.1],
+  ];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+      {seed.map((row, r) => (
+        <div key={r} style={{ display: 'flex', gap: 3 }}>
+          {row.map((v, c) => (
+            <div key={c} style={{ flex: 1, aspectRatio: '1', borderRadius: 2, background: `rgba(79,156,249,${(0.08 + v * 0.82).toFixed(2)})` }}/>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CircleGauge({ value, label, color }: { value: number; label: string; color: string }) {
+  const id = useId();
+  const r = 26; const circ = 2 * Math.PI * r; const offset = circ - (value / 100) * circ;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+      <svg key={id} width="68" height="68" viewBox="0 0 68 68">
+        <circle cx="34" cy="34" r={r} fill="none" stroke="rgba(232,240,255,0.07)" strokeWidth="6"/>
+        <circle cx="34" cy="34" r={r} fill="none" stroke={color} strokeWidth="6"
+          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" transform="rotate(-90 34 34)"/>
+        <text x="34" y="38" textAnchor="middle" fontSize="13" fontWeight="600" fill="#E8F0FF" fontFamily="var(--mono, monospace)">{value}%</text>
+      </svg>
+      <span style={{ fontSize: 10, fontFamily: 'var(--mono, monospace)', color: 'rgba(232,240,255,0.42)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>{label}</span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const C = {
   bg:       '#0E1830',
@@ -419,62 +511,94 @@ export default function MNPage() {
 
       <Divider/>
 
-      {/* ── ELLA MEMORY ── */}
+      {/* ── ELLA AI NURSE ASSISTANT ── */}
       <section style={{ padding: '80px 48px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 56, alignItems: 'center' }}>
+
+          {/* Header */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 56, alignItems: 'end', marginBottom: 48 }}>
             <div>
               <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: C.text4, margin: '0 0 16px' }}>Flagship Product</p>
-              <h2 style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 'clamp(32px, 3.5vw, 48px)', lineHeight: 1.1, letterSpacing: '-0.025em', margin: '0 0 24px' }}>
-                Ella <em style={{ fontStyle: 'italic', color: C.text2 }}>Memory</em>
+              <h2 style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 'clamp(32px, 3.5vw, 48px)', lineHeight: 1.1, letterSpacing: '-0.025em', margin: '0 0 20px' }}>
+                Ella AI <em style={{ fontStyle: 'italic', color: C.text2 }}>Nurse Assistant</em>
               </h2>
-              <p style={{ fontSize: 16, lineHeight: 1.75, color: C.text2, margin: '0 0 28px' }}>
-                Our patient-facing intelligent care companion. Ella Memory continuously observes patient
-                behavior using ambient room sensors — no cameras, no wearables — and surfaces meaningful
-                patterns to care teams in real time.
+              <p style={{ fontSize: 16, lineHeight: 1.75, color: C.text2, margin: 0 }}>
+                Our patient-facing intelligent care companion — a purpose-built platform that continuously
+                observes, learns, and communicates meaningful patterns to care teams in real time,
+                without disrupting the human moments that matter most.
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10, marginBottom: 32 }}>
-                {[
-                  'Ambient room sensors — completely passive',
-                  'Nurse dashboard with live resident status',
-                  'AI-powered behavioral trend analysis',
-                  'Privacy by architecture — PHI never in transit',
-                  'Minneapolis pilot launching Summer 2026',
-                ].map((item) => (
-                  <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                    <span style={{ color: C.green, fontSize: 14, marginTop: 2, flexShrink: 0 }}>—</span>
-                    <span style={{ fontSize: 15, color: C.text2 }}>{item}</span>
-                  </div>
-                ))}
-              </div>
-              <a href="https://www.ellamemory.com/" target="_blank" rel="noopener noreferrer" className="mn-text-link" style={{ fontFamily: 'var(--mono, monospace)', fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+              {[
+                'Ambient room sensors — no cameras, no wearables',
+                'Nurse dashboard with prioritized resident list and live vitals',
+                'Behavioral trend analysis over days, weeks, and months',
+                'Privacy by architecture — PHI never in transit',
+                'Minneapolis pilot launching Summer 2026',
+              ].map((item) => (
+                <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <span style={{ color: C.green, fontSize: 14, marginTop: 2, flexShrink: 0 }}>—</span>
+                  <span style={{ fontSize: 15, color: C.text2 }}>{item}</span>
+                </div>
+              ))}
+              <a href="https://www.ellamemory.com/" target="_blank" rel="noopener noreferrer" className="mn-text-link" style={{ fontFamily: 'var(--mono, monospace)', fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginTop: 8 }}>
                 ellamemory.com ↗
               </a>
             </div>
+          </div>
 
-            <div style={{ border: `1px solid ${C.lineStrg}`, borderRadius: 20, overflow: 'hidden', background: C.surf1 }}>
-              <div style={{ padding: '24px 28px', borderBottom: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontFamily: 'var(--mono, monospace)', fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: C.text3 }}>Ella Memory · Live</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.text3 }}>
-                  <span className="mn-live" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: C.green }}/>
-                  Active
-                </span>
-              </div>
-              {[
-                { label: 'Avg. Response Time', value: '< 2s',  color: C.accent },
-                { label: 'Uptime SLA',          value: '99.9%', color: C.green  },
-                { label: 'Detection Accuracy',   value: '94%',  color: C.violet },
-                { label: 'Residents / Node',     value: '12',   color: C.gold   },
-              ].map((m, i) => (
-                <div key={m.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', borderBottom: i < 3 ? `1px solid ${C.line}` : 'none' }}>
-                  <span style={{ fontSize: 14, color: C.text2 }}>{m.label}</span>
-                  <span style={{ fontFamily: 'var(--serif, Georgia, serif)', fontSize: 28, fontWeight: 300, letterSpacing: '-0.03em', color: m.color }}>{m.value}</span>
+          {/* Dashboard preview */}
+          <div style={{ border: `1px solid ${C.lineStrg}`, borderRadius: 20, overflow: 'hidden', background: C.surf1 }}>
+            {/* Header bar */}
+            <div style={{ padding: '18px 28px', borderBottom: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: 'var(--mono, monospace)', fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: C.text3 }}>Ella AI Nurse Assistant · Live Dashboard</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.text3 }}>
+                <span className="mn-live" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: C.green }}/>
+                Active
+              </span>
+            </div>
+
+            {/* Vitals chart — full width */}
+            <div style={{ padding: '24px 28px', borderBottom: `1px solid ${C.line}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: C.text3, margin: 0 }}>Resident Vitals — Live Feed</p>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: C.text3 }}>
+                    <span style={{ display: 'inline-block', width: 20, height: 2, background: C.accent, borderRadius: 2 }}/>Activity Index
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: C.text3 }}>
+                    <span style={{ display: 'inline-block', width: 20, height: 2, background: C.green, borderRadius: 2, opacity: 0.7 }}/>Rest Quality
+                  </span>
                 </div>
-              ))}
-              <div style={{ padding: '16px 28px', background: C.greenSoft, borderTop: `1px solid rgba(63,204,145,0.15)` }}>
-                <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, color: C.green, textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: '0 0 3px', fontWeight: 500 }}>Minneapolis Pilot · Summer 2026</p>
-                <p style={{ fontSize: 13, color: C.text3, margin: 0 }}>IRB-guided · HIPAA-compliant · Real care facilities</p>
               </div>
+              <div style={{ height: 90 }}><VitalsTrend/></div>
+            </div>
+
+            {/* Second row: anomaly + heatmap + gauges */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: `1px solid ${C.line}` }}>
+              <div style={{ padding: '20px 24px', borderRight: `1px solid ${C.line}` }}>
+                <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: C.text3, margin: '0 0 12px' }}>Anomaly Detection</p>
+                <div style={{ height: 72 }}><AnomalyChart/></div>
+                <p style={{ fontSize: 11, color: C.text4, margin: '8px 0 0' }}>Z-score threshold events</p>
+              </div>
+              <div style={{ padding: '20px 24px', borderRight: `1px solid ${C.line}` }}>
+                <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: C.text3, margin: '0 0 12px' }}>Activity Heatmap</p>
+                <div style={{ paddingTop: 4 }}><ActivityHeatmap/></div>
+                <p style={{ fontSize: 11, color: C.text4, margin: '8px 0 0' }}>14-day behavioral grid</p>
+              </div>
+              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: C.text3, margin: '0 0 12px', alignSelf: 'flex-start' }}>Model Accuracy</p>
+                <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
+                  <CircleGauge value={94} label="Detection" color={C.accent}/>
+                  <CircleGauge value={87} label="Precision" color={C.green}/>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer bar */}
+            <div style={{ padding: '14px 28px', background: C.greenSoft, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, color: C.green, textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: 0, fontWeight: 500 }}>Minneapolis Pilot · Summer 2026</p>
+              <p style={{ fontSize: 12, color: C.text3, margin: 0 }}>IRB-guided · HIPAA-compliant · Real care facilities · Real outcomes</p>
             </div>
           </div>
         </div>
