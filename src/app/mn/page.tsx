@@ -102,10 +102,7 @@ export default function MNPage() {
 
       {/* ── NAV ── */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 48px', height: 60, background: `rgba(14,24,48,0.84)`, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.line}` }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div style={{ width: 28, height: 28, borderRadius: 6, background: `linear-gradient(135deg, ${C.accent}, ${C.violet})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="white" strokeWidth="1.3"/><circle cx="7" cy="7" r="2.2" fill="white"/></svg>
-          </div>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           <span style={{ fontFamily: 'var(--serif, Georgia, serif)', fontSize: 15, fontWeight: 300, color: C.text, letterSpacing: '-0.01em' }}>Ambient <em style={{ fontStyle: 'italic', color: C.text2 }}>Intelligence</em></span>
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
