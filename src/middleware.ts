@@ -44,6 +44,7 @@ export default authkitMiddleware({
       "/bom",
       "/control",
       "/apparchive",
+      "/archive",
       "/api/push/(.*)",
     ],
   },
