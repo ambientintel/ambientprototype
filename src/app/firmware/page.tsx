@@ -615,14 +615,7 @@ export default function FirmwarePage() {
         {/* Brand */}
         <div style={{ marginBottom: 18 }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '4px 6px', marginBottom: 14 }}>
-              <div style={{ width: 27, height: 27, borderRadius: 6, background: '#EFF6FF', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <rect x="2" y="3" width="10" height="1.5" rx="0.75" fill="#2563EB"/>
-                  <rect x="2" y="6.5" width="7" height="1.5" rx="0.75" fill="#2563EB" opacity="0.6"/>
-                  <rect x="2" y="10" width="5" height="1.5" rx="0.75" fill="#2563EB" opacity="0.35"/>
-                </svg>
-              </div>
+            <div style={{ padding: '4px 6px', marginBottom: 14 }}>
               <span style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 14, color: '#111827', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
                 Ambient <em style={{ color: '#6B7280' }}>Firmware</em>
               </span>
