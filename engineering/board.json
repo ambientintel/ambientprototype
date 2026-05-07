@@ -149,6 +149,21 @@
       "description": "",
       "created": "May 7",
       "updated": "May 7"
+    },
+    {
+      "id": "ENG-L1778190964776",
+      "type": "task",
+      "title": "power circuit development",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Hanna",
+      "assigneeInitial": "H",
+      "assigneeColor": "#F472B6",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 7",
+      "updated": "May 7"
     }
   ],
   "personalTasks": {
@@ -167,7 +182,9 @@
       "Test lambda function",
       "IAC aws git research"
     ],
-    "Hanna": []
+    "Hanna": [
+      "power circuit development"
+    ]
   },
   "completedTasks": {
     "Brian": []
