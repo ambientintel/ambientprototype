@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import Link from 'next/link';
 
 // ── Topographic canvas background ──────────────────────────────────────────────
@@ -71,6 +71,16 @@ const SC: Record<StepStatus, { label: string; bg: string; border: string; color:
   pending: { label: 'Pending',     bg: '#FFFBEB', border: '#FDE68A', color: '#D97706', dot: '#D97706' },
   blocked: { label: 'Blocked',     bg: '#FEF2F2', border: '#FECACA', color: '#DC2626', dot: '#DC2626' },
   warning: { label: 'Attention',   bg: '#FFF7ED', border: '#FED7AA', color: '#EA580C', dot: '#EA580C' },
+};
+
+// ── Phase config ───────────────────────────────────────────────────────────────
+const PHASES = ['Setup', 'PCB', 'Enclosure', 'Assembly', 'Validation'] as const;
+const PHASE_COLORS: Record<string, { text: string; bg: string; border: string }> = {
+  Setup:      { text: '#15803D', bg: '#F0FDF4', border: '#A7F3D0' },
+  PCB:        { text: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  Enclosure:  { text: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
+  Assembly:   { text: '#C2410C', bg: '#FFF7ED', border: '#FED7AA' },
+  Validation: { text: '#9D174D', bg: '#FDF2F8', border: '#FBCFE8' },
 };
 
 // ── Step data ─────────────────────────────────────────────────────────────────
@@ -383,7 +393,7 @@ const HW_SPECS = [
   { label: 'Compute Module', value: 'OSD62x-PM', sub: 'AM62x · 1 GB DDR4 · 500-ball BGA' },
   { label: 'Radar SoC', value: 'IWR6843AOP', sub: '60 GHz · AOP antenna · ±60° FOV' },
   { label: 'Enclosure', value: 'IP42', sub: 'ABS + 6061-T6 Al bracket · ≤ 35 mm' },
-  { label: 'Revision', value: 'Rev A', sub: 'Prototype → production via Rev B' },
+  { label: 'Revision', value: 'Rev A → B', sub: 'EVT prototype · production via Rev B' },
 ];
 
 const CHECKLIST = [
@@ -391,16 +401,24 @@ const CHECKLIST = [
   { done: true,  text: 'Power budget approved' },
   { done: true,  text: 'Interface matrix signed off' },
   { done: true,  text: 'Schematic sheets 01–02 done' },
-  { done: false, text: 'Schematic sheets 03–04 complete' },
   { done: true,  text: 'ERC: 0 errors' },
+  { done: false, text: 'Schematic sheets 03–05 complete' },
   { done: false, text: 'DRC: 0 errors, 0 warnings' },
-  { done: false, text: 'Controlled-impedance verified' },
-  { done: false, text: 'BOM critical parts ordered' },
-  { done: false, text: 'Enclosure CAD: PCB outline locked' },
-  { done: false, text: 'Gerber package generated' },
-  { done: false, text: 'First-article boards received' },
-  { done: false, text: 'Electrical validation pass' },
-  { done: false, text: 'EMC pre-scan pass' },
+  { done: false, text: 'Controlled-impedance verified (SI9000)' },
+  { done: false, text: 'BOM: all critical parts received' },
+  { done: false, text: 'PCB outline locked for enclosure CAD' },
+  { done: false, text: 'Enclosure SolidWorks assembly complete' },
+  { done: false, text: 'FDM prototype printed + fit-checked' },
+  { done: false, text: 'Harness crimped + continuity checked' },
+  { done: false, text: 'Gerber package generated + DFM reviewed' },
+  { done: false, text: 'First-article boards received from fab' },
+  { done: false, text: 'Power-on: all rails nominal' },
+  { done: false, text: 'Compute bring-up: Linux boot confirmed' },
+  { done: false, text: 'Radar bring-up: SPI frames arriving' },
+  { done: false, text: 'Electrical validation pass (all 6 tests)' },
+  { done: false, text: 'Mechanical fit-check pass' },
+  { done: false, text: 'EMC pre-scan: 6 dB margin to FCC limits' },
+  { done: false, text: 'EVT sign-off — ready for DVT' },
 ];
 
 const OPEN_DECISIONS = [
@@ -411,13 +429,51 @@ const OPEN_DECISIONS = [
 ];
 
 const TAGS = ['All', 'Setup', 'PCB', 'Enclosure', 'Assembly', 'Validation'];
-const TAG_COLORS: Record<string, { bg: string; color: string }> = {
-  Setup:      { bg: '#F0FDF4', color: '#15803D' },
-  PCB:        { bg: '#EFF6FF', color: '#1D4ED8' },
-  Enclosure:  { bg: '#FAF5FF', color: '#7E22CE' },
-  Assembly:   { bg: '#FFF7ED', color: '#C2410C' },
-  Validation: { bg: '#FDF2F8', color: '#9D174D' },
-};
+
+// ── Pipeline strip ─────────────────────────────────────────────────────────────
+function PipelineStrip({ steps, active, onSelect }: { steps: Step[]; active: string; onSelect: (id: string) => void }) {
+  return (
+    <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, padding: '16px 28px 18px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflowX: 'auto' }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#9CA3AF', marginBottom: 12 }}>Build Pipeline · EVT Rev A</div>
+      <div style={{ display: 'flex', alignItems: 'center', minWidth: 560 }}>
+        {PHASES.map((phase, pi) => {
+          const phaseSteps = steps.filter(s => s.tag === phase);
+          const pc = PHASE_COLORS[phase];
+          const allDone = phaseSteps.every(s => s.status === 'done');
+          const anyActive = phaseSteps.some(s => s.status === 'active');
+          const lineColor = allDone ? '#059669' : anyActive ? '#2563EB' : '#E5E7EB';
+          const isLast = pi === PHASES.length - 1;
+
+          return (
+            <div key={phase} style={{ display: 'flex', alignItems: 'center', flex: isLast ? 0 : 1 }}>
+              {/* Phase block */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: pc.text, fontWeight: 600 }}>{phase}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {phaseSteps.map(s => {
+                    const sc = SC[s.status];
+                    const isActive = active === s.id;
+                    return (
+                      <button key={s.id} onClick={() => onSelect(s.id)} title={s.title}
+                        style={{ width: 32, height: 32, borderRadius: '50%', border: isActive ? `2px solid ${sc.dot}` : `1.5px solid ${isActive ? sc.border : 'rgba(0,0,0,0.1)'}`, background: isActive ? sc.bg : '#F8FAFC', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'all 0.14s', boxShadow: isActive ? `0 0 0 3px ${sc.bg}` : 'none' }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: isActive ? sc.color : '#6B7280', fontWeight: 600, lineHeight: 1 }}>{s.phase}</span>
+                        <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: sc.dot, border: '1.5px solid #FFFFFF' }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Connector line */}
+              {!isLast && (
+                <div style={{ flex: 1, height: 2, minWidth: 24, background: `linear-gradient(90deg, ${lineColor}, #E5E7EB)`, margin: '16px 8px 0', borderRadius: 2, opacity: 0.7 }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function MechanicalPage() {
@@ -426,7 +482,7 @@ export default function MechanicalPage() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const step = STEPS.find(s => s.id === active)!;
-  const visibleSteps = filterTag === 'All' ? STEPS : STEPS.filter(s => s.tag === filterTag);
+  const filteredSteps = filterTag === 'All' ? STEPS : STEPS.filter(s => s.tag === filterTag);
   const doneCount = CHECKLIST.filter(c => c.done).length;
 
   function toggle(key: string) { setCollapsed(p => ({ ...p, [key]: !p[key] })); }
@@ -461,7 +517,7 @@ export default function MechanicalPage() {
           {/* Progress */}
           <div style={{ padding: '10px 12px', background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.07)', borderRadius: 10, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9CA3AF' }}>Build Progress</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9CA3AF' }}>EVT Progress</span>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#059669', fontWeight: 600 }}>{doneCount}/{CHECKLIST.length}</span>
             </div>
             <div style={{ height: 4, borderRadius: 2, background: '#E5E7EB' }}>
@@ -482,17 +538,30 @@ export default function MechanicalPage() {
           </div>
         </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {visibleSteps.map(s => {
-            const sc = SC[s.status];
-            const isActive = active === s.id;
+        {/* Phase-grouped nav */}
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {PHASES.map(phase => {
+            const phaseSteps = filteredSteps.filter(s => s.tag === phase);
+            if (phaseSteps.length === 0) return null;
+            const pc = PHASE_COLORS[phase];
             return (
-              <button key={s.id} onClick={() => setActive(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', borderRadius: 7, background: isActive ? '#F0F7FF' : 'transparent', border: isActive ? '1px solid #BFDBFE' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s' }}>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: isActive ? '#2563EB' : '#9CA3AF', minWidth: 16, letterSpacing: '0.04em' }}>{s.phase}</span>
-                <span style={{ flex: 1, fontSize: 12.5, color: isActive ? '#111827' : '#374151', fontWeight: isActive ? 500 : 400 }}>{s.title}</span>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot, flexShrink: 0 }} />
-              </button>
+              <div key={phase} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px 5px', marginBottom: 3 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: pc.text, opacity: 0.5, flexShrink: 0 }} />
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.16em', color: pc.text, fontWeight: 600 }}>{phase}</span>
+                </div>
+                {phaseSteps.map(s => {
+                  const sc = SC[s.status];
+                  const isActive = active === s.id;
+                  return (
+                    <button key={s.id} onClick={() => setActive(s.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', borderRadius: 7, background: isActive ? '#F0F7FF' : 'transparent', border: isActive ? '1px solid #BFDBFE' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s', marginBottom: 1 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: isActive ? '#2563EB' : '#9CA3AF', minWidth: 16, letterSpacing: '0.04em' }}>{s.phase}</span>
+                      <span style={{ flex: 1, fontSize: 12.5, color: isActive ? '#111827' : '#374151', fontWeight: isActive ? 500 : 400 }}>{s.title}</span>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot, flexShrink: 0 }} />
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
@@ -525,7 +594,7 @@ export default function MechanicalPage() {
         </div>
 
         {/* Hardware spec row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 24 }}>
           {HW_SPECS.map(spec => (
             <div key={spec.label} style={{ padding: '14px 16px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF', marginBottom: 5 }}>{spec.label}</div>
@@ -535,6 +604,9 @@ export default function MechanicalPage() {
           ))}
         </div>
 
+        {/* Pipeline strip */}
+        <PipelineStrip steps={STEPS} active={active} onSelect={setActive} />
+
         {/* Two-column layout */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 272px', gap: 24, alignItems: 'start' }}>
 
@@ -543,15 +615,15 @@ export default function MechanicalPage() {
             {/* Step header */}
             {(() => {
               const sc = SC[step.status];
-              const tagStyle = TAG_COLORS[step.tag] || { bg: '#F3F4F6', color: '#374151' };
+              const pc = PHASE_COLORS[step.tag] || { text: '#374151', bg: '#F3F4F6', border: '#E5E7EB' };
               return (
                 <div style={{ padding: '22px 26px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: '#2563EB', letterSpacing: '0.1em', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 4, padding: '3px 9px' }}>
-                        PHASE {step.phase}
+                        STEP {step.phase}
                       </div>
-                      <span style={{ padding: '3px 9px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', background: tagStyle.bg, color: tagStyle.color }}>{step.tag}</span>
+                      <span style={{ padding: '3px 9px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', background: pc.bg, color: pc.text, border: `1px solid ${pc.border}` }}>{step.tag}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 999, background: sc.bg, border: `1px solid ${sc.border}` }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
@@ -675,16 +747,19 @@ export default function MechanicalPage() {
 
           {/* Right panel */}
           <div style={{ position: 'sticky', top: 24 }}>
-            {/* Build checklist */}
+            {/* EVT checklist */}
             <div style={{ padding: '18px 18px 16px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 16 }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF', marginBottom: 14 }}>Build Status</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>EVT Checklist</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#059669', fontWeight: 600 }}>{doneCount}/{CHECKLIST.length}</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {CHECKLIST.map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
                     <div style={{ width: 15, height: 15, borderRadius: 3, border: item.done ? 'none' : '1.5px solid #D1D5DB', background: item.done ? '#059669' : 'transparent', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {item.done && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
-                    <span style={{ fontSize: 12, color: item.done ? '#374151' : '#9CA3AF', lineHeight: 1.45 }}>{item.text}</span>
+                    <span style={{ fontSize: 11.5, color: item.done ? '#374151' : '#9CA3AF', lineHeight: 1.45 }}>{item.text}</span>
                   </div>
                 ))}
               </div>
