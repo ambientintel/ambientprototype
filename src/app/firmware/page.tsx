@@ -9,7 +9,8 @@ function LissajousCanvas() {
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
+    const el = canvas;
+    const ctx = el.getContext('2d')!;
     let raf: number;
     let t = 0;
 
@@ -24,19 +25,19 @@ function LissajousCanvas() {
     ];
 
     function resize() {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      el.width = el.offsetWidth;
+      el.height = el.offsetHeight;
     }
     resize();
     window.addEventListener('resize', resize);
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, el.width, el.height);
       t += 0.003;
 
       figures.forEach(fig => {
-        const cx = fig.cx * canvas.width;
-        const cy = fig.cy * canvas.height;
+        const cx = fig.cx * el.width;
+        const cy = fig.cy * el.height;
         const delta = fig.phase + t * 0.18;
         const pts = 420;
 
