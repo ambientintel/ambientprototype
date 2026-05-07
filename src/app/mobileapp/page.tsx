@@ -14,13 +14,13 @@ function LissajousCanvas() {
     let raf: number;
     let t = 0;
     const figs = [
-      { a: 3, b: 4, cx: 0.10, cy: 0.25, r: 135, ph: 0.3 },
-      { a: 5, b: 3, cx: 0.52, cy: 0.09, r: 150, ph: 0.7 },
-      { a: 2, b: 5, cx: 0.88, cy: 0.32, r: 110, ph: 1.4 },
-      { a: 4, b: 5, cx: 0.22, cy: 0.78, r: 100, ph: 1.9 },
-      { a: 3, b: 2, cx: 0.68, cy: 0.68, r: 140, ph: 0.5 },
-      { a: 5, b: 4, cx: 0.91, cy: 0.82, r: 90,  ph: 0.1 },
-      { a: 1, b: 3, cx: 0.40, cy: 0.92, r: 120, ph: 2.2 },
+      { a: 2, b: 3, cx: 0.10, cy: 0.20, r: 120, ph: 0.3 },
+      { a: 3, b: 4, cx: 0.52, cy: 0.10, r: 145, ph: 0.7 },
+      { a: 5, b: 3, cx: 0.82, cy: 0.30, r: 110, ph: 1.1 },
+      { a: 1, b: 3, cx: 0.25, cy: 0.72, r: 100, ph: 0.0 },
+      { a: 4, b: 5, cx: 0.65, cy: 0.60, r: 140, ph: 0.5 },
+      { a: 3, b: 2, cx: 0.88, cy: 0.82, r: 90,  ph: 1.6 },
+      { a: 5, b: 4, cx: 0.40, cy: 0.90, r: 120, ph: 2.0 },
     ];
     function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; }
     resize();
@@ -38,7 +38,7 @@ function LissajousCanvas() {
           const y = cy + f.r * Math.sin(f.b * u);
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = 'rgba(13,148,136,0.055)';
+        ctx.strokeStyle = 'rgba(37,99,235,0.06)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
       });
@@ -86,521 +86,376 @@ const SC: Record<StepStatus, { label: string; bg: string; border: string; color:
 };
 
 const TAG_STYLE: Record<string, { bg: string; color: string }> = {
-  'Setup':       { bg: '#F0FDFA', color: '#0F766E' },
-  'Development': { bg: '#ECFDF5', color: '#15803D' },
-  'Feature':     { bg: '#EFF6FF', color: '#1D4ED8' },
-  'Distribution':{ bg: '#FFF7ED', color: '#C2410C' },
+  'PWA':    { bg: '#EFF6FF', color: '#1D4ED8' },
+  'Native': { bg: '#F0FDF4', color: '#15803D' },
+  'iOS':    { bg: '#FFF7ED', color: '#C2410C' },
+  'Ship':   { bg: '#FAF5FF', color: '#7E22CE' },
 };
 
 const PIPELINE_PHASES = [
-  { label: 'Environment',  ids: ['repo', 'env', 'auth'] },
-  { label: 'Development',  ids: ['dev', 'push', 'alerts'] },
-  { label: 'Features',     ids: ['alertlist', 'alertdetail', 'phi'] },
-  { label: 'Distribution', ids: ['build', 'distribute', 'ci'] },
+  { label: 'PWA',    ids: ['manifest', 'service-worker', 'web-push', 'mobile-ui'] },
+  { label: 'Native', ids: ['capacitor', 'ios-build', 'android-build'] },
+  { label: 'iOS',    ids: ['signing', 'apns', 'enterprise-dist'] },
+  { label: 'Ship',   ids: ['testflight', 'prod-build', 'pilot-validation'] },
 ];
 
 // ── Step data ──────────────────────────────────────────────────────────────────
 
 const STEPS: Step[] = [
   {
-    id: 'repo', phase: '01', title: 'Repository Setup', status: 'done', tag: 'Setup', time: '< 5 min',
-    summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. Initialized 2026-04-21 — scaffold only. Implementation begins in subsequent sessions per ambientcloud/docs/study-mvp.md §12.',
+    id: 'manifest', phase: '01', title: 'PWA Manifest', status: 'done', tag: 'PWA', time: '~2 hrs',
+    summary: 'manifest.json configures the PWA identity: name, icons, theme color, display mode, and orientation. Required for Add to Home Screen on iOS and Android and for the install prompt on Chrome.',
     sections: [
       {
-        heading: 'Clone and install',
-        commands: [
-          { label: 'clone and install', code: 'git clone https://github.com/ambientintel/ambientmobile.git\ncd ambientmobile\npnpm install' },
-          { label: 'verify Expo CLI', code: 'npx expo --version\n# → 54.x.x' },
+        heading: 'manifest.json spec',
+        artifacts: [
+          { file: 'apps/web/public/manifest.json', role: 'PWA manifest. name, short_name, icons (192×192 + 512×512), theme_color #0C0D0F, display: standalone.' },
+          { file: 'apps/web/public/icon-192.png',  role: '192×192 maskable icon. Used by Android launcher and as push notification badge.' },
+          { file: 'apps/web/public/icon-512.png',  role: '512×512 splash icon. Required for iOS full-screen launch image.' },
         ],
-        body: 'Node 20+ required. pnpm is the package manager — consistent with ambientweb. No monorepo structure: this is a flat single-app repo with a root package.json.',
+        commands: [
+          { label: 'verify manifest is linked in layout', code: '// apps/web/src/app/layout.tsx\nexport const metadata: Metadata = {\n  manifest: "/manifest.json",\n  appleWebApp: {\n    capable: true,\n    statusBarStyle: "black-translucent",\n    title: "Ambient Alert",\n  },\n};' },
+          { label: 'check manifest parses correctly', code: '# Start dev server then inspect:\ncurl http://localhost:3000/manifest.json | jq .\n# Must return valid JSON with name, icons, display fields' },
+        ],
       },
       {
-        heading: 'Repo layout',
+        heading: 'iOS meta tags',
+        body: 'iOS Safari does not fully respect the manifest for home screen apps. apple-mobile-web-app-capable and apple-touch-icon meta tags must be set explicitly in the <head>. These are wired in apps/web/src/app/layout.tsx via the Next.js Metadata API.',
         table: {
-          cols: ['Path', 'Contents'],
+          cols: ['Meta tag', 'Value', 'Purpose'],
           rows: [
-            ['App.tsx',                'Root React Native component — entry point for screens'],
-            ['index.ts',              'Expo entry point — registers App as the root'],
-            ['app.json',             'Expo configuration — name, slug, icon, splash, permissions'],
-            ['docs/deidentification.md', 'PHI handling policy — what reaches the device and what never does'],
-            ['.env.example',         'Cognito + API + pilot site environment variables'],
-            ['assets/',              'App icons, splash screen, adaptive icon'],
+            ['apple-mobile-web-app-capable',    'yes',                   'Enables full-screen mode on iOS home screen launch'],
+            ['apple-mobile-web-app-status-bar-style', 'black-translucent', 'Extends content under the notch'],
+            ['apple-touch-icon',                '/icon-192.png?v=5',     'Home screen icon — must be PNG, no transparency'],
+            ['theme-color',                     '#0C0D0F',               'Browser chrome color on Android Chrome'],
           ],
         },
+        warnings: [
+          'iOS caches the apple-touch-icon aggressively. Append a cache-busting query param (?v=N) when changing the icon — otherwise nurses see the old icon until they delete and reinstall the PWA.',
+        ],
       },
       {
-        heading: 'Related repos',
-        table: {
-          cols: ['Repo', 'Role'],
-          rows: [
-            ['ambientintel/ambientcloud',    'AWS backend — Cognito user pool, IoT Core, FastAPI'],
-            ['ambientintel/ambientweb',      'Nurse dashboard (Next.js) — name-hydrated views'],
-            ['ambientintel/ambientfirmware', 'TI AM62x + IWR6843AOP device firmware'],
-          ],
-        },
+        heading: 'PWA install prompt (Android / Chrome)',
+        commands: [
+          { label: 'capture beforeinstallprompt', code: '// apps/web/src/components/InstallBanner.tsx\nwindow.addEventListener("beforeinstallprompt", (e) => {\n  e.preventDefault();\n  setDeferredPrompt(e);\n  setShowBanner(true);\n});\n\n// When nurse taps "Add to home screen":\nawait deferredPrompt.prompt();\nconst { outcome } = await deferredPrompt.userChoice;\n// outcome: "accepted" | "dismissed"' },
+        ],
+        warnings: [
+          'beforeinstallprompt does not fire on iOS Safari — Apple requires manual Add to Home Screen from the share sheet. The /mobile install guide page covers the step-by-step iOS flow for nurse onboarding.',
+        ],
       },
     ],
   },
   {
-    id: 'env', phase: '02', title: 'Environment Variables', status: 'done', tag: 'Setup', time: '~10 min',
-    summary: 'Copy .env.example to .env. Cognito pool and client ID from ambientcloud Terraform outputs. All values are non-PHI infrastructure references.',
+    id: 'service-worker', phase: '02', title: 'Service Worker', status: 'done', tag: 'PWA', time: '~1 day',
+    summary: 'The service worker handles three responsibilities: push event display, offline shell caching (CacheFirst), and API request queuing when offline (NetworkFirst with fallback).',
     sections: [
       {
-        heading: 'Required variables',
-        commands: [
-          { label: 'create local env file', code: 'cp .env.example .env' },
+        heading: 'Registration',
+        body: 'The service worker is registered in apps/web/src/app/layout.tsx via an inline script that fires on window load. This ensures registration does not block the initial render.',
+        artifacts: [
+          { file: 'apps/web/public/sw.js', role: 'Service worker. Push handler, install/activate lifecycle, cache strategy, notification click routing.' },
         ],
-        table: {
-          cols: ['Variable', 'Description', 'Where to get it'],
-          rows: [
-            ['EXPO_PUBLIC_COGNITO_REGION',       'AWS region of the Cognito user pool',       'ambientcloud Terraform outputs → cognito_region'],
-            ['EXPO_PUBLIC_COGNITO_USER_POOL_ID', 'Shared user pool ID (same as ambientweb)',  'ambientcloud Terraform outputs → user_pool_id'],
-            ['EXPO_PUBLIC_COGNITO_CLIENT_ID',    'Mobile app OAuth client (no secret)',       'Cognito console → App clients → ambientmobile'],
-            ['EXPO_PUBLIC_API_URL',              'ambientcloud FastAPI base URL',             'ambientcloud Terraform outputs → api_url'],
-            ['EXPO_PUBLIC_PILOT_SITE',           'Coded pilot site prefix — mocarev',         'Hardcode: mocarev'],
-          ],
-        },
-        warnings: [
-          'Never commit .env — it is in .gitignore. The Cognito client for mobile must have no client secret (public client) since secrets cannot be safely stored in a mobile app bundle.',
-          'EXPO_PUBLIC_* variables are bundled into the client app at build time and visible to anyone who installs the app. Never put secrets in EXPO_PUBLIC_* variables.',
+        commands: [
+          { label: 'sw.js — install + cache shell', code: 'const CACHE = "ambient-v2";\nconst SHELL = [\n  "/",\n  "/dashboard/overview",\n  "/icon-192.png",\n  "/manifest.json",\n];\n\nself.addEventListener("install", e => {\n  e.waitUntil(\n    caches.open(CACHE).then(c => c.addAll(SHELL))\n  );\n  self.skipWaiting();\n});\n\nself.addEventListener("activate", e => {\n  e.waitUntil(\n    caches.keys().then(keys =>\n      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))\n    )\n  );\n  self.clients.claim();\n});' },
+          { label: 'sw.js — fetch strategy', code: '// Shell routes: CacheFirst\n// API routes: NetworkFirst, fall back to cached\nself.addEventListener("fetch", e => {\n  const url = new URL(e.request.url);\n  if (url.pathname.startsWith("/api/")) {\n    e.respondWith(\n      fetch(e.request).catch(() =>\n        caches.match(e.request)\n      )\n    );\n  } else {\n    e.respondWith(\n      caches.match(e.request).then(cached =>\n        cached ?? fetch(e.request)\n      )\n    );\n  }\n});' },
         ],
       },
       {
-        heading: 'Cognito mobile client setup',
-        body: 'The mobile app uses a separate Cognito app client from ambientweb — no client secret, auth flow: USER_SRP_AUTH. The Cognito user pool is shared (same nurse accounts log in on both web and mobile).',
+        heading: 'Push event handler',
         commands: [
-          { label: 'verify client in AWS CLI', code: 'aws cognito-idp describe-user-pool-client \\\n  --user-pool-id $COGNITO_USER_POOL_ID \\\n  --client-id $COGNITO_CLIENT_ID \\\n  --query "UserPoolClient.{Flow:ExplicitAuthFlows,Secret:ClientSecret}"' },
+          { label: 'sw.js — push + notificationclick', code: 'self.addEventListener("push", e => {\n  const d = e.data?.json() ?? {};\n  e.waitUntil(\n    self.registration.showNotification(d.title ?? "Ambient Alert", {\n      body:      d.body,\n      icon:      "/icon-192.png",\n      badge:     "/icon-192.png",\n      tag:       d.roomId,\n      renotify:  true,\n      data:      { url: d.url },\n      // Vibration pattern: 200ms on, 100ms off, 200ms on\n      vibrate:   [200, 100, 200],\n    })\n  );\n});\n\nself.addEventListener("notificationclick", e => {\n  e.notification.close();\n  e.waitUntil(\n    clients.matchAll({ type: "window" }).then(list => {\n      const match = list.find(c => c.url.includes(e.notification.data.url));\n      return match ? match.focus() : clients.openWindow(e.notification.data.url);\n    })\n  );\n});' },
         ],
-        warnings: ['ExplicitAuthFlows must include ALLOW_USER_SRP_AUTH and ALLOW_REFRESH_TOKEN_AUTH. ClientSecret must be null for a public mobile client.'],
+        warnings: [
+          'Vibration patterns are silenced when the device is in Do Not Disturb mode. For critical fall alerts, consider also triggering a native sound via the Notification API sound property — though iOS PWA ignores custom sounds.',
+        ],
       },
     ],
   },
   {
-    id: 'auth', phase: '03', title: 'Cognito Authentication', status: 'pending', tag: 'Setup', time: '~2 hr implementation',
-    summary: 'Login via AWS Cognito — shared user pool with ambientweb. Same nurse credentials work on both platforms. SRP auth, no client secret.',
+    id: 'web-push', phase: '03', title: 'Web Push', status: 'done', tag: 'PWA', time: '~1 day',
+    summary: 'VAPID-authenticated Web Push. The browser subscribes once per device/profile. The ambientcloud backend POSTs fall events to /api/push/send which fans out to all stored subscriptions.',
     sections: [
       {
-        heading: 'Auth library',
-        body: 'Use aws-amplify/auth (Auth v6) or amazon-cognito-identity-js directly. Amplify Auth is recommended for Phase I — it handles SRP, token refresh, and secure storage via SecureStore on iOS / EncryptedSharedPreferences on Android.',
+        heading: 'Permission request flow',
         commands: [
-          { label: 'install auth dependencies', code: 'pnpm add aws-amplify\npnpm add @aws-amplify/react-native\npnpm add @react-native-async-storage/async-storage\npnpm add react-native-get-random-values' },
-          { label: 'configure Amplify in App.tsx', code: `import { Amplify } from 'aws-amplify';
-
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: process.env.EXPO_PUBLIC_COGNITO_USER_POOL_ID!,
-      userPoolClientId: process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID!,
-      loginWith: { email: true },
-    },
-  },
-});` },
+          { label: 'request permission + subscribe', code: '// Request permission first — must be in response to user gesture\nconst permission = await Notification.requestPermission();\nif (permission !== "granted") return;\n\nconst reg = await navigator.serviceWorker.ready;\nconst sub = await reg.pushManager.subscribe({\n  userVisibleOnly: true,\n  applicationServerKey: urlBase64ToUint8Array(\n    process.env.NEXT_PUBLIC_VAPID_KEY!\n  ),\n});\n\nawait fetch("/api/push/subscribe", {\n  method: "POST",\n  headers: { "Content-Type": "application/json" },\n  body: JSON.stringify(sub),\n});' },
+          { label: 'urlBase64ToUint8Array helper', code: 'function urlBase64ToUint8Array(base64: string) {\n  const padding = "=".repeat((4 - (base64.length % 4)) % 4);\n  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");\n  const raw = atob(b64);\n  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));\n}' },
         ],
         warnings: [
-          'react-native-get-random-values must be imported before aws-amplify in the entry file (index.ts). Missing it causes a "crypto.getRandomValues is not a function" crash at startup.',
-          'Amplify v6 requires AsyncStorage to be configured explicitly for React Native. Pass it via Amplify.configure({ Storage: { AsyncStorage } }).',
+          'Push permission prompts on iOS require the app to be running in standalone mode (installed to home screen). If Notification.requestPermission() is called in Safari browser tab, it will silently fail without error. Gate the subscribe call behind a check for window.navigator.standalone === true on iOS.',
         ],
       },
       {
-        heading: 'Login screen',
-        body: 'Phase I login screen: email + password fields, sign-in button, error state for wrong credentials. No sign-up flow — nurse accounts are provisioned by the study coordinator via the Cognito admin CLI.',
-        checklist: [
-          'Email + password fields with secure text entry on password',
-          'Loading state during signIn call',
-          'Error message for NotAuthorizedException and UserNotFoundException',
-          'On success: store session, navigate to alerts list',
-          'Token refresh on app foreground (AppState listener)',
-        ],
-        warnings: ['Do not implement "Forgot password" in Phase I — password reset goes through the study coordinator. A self-service flow risks PHI exposure if email is compromised.'],
-      },
-    ],
-  },
-  {
-    id: 'dev', phase: '04', title: 'Development Server', status: 'done', tag: 'Development', time: '< 1 min start',
-    summary: 'expo start launches Metro bundler. Use Expo Go on a physical device for fastest iteration; iOS Simulator and Android Emulator for push notification testing (Simulator does not support APNS).',
-    sections: [
-      {
-        heading: 'Start Metro',
+        heading: 'Server-side send (ambientcloud webhook)',
         commands: [
-          { label: 'start dev server', code: 'pnpm start\n# or target a platform directly:\npnpm ios      # opens iOS Simulator\npnpm android  # opens Android Emulator' },
-          { label: 'open on physical device (fastest)', code: '# Install Expo Go from App Store / Play Store\n# Scan QR code shown in terminal after `pnpm start`\n# Or: press s to switch to Expo Go mode' },
-        ],
-        warnings: [
-          'APNS push notifications do not work in the iOS Simulator. Use a physical iOS device (connected over USB or on the same Wi-Fi) for end-to-end push testing.',
-          'Android Emulator supports FCM push but requires Google Play Services — use a Pixel emulator image with Play Store, not the AOSP image.',
-        ],
-      },
-      {
-        heading: 'TypeScript in Expo managed workflow',
-        body: 'tsconfig.json extends expo/tsconfig.base with strict: true. Type-check without building:',
-        commands: [
-          { label: 'type-check', code: 'npx tsc --noEmit' },
+          { label: '/api/push/send — fan out to all subscribers', code: 'import webpush from "web-push";\n\nwebpush.setVapidDetails(\n  "mailto:eng@ambientintel.com",\n  process.env.NEXT_PUBLIC_VAPID_KEY!,\n  process.env.VAPID_PRIVATE_KEY!\n);\n\n// Fan out to all stored subscriptions\nawait Promise.allSettled(\n  subscriptions.map(sub =>\n    webpush.sendNotification(sub, JSON.stringify({\n      title: `Fall Alert — Room ${roomId}`,\n      body:  `${eventType} detected at ${timestamp}`,\n      roomId,\n      url:   `/dashboard/room/${roomId}`,\n    }))\n  )\n);' },
         ],
         artifacts: [
-          { file: 'tsconfig.json', role: 'Extends expo/tsconfig.base — strict mode, no emit, React Native types', size: '' },
+          { file: 'apps/web/src/app/api/push/subscribe/route.ts', role: 'POST — upserts browser PushSubscription into server-side store (keyed by subscription endpoint).' },
+          { file: 'apps/web/src/app/api/push/send/route.ts',      role: 'POST — receives webhook from ambientcloud, verifies HMAC sig, fans out push to all subscribers.' },
         ],
       },
     ],
   },
   {
-    id: 'push', phase: '05', title: 'Push Notifications', status: 'pending', tag: 'Development', time: '~3 hr setup',
-    summary: 'APNS (iOS) and FCM (Android) via Expo Notifications. Device push token sent to ambientcloud at login. Fall alert payload contains coded ID only — no PHI.',
+    id: 'mobile-ui', phase: '04', title: 'Mobile UI', status: 'done', tag: 'PWA', time: '~2 days',
+    summary: 'Responsive layout adapted for nurse phones and tablets. Safe area insets for notch/Dynamic Island, 44px touch targets per Apple HIG, bottom nav bar for one-thumb operation.',
     sections: [
       {
-        heading: 'Install and configure expo-notifications',
+        heading: 'Safe area insets',
         commands: [
-          { label: 'install', code: 'npx expo install expo-notifications expo-device' },
-          { label: 'register for push token', code: `import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-
-async function registerForPush(): Promise<string | null> {
-  if (!Device.isDevice) return null; // Simulator — skip
-  const { status } = await Notifications.requestPermissionsAsync();
-  if (status !== 'granted') return null;
-  const token = (await Notifications.getExpoPushTokenAsync({
-    projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
-  })).data;
-  // Send token to ambientcloud
-  await fetch(\`\${process.env.EXPO_PUBLIC_API_URL}/push/register\`, {
-    method: 'POST',
-    headers: { Authorization: \`Bearer \${cognitoAccessToken}\` },
-    body: JSON.stringify({ token, platform: Platform.OS }),
-  });
-  return token;
-}` },
+          { label: 'apply safe area in CSS', code: '/* globals.css — applied to the bottom nav and full-screen containers */\n.safe-bottom {\n  padding-bottom: env(safe-area-inset-bottom);\n}\n.safe-top {\n  padding-top: env(safe-area-inset-top);\n}\n\n/* In the PWA shell — avoid content under the notch */\nbody {\n  padding-top: env(safe-area-inset-top);\n  /* Don\'t pad bottom — bottom nav handles that */\n}' },
         ],
+        body: 'The viewport meta tag must include viewport-fit=cover for safe area insets to take effect. This is set in apps/web/src/app/layout.tsx via the Next.js Viewport export.',
         warnings: [
-          'APNS requires an Apple Developer account and a provisioning profile with push capability. In managed Expo workflow, run `eas credentials` to provision automatically.',
-          'Re-register the push token on every app launch — tokens rotate and an expired token in ambientcloud means missed alerts. Check for token changes with getExpoPushTokenAsync and only re-POST if the token changed.',
+          'Without viewport-fit=cover, env(safe-area-inset-*) returns 0 on all devices. Verify this is set in the Viewport export — not in a <meta> tag, since Next.js deduplicates viewport meta.',
         ],
       },
       {
-        heading: 'Alert payload structure',
-        body: 'ambientcloud sends push payloads with coded identifiers only. The push notification body never contains resident names, room numbers, or any PHI.',
+        heading: 'Touch targets and bottom nav',
         table: {
-          cols: ['Payload field', 'Type', 'Example', 'Notes'],
+          cols: ['Component', 'Min touch target', 'Notes'],
           rows: [
-            ['alert_id',  'string', '"ALT-20260507-0042"',  'Unique alert ID for deduplication'],
-            ['coded_id',  'string', '"MOCAREV-0014"',       'Coded resident ID — no PHI'],
-            ['type',      'string', '"fall"',               'fall | absence | distress'],
-            ['confidence','number', '0.94',                 '0–1 sensor confidence score'],
-            ['ts',        'number', '1746641284',           'Unix timestamp UTC'],
+            ['Room card tap area',    '44×44px', 'Apple HIG minimum. Expand tap area beyond visible element if needed.'],
+            ['Alert acknowledge btn', '44×44px', 'Critical action — must be thumb-reachable in bottom 40% of screen.'],
+            ['Bottom nav items',      '48×48px', 'Material Design 3 minimum for bottom nav.'],
+            ['Ella speak button',     '44×44px', 'Audio play — single tap, no long press.'],
+            ['Dismiss alert',         '44×44px', 'Destructive — confirm dialog on tap, not swipe.'],
           ],
         },
+        artifacts: [
+          { file: 'apps/web/src/components/BottomNav.tsx', role: 'Mobile bottom navigation bar: Overview, Alerts, Room List, Settings. Shown only in standalone PWA mode.' },
+        ],
+      },
+      {
+        heading: 'Standalone mode detection',
         commands: [
-          { label: 'test a push from CLI (ambientcloud)', code: "curl -X POST $API_URL/push/test \\\n  -H 'Authorization: Bearer <admin-token>' \\\n  -d '{\"coded_id\": \"MOCAREV-0014\", \"type\": \"fall\"}'" },
+          { label: 'detect PWA standalone vs browser', code: '// Use to show/hide bottom nav and adjust padding\nconst isStandalone =\n  window.matchMedia("(display-mode: standalone)").matches ||\n  (window.navigator as Navigator & { standalone?: boolean }).standalone === true;\n\n// React hook:\nfunction useIsStandalone() {\n  const [standalone, setStandalone] = useState(false);\n  useEffect(() => {\n    setStandalone(\n      window.matchMedia("(display-mode: standalone)").matches ||\n      (window.navigator as Navigator & { standalone?: boolean }).standalone === true\n    );\n  }, []);\n  return standalone;\n}' },
         ],
-      },
-      {
-        heading: 'Foreground notification handler',
-        commands: [{ code: `// Show an in-app alert banner when the app is foregrounded
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});` }],
-        warnings: ['iOS will not show a notification banner when the app is in the foreground unless setNotificationHandler is configured. Without it, foreground alerts are silently dropped.'],
       },
     ],
   },
   {
-    id: 'alerts', phase: '06', title: 'Alert Handling', status: 'pending', tag: 'Development', time: '~2 hr implementation',
-    summary: 'Tap a push notification to deep-link into the app at the alert detail screen. Handle both cold-start (app not running) and warm-start (app backgrounded) cases.',
+    id: 'capacitor', phase: '05', title: 'Capacitor Init', status: 'pending', tag: 'Native', time: '~2 hrs',
+    summary: 'Capacitor 6 wraps the Next.js PWA in a native iOS/Android shell. The static export of the web app is bundled into the native binary, enabling App Store distribution and native plugin access.',
     sections: [
       {
-        heading: 'Notification tap → deep link',
-        commands: [{ code: `import * as Notifications from 'expo-notifications';
-import { useEffect, useRef } from 'react';
-import { useNavigation } from '@react-navigation/native';
-
-export function useNotificationNavigation() {
-  const navigation = useNavigation();
-  const responseListener = useRef<Notifications.Subscription>();
-
-  useEffect(() => {
-    // Warm start: app backgrounded, notification tapped
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      const { alert_id } = response.notification.request.content.data as { alert_id: string };
-      navigation.navigate('AlertDetail', { alertId: alert_id });
-    });
-
-    // Cold start: app launched from notification tap
-    Notifications.getLastNotificationResponseAsync().then(response => {
-      if (!response) return;
-      const { alert_id } = response.notification.request.content.data as { alert_id: string };
-      navigation.navigate('AlertDetail', { alertId: alert_id });
-    });
-
-    return () => responseListener.current?.remove();
-  }, [navigation]);
-}` }],
-        warnings: [
-          'getLastNotificationResponseAsync only returns a value once per cold start. Clear it after consuming or you will navigate on every hot reload during development.',
-          'Navigation must be ready before calling navigate — wrap in a useEffect that runs after the navigation container mounts.',
-        ],
-      },
-      {
-        heading: 'Alert deduplication',
-        body: 'The sensor pipeline has an 800 ms dedup window, but network retransmission can still deliver duplicates. Maintain a Set of seen alert_ids in memory (and persist to AsyncStorage) and skip rendering duplicates.',
-        commands: [{ label: 'dedup on receive', code: `const seenAlerts = useRef(new Set<string>());
-
-function onNewAlert(payload: AlertPayload) {
-  if (seenAlerts.current.has(payload.alert_id)) return;
-  seenAlerts.current.add(payload.alert_id);
-  setAlerts(prev => [payload, ...prev].slice(0, 50));
-}` }],
-      },
-    ],
-  },
-  {
-    id: 'alertlist', phase: '07', title: 'Recent Alerts List', status: 'pending', tag: 'Feature', time: '~2 hr implementation',
-    summary: 'Scrollable list of the last 50 alerts — coded ID, type badge, confidence, timestamp. Pull-to-refresh fetches from the ambientcloud alerts API.',
-    sections: [
-      {
-        heading: 'List design',
-        body: 'Each row shows: alert type badge (fall / absence / distress), coded resident ID (MOCAREV-NNNN), time elapsed since alert, and an acknowledge indicator. Unacknowledged alerts are visually distinct (bold, colored left border).',
-        table: {
-          cols: ['Element', 'Value source', 'Notes'],
-          rows: [
-            ['Type badge', 'payload.type',       'Color-coded: fall=red, absence=amber, distress=orange'],
-            ['Coded ID',   'payload.coded_id',   'Never resolve to a name on mobile in Phase I'],
-            ['Time',       'payload.ts',          'Display as relative time: "3 min ago"'],
-            ['Confidence', 'payload.confidence', 'Show only when < 0.80 — grey warning label'],
-            ['Status dot', 'acknowledged field', 'Green = ack\'d, amber = pending'],
-          ],
-        },
-        warnings: ['Do not display resident names or room numbers on this screen in Phase I. Mobile shows coded IDs only — nurses use ambientweb in a browser for name-hydrated views.'],
-      },
-      {
-        heading: 'Fetch from API',
-        commands: [{ label: 'GET /alerts', code: `const res = await fetch(\`\${API_URL}/alerts?site=mocarev&limit=50\`, {
-  headers: { Authorization: \`Bearer \${accessToken}\` },
-});
-const { alerts } = await res.json() as { alerts: AlertPayload[] };
-// alerts are already coded — no PHI` }],
-      },
-    ],
-  },
-  {
-    id: 'alertdetail', phase: '08', title: 'Alert Detail', status: 'pending', tag: 'Feature', time: '~2 hr implementation',
-    summary: 'Per-alert screen reached by tapping a list row or a push notification. Shows alert context, acknowledge button, and false-positive flag. Coded IDs only.',
-    sections: [
-      {
-        heading: 'Detail screen',
-        body: 'Shows: alert type, coded resident ID, timestamp, sensor confidence, sensor location (coded zone — e.g. "Zone 3"), and action buttons. Two actions: Acknowledge (marks alert resolved in ambientcloud) and Flag as false positive (sends feedback to improve the model).',
-        checklist: [
-          'Coded resident ID displayed prominently',
-          'Alert type with color-coded badge',
-          'Timestamp formatted in local time (not UTC)',
-          'Sensor confidence displayed — warn if < 0.80',
-          'Coded zone label (not room number)',
-          'Acknowledge button — calls PATCH /alerts/{alert_id}/acknowledge',
-          'Flag false positive — calls PATCH /alerts/{alert_id}/flag',
-          'Both actions optimistically update the UI, then sync',
-          'Loading and error states for both actions',
-        ],
-      },
-      {
-        heading: 'Acknowledge + flag API calls',
+        heading: 'Install and initialize',
         commands: [
-          { label: 'acknowledge', code: `await fetch(\`\${API_URL}/alerts/\${alertId}/acknowledge\`, {
-  method: 'PATCH',
-  headers: { Authorization: \`Bearer \${accessToken}\` },
-});` },
-          { label: 'flag as false positive', code: `await fetch(\`\${API_URL}/alerts/\${alertId}/flag\`, {
-  method: 'PATCH',
-  headers: { Authorization: \`Bearer \${accessToken}\` },
-  body: JSON.stringify({ reason: 'false_positive' }),
-});` },
+          { label: 'add capacitor to the web app', code: 'cd apps/web\npnpm add @capacitor/core @capacitor/cli\npnpm add @capacitor/ios @capacitor/android\n\n# Initialize (run once)\nnpx cap init "Ambient Nurse" "com.ambientintel.nurse" \\\n  --web-dir out\n\n# Verify capacitor.config.ts was created\ncat capacitor.config.ts' },
+          { label: 'capacitor.config.ts', code: 'import { CapacitorConfig } from "@capacitor/cli";\n\nconst config: CapacitorConfig = {\n  appId:    "com.ambientintel.nurse",\n  appName:  "Ambient Nurse",\n  webDir:   "out",           // Next.js static export output\n  server: {\n    androidScheme: "https", // Required for Android cookies\n  },\n  ios: {\n    contentInset: "always", // Respect safe areas\n  },\n};\n\nexport default config;' },
         ],
         warnings: [
-          'Optimistic updates must be rolled back on API error — show a toast and restore the previous state.',
-          'False-positive flags are PHI-adjacent study data and must be timestamped server-side. Do not timestamp client-side — device clocks drift.',
-        ],
-      },
-    ],
-  },
-  {
-    id: 'phi', phase: '09', title: 'PHI Boundary', status: 'done', tag: 'Feature', time: 'reference',
-    summary: 'Coded-data design under HIPAA §164.514(c). All API responses and push payloads use MOCAREV-NNNN identifiers. No names, MRNs, DOBs, or room numbers ever reach the device in Phase I.',
-    sections: [
-      {
-        heading: 'What reaches the device',
-        table: {
-          cols: ['Data', 'On-device?', 'Notes'],
-          rows: [
-            ['Coded resident ID (MOCAREV-NNNN)', 'Yes', 'De-identified per HIPAA §164.514(c)'],
-            ['Alert type (fall / absence / distress)', 'Yes', 'Not PHI'],
-            ['Sensor confidence score', 'Yes', 'Not PHI'],
-            ['Timestamp (UTC)', 'Yes', 'Not PHI when not linked to a named individual'],
-            ['Coded zone label', 'Yes', 'Zone numbers, not room numbers'],
-            ['Resident name', 'Never', 'Name hydration only in ambientweb (browser, encrypted keyring)'],
-            ['Room number', 'Never', 'Coded zone only in Phase I'],
-            ['DOB / MRN / contact info', 'Never', 'Not transmitted at any layer'],
-          ],
-        },
-        warnings: [
-          'Any change that would cause a name or MRN to appear in the app — even in a log, a crash report, or a comment — requires IRB amendment review before implementation.',
-          'Sentry, Crashlytics, and analytics SDKs must be audited before adding. Breadcrumbs and crash payloads must never capture screen content that could show coded IDs linked to names.',
+          'Capacitor requires a static export (next export or output: "export" in next.config). The ambientweb app currently uses server-side API routes (/api/*) which are incompatible with static export. API routes must be moved to a separate backend (ambientcloud) before Capacitor bundling.',
+          'WorkOS SSO uses server-side cookie manipulation in /api/auth/callback. This must be replaced with a mobile-compatible OAuth flow (in-app browser + deep-link callback) before the Capacitor build will work end-to-end.',
         ],
       },
       {
-        heading: 'API response guards',
-        body: 'ambientcloud\'s alert API runs a server-side PHI strip before responding. The mobile client should also defensively verify that no unexpected PHI fields appear in API responses during development.',
-        commands: [{ label: 'dev-only PHI guard (remove before production)', code: `function assertNoPHI(obj: unknown, path = '') {
-  const PHI_KEYS = ['name', 'firstName', 'lastName', 'dob', 'mrn', 'ssn', 'address', 'phone', 'email'];
-  if (typeof obj !== 'object' || !obj) return;
-  for (const [k, v] of Object.entries(obj)) {
-    if (PHI_KEYS.some(p => k.toLowerCase().includes(p))) {
-      console.warn(\`PHI key detected at \${path}.\${k} — strip before shipping\`);
-    }
-    if (typeof v === 'object') assertNoPHI(v, \`\${path}.\${k}\`);
-  }
-}` }],
-      },
-      {
-        heading: 'Phase II considerations',
-        body: 'The coded-ID-only design is a deliberate Phase I constraint, not a permanent limitation. Phase II may introduce an encrypted identity overlay on mobile (parity with ambientweb). Any such change requires IRB protocol amendment and a security review of the on-device keyring.',
-        checklist: [
-          'Phase II identity overlay requires IRB amendment — budget 4–6 weeks for review',
-          'If keyring is added, use iOS Keychain / Android Keystore via Expo SecureStore — never AsyncStorage for PHI',
-          'Phase II scope not yet approved — do not implement identity overlay code in Phase I branches',
-        ],
-      },
-    ],
-  },
-  {
-    id: 'build', phase: '10', title: 'EAS Build', status: 'pending', tag: 'Distribution', time: '~20–40 min per build',
-    summary: 'Expo Application Services (EAS) Build for iOS (.ipa) and Android (.apk/.aab). Credentials managed by EAS — no local Xcode keychain needed.',
-    sections: [
-      {
-        heading: 'EAS setup',
+        heading: 'Add platforms and sync',
         commands: [
-          { label: 'install EAS CLI', code: 'npm install -g eas-cli\neas login\neas init   # links to Expo project, sets projectId in app.json' },
-          { label: 'eas.json', code: `{
-  "cli": { "version": ">= 12.0.0" },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal",
-      "ios": { "simulator": false }
-    },
-    "production": {
-      "ios": { "buildConfiguration": "Release" },
-      "android": { "buildType": "apk" }
-    }
-  },
-  "submit": {
-    "production": {
-      "ios": { "appleId": "dev@ambientintel.co", "ascAppId": "XXXXXXXXXX" }
-    }
-  }
-}` },
-        ],
-        warnings: ['EAS Build runs on Expo\'s cloud infrastructure. The first iOS build requires provisioning — run `eas credentials` to generate certificates and profiles automatically. Do not create them manually in the Apple Developer portal first.'],
-      },
-      {
-        heading: 'Trigger a build',
-        commands: [
-          { label: 'iOS preview build', code: 'eas build --platform ios --profile preview' },
-          { label: 'Android preview build', code: 'eas build --platform android --profile preview' },
-          { label: 'both platforms', code: 'eas build --platform all --profile preview' },
+          { label: 'add iOS and Android targets', code: 'cd apps/web\nnpx cap add ios\nnpx cap add android\n\n# After every web build:\nnext build && next export\nnpx cap sync\n# Copies out/ into ios/App/public and android/app/src/main/assets/public' },
+          { label: 'open in Xcode / Android Studio', code: 'npx cap open ios      # Opens ios/ in Xcode\nnpx cap open android  # Opens android/ in Android Studio' },
         ],
         artifacts: [
-          { file: 'eas.json', role: 'EAS build profiles — development, preview, production', size: '' },
-          { file: 'app.json', role: 'Expo config — bundleIdentifier (iOS), package (Android), EAS projectId', size: '' },
+          { file: 'apps/web/ios/',     role: 'Xcode project. Generated by cap add ios — do not hand-edit. Managed by cap sync.' },
+          { file: 'apps/web/android/', role: 'Gradle project. Generated by cap add android — do not hand-edit. Managed by cap sync.' },
         ],
       },
     ],
   },
   {
-    id: 'distribute', phase: '11', title: 'Distribution', status: 'pending', tag: 'Distribution', time: '~1 hr setup',
-    summary: 'iOS via TestFlight (study coordinator sends invitations). Android via Firebase App Distribution (internal testing track). No public App Store or Play Store release in Phase I.',
+    id: 'ios-build', phase: '06', title: 'iOS Build', status: 'pending', tag: 'Native', time: '~1 day',
+    summary: 'Xcode build targeting iOS 16+. Bundle ID com.ambientintel.nurse. Requires an Apple Developer Program membership and a provisioning profile for device testing.',
     sections: [
       {
-        heading: 'iOS — TestFlight',
+        heading: 'Xcode project setup',
         commands: [
-          { label: 'submit to App Store Connect (TestFlight)', code: 'eas submit --platform ios --profile production\n# Uses appleId + ascAppId from eas.json submit config' },
-          { label: 'add internal testers via App Store Connect', code: '# Open App Store Connect → TestFlight → Internal Testing\n# Add nurse UDIDs or invite via email\n# OR: use study coordinator\'s Apple account to manage invitations' },
+          { label: 'open and configure the Xcode project', code: 'cd apps/web\nnpx cap open ios\n# In Xcode:\n# 1. Select "App" target → Signing & Capabilities\n# 2. Set Team: Ambient Intelligence, Inc.\n# 3. Bundle Identifier: com.ambientintel.nurse\n# 4. Deployment Target: iOS 16.0\n# 5. Check "Automatically manage signing"' },
+          { label: 'build for device from CLI', code: 'cd apps/web/ios\nxcodebuild -workspace App.xcworkspace \\\n  -scheme App \\\n  -configuration Release \\\n  -destination "generic/platform=iOS" \\\n  -archivePath build/App.xcarchive \\\n  archive\n\nxcodebuild -exportArchive \\\n  -archivePath build/App.xcarchive \\\n  -exportOptionsPlist ExportOptions.plist \\\n  -exportPath build/ipa/' },
         ],
-        body: 'All study participants (nurses at Mount Olivet Careview Home) must be added as TestFlight internal testers before installation. The study coordinator manages the invite list. External TestFlight is not needed for Phase I.',
+        table: {
+          cols: ['Build setting', 'Value', 'Notes'],
+          rows: [
+            ['Bundle ID',        'com.ambientintel.nurse',  'Must match App Store Connect and push certificate'],
+            ['Version',          '1.0.0',                   'Semantic version shown in Settings → General'],
+            ['Build number',     'Auto-increment in CI',    'App Store Connect requires unique build per upload'],
+            ['Deployment target','iOS 16.0',                'Covers 97%+ of active devices as of 2026'],
+            ['Capabilities',     'Push Notifications, Background Modes (Remote notifications)', 'Both required for fall alerts'],
+          ],
+        },
         warnings: [
-          'TestFlight builds expire after 90 days. Schedule a rebuild at the start of Phase I and again at the 80-day mark if the study runs longer.',
-          'The App Store Connect app record must have a privacy policy URL before TestFlight can be enabled — use the Ambient Intelligence privacy policy URL. No App Store listing is required for internal testing only.',
-        ],
-      },
-      {
-        heading: 'Android — Firebase App Distribution',
-        commands: [
-          { label: 'install Firebase CLI and distribute', code: 'npm install -g firebase-tools\nfirebase login\n\n# After EAS Android build completes:\neas build --platform android --profile production\n\n# Download the .apk from EAS, then distribute:\nfirebase appdistribution:distribute app-release.apk \\\n  --app $FIREBASE_APP_ID \\\n  --groups "phase1-nurses" \\\n  --release-notes "Ambient Phase I build"' },
-        ],
-        warnings: [
-          'Add nurse Android device email addresses to the "phase1-nurses" Firebase App Distribution group before the first distribute call.',
-          'Android devices must have unknown sources installation enabled (or be enrolled in MDM) to install from Firebase App Distribution. Instruct nurses or the IT team accordingly.',
+          'Push Notifications capability must be added in both Xcode (Signing & Capabilities) and the Apple Developer Portal (Identifiers → com.ambientintel.nurse). Missing either causes silent push delivery failure.',
         ],
       },
     ],
   },
   {
-    id: 'ci', phase: '12', title: 'CI Pipeline', status: 'pending', tag: 'Distribution', time: '~1 hr setup',
-    summary: 'GitHub Actions runs type-check and triggers EAS Build on merge to main. EAS handles the cloud build queue — no self-hosted runner or macOS agent needed.',
+    id: 'android-build', phase: '07', title: 'Android Build', status: 'pending', tag: 'Native', time: '~1 day',
+    summary: 'Gradle build targeting Android 10+ (API 29). Signed AAB for Google Play or APK for enterprise sideload. Keystore stored in Vercel env vars for CI builds.',
     sections: [
       {
-        heading: 'GitHub Actions workflow',
-        commands: [{ label: '.github/workflows/mobile-ci.yml', code: `name: Mobile CI
-on:
-  push:    { branches: [main] }
-  pull_request: { branches: [main] }
-
-jobs:
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'pnpm' }
-
-      - uses: pnpm/action-setup@v4
-        with: { version: 9 }
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Type check
-        run: npx tsc --noEmit
-
-  eas-build:
-    needs: typecheck
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-
-      - uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: \${{ secrets.EXPO_TOKEN }}
-
-      - name: EAS Build (preview)
-        run: eas build --platform all --profile preview --non-interactive` }],
-      },
-      {
-        heading: 'Secrets setup',
+        heading: 'Keystore setup',
         commands: [
-          { label: 'add Expo token to GitHub', code: '# Generate at expo.dev → Account Settings → Access Tokens\ngh secret set EXPO_TOKEN' },
+          { label: 'generate release keystore (one time)', code: 'keytool -genkey -v \\\n  -keystore ambient-nurse.keystore \\\n  -alias ambientnurse \\\n  -keyalg RSA -keysize 2048 \\\n  -validity 10000\n\n# Store keystore password + key password in Vercel env vars:\n# ANDROID_KEYSTORE_BASE64  ← base64-encoded .keystore file\n# ANDROID_KEY_ALIAS        ← ambientnurse\n# ANDROID_KEY_PASSWORD     ← key password\n# ANDROID_STORE_PASSWORD   ← store password' },
+          { label: 'build signed AAB', code: 'cd apps/web/android\n./gradlew bundleRelease \\\n  -Pandroid.injected.signing.store.file=../ambient-nurse.keystore \\\n  -Pandroid.injected.signing.store.password=$ANDROID_STORE_PASSWORD \\\n  -Pandroid.injected.signing.key.alias=$ANDROID_KEY_ALIAS \\\n  -Pandroid.injected.signing.key.password=$ANDROID_KEY_PASSWORD\n\n# Output: app/build/outputs/bundle/release/app-release.aab' },
         ],
         warnings: [
-          'EAS Build minutes are metered on the Expo free tier. Use the preview profile (not production) for CI to conserve minutes — production builds should be triggered manually before TestFlight submission.',
-          'Do not run EAS Build on every PR — only on merge to main. PR checks only need type-check and lint.',
+          'Never commit ambient-nurse.keystore to git. Loss of the keystore means you cannot publish updates to the same app on Google Play — the app must be relisted under a new package ID. Store it in a password manager and in encrypted Vercel env vars.',
+        ],
+      },
+      {
+        heading: 'Enterprise APK sideload',
+        body: 'For the MOH pilot, enterprise sideloading via MDM is simpler than a Play Store listing. Build a signed APK (not AAB), distribute via the facility MDM profile.',
+        commands: [
+          { label: 'build signed APK for sideload', code: 'cd apps/web/android\n./gradlew assembleRelease\n\n# Output: app/build/outputs/apk/release/app-release.apk\n# Upload to MDM or distribute directly for manual install' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'signing', phase: '08', title: 'Code Signing', status: 'pending', tag: 'iOS', time: '~2 hrs',
+    summary: 'Apple Developer Enterprise Program signing for facility iPad distribution. Provisioning profile locked to com.ambientintel.nurse, distributed via MDM rather than the App Store.',
+    sections: [
+      {
+        heading: 'Certificate types',
+        table: {
+          cols: ['Certificate', 'Program required', 'Distribution method', 'Use case'],
+          rows: [
+            ['Development',           'Standard ($99/yr)',     'Device UDID allowlist',    'Engineer devices, internal testing'],
+            ['App Store Distribution','Standard ($99/yr)',     'App Store / TestFlight',   'Public release, TestFlight beta'],
+            ['Enterprise (In-House)', 'Enterprise ($299/yr)', 'MDM / direct install URL', 'MOH pilot iPads — no App Store'],
+          ],
+        },
+        commands: [
+          { label: 'create provisioning profile in developer portal', code: '# 1. developer.apple.com → Certificates, IDs & Profiles\n# 2. Identifiers → Register App ID: com.ambientintel.nurse\n# 3. Add capabilities: Push Notifications\n# 4. Profiles → New Profile → In-House (Enterprise)\n# 5. Select App ID: com.ambientintel.nurse\n# 6. Select Distribution Certificate → Generate\n# 7. Download: AmbientNurse_Enterprise.mobileprovision\n# 8. Double-click to install in Xcode' },
+        ],
+        warnings: [
+          'Enterprise (In-House) distribution requires an Apple Developer Enterprise Program account ($299/yr, requires DUNS number and business verification). Standard Developer accounts cannot distribute outside the App Store or TestFlight.',
+          'Enterprise-signed apps must be re-signed annually when the provisioning profile expires. Plan a calendar reminder 30 days before expiry — expired profiles cause the app to crash on launch with no visible error on the device.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'apns', phase: '09', title: 'APNs Push', status: 'pending', tag: 'iOS', time: '~1 day',
+    summary: 'Native APNs push for the Capacitor-wrapped iOS app. Replaces Web Push (VAPID) for installed app builds. Requires APNs auth key and the @capacitor/push-notifications plugin.',
+    sections: [
+      {
+        heading: 'APNs key setup',
+        commands: [
+          { label: 'create APNs auth key in developer portal', code: '# developer.apple.com → Keys → Create a Key\n# Check "Apple Push Notifications service (APNs)"\n# Name: Ambient Nurse Push\n# Download: AuthKey_XXXXXXXXXX.p8\n# Note: Key ID + Team ID (shown in top-right of developer portal)\n\n# Store securely — can only be downloaded once' },
+          { label: 'configure push plugin in capacitor', code: 'cd apps/web\npnpm add @capacitor/push-notifications\nnpx cap sync\n\n// In your app init code:\nimport { PushNotifications } from "@capacitor/push-notifications";\n\nawait PushNotifications.requestPermissions();\nawait PushNotifications.register();\n\nPushNotifications.addListener("registration", ({ value: token }) => {\n  // Send APNs device token to ambientcloud\n  fetch("/api/push/register-apns", {\n    method: "POST",\n    body: JSON.stringify({ token, platform: "ios" }),\n    headers: { "Content-Type": "application/json" },\n  });\n});\n\nPushNotifications.addListener("pushNotificationReceived", notification => {\n  // App is foregrounded — show in-app alert\n  showInAppAlert(notification);\n});' },
+        ],
+        warnings: [
+          'APNs device tokens change after app reinstall, OS upgrade, and sometimes after backup restore. Always upsert the token on app launch — never assume the stored token is current.',
+          'Web Push (VAPID) and APNs push are separate stacks. For the Capacitor iOS build, use @capacitor/push-notifications (APNs). For the PWA browser install, use the Web Push API. The ambientcloud fanout must route to the correct stack based on the subscription type.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'enterprise-dist', phase: '10', title: 'Enterprise Distribution', status: 'pending', tag: 'iOS', time: '~1 day',
+    summary: 'Apple Business Manager + MDM push to facility iPads. The IPA is signed with the Enterprise certificate and distributed via the facility MDM profile without App Store review.',
+    sections: [
+      {
+        heading: 'MDM distribution flow',
+        checklist: [
+          'Apple Developer Enterprise Program account active (com.ambientintel.nurse)',
+          'IPA signed with Enterprise Distribution provisioning profile',
+          'Facility IT has enrolled iPads in Apple Business Manager',
+          'MDM server (Jamf / Mosyle / Kandji) configured for the facility',
+          'App uploaded to MDM as a custom in-house app',
+          'MDM policy pushes app automatically to all enrolled nurse iPads',
+          'Push notification permission granted via MDM policy (no user prompt required)',
+        ],
+        commands: [
+          { label: 'build IPA for enterprise distribution', code: '# ExportOptions.plist for enterprise:\n# method: enterprise\n# teamID: YOUR_TEAM_ID\n# provisioningProfiles:\n#   com.ambientintel.nurse: AmbientNurse_Enterprise\n\nxcodebuild -exportArchive \\\n  -archivePath build/App.xcarchive \\\n  -exportOptionsPlist ExportOptions-Enterprise.plist \\\n  -exportPath build/enterprise-ipa/' },
+        ],
+      },
+      {
+        heading: 'Manifest URL distribution (alternative)',
+        body: 'If MDM is not available, an HTTPS manifest URL can be used for OTA install. Host the IPA and a manifest.plist on a TLS server and share the itms-services:// URL with nurses.',
+        commands: [
+          { label: 'manifest.plist for OTA install', code: '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" ...>\n<plist version="1.0"><dict>\n  <key>items</key><array><dict>\n    <key>assets</key><array><dict>\n      <key>kind</key><string>software-package</string>\n      <key>url</key><string>https://dist.ambientintel.com/ambient-nurse-1.0.ipa</string>\n    </dict></array>\n    <key>metadata</key><dict>\n      <key>bundle-identifier</key><string>com.ambientintel.nurse</string>\n      <key>bundle-version</key><string>1.0.0</string>\n      <key>kind</key><string>software</string>\n      <key>title</key><string>Ambient Nurse</string>\n    </dict>\n  </dict></array>\n</dict></plist>' },
+        ],
+        warnings: [
+          'OTA install via manifest URL requires HTTPS with a valid certificate chain on the hosting server. Self-signed certs cause a silent install failure on iOS.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'testflight', phase: '11', title: 'TestFlight', status: 'pending', tag: 'Ship', time: '~2 hrs',
+    summary: 'Internal TestFlight distribution for engineering team testing before enterprise rollout. Up to 100 internal testers, no App Store review. 90-day build expiry.',
+    sections: [
+      {
+        heading: 'Upload to App Store Connect',
+        commands: [
+          { label: 'upload IPA via Transporter or CLI', code: '# Option 1: Xcode Organizer → Distribute App → TestFlight\n\n# Option 2: xcrun altool (deprecated but still works)\nxcrun altool --upload-app \\\n  -f build/ipa/App.ipa \\\n  -t ios \\\n  -u $APPLE_ID \\\n  -p $APP_SPECIFIC_PASSWORD\n\n# Option 3: Transporter CLI\ntransporter -u $APPLE_ID -p $APP_SPECIFIC_PASSWORD -f build/ipa/App.ipa' },
+        ],
+        checklist: [
+          'App record created in App Store Connect (appstoreconnect.apple.com)',
+          'Bundle ID com.ambientintel.nurse matches Xcode project',
+          'Build uploaded and processed (5–15 min after upload)',
+          'Internal testing group created: Ambient Engineering',
+          'All engineers added as internal testers by Apple ID',
+          'TestFlight invite emails accepted by all testers',
+          'App installed from TestFlight on at least one iPhone and one iPad',
+        ],
+      },
+      {
+        heading: 'Build expiry',
+        body: 'TestFlight builds expire after 90 days. Set a calendar reminder to upload a new build before expiry — nurses cannot launch an expired TestFlight build and will see a confusing error. Production will use the Enterprise distribution path, not TestFlight.',
+        warnings: [
+          'TestFlight internal builds do not require App Store review. External TestFlight (up to 10,000 testers) requires a review. For the MOH pilot we stay internal and ship via Enterprise distribution — no external TestFlight needed.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'prod-build', phase: '12', title: 'Production Build', status: 'pending', tag: 'Ship', time: '~1 hr',
+    summary: 'Full CI build: pnpm build → next export → cap sync → xcodebuild release → Gradle release. All artifacts versioned and stored in GitHub Actions.',
+    sections: [
+      {
+        heading: 'CI build sequence',
+        commands: [
+          { label: 'full mobile production build', code: '# Step 1: build Next.js static export\ncd apps/web\npnpm build\n# Requires next.config.js: output: "export"\n# Output: apps/web/out/\n\n# Step 2: sync to Capacitor\nnpx cap sync ios\nnpx cap sync android\n\n# Step 3: iOS archive\ncd ios\nxcodebuild -workspace App.xcworkspace \\\n  -scheme App -configuration Release \\\n  -destination "generic/platform=iOS" \\\n  -archivePath ../build/App.xcarchive archive\n\n# Step 4: Android AAB\ncd ../android\n./gradlew bundleRelease' },
+        ],
+        warnings: [
+          'next export is incompatible with API routes and dynamic server-side rendering. All /api/* routes must be hosted on ambientcloud before the Capacitor build will produce a working app. The web PWA (apps/web) continues to work with server-side routes — only the native Capacitor build requires the static export.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'pilot-validation', phase: '13', title: 'Pilot Validation', status: 'pending', tag: 'Ship', time: '~1 week',
+    summary: 'On-device smoke test on one iPhone and one iPad. Covers auth, keyring unlock, fall alert push notification (APNs), Ella TTS, and alert acknowledge — end-to-end on real hardware.',
+    sections: [
+      {
+        heading: 'On-device test checklist',
+        checklist: [
+          'PWA installs to home screen on iPhone (Safari share sheet → Add to Home Screen)',
+          'PWA installs to home screen on iPad',
+          'Standalone mode active — no browser chrome visible on launch',
+          'WorkOS SSO sign-in completes without redirect errors in standalone mode',
+          'Keyring unlock modal appears and decrypts correctly with pilot passphrase',
+          'Dashboard overview loads with room grid and alert table',
+          'Fall alert push notification received within 5 seconds of test event',
+          'Tapping notification opens correct room detail page',
+          'Ella narrative loads and TTS plays correctly',
+          'Alert acknowledge action works without page reload',
+          'Bottom nav bar visible and all tabs navigate correctly',
+          'Safe area insets correct on iPhone 16 Pro (Dynamic Island) and iPad',
+          'App works offline: shell loads from cache, alert table shows last state',
+        ],
+      },
+      {
+        heading: 'APNs vs Web Push verification',
+        commands: [
+          { label: 'trigger test push via ambientcloud webhook', code: '# Send test fall event to /api/push/send\ncurl -X POST https://ellamemory.com/api/push/send \\\n  -H "Content-Type: application/json" \\\n  -H "x-ambient-sig: $TEST_WEBHOOK_SIG" \\\n  -d \'{ "roomId": "301", "eventType": "Fall Detected", "timestamp": "2026-05-07T14:30:00Z" }\'\n\n# Expected:\n# 1. Capacitor iOS app (APNs): native lock-screen notification\n# 2. PWA browser tab (Web Push): browser notification\n# 3. Both appear within 5 seconds' },
+        ],
+        warnings: [
+          'APNs delivery requires the Capacitor app to be signed with a provisioning profile that has Push Notifications enabled. If push fails silently, check Xcode console for "APNs registration failed" — this almost always means the capability is missing from the provisioning profile.',
         ],
       },
     ],
@@ -609,49 +464,45 @@ jobs:
 
 // ── Static data ────────────────────────────────────────────────────────────────
 
-const STACK_SPECS = [
-  { label: 'Framework',  value: 'Expo SDK 54',       sub: 'Managed workflow · React Native 0.81.5' },
-  { label: 'Language',   value: 'TypeScript 5.9',    sub: 'Strict mode · expo/tsconfig.base' },
-  { label: 'Auth',       value: 'AWS Cognito',       sub: 'Shared pool with ambientweb · SRP auth' },
-  { label: 'Push',       value: 'APNS + FCM',        sub: 'iOS TestFlight · Android Firebase Dist.' },
-  { label: 'Build',      value: 'EAS Build',         sub: 'Cloud iOS + Android · eas.json profiles' },
-  { label: 'Study',      value: '1R41AG097177-01',   sub: 'NIH STTR Phase I · NIA · Mount Olivet' },
+const APP_SPECS = [
+  { label: 'PWA Stack',  value: 'Next.js 16',        sub: 'Service Worker · Web Push · Standalone' },
+  { label: 'Native',     value: 'Capacitor 6',        sub: 'iOS 16+ · Android 10+' },
+  { label: 'Push',       value: 'APNs + VAPID',       sub: 'Native iOS · PWA browser' },
+  { label: 'Distribution', value: 'Enterprise MDM',  sub: 'Apple Business Manager · Jamf' },
+  { label: 'Bundle ID',  value: 'com.ambientintel.nurse', sub: 'Nurse fall-alert app' },
 ];
 
 const CHECKLIST_ITEMS = [
-  'Node 20+ and pnpm installed',
-  '.env configured from .env.example',
-  'pnpm install clean',
-  'Expo CLI available (npx expo --version)',
-  'Dev server running (pnpm start)',
-  'App loads on iOS Simulator',
-  'App loads on Android Emulator',
-  'Cognito login working (nurse test account)',
-  'Push token registered on physical iOS device',
-  'Push token registered on Android device',
-  'Test fall alert push received',
-  'Notification tap → alert detail screen',
-  'Alert list rendering (coded IDs only)',
-  'Alert detail rendering',
-  'Acknowledge action working',
-  'False-positive flag working',
-  'PHI guard: no names/MRNs in any API response',
-  'TypeScript build clean (npx tsc --noEmit)',
-  'EAS credentials provisioned (iOS)',
-  'Preview build uploaded to TestFlight',
-  'Preview build on Firebase App Distribution',
-  'Nurse TestFlight invitations sent',
-  'CI pipeline passing on main',
+  'manifest.json verified — name, icons, display: standalone',
+  'apple-touch-icon and PWA meta tags in layout.tsx',
+  'Service worker registered and caching shell routes',
+  'Push permission flow working on Android Chrome',
+  'Push permission working on iOS (standalone mode required)',
+  'Web Push VAPID subscription stored per-device',
+  'Fall alert push notification delivered within 5 sec',
+  'Mobile layout: safe area insets applied',
+  'Touch targets: all interactive elements ≥ 44×44px',
+  'Bottom nav bar visible in standalone mode',
+  'Capacitor initialized: capacitor.config.ts created',
+  'iOS platform added: apps/web/ios/ directory present',
+  'Android platform added: apps/web/android/ directory present',
+  'iOS code signing configured: com.ambientintel.nurse',
+  'Push Notifications capability added in Xcode',
+  'APNs auth key created and stored securely',
+  '@capacitor/push-notifications device token registered',
+  'Enterprise provisioning profile generated',
+  'IPA built and installed on pilot iPad via MDM or OTA',
+  'End-to-end: fall event → APNs notification → room detail',
 ];
 
-const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4]);
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 6, 7, 8]);
 
 const OPEN_DECISIONS = [
-  'Offline alert queue: cache unacknowledged alerts in AsyncStorage when connectivity drops in the care facility',
-  'Biometric unlock: Face ID / fingerprint for faster re-auth after session expiry vs. Cognito password re-entry',
-  'Alert sound: custom urgent clinical tone vs. iOS/Android system notification sounds',
-  'Android MDM: Firebase App Distribution (Phase I) vs. hospital-managed MDM for Phase II scale',
-  'Phase II identity overlay: encrypted on-device keyring parity with ambientweb — requires IRB amendment',
+  'API route migration: /api/* must move to ambientcloud before Capacitor static export is possible — timeline undefined',
+  'WorkOS mobile OAuth: replace server-side cookie auth with in-app browser + deep-link callback for Capacitor compatibility',
+  'APNs vs Web Push fanout: ambientcloud must route push by subscription type (APNs token vs VAPID endpoint) — architecture pending',
+  'MDM provider: Jamf Pro vs Mosyle Business for the MOH iPad fleet — pending IT procurement decision',
+  'Android strategy: enterprise APK sideload via MDM vs Google Play private app — Play requires business verification',
 ];
 
 // ── Page component ─────────────────────────────────────────────────────────────
@@ -659,11 +510,12 @@ const OPEN_DECISIONS = [
 const LS_KEY = 'ambient-mobileapp-checklist-v1';
 
 export default function MobileAppPage() {
-  const [active, setActive]       = useState('repo');
+  const [active, setActive]       = useState('manifest');
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [focusMode, setFocusMode] = useState(false);
   const [checked, setChecked]     = useState<Set<number>>(new Set(CHECKLIST_DONE));
   const [filterTag, setFilterTag] = useState('All');
+  const [shipFrozen, setShipFrozen] = useState(false);
 
   useEffect(() => {
     try {
@@ -700,14 +552,14 @@ export default function MobileAppPage() {
   }, [navigate]);
 
   function toggleSection(key: string) { setCollapsed(p => ({ ...p, [key]: !p[key] })); }
-  function expandAll()  { setCollapsed({}); }
+  function expandAll() { setCollapsed({}); }
   function collapseAll() {
     const all: Record<string, boolean> = {};
     step.sections.forEach((_, i) => { all[`${active}-${i}`] = true; });
     setCollapsed(prev => ({ ...prev, ...all }));
   }
 
-  const TAGS = ['All', 'Setup', 'Development', 'Feature', 'Distribution'];
+  const TAGS = ['All', 'PWA', 'Native', 'iOS', 'Ship'];
   const step = STEPS.find(s => s.id === active)!;
   const stepIdx = STEPS.findIndex(s => s.id === active);
   const doneCount = checked.size;
@@ -722,44 +574,45 @@ export default function MobileAppPage() {
 
       {/* ── Sidebar ── */}
       <aside style={{ background: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.08)', padding: '22px 14px 28px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0, zIndex: 10, boxShadow: '2px 0 8px rgba(0,0,0,0.04)' }}>
-
-        {/* Brand */}
         <div style={{ marginBottom: 18 }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <div style={{ padding: '4px 6px', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '4px 6px', marginBottom: 14 }}>
+              <div style={{ width: 27, height: 27, borderRadius: 6, background: '#EFF6FF', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <rect x="2" y="2" width="4" height="4" rx="1" fill="#2563EB"/>
+                  <rect x="8" y="2" width="4" height="4" rx="1" fill="#2563EB" opacity="0.5"/>
+                  <rect x="2" y="8" width="4" height="4" rx="1" fill="#2563EB" opacity="0.5"/>
+                  <rect x="8" y="8" width="4" height="4" rx="1" fill="#2563EB" opacity="0.3"/>
+                </svg>
+              </div>
               <span style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 14, color: '#111827', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
-                Ambient <em style={{ color: '#6B7280' }}>Mobile</em>
+                Ambient <em style={{ color: '#6B7280' }}>Mobile App</em>
               </span>
             </div>
           </Link>
 
-          {/* Progress bar */}
           <div style={{ padding: '10px 12px', background: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: 10, marginBottom: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9CA3AF' }}>Progress</span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#0D9488', fontWeight: 600 }}>{doneCount}/{CHECKLIST_ITEMS.length}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#059669', fontWeight: 600 }}>{doneCount}/{CHECKLIST_ITEMS.length}</span>
             </div>
             <div style={{ height: 5, borderRadius: 3, background: '#E5E7EB' }}>
-              <div style={{ height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #0D9488, #2563EB)', width: `${(doneCount / CHECKLIST_ITEMS.length) * 100}%`, transition: 'width 0.4s ease' }} />
+              <div style={{ height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #059669, #2563EB)', width: `${(doneCount / CHECKLIST_ITEMS.length) * 100}%`, transition: 'width 0.4s ease' }} />
             </div>
           </div>
 
-          {/* Tag filter */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '0 2px', marginBottom: 6 }}>
             {TAGS.map(tag => (
-              <button key={tag} onClick={() => setFilterTag(tag)} style={{ padding: '3px 8px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', cursor: 'pointer', border: filterTag === tag ? '1.5px solid #0D9488' : '1px solid #E5E7EB', background: filterTag === tag ? '#F0FDFA' : '#FFFFFF', color: filterTag === tag ? '#0D9488' : '#6B7280', transition: 'all 0.12s' }}>
+              <button key={tag} onClick={() => setFilterTag(tag)} style={{ padding: '3px 8px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', cursor: 'pointer', border: filterTag === tag ? '1.5px solid #2563EB' : '1px solid #E5E7EB', background: filterTag === tag ? '#EFF6FF' : '#FFFFFF', color: filterTag === tag ? '#2563EB' : '#6B7280', transition: 'all 0.12s' }}>
                 {tag}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Grouped nav */}
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
           {PIPELINE_PHASES.map(phase => {
-            const phaseSteps = phase.ids
-              .map(id => STEPS.find(s => s.id === id)!)
-              .filter(s => filterTag === 'All' || s.tag === filterTag);
+            const phaseSteps = phase.ids.map(id => STEPS.find(s => s.id === id)!).filter(s => filterTag === 'All' || s.tag === filterTag);
             if (phaseSteps.length === 0) return null;
             return (
               <div key={phase.label}>
@@ -769,12 +622,10 @@ export default function MobileAppPage() {
                   const isActive = active === s.id;
                   const warns = warnCounts[s.id] ?? 0;
                   return (
-                    <button key={s.id} onClick={() => setActive(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 7, background: isActive ? '#F0FDFA' : 'transparent', border: isActive ? '1px solid #99F6E4' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s', marginBottom: 1 }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: isActive ? '#0D9488' : '#9CA3AF', minWidth: 16, flexShrink: 0 }}>{s.phase}</span>
+                    <button key={s.id} onClick={() => setActive(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 7, background: isActive ? '#EFF6FF' : 'transparent', border: isActive ? '1px solid #BFDBFE' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s', marginBottom: 1 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: isActive ? '#2563EB' : '#9CA3AF', minWidth: 16, flexShrink: 0 }}>{s.phase}</span>
                       <span style={{ flex: 1, fontSize: 12, color: isActive ? '#111827' : '#374151', fontWeight: isActive ? 500 : 400, lineHeight: 1.3 }}>{s.title}</span>
-                      {warns > 0 && (
-                        <span title={`${warns} warning${warns > 1 ? 's' : ''}`} style={{ fontSize: 9, background: '#FEF9C3', color: '#A16207', borderRadius: 3, padding: '1px 5px', fontFamily: 'var(--mono)', flexShrink: 0 }}>⚠{warns}</span>
-                      )}
+                      {warns > 0 && <span title={`${warns} warning${warns > 1 ? 's' : ''}`} style={{ fontSize: 9, background: '#FEF9C3', color: '#A16207', borderRadius: 3, padding: '1px 5px', fontFamily: 'var(--mono)', flexShrink: 0 }}>⚠{warns}</span>}
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot, flexShrink: 0 }} />
                     </button>
                   );
@@ -784,11 +635,10 @@ export default function MobileAppPage() {
           })}
         </nav>
 
-        {/* Footer */}
         <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #F3F4F6' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#0D9488', flexShrink: 0 }} />
-            <a href="https://github.com/ambientintel/ambientmobile" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#6B7280', textDecoration: 'none', letterSpacing: '0.04em' }}>ambientintel/ambientmobile</a>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669', flexShrink: 0 }} />
+            <a href="https://github.com/ambientintel/ambientweb" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#6B7280', textDecoration: 'none', letterSpacing: '0.04em' }}>ambientintel/ambientweb</a>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {(['j','k'] as const).map(k => (
@@ -802,33 +652,27 @@ export default function MobileAppPage() {
       {/* ── Main ── */}
       <main style={{ padding: '24px 36px 60px', maxWidth: 1200, width: '100%', boxSizing: 'border-box', position: 'relative', zIndex: 1 }}>
 
-        {/* Topbar */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: 22, borderBottom: '1px solid rgba(0,0,0,0.08)', marginBottom: 22 }}>
           <div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#9CA3AF', marginBottom: 7 }}>Ambient Intelligence · NIH STTR Phase I</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#9CA3AF', marginBottom: 7 }}>Ambient Intelligence · Mobile</div>
             <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 40, lineHeight: 1.05, letterSpacing: '-0.02em', margin: 0, color: '#111827' }}>
-              Ambient <em style={{ fontStyle: 'italic', color: '#6B7280' }}>Mobile</em>
+              Nurse <em style={{ fontStyle: 'italic', color: '#6B7280' }}>Mobile App</em>
             </h1>
-            <p style={{ margin: '8px 0 0', color: '#6B7280', fontSize: 13.5, maxWidth: 520, lineHeight: 1.6 }}>
-              Fall alert delivery to nursing staff via APNS and FCM. NIH STTR grant 1R41AG097177-01 · Mount Olivet Careview Home pilot.
+            <p style={{ margin: '8px 0 0', color: '#6B7280', fontSize: 13.5, maxWidth: 500, lineHeight: 1.6 }}>
+              PWA build, Capacitor native wrapper, and enterprise iOS distribution runbook for the Ambient fall-alert nurse app.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <Link href="/engineering" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 15px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#FFFFFF', fontSize: 12, fontFamily: 'var(--mono)', color: '#374151', textDecoration: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-              Engineering
-            </Link>
-            <a href="https://github.com/ambientintel/ambientmobile" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 15px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#FFFFFF', fontSize: 12, fontFamily: 'var(--mono)', color: '#374151', textDecoration: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" opacity={0.6}><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-              ambientintel/ambientmobile
-            </a>
-          </div>
+          <a href="https://github.com/ambientintel/ambientweb" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 15px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#FFFFFF', fontSize: 12, fontFamily: 'var(--mono)', color: '#374151', textDecoration: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', flexShrink: 0 }}>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" opacity={0.6}><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            ambientintel/ambientweb
+          </a>
         </div>
 
         {/* Pipeline strip */}
         <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, padding: '14px 20px', marginBottom: 20, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, minWidth: 'max-content' }}>
             {PIPELINE_PHASES.map((phase, pi) => (
-              <div key={phase.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pi === 0 ? '0 24px 0 0' : '0 24px', borderRight: pi < PIPELINE_PHASES.length - 1 ? '1px solid #E5E7EB' : 'none' }}>
+              <div key={phase.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pi === 0 ? '0 24px 0 0' : '0 24px', borderRight: '1px solid #E5E7EB' }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>{phase.label}</div>
                 <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                   {phase.ids.map((id, si) => {
@@ -836,10 +680,10 @@ export default function MobileAppPage() {
                     const sc = SC[s.status];
                     const isActive = active === id;
                     return (
-                      <span key={id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-                        {si > 0 && <span style={{ display: 'inline-block', width: 12, height: 1, background: '#E5E7EB', margin: '0 -2px', alignSelf: 'center' }} />}
-                        <button onClick={() => setActive(id)} title={s.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 8px', borderRadius: 7, border: isActive ? '1.5px solid #0D9488' : `1px solid ${sc.border}`, background: isActive ? '#F0FDFA' : sc.bg, cursor: 'pointer', transition: 'all 0.12s', minWidth: 44 }}>
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: isActive ? '#0D9488' : '#6B7280', fontWeight: isActive ? 600 : 400 }}>{s.phase}</span>
+                      <span key={id} style={{ display: 'flex', alignItems: 'center' }}>
+                        {si > 0 && <span style={{ display: 'inline-block', width: 12, height: 1, background: '#E5E7EB', margin: '0 -2px' }} />}
+                        <button onClick={() => setActive(id)} title={s.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 8px', borderRadius: 7, border: isActive ? '1.5px solid #2563EB' : `1px solid ${sc.border}`, background: isActive ? '#EFF6FF' : sc.bg, cursor: 'pointer', transition: 'all 0.12s', minWidth: 44 }}>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: isActive ? '#2563EB' : '#6B7280', fontWeight: isActive ? 600 : 400 }}>{s.phase}</span>
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
                         </button>
                       </span>
@@ -848,12 +692,49 @@ export default function MobileAppPage() {
                 </div>
               </div>
             ))}
+
+            {/* App Store milestone */}
+            {(() => {
+              const pct = Math.round((doneCount / CHECKLIST_ITEMS.length) * 100);
+              const ready = doneCount === CHECKLIST_ITEMS.length;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ width: 24, height: 1, background: ready ? 'linear-gradient(90deg, #E5E7EB, #2563EB)' : '#E5E7EB' }} />
+                    <svg width="6" height="10" viewBox="0 0 6 10" fill="none"><path d="M1 1l4 4-4 4" stroke={ready ? '#2563EB' : '#D1D5DB'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: shipFrozen ? '#059669' : ready ? '#2563EB' : '#9CA3AF' }}>
+                      {shipFrozen ? 'Milestone' : 'Goal'}
+                    </div>
+                    <button onClick={() => ready || shipFrozen ? setShipFrozen(f => !f) : undefined}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9, cursor: ready || shipFrozen ? 'pointer' : 'default', border: shipFrozen ? '1.5px solid #059669' : ready ? '1.5px solid #2563EB' : '1.5px dashed #D1D5DB', background: shipFrozen ? 'linear-gradient(135deg, #ECFDF5, #D1FAE5)' : ready ? 'linear-gradient(135deg, #EFF6FF, #DBEAFE)' : '#F9FAFB', transition: 'all 0.2s', boxShadow: shipFrozen ? '0 0 0 3px rgba(5,150,105,0.12)' : ready ? '0 0 0 3px rgba(37,99,235,0.10)' : 'none' }}>
+                      {shipFrozen ? (
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke="#059669" strokeWidth="1.6" strokeLinecap="round"/><circle cx="8" cy="8" r="2" fill="#059669" opacity="0.3"/></svg>
+                      ) : ready ? (
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke="#2563EB" strokeWidth="1.6" strokeLinecap="round"/><circle cx="8" cy="8" r="2" fill="#2563EB" opacity="0.3"/></svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="4" y="7" width="8" height="7" rx="1.5" stroke="#9CA3AF" strokeWidth="1.4"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="#9CA3AF" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
+                        <span style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: shipFrozen ? '#059669' : ready ? '#1D4ED8' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                          {shipFrozen ? 'Shipped ✓' : 'App Ship'}
+                        </span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: shipFrozen ? '#059669' : ready ? '#2563EB' : '#9CA3AF' }}>
+                          {shipFrozen ? 'v1.0 on MDM' : ready ? 'Ready — click to confirm' : `${pct}% complete`}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
-        {/* Stack spec row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 22 }}>
-          {STACK_SPECS.map(spec => (
+        {/* App spec row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 22 }}>
+          {APP_SPECS.map(spec => (
             <div key={spec.label} style={{ padding: '13px 15px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF', marginBottom: 4 }}>{spec.label}</div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: '#111827', fontWeight: 600, marginBottom: 3 }}>{spec.value}</div>
@@ -864,8 +745,6 @@ export default function MobileAppPage() {
 
         {/* Main two-column */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 268px', gap: 22, alignItems: 'start' }}>
-
-          {/* Step detail */}
           <div>
             {/* Step header */}
             {(() => {
@@ -875,12 +754,12 @@ export default function MobileAppPage() {
                 <div style={{ padding: '20px 24px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#0D9488', background: '#F0FDFA', border: '1px solid #99F6E4', borderRadius: 4, padding: '2px 8px' }}>STEP {step.phase}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 4, padding: '2px 8px' }}>STEP {step.phase}</div>
                       <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', background: tagStyle.bg, color: tagStyle.color }}>{step.tag}</span>
                       {step.time && <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', background: '#F8FAFC', color: '#6B7280', border: '1px solid #E5E7EB' }}>⏱ {step.time}</span>}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <button onClick={() => setFocusMode(f => !f)} title="Focus mode — show commands only" style={{ padding: '4px 10px', borderRadius: 6, border: focusMode ? '1.5px solid #0D9488' : '1px solid #E5E7EB', background: focusMode ? '#F0FDFA' : '#FFFFFF', color: focusMode ? '#0D9488' : '#6B7280', fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.12s' }}>
+                      <button onClick={() => setFocusMode(f => !f)} style={{ padding: '4px 10px', borderRadius: 6, border: focusMode ? '1.5px solid #2563EB' : '1px solid #E5E7EB', background: focusMode ? '#EFF6FF' : '#FFFFFF', color: focusMode ? '#2563EB' : '#6B7280', fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.12s' }}>
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6h2M9 6h2M6 1v2M6 9v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><circle cx="6" cy="6" r="2" stroke="currentColor" strokeWidth="1.4"/></svg>
                         {focusMode ? 'Focus ON' : 'Focus'}
                       </button>
@@ -905,12 +784,11 @@ export default function MobileAppPage() {
               const hasContent = !!(sec.commands?.length || sec.artifacts?.length || sec.warnings?.length || sec.table || sec.checklist);
               const hasOnlyBody = !hasContent && !!sec.body;
               if (focusMode && hasOnlyBody) return null;
-
               return (
                 <div key={key} style={{ marginBottom: 10, background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
                   {sec.heading && (
-                    <button onClick={() => toggle(key)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', background: isOpen ? '#FAFBFC' : '#FFFFFF', cursor: 'pointer', border: 0, borderBottom: isOpen ? '1px solid rgba(0,0,0,0.07)' : 'none', textAlign: 'left' }}>
-                      <span style={{ display: 'inline-block', width: 3, height: 16, borderRadius: 2, background: isOpen ? '#0D9488' : '#D1D5DB', flexShrink: 0, transition: 'background 0.15s' }} />
+                    <button onClick={() => toggleSection(key)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', background: isOpen ? '#FAFBFC' : '#FFFFFF', cursor: 'pointer', border: 0, borderBottom: isOpen ? '1px solid rgba(0,0,0,0.07)' : 'none', textAlign: 'left' }}>
+                      <span style={{ display: 'inline-block', width: 3, height: 16, borderRadius: 2, background: isOpen ? '#2563EB' : '#D1D5DB', flexShrink: 0, transition: 'background 0.15s' }} />
                       <span style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>{sec.heading}</span>
                       <span style={{ color: '#9CA3AF', fontSize: 13, transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.18s' }}>▾</span>
                     </button>
@@ -918,7 +796,6 @@ export default function MobileAppPage() {
                   {isOpen && (
                     <div style={{ padding: '16px 18px 18px' }}>
                       {!focusMode && sec.body && <p style={{ margin: '0 0 14px', color: '#4B5563', fontSize: 13.5, lineHeight: 1.7 }}>{sec.body}</p>}
-
                       {sec.commands?.map((cmd, ci) => (
                         <div key={ci} style={{ marginBottom: 12 }}>
                           {cmd.label && <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 5 }}>$ {cmd.label}</div>}
@@ -928,15 +805,14 @@ export default function MobileAppPage() {
                           </div>
                         </div>
                       ))}
-
                       {sec.artifacts && sec.artifacts.length > 0 && (
                         <div style={{ marginTop: 14 }}>
                           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 7 }}>Artifacts</div>
                           {sec.artifacts.map((a, ai) => (
-                            <div key={ai} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '9px 13px', background: '#F0FDFA', border: '1px solid #99F6E4', borderRadius: 8, marginBottom: 6 }}>
-                              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#0D9488', flexShrink: 0, marginTop: 2 }}>▸</span>
+                            <div key={ai} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '9px 13px', background: '#F0F7FF', border: '1px solid #BFDBFE', borderRadius: 8, marginBottom: 6 }}>
+                              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#2563EB', flexShrink: 0, marginTop: 2 }}>▸</span>
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#0F766E', marginBottom: 2 }}>{a.file}</div>
+                                <div style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#1D4ED8', marginBottom: 2 }}>{a.file}</div>
                                 <div style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.5 }}>{a.role}</div>
                               </div>
                               {a.size && <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#9CA3AF', flexShrink: 0 }}>{a.size}</span>}
@@ -944,41 +820,30 @@ export default function MobileAppPage() {
                           ))}
                         </div>
                       )}
-
                       {sec.table && (
                         <div style={{ marginTop: 14, borderRadius: 9, border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                            <thead>
-                              <tr style={{ background: '#F8FAFC' }}>
-                                {sec.table.cols.map((col, ci) => (
-                                  <th key={ci} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6B7280', padding: '9px 13px', textAlign: 'left', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>{col}</th>
-                                ))}
+                            <thead><tr style={{ background: '#F8FAFC' }}>
+                              {sec.table.cols.map((col, ci) => <th key={ci} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6B7280', padding: '9px 13px', textAlign: 'left', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>{col}</th>)}
+                            </tr></thead>
+                            <tbody>{sec.table.rows.map((row, ri) => (
+                              <tr key={ri} style={{ borderBottom: ri < sec.table!.rows.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                                {row.map((cell, ci) => <td key={ci} style={{ padding: '9px 13px', color: ci === 0 ? '#1E293B' : '#4B5563', fontFamily: ci === 0 ? 'var(--mono)' : 'inherit', fontSize: ci === 0 ? 12 : 13, lineHeight: 1.55, verticalAlign: 'top' }}>{cell}</td>)}
                               </tr>
-                            </thead>
-                            <tbody>
-                              {sec.table.rows.map((row, ri) => (
-                                <tr key={ri} style={{ borderBottom: ri < sec.table!.rows.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
-                                  {row.map((cell, ci) => (
-                                    <td key={ci} style={{ padding: '9px 13px', color: ci === 0 ? '#1E293B' : '#4B5563', fontFamily: ci === 0 ? 'var(--mono)' : 'inherit', fontSize: ci === 0 ? 12 : 13, lineHeight: 1.55, verticalAlign: 'top' }}>{cell}</td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
+                            ))}</tbody>
                           </table>
                         </div>
                       )}
-
                       {!focusMode && sec.checklist && (
                         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
                           {sec.checklist.map((item, ii) => (
                             <div key={ii} style={{ display: 'flex', gap: 10, padding: '8px 12px', background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.07)', borderRadius: 7 }}>
-                              <span style={{ color: '#0D9488', fontSize: 12, flexShrink: 0, marginTop: 1 }}>◆</span>
+                              <span style={{ color: '#2563EB', fontSize: 12, flexShrink: 0, marginTop: 1 }}>◆</span>
                               <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.55 }}>{item}</span>
                             </div>
                           ))}
                         </div>
                       )}
-
                       {sec.warnings?.map((w, wi) => (
                         <div key={wi} style={{ display: 'flex', gap: 10, padding: '10px 13px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, marginTop: 9 }}>
                           <span style={{ color: '#D97706', fontSize: 13, flexShrink: 0, marginTop: 1 }}>⚠</span>
@@ -991,7 +856,6 @@ export default function MobileAppPage() {
               );
             })}
 
-            {/* Prev / Next */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22, paddingTop: 16, borderTop: '1px solid rgba(0,0,0,0.08)' }}>
               {stepIdx > 0
                 ? <button onClick={() => setActive(STEPS[stepIdx - 1].id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', border: '1px solid #E5E7EB', borderRadius: 8, background: '#FFFFFF', color: '#374151', fontSize: 13, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
@@ -1008,11 +872,9 @@ export default function MobileAppPage() {
 
           {/* Right panel */}
           <div style={{ position: 'sticky', top: 24 }}>
-
-            {/* Interactive checklist */}
             <div style={{ padding: '16px 16px 14px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>Study Launch Checklist</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>Ship Checklist</div>
                 <button onClick={() => { setChecked(new Set(CHECKLIST_DONE)); try { localStorage.setItem(LS_KEY, JSON.stringify([...CHECKLIST_DONE])); } catch { /* ignore */ } }} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>reset</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -1020,7 +882,7 @@ export default function MobileAppPage() {
                   const done = checked.has(i);
                   return (
                     <button key={i} onClick={() => toggleChecked(i)} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-                      <div style={{ width: 15, height: 15, borderRadius: 3, border: done ? 'none' : '1.5px solid #D1D5DB', background: done ? '#0D9488' : 'transparent', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                      <div style={{ width: 15, height: 15, borderRadius: 3, border: done ? 'none' : '1.5px solid #D1D5DB', background: done ? '#059669' : 'transparent', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
                         {done && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                       </div>
                       <span style={{ fontSize: 11.5, color: done ? '#374151' : '#9CA3AF', lineHeight: 1.45, textDecoration: done ? 'line-through' : 'none', textDecorationColor: '#D1D5DB' }}>{item}</span>
@@ -1031,15 +893,14 @@ export default function MobileAppPage() {
               <div style={{ marginTop: 14, paddingTop: 11, borderTop: '1px solid rgba(0,0,0,0.07)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Complete</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#0D9488', fontWeight: 600 }}>{Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}%</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#059669', fontWeight: 600 }}>{Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}%</span>
                 </div>
                 <div style={{ height: 4, borderRadius: 2, background: '#E5E7EB' }}>
-                  <div style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #0D9488, #2563EB)', width: `${(doneCount / CHECKLIST_ITEMS.length) * 100}%`, transition: 'width 0.3s ease' }} />
+                  <div style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #059669, #2563EB)', width: `${(doneCount / CHECKLIST_ITEMS.length) * 100}%`, transition: 'width 0.3s ease' }} />
                 </div>
               </div>
             </div>
 
-            {/* Open decisions */}
             <div style={{ padding: '14px 16px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 14 }}>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#D97706', marginBottom: 11 }}>Open Decisions</div>
               {OPEN_DECISIONS.map((d, i) => (
@@ -1054,6 +915,4 @@ export default function MobileAppPage() {
       </main>
     </div>
   );
-
-  function toggle(key: string) { toggleSection(key); }
 }

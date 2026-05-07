@@ -569,6 +569,21 @@ export default function EngineeringPage() {
 
         {/* Topbar */}
         <header style={s.topbar}>
+
+          {/* ── Top nav strip ── */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingBottom:14, borderBottom:"1px solid var(--line)", marginBottom:4 }}>
+            <Link href="/" style={{ textDecoration:"none" }}>
+              <span style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--text-3)" }}>Ambient Intelligence</span>
+            </Link>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <NavCard href="/firmware"  label="Firmware"   color="#00B4D8" />
+              <NavCard href="/ee"        label="EE"         color="#2563EB" lsKey="ambient-ee-checklist-v1"        total={22} defaultDone={13} />
+              <NavCard href="/cloud"     label="Cloud"      color="#818CF8" />
+              <NavCard href="/webapp"    label="Web App"    color="#3DCC91" lsKey="ambient-webapp-checklist-v1"    total={20} defaultDone={13} />
+              <NavCard href="/mobileapp" label="Mobile App" color="#FB923C" lsKey="ambient-mobileapp-checklist-v1" total={20} defaultDone={7} />
+            </div>
+          </div>
+
           <div style={s.topbarRow}>
             <div>
               <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", textTransform:"uppercase", letterSpacing:"0.12em", marginBottom:4 }}>Engineering / Sprint {weekNum}</div>
@@ -2003,6 +2018,83 @@ function SectionDivider({ label, n }: { label: string; n?: string }) {
         <div style={{ flex:1, height:"1px", background:"var(--line)", opacity:0.5 }}/>
       </div>
     </div>
+  );
+}
+
+// ── NavCard ───────────────────────────────────────────────────────────────
+function NavCard({ href, label, color, lsKey, total, defaultDone }: {
+  href: string; label: string; color: string;
+  lsKey?: string; total?: number; defaultDone?: number;
+}) {
+  const [hov, setHov] = useState(false);
+  const [pct, setPct] = useState<number | null>(() =>
+    total ? Math.round(((defaultDone ?? 0) / total) * 100) : null
+  );
+  useEffect(() => {
+    if (!lsKey || !total) return;
+    try {
+      const raw = localStorage.getItem(lsKey);
+      if (raw) setPct(Math.round((JSON.parse(raw).length / total) * 100));
+    } catch { /* ignore */ }
+  }, [lsKey, total]);
+
+  return (
+    <Link href={href} style={{ textDecoration:"none" }}>
+      <div
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        style={{
+          padding: "8px 13px 9px",
+          borderRadius: 8,
+          border: `1px solid ${hov ? color + "55" : "rgba(255,255,255,0.12)"}`,
+          background: hov ? `${color}12` : "var(--surface-1)",
+          transform: hov ? "translateY(-2px)" : "none",
+          boxShadow: hov
+            ? `0 6px 20px ${color}22, 0 0 0 1px ${color}30`
+            : "0 1px 3px rgba(0,0,0,0.25)",
+          transition: "all 0.18s ease",
+          minWidth: 84,
+          cursor: "pointer",
+          userSelect: "none" as const,
+        }}
+      >
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom: pct !== null ? 7 : 0 }}>
+          <span style={{
+            fontFamily: "var(--mono)", fontSize: 10,
+            textTransform: "uppercase" as const, letterSpacing: "0.12em",
+            color: hov ? "var(--text)" : "var(--text-2)",
+            transition: "color 0.18s", whiteSpace: "nowrap" as const,
+          }}>
+            {label}
+          </span>
+          {pct !== null ? (
+            <span style={{
+              fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600,
+              color: pct === 100 ? "#3DCC91" : hov ? color : "var(--text-3)",
+              transition: "color 0.18s",
+            }}>
+              {pct}%
+            </span>
+          ) : (
+            <span style={{
+              width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0,
+              boxShadow: hov ? `0 0 8px ${color}` : "none",
+              transition: "box-shadow 0.18s",
+            }} />
+          )}
+        </div>
+        {pct !== null && (
+          <div style={{ height: 3, borderRadius: 2, background: "var(--surface-3)" }}>
+            <div style={{
+              height: "100%", borderRadius: 2, width: `${pct}%`,
+              background: pct === 100 ? "#3DCC91" : color,
+              boxShadow: hov && pct > 0 ? `0 0 8px ${color}AA` : "none",
+              transition: "box-shadow 0.18s, width 0.4s ease",
+            }} />
+          </div>
+        )}
+      </div>
+    </Link>
   );
 }
 

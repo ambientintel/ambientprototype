@@ -670,11 +670,18 @@ export default function Landing1() {
             </span>
           </Link>
           <LiveNav />
-          <Link href="/control" style={{ textDecoration: 'none' }}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.accent, border: `1px solid ${C.accentDim}`, padding: '5px 12px', borderRadius: 2 }}>
-              View Control Center
-            </span>
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Link href="/engineering" style={{ textDecoration: 'none' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 12px', borderRadius: 2 }}>
+                Engineering
+              </span>
+            </Link>
+            <Link href="/control" style={{ textDecoration: 'none' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.accent, border: `1px solid ${C.accentDim}`, padding: '5px 12px', borderRadius: 2 }}>
+                View Control Center
+              </span>
+            </Link>
+          </div>
         </nav>
 
         {/* ── Hero ── */}
