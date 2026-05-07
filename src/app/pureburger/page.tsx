@@ -108,12 +108,18 @@ function MenuCard({ item, accent }: { item: typeof BEEF[0]; accent: string }) {
   );
 }
 
-type Particle = {
+type Node = {
   baseX: number; baseY: number; x: number; y: number;
-  size: number; speedX: number; speedY: number;
-  offsetX: number; offsetY: number; amplitude: number;
-  label?: string; isIngredient: boolean; opacity: number;
+  label: string; speedX: number; speedY: number;
+  offX: number; offY: number; amp: number;
+  opacity: number; pulseOff: number;
 };
+type Spore = {
+  x: number; y: number; size: number;
+  speed: number; sway: number; swayOff: number;
+  isGold: boolean; opacity: number;
+};
+type Ripple = { x: number; y: number; r: number; maxR: number; alpha: number };
 
 export default function PureBurger() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -124,108 +130,178 @@ export default function PureBurger() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    let W = 0, H = 0;
     const resize = () => {
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
+      W = canvas.width; H = canvas.height;
     };
     resize();
     window.addEventListener('resize', resize);
 
     const LABELS = [
-      'grass-fed', 'free-range', 'aged cheddar', 'brioche',
-      'dill pickle', 'arugula', 'avocado', 'sea salt',
-      'sunflower oil', 'vine tomato', 'whole grain mustard',
-      'lemon', 'cane sugar', 'cold-pressed', 'pasture-raised',
+      'grass-fed', 'free-range', 'pasture-raised', 'cold-pressed',
+      'aged cheddar', 'whole grain', 'arugula', 'avocado',
+      'sea salt', 'vine tomato', 'lemon', 'dill pickle',
+      'sunflower oil', 'brioche',
     ];
 
-    const particles: Particle[] = [];
+    // Large breathing radial blobs — soft sage green
+    const blobs = Array.from({ length: 5 }, () => ({
+      baseX: Math.random() * W, baseY: Math.random() * H,
+      radius: 130 + Math.random() * 200,
+      breathSpeed: 0.18 + Math.random() * 0.12,
+      phase: Math.random() * Math.PI * 2,
+      driftSpeed: 0.035 + Math.random() * 0.025,
+      opacity: 0.038 + Math.random() * 0.045,
+    }));
 
-    const make = (isIngredient: boolean, label?: string): Particle => ({
-      baseX: Math.random() * canvas.width,
-      baseY: Math.random() * canvas.height,
+    // Tiny spores floating upward — pollen/seed feel
+    const spores: Spore[] = Array.from({ length: 40 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      size: 1.2 + Math.random() * 2.2,
+      speed: 0.22 + Math.random() * 0.42,
+      sway: 0.25 + Math.random() * 0.45,
+      swayOff: Math.random() * Math.PI * 2,
+      isGold: Math.random() < 0.22,
+      opacity: 0.18 + Math.random() * 0.32,
+    }));
+
+    // Ingredient label nodes
+    const nodes: Node[] = LABELS.map(() => ({
+      baseX: Math.random() * W, baseY: Math.random() * H,
       x: 0, y: 0,
-      size: isIngredient ? 3.5 : 1.5 + Math.random() * 2,
-      speedX: 0.08 + Math.random() * 0.12,
-      speedY: 0.07 + Math.random() * 0.10,
-      offsetX: Math.random() * Math.PI * 2,
-      offsetY: Math.random() * Math.PI * 2,
-      amplitude: isIngredient ? 50 + Math.random() * 50 : 25 + Math.random() * 55,
-      label,
-      isIngredient,
-      opacity: isIngredient ? 0.45 + Math.random() * 0.3 : 0.12 + Math.random() * 0.18,
-    });
+      label: LABELS[Math.floor(Math.random() * LABELS.length)],
+      speedX: 0.055 + Math.random() * 0.075,
+      speedY: 0.045 + Math.random() * 0.06,
+      offX: Math.random() * Math.PI * 2,
+      offY: Math.random() * Math.PI * 2,
+      amp: 50 + Math.random() * 55,
+      opacity: 0.4 + Math.random() * 0.3,
+      pulseOff: Math.random() * Math.PI * 2,
+    }));
+    // Assign unique labels
+    LABELS.forEach((l, i) => { if (nodes[i]) nodes[i].label = l; });
 
-    LABELS.forEach(l => particles.push(make(true, l)));
-    for (let i = 0; i < 55; i++) particles.push(make(false));
+    // Expanding ripple rings spawned from nodes
+    const ripples: Ripple[] = [];
+    let frame = 0;
 
-    let t = 0;
-    let animId: number;
+    const spawnRipple = () => {
+      const n = nodes[Math.floor(Math.random() * nodes.length)];
+      if (n.x && ripples.length < 5) {
+        ripples.push({ x: n.x, y: n.y, r: 4, maxR: 55 + Math.random() * 45, alpha: 0.14 });
+      }
+    };
+
+    let t = 0, animId: number;
 
     const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      t += 0.006;
+      ctx.clearRect(0, 0, W, H);
+      t += 0.005;
+      frame++;
+      if (frame % 110 === 0) spawnRipple();
 
-      particles.forEach(p => {
-        p.x = p.baseX + Math.sin(t * p.speedX + p.offsetX) * p.amplitude;
-        p.y = p.baseY + Math.sin(t * p.speedY + p.offsetY) * p.amplitude * 0.55;
+      // ── 1. Breathing blobs ──
+      blobs.forEach(b => {
+        const scale = 1 + 0.2 * Math.sin(t * b.breathSpeed + b.phase);
+        const r = b.radius * scale;
+        const x = b.baseX + Math.sin(t * b.driftSpeed + b.phase) * 65;
+        const y = b.baseY + Math.cos(t * b.driftSpeed * 0.75 + b.phase) * 45;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, `rgba(50,110,40,${b.opacity * 2.2})`);
+        g.addColorStop(0.45, `rgba(42,90,36,${b.opacity})`);
+        g.addColorStop(1, `rgba(42,90,36,0)`);
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = g; ctx.fill();
       });
 
-      // connections
-      const DIST = 150;
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
+      // ── 2. Floating spores ──
+      spores.forEach(s => {
+        s.y -= s.speed;
+        s.x += Math.sin(t * s.sway + s.swayOff) * 0.45;
+        if (s.y < -8) { s.y = H + 8; s.x = Math.random() * W; }
+        if (s.x < -8) s.x = W + 8;
+        if (s.x > W + 8) s.x = -8;
+
+        // soft glow halo
+        if (s.size > 1.8) {
+          const halo = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * 3.5);
+          const col = s.isGold ? `150,110,35` : `55,120,45`;
+          halo.addColorStop(0, `rgba(${col},${s.opacity * 0.28})`);
+          halo.addColorStop(1, `rgba(${col},0)`);
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.size * 3.5, 0, Math.PI * 2);
+          ctx.fillStyle = halo; ctx.fill();
+        }
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fillStyle = s.isGold ? `rgba(155,115,35,${s.opacity})` : `rgba(58,118,44,${s.opacity})`;
+        ctx.fill();
+      });
+
+      // ── 3. Ripple rings ──
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rp = ripples[i];
+        rp.r += 0.55; rp.alpha *= 0.982;
+        ctx.beginPath(); ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(42,90,36,${rp.alpha})`;
+        ctx.lineWidth = 1; ctx.stroke();
+        if (rp.r >= rp.maxR || rp.alpha < 0.006) ripples.splice(i, 1);
+      }
+
+      // ── 4. Node positions ──
+      nodes.forEach(n => {
+        n.x = n.baseX + Math.sin(t * n.speedX + n.offX) * n.amp;
+        n.y = n.baseY + Math.sin(t * n.speedY + n.offY) * n.amp * 0.6;
+      });
+
+      // ── 5. Node connections (green only) ──
+      const DIST = 170;
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
           const d = Math.sqrt(dx * dx + dy * dy);
           if (d < DIST) {
-            const alpha = (1 - d / DIST) * 0.07;
-            const bothIngredient = particles[i].isIngredient && particles[j].isIngredient;
             ctx.beginPath();
-            ctx.strokeStyle = bothIngredient
-              ? `rgba(42,90,36,${alpha * 1.8})`
-              : `rgba(28,26,23,${alpha})`;
-            ctx.lineWidth = bothIngredient ? 1 : 0.6;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(42,90,36,${(1 - d / DIST) * 0.09})`;
+            ctx.lineWidth = 0.8;
+            ctx.moveTo(nodes[i].x, nodes[i].y);
+            ctx.lineTo(nodes[j].x, nodes[j].y);
             ctx.stroke();
           }
         }
       }
 
-      // nodes
-      particles.forEach(p => {
-        if (p.isIngredient) {
-          // outer ring
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size + 3, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(42,90,36,${p.opacity * 0.25})`;
-          ctx.lineWidth = 1;
-          ctx.stroke();
-          // filled dot
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(42,90,36,${p.opacity})`;
-          ctx.fill();
-          // label
-          ctx.font = '500 10px -apple-system, sans-serif';
-          ctx.fillStyle = `rgba(42,90,36,${p.opacity * 0.7})`;
-          ctx.fillText(p.label!, p.x + p.size + 6, p.y + 3.5);
-        } else {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(28,26,23,${p.opacity})`;
-          ctx.fill();
-        }
+      // ── 6. Ingredient nodes ──
+      nodes.forEach(n => {
+        const pulse = 1 + 0.12 * Math.sin(t * 1.1 + n.pulseOff);
+
+        // radial glow
+        const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, 20 * pulse);
+        grd.addColorStop(0, `rgba(42,90,36,${n.opacity * 0.35})`);
+        grd.addColorStop(1, `rgba(42,90,36,0)`);
+        ctx.beginPath(); ctx.arc(n.x, n.y, 20 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = grd; ctx.fill();
+
+        // outer ring
+        ctx.beginPath(); ctx.arc(n.x, n.y, 7 * pulse, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(42,90,36,${n.opacity * 0.28})`;
+        ctx.lineWidth = 1; ctx.stroke();
+
+        // filled core
+        ctx.beginPath(); ctx.arc(n.x, n.y, 3.2 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(42,90,36,${n.opacity})`; ctx.fill();
+
+        // italic label
+        ctx.font = `italic 10px Georgia, 'Times New Roman', serif`;
+        ctx.fillStyle = `rgba(42,90,36,${n.opacity * 0.72})`;
+        ctx.fillText(n.label, n.x + 11, n.y + 3.5);
       });
 
       animId = requestAnimationFrame(draw);
     };
     draw();
 
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('resize', resize);
-    };
+    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize); };
   }, []);
 
   return (
