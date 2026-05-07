@@ -119,9 +119,9 @@ const SC: Record<StepStatus, { label: string; bg: string; border: string; color:
 };
 
 const TAG_STYLE: Record<string, { bg: string; color: string }> = {
-  'Setup':       { bg: '#F0FDFA', color: '#0F766E' },
+  'Environment': { bg: '#F0FDFA', color: '#0F766E' },
   'Development': { bg: '#ECFDF5', color: '#15803D' },
-  'Feature':     { bg: '#EFF6FF', color: '#1D4ED8' },
+  'Features':    { bg: '#EFF6FF', color: '#1D4ED8' },
   'Distribution':{ bg: '#FFF7ED', color: '#C2410C' },
 };
 
@@ -136,7 +136,7 @@ const PIPELINE_PHASES = [
 
 const STEPS: Step[] = [
   {
-    id: 'repo', phase: '01', title: 'Repository Setup', status: 'done', tag: 'Setup', time: '< 5 min',
+    id: 'repo', phase: '01', title: 'Repository Setup', status: 'done', tag: 'Environment', time: '< 5 min',
     summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. Initialized 2026-04-21 — scaffold only. Implementation begins in subsequent sessions per ambientcloud/docs/study-mvp.md §12.',
     sections: [
       {
@@ -175,7 +175,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'env', phase: '02', title: 'Environment Variables', status: 'done', tag: 'Setup', time: '~10 min',
+    id: 'env', phase: '02', title: 'Environment Variables', status: 'done', tag: 'Environment', time: '~10 min',
     summary: 'Copy .env.example to .env. Cognito pool and client ID from ambientcloud Terraform outputs. All values are non-PHI infrastructure references.',
     sections: [
       {
@@ -209,7 +209,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'auth', phase: '03', title: 'Cognito Authentication', status: 'pending', tag: 'Setup', time: '~2 hr implementation',
+    id: 'auth', phase: '03', title: 'Cognito Authentication', status: 'pending', tag: 'Environment', time: '~2 hr implementation',
     summary: 'Login via AWS Cognito — shared user pool with ambientweb. Same nurse credentials work on both platforms. SRP auth, no client secret.',
     sections: [
       {
@@ -388,7 +388,7 @@ function onNewAlert(payload: AlertPayload) {
     ],
   },
   {
-    id: 'alertlist', phase: '07', title: 'Recent Alerts List', status: 'pending', tag: 'Feature', time: '~2 hr implementation',
+    id: 'alertlist', phase: '07', title: 'Recent Alerts List', status: 'pending', tag: 'Features', time: '~2 hr implementation',
     summary: 'Scrollable list of the last 50 alerts — coded ID, type badge, confidence, timestamp. Pull-to-refresh fetches from the ambientcloud alerts API.',
     sections: [
       {
@@ -417,7 +417,7 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
     ],
   },
   {
-    id: 'alertdetail', phase: '08', title: 'Alert Detail', status: 'pending', tag: 'Feature', time: '~2 hr implementation',
+    id: 'alertdetail', phase: '08', title: 'Alert Detail', status: 'pending', tag: 'Features', time: '~2 hr implementation',
     summary: 'Per-alert screen reached by tapping a list row or a push notification. Shows alert context, acknowledge button, and false-positive flag. Coded IDs only.',
     sections: [
       {
@@ -456,7 +456,7 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
     ],
   },
   {
-    id: 'phi', phase: '09', title: 'PHI Boundary', status: 'done', tag: 'Feature', time: 'reference',
+    id: 'phi', phase: '09', title: 'PHI Boundary', status: 'done', tag: 'Features', time: 'reference',
     summary: 'Coded-data design under HIPAA §164.514(c). All API responses and push payloads use MOCAREV-NNNN identifiers. No names, MRNs, DOBs, or room numbers ever reach the device in Phase I.',
     sections: [
       {
@@ -745,7 +745,7 @@ export default function MobileAppPage() {
     setCollapsed(prev => ({ ...prev, ...all }));
   }
 
-  const TAGS = ['All', 'Setup', 'Development', 'Feature', 'Distribution'];
+  const TAGS = ['All', 'Environment', 'Development', 'Features', 'Distribution'];
   const step = STEPS.find(s => s.id === active)!;
   const stepIdx = STEPS.findIndex(s => s.id === active);
   const doneCount = checked.size;
