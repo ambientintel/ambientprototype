@@ -61,6 +61,7 @@ export default authkitMiddleware({
       "/apparchive",
       "/archive",
       "/api/push/(.*)",
+      "/api/eng/(.*)",
     ],
   },
   redirectUri: process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI,

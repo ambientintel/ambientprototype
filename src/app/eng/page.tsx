@@ -87,7 +87,7 @@ const DOMAINS = [
     ],
     description: 'TI Processor SDK 11 · Yocto · U-Boot · custom DTB for IWR6843AOP integration. Build → bring-up → OTA.',
     currentStep: '07 · Kernel Patch Management',
-    freezeKey: 'ambient-fw-frozen-v2',
+    freezeKey: 'ambient-fw-frozen-v1',
     freezeLabel: 'Firmware Freeze',
   },
   {
@@ -149,7 +149,7 @@ const DOMAINS = [
     ],
     description: 'Nurse-facing fall alert app. Cognito auth, push notifications via SNS, alert list + detail, EAS build for TestFlight.',
     currentStep: '03 · Cognito Authentication',
-    freezeKey: 'ambient-mobile-frozen-v1',
+    freezeKey: 'ambient-mobileapp-frozen-v1',
     freezeLabel: 'Phase I Lock',
   },
   {
@@ -216,6 +216,24 @@ export default function EngDashboard() {
     });
     setProgress(p);
     setFrozen(f);
+    // Overlay with server-side shared state
+    const domainKeyMap: Record<string, string> = {
+      firmware: 'firmware', ee: 'ee', mobileapp: 'mobileapp', cloudengineering: 'cloud',
+    };
+    fetch('/api/eng/state').then(r => r.json()).then((all) => {
+      const sp: Record<string, number> = {};
+      const sf: Record<string, string | null> = {};
+      DOMAINS.forEach(d => {
+        const key = domainKeyMap[d.id];
+        const serverDomain = key ? all[key] : undefined;
+        if (serverDomain) {
+          if (Array.isArray(serverDomain.checked)) sp[d.id] = serverDomain.checked.length;
+          sf[d.id] = typeof serverDomain.frozen === 'string' ? serverDomain.frozen : null;
+        }
+      });
+      setProgress(prev => ({ ...prev, ...sp }));
+      setFrozen(prev => ({ ...prev, ...sf }));
+    }).catch(() => {});
   }, []);
 
   const totalSteps  = DOMAINS.reduce((s, d) => s + d.stepsTotal, 0);

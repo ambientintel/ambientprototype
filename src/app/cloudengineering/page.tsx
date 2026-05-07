@@ -675,6 +675,8 @@ export default function CloudEngineeringPage() {
   const [filterTag, setFilterTag] = useState('All');
   const [prodFrozen, setProdFrozen]   = useState(false);
   const [frozenDate, setFrozenDate]   = useState<string | null>(null);
+  const isMounted = useRef(false);
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     try {
@@ -683,7 +685,26 @@ export default function CloudEngineeringPage() {
       const fz = localStorage.getItem(LS_FREEZE_KEY);
       if (fz) { const p = JSON.parse(fz); setProdFrozen(true); setFrozenDate(p.date); }
     } catch { /* ignore */ }
+    fetch('/api/eng/state').then(r => r.json()).then((all) => {
+      const d = all['cloud'];
+      if (!d) return;
+      if (Array.isArray(d.checked)) { setChecked(new Set(d.checked)); try { localStorage.setItem(LS_KEY, JSON.stringify(d.checked)); } catch { /* ignore */ } }
+      if (typeof d.frozen === 'string') { setProdFrozen(true); setFrozenDate(d.frozen); try { localStorage.setItem(LS_FREEZE_KEY, JSON.stringify({ frozen: true, date: d.frozen })); } catch { /* ignore */ } }
+      else if (d.frozen === null) { setProdFrozen(false); setFrozenDate(null); try { localStorage.removeItem(LS_FREEZE_KEY); } catch { /* ignore */ } }
+    }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isMounted.current) { isMounted.current = true; return; }
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => {
+      fetch('/api/eng/state', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: 'cloud', checked: [...checked], frozen: prodFrozen ? frozenDate : null }),
+      }).catch(() => {});
+    }, 800);
+  }, [checked, prodFrozen, frozenDate]);
 
   function toggleChecked(i: number) {
     setChecked(prev => {

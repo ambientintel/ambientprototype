@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 
 const HERO_MODULE = {
-  href: '/dashboard/overview',
+  href: 'https://ellamemory.com/',
   tag: 'Operations',
   label: 'Nurse Dashboard',
   description: 'Real-time resident activity monitoring, fall-detection alerts, and AI-generated clinical summaries across all floors. The operational core of the Ambient Intelligence platform.',
@@ -734,7 +734,7 @@ export default function Landing1() {
             </p>
 
             <div className="l1-fadeup" style={{ animationDelay: '0.35s', display: 'flex', gap: 12 }}>
-              <Link href="/dashboard/overview" style={{ textDecoration: 'none' }}>
+              <Link href="https://ellamemory.com/" style={{ textDecoration: 'none' }}>
                 <button className="l1-cta-primary">Nurse Dashboard</button>
               </Link>
               <Link href="/control" style={{ textDecoration: 'none' }}>
