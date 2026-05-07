@@ -119,21 +119,6 @@
       "description": "",
       "created": "May 4",
       "updated": "May 4"
-    },
-    {
-      "id": "ENG-L1778186355663",
-      "type": "task",
-      "title": "hi",
-      "priority": "medium",
-      "points": 1,
-      "assignee": "Hanna",
-      "assigneeInitial": "H",
-      "assigneeColor": "#F472B6",
-      "labels": [],
-      "column": "review",
-      "description": "",
-      "created": "May 7",
-      "updated": "May 7"
     }
   ],
   "personalTasks": {
