@@ -2,91 +2,75 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
-// ── Constellation / neural-net background ─────────────────────────────────────
+// ── Topographic contour background ────────────────────────────────────────────
+// Six terrain peaks rendered as slow-rotating concentric ellipses.
+// Three independent motions per peak — axis rotation, center drift, aspect morph —
+// create complex evolution that never exactly repeats.
 
-function ConstellationCanvas() {
+function TopoCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const el = ref.current!;
     if (!el) return;
     const ctx = el.getContext('2d')!;
     let raf: number;
+    let t = 0;
 
-    type P = { x:number; y:number; vx:number; vy:number; r:number; pulse:number; pulseSpd:number };
-    let pts: P[] = [];
+    // fx/fy: fractional center, rx/ry: base radii, a: initial axis angle,
+    // n: ring count, rs: rotation speed, dr: drift radius (fraction of W),
+    // ds: drift speed, dp: drift phase, ms: morph speed
+    const PEAKS = [
+      { fx:0.14, fy:0.24, rx:245, ry:152, a:-0.30, n: 9, rs:0.000115, dr:0.024, ds:0.000310, dp:0.00, ms:0.000205 },
+      { fx:0.73, fy:0.14, rx:192, ry:119, a: 0.42, n: 7, rs:0.000188, dr:0.019, ds:0.000415, dp:1.10, ms:0.000282 },
+      { fx:0.54, fy:0.77, rx:272, ry:170, a:-0.09, n:11, rs:0.000092, dr:0.017, ds:0.000268, dp:2.30, ms:0.000158 },
+      { fx:0.89, fy:0.61, rx:150, ry: 96, a: 0.68, n: 6, rs:0.000162, dr:0.021, ds:0.000352, dp:0.72, ms:0.000241 },
+      { fx:0.07, fy:0.83, rx:168, ry:106, a:-0.51, n: 6, rs:0.000140, dr:0.018, ds:0.000292, dp:3.58, ms:0.000198 },
+      { fx:0.43, fy:0.43, rx:140, ry: 90, a: 0.21, n: 5, rs:0.000238, dr:0.028, ds:0.000475, dp:5.10, ms:0.000330 },
+    ];
 
-    function init() {
-      const n = Math.max(55, Math.min(85, Math.floor(el.width * el.height / 16000)));
-      pts = Array.from({ length: n }, () => ({
-        x: Math.random() * el.width,
-        y: Math.random() * el.height,
-        vx: (Math.random() - 0.5) * 0.30,
-        vy: (Math.random() - 0.5) * 0.30,
-        r: Math.random() < 0.14 ? 2.6 : Math.random() * 1.1 + 0.7,
-        pulse: Math.random() * Math.PI * 2,
-        pulseSpd: 0.012 + Math.random() * 0.018,
-      }));
-    }
-
-    function resize() {
-      el.width  = el.offsetWidth;
-      el.height = el.offsetHeight;
-      init();
-    }
+    function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; }
     resize();
     window.addEventListener('resize', resize);
 
     function frame() {
       const W = el.width, H = el.height;
       ctx.clearRect(0, 0, W, H);
+      t++;
 
-      const maxD = Math.min(W, H) * 0.19;
+      // Faint survey grid — mathematical foundation layer
+      ctx.lineWidth = 0.45;
+      ctx.strokeStyle = 'rgba(8,14,50,0.013)';
+      for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+      for (let y = 0; y < H; y += 80) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
 
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(8,12,26,0.022)';
-      const gx = W / 11, gy = H / 8;
-      for (let i = 1; i < 11; i++) { ctx.beginPath(); ctx.moveTo(i*gx,0); ctx.lineTo(i*gx,H); ctx.stroke(); }
-      for (let j = 1; j < 8;  j++) { ctx.beginPath(); ctx.moveTo(0,j*gy); ctx.lineTo(W,j*gy); ctx.stroke(); }
+      PEAKS.forEach(p => {
+        // Orbital drift — center traces a slow elliptical path
+        const cx = p.fx * W + p.dr * W       * Math.sin(t * p.ds + p.dp);
+        const cy = p.fy * H + p.dr * H * 0.6 * Math.cos(t * p.ds * 0.77 + p.dp + 0.5);
 
-      pts.forEach(p => {
-        p.x = ((p.x + p.vx) + W) % W;
-        p.y = ((p.y + p.vy) + H) % H;
-        p.pulse += p.pulseSpd;
-      });
+        // Slow axis rotation
+        const angle = p.a + t * p.rs;
 
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const dx = pts[i].x - pts[j].x;
-          const dy = pts[i].y - pts[j].y;
-          const d = Math.sqrt(dx*dx + dy*dy);
-          if (d < maxD) {
-            const t = 1 - d / maxD;
-            const act = 0.5 + 0.5 * Math.sin(pts[i].pulse) * Math.sin(pts[j].pulse);
-            const alpha = t * (0.09 + act * 0.06);
-            ctx.beginPath();
-            ctx.moveTo(pts[i].x, pts[i].y);
-            ctx.lineTo(pts[j].x, pts[j].y);
-            ctx.strokeStyle = `rgba(8,12,26,${alpha.toFixed(3)})`;
-            ctx.lineWidth = t * 1.1;
-            ctx.stroke();
-          }
+        // Aspect ratio breathes — ry oscillates gently around baseline
+        const morph = 1 + 0.07 * Math.sin(t * p.ms + p.dp);
+
+        for (let r = 0; r < p.n; r++) {
+          const frac  = r / p.n;
+          const scale = 1 - frac * 0.74;
+          // Outer rings most faint, inner rings slightly more defined
+          const alpha = 0.012 + frac * 0.036;
+          const lw    = 0.38 + frac * 0.34;
+
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(angle);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, p.rx * scale, p.ry * morph * scale, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(8,14,58,${alpha.toFixed(4)})`;
+          ctx.lineWidth = lw;
+          ctx.stroke();
+          ctx.restore();
         }
-      }
-
-      pts.forEach(p => {
-        const glow = 0.5 + 0.5 * Math.sin(p.pulse);
-        const glowR = p.r * (3.5 + glow * 2.5);
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
-        grad.addColorStop(0,   `rgba(8,12,26,${(0.08 + glow * 0.06).toFixed(3)})`);
-        grad.addColorStop(1,   'rgba(8,12,26,0)');
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * (1 + glow * 0.18), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(8,12,26,${(0.28 + glow * 0.14).toFixed(3)})`;
-        ctx.fill();
       });
 
       raf = requestAnimationFrame(frame);
@@ -800,7 +784,7 @@ export default function CloudEngineeringPage() {
       .pf-frozen .pf-sub   { color: rgba(255,255,255,0.82); }
     `}} />
     <div className="app" style={{ background: '#F1F3F6', minHeight: '100vh', position: 'relative' }}>
-      <ConstellationCanvas />
+      <TopoCanvas />
 
       {/* ── Sidebar ── */}
       <aside style={{ background: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.08)', padding: '22px 14px 28px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0, zIndex: 10, boxShadow: '2px 0 8px rgba(0,0,0,0.04)' }}>
