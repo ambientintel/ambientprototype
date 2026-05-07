@@ -2,49 +2,82 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
-// ── Lissajous background ───────────────────────────────────────────────────────
+// ── Constellation / neural-net background ─────────────────────────────────────
 
-function LissajousCanvas() {
+function ConstellationCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const el = canvas;
+    const el = ref.current!;
+    if (!el) return;
     const ctx = el.getContext('2d')!;
     let raf: number;
-    let t = 0;
-    const figs = [
-      { a: 1, b: 2, cx: 0.15, cy: 0.28, r: 140, ph: 0.0 },
-      { a: 3, b: 2, cx: 0.50, cy: 0.10, r: 160, ph: 0.4 },
-      { a: 5, b: 4, cx: 0.82, cy: 0.30, r: 120, ph: 0.9 },
-      { a: 3, b: 4, cx: 0.20, cy: 0.72, r: 110, ph: 1.3 },
-      { a: 5, b: 3, cx: 0.65, cy: 0.65, r: 150, ph: 0.7 },
-      { a: 2, b: 3, cx: 0.88, cy: 0.78, r: 100, ph: 0.2 },
-      { a: 4, b: 3, cx: 0.44, cy: 0.88, r: 130, ph: 1.8 },
-    ];
-    function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; }
+
+    type P = { x:number; y:number; vx:number; vy:number; r:number; pulse:number; pulseSpd:number };
+    let pts: P[] = [];
+
+    function init() {
+      const n = Math.max(55, Math.min(85, Math.floor(el.width * el.height / 16000)));
+      pts = Array.from({ length: n }, () => ({
+        x: Math.random() * el.width,
+        y: Math.random() * el.height,
+        vx: (Math.random() - 0.5) * 0.30,
+        vy: (Math.random() - 0.5) * 0.30,
+        r: Math.random() < 0.14 ? 2.6 : Math.random() * 1.1 + 0.7,
+        pulse: Math.random() * Math.PI * 2,
+        pulseSpd: 0.012 + Math.random() * 0.018,
+      }));
+    }
+
+    function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; init(); }
     resize();
     window.addEventListener('resize', resize);
-    function draw() {
-      ctx.clearRect(0, 0, el.width, el.height);
-      t += 0.003;
-      figs.forEach(f => {
-        const cx = f.cx * el.width, cy = f.cy * el.height;
-        const delta = f.ph + t * 0.18;
-        ctx.beginPath();
-        for (let i = 0; i <= 420; i++) {
-          const u = (i / 420) * Math.PI * 2;
-          const x = cx + f.r * Math.sin(f.a * u + delta);
-          const y = cy + f.r * Math.sin(f.b * u);
-          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
-        ctx.strokeStyle = 'rgba(37,99,235,0.06)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+
+    function frame() {
+      const W = el.width, H = el.height;
+      ctx.clearRect(0, 0, W, H);
+      const maxD = Math.min(W, H) * 0.19;
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(8,12,26,0.022)';
+      const gx = W / 11, gy = H / 8;
+      for (let i = 1; i < 11; i++) { ctx.beginPath(); ctx.moveTo(i*gx,0); ctx.lineTo(i*gx,H); ctx.stroke(); }
+      for (let j = 1; j < 8;  j++) { ctx.beginPath(); ctx.moveTo(0,j*gy); ctx.lineTo(W,j*gy); ctx.stroke(); }
+
+      pts.forEach(p => {
+        p.x = ((p.x + p.vx) + W) % W;
+        p.y = ((p.y + p.vy) + H) % H;
+        p.pulse += p.pulseSpd;
       });
-      raf = requestAnimationFrame(draw);
+
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+          const d = Math.sqrt(dx*dx + dy*dy);
+          if (d < maxD) {
+            const t = 1 - d / maxD;
+            const act = 0.5 + 0.5 * Math.sin(pts[i].pulse) * Math.sin(pts[j].pulse);
+            const alpha = t * (0.09 + act * 0.06);
+            ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.strokeStyle = `rgba(8,12,26,${alpha.toFixed(3)})`; ctx.lineWidth = t * 1.1; ctx.stroke();
+          }
+        }
+      }
+
+      pts.forEach(p => {
+        const glow = 0.5 + 0.5 * Math.sin(p.pulse);
+        const glowR = p.r * (3.5 + glow * 2.5);
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
+        grad.addColorStop(0, `rgba(8,12,26,${(0.08 + glow * 0.06).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(8,12,26,0)');
+        ctx.beginPath(); ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
+        ctx.fillStyle = grad; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 + glow * 0.18), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(8,12,26,${(0.28 + glow * 0.14).toFixed(3)})`; ctx.fill();
+      });
+
+      raf = requestAnimationFrame(frame);
     }
-    draw();
+    frame();
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
   }, []);
   return <canvas ref={ref} style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />;
@@ -535,20 +568,24 @@ const OPEN_DECISIONS = [
 
 // ── Page component ─────────────────────────────────────────────────────────────
 
-const LS_KEY = 'ambient-fw-checklist-v2';
+const LS_KEY        = 'ambient-fw-checklist-v2';
+const LS_FREEZE_KEY = 'ambient-fw-frozen-v1';
 
 export default function FirmwarePage() {
-  const [active, setActive]       = useState('env');
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [focusMode, setFocusMode] = useState(false);
-  const [checked, setChecked]     = useState<Set<number>>(new Set(CHECKLIST_DONE));
-  const [filterTag, setFilterTag] = useState('All');
+  const [active, setActive]             = useState('env');
+  const [collapsed, setCollapsed]       = useState<Record<string, boolean>>({});
+  const [focusMode, setFocusMode]       = useState(false);
+  const [checked, setChecked]           = useState<Set<number>>(new Set(CHECKLIST_DONE));
+  const [filterTag, setFilterTag]       = useState('All');
+  const [designFrozen, setDesignFrozen] = useState(false);
+  const [frozenDate, setFrozenDate]     = useState<string | null>(null);
 
-  // Load checklist from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem(LS_KEY);
       if (stored) setChecked(new Set(JSON.parse(stored)));
+      const fz = localStorage.getItem(LS_FREEZE_KEY);
+      if (fz) { const p = JSON.parse(fz); setDesignFrozen(true); setFrozenDate(p.date); }
     } catch { /* ignore */ }
   }, []);
 
@@ -590,11 +627,27 @@ export default function FirmwarePage() {
     setCollapsed(prev => ({ ...prev, ...all }));
   }
 
+  function toggleFreeze() {
+    if (!ready && !designFrozen) return;
+    setDesignFrozen(f => {
+      const next = !f;
+      if (next) {
+        const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        setFrozenDate(date);
+        try { localStorage.setItem(LS_FREEZE_KEY, JSON.stringify({ frozen: true, date })); } catch { /* ignore */ }
+      } else {
+        setFrozenDate(null);
+        try { localStorage.removeItem(LS_FREEZE_KEY); } catch { /* ignore */ }
+      }
+      return next;
+    });
+  }
+
   const TAGS = ['All', 'Setup', 'Build', 'Deploy', 'Best Practice'];
-  const visibleSteps = filterTag === 'All' ? STEPS : STEPS.filter(s => s.tag === filterTag);
   const step = STEPS.find(s => s.id === active)!;
   const stepIdx = STEPS.findIndex(s => s.id === active);
   const doneCount = checked.size;
+  const ready = doneCount === CHECKLIST_ITEMS.length;
   const warnCounts: Record<string, number> = {};
   STEPS.forEach(s => {
     warnCounts[s.id] = s.sections.reduce((n, sec) => n + (sec.warnings?.length ?? 0), 0);
@@ -606,8 +659,36 @@ export default function FirmwarePage() {
   }
 
   return (
+    <>
+    <style dangerouslySetInnerHTML={{__html: `
+      @keyframes dfFlow {
+        0%   { background-position: 0% 50%; }
+        50%  { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes dfGlow {
+        0%, 100% { box-shadow: 0 0 0 2px rgba(37,99,235,0.18), 0 2px 8px rgba(37,99,235,0.10); }
+        50%       { box-shadow: 0 0 0 5px rgba(37,99,235,0.28), 0 4px 24px rgba(37,99,235,0.20); }
+      }
+      .df-ready {
+        background: linear-gradient(-45deg, #2563EB, #1D4ED8, #1E40AF, #2563EB);
+        background-size: 300% 300%;
+        animation: dfFlow 3s ease infinite;
+        border: 1.5px solid transparent;
+      }
+      .df-ready .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
+      .df-ready .df-sub   { color: rgba(255,255,255,0.82); }
+      .df-frozen {
+        background: linear-gradient(-45deg, #1D4ED8, #2563EB, #3B82F6, #60A5FA, #2563EB, #1D4ED8);
+        background-size: 300% 300%;
+        animation: dfFlow 4s ease infinite, dfGlow 2.5s ease-in-out infinite;
+        border: 1.5px solid transparent;
+      }
+      .df-frozen .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
+      .df-frozen .df-sub   { color: rgba(255,255,255,0.82); }
+    `}} />
     <div className="app" style={{ background: '#F1F3F6', minHeight: '100vh', position: 'relative' }}>
-      <LissajousCanvas />
+      <ConstellationCanvas />
 
       {/* ── Sidebar ── */}
       <aside style={{ background: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.08)', padding: '22px 14px 28px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0, zIndex: 10, boxShadow: '2px 0 8px rgba(0,0,0,0.04)' }}>
@@ -712,7 +793,7 @@ export default function FirmwarePage() {
         <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, padding: '14px 20px', marginBottom: 20, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, minWidth: 'max-content' }}>
             {PIPELINE_PHASES.map((phase, pi) => (
-              <div key={phase.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pi === 0 ? '0 24px 0 0' : '0 24px', borderRight: pi < PIPELINE_PHASES.length - 1 ? '1px solid #E5E7EB' : 'none' }}>
+              <div key={phase.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pi === 0 ? '0 24px 0 0' : '0 24px', borderRight: '1px solid #E5E7EB' }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>{phase.label}</div>
                 <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                   {phase.ids.map((id, si) => {
@@ -732,6 +813,54 @@ export default function FirmwarePage() {
                 </div>
               </div>
             ))}
+
+            {/* Production Release milestone */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: 24, height: 1, background: designFrozen || ready ? 'linear-gradient(90deg,#E5E7EB,#2563EB)' : '#E5E7EB' }} />
+                <svg width="6" height="10" viewBox="0 0 6 10" fill="none" style={{ flexShrink: 0 }}>
+                  <path d="M1 1l4 4-4 4" stroke={designFrozen || ready ? '#2563EB' : '#D1D5DB'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: designFrozen || ready ? '#2563EB' : '#9CA3AF' }}>
+                  {designFrozen ? 'Saved ✓' : 'Goal'}
+                </div>
+                <button
+                  onClick={toggleFreeze}
+                  className={designFrozen ? 'df-frozen' : ready ? 'df-ready' : ''}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9,
+                    padding: '8px 16px', borderRadius: 9,
+                    cursor: ready || designFrozen ? 'pointer' : 'default',
+                    ...(!(designFrozen || ready) && { background: '#F9FAFB', border: '1.5px dashed #D1D5DB' }),
+                    transition: 'all 0.25s',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                    {designFrozen || ready ? (
+                      <>
+                        <path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke="#2563EB" strokeWidth="1.6" strokeLinecap="round"/>
+                        <circle cx="8" cy="8" r="2.2" fill="#2563EB" fillOpacity="0.25"/>
+                      </>
+                    ) : (
+                      <>
+                        <rect x="4" y="7" width="8" height="7" rx="1.5" stroke="#9CA3AF" strokeWidth="1.4"/>
+                        <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="#9CA3AF" strokeWidth="1.4" strokeLinecap="round"/>
+                      </>
+                    )}
+                  </svg>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
+                    <span className="df-title" style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: designFrozen ? '#2563EB' : ready ? '#1D4ED8' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                      {designFrozen ? 'Released ✓' : 'Production Release'}
+                    </span>
+                    <span className="df-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF' }}>
+                      {designFrozen ? (frozenDate ? `Locked ${frozenDate}` : 'Firmware locked') : ready ? 'Ready — click to lock' : `${Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}% complete`}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -900,7 +1029,7 @@ export default function FirmwarePage() {
             <div style={{ padding: '16px 16px 14px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>Build Checklist</div>
-                <button onClick={() => { setChecked(new Set(CHECKLIST_ITEMS.map((_, i) => i))); try { localStorage.setItem(LS_KEY, JSON.stringify(CHECKLIST_ITEMS.map((_, i) => i))); } catch { /* ignore */ } }} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>reset</button>
+                <button onClick={() => { setChecked(new Set(CHECKLIST_DONE)); try { localStorage.setItem(LS_KEY, JSON.stringify([...CHECKLIST_DONE])); } catch { /* ignore */ } }} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>reset</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {CHECKLIST_ITEMS.map((item, i) => {
@@ -940,5 +1069,6 @@ export default function FirmwarePage() {
         </div>
       </main>
     </div>
+    </>
   );
 }
