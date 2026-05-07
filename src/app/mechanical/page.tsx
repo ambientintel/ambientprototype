@@ -2,58 +2,83 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import Link from 'next/link';
 
-// ── Topographic canvas background ──────────────────────────────────────────────
-function TopographicCanvas() {
+// ── Constellation / neural-net background ─────────────────────────────────────
+function ConstellationCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const el = canvas;
+    const el = ref.current!;
+    if (!el) return;
     const ctx = el.getContext('2d')!;
     let raf: number;
-    let t = 0;
 
-    const rings = [
-      { cx: 0.50, cy: 0.44, rx: 340, ry: 158, angle:  0.14, speed: 0.45 },
-      { cx: 0.50, cy: 0.44, rx: 260, ry: 118, angle: -0.10, speed: 0.65 },
-      { cx: 0.48, cy: 0.46, rx: 192, ry:  87, angle:  0.22, speed: 0.85 },
-      { cx: 0.52, cy: 0.42, rx: 132, ry:  59, angle: -0.18, speed: 1.05 },
-      { cx: 0.50, cy: 0.44, rx:  80, ry:  35, angle:  0.30, speed: 1.25 },
-      { cx: 0.50, cy: 0.44, rx: 430, ry: 200, angle:  0.06, speed: 0.32 },
-      { cx: 0.46, cy: 0.48, rx: 300, ry: 138, angle: -0.25, speed: 0.56 },
-      { cx: 0.54, cy: 0.40, rx: 220, ry:  99, angle:  0.18, speed: 0.74 },
-      { cx: 0.50, cy: 0.44, rx: 510, ry: 240, angle: -0.04, speed: 0.22 },
-    ];
+    type P = { x:number; y:number; vx:number; vy:number; r:number; pulse:number; pulseSpd:number };
+    let pts: P[] = [];
 
-    function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; }
+    function init() {
+      const n = Math.max(55, Math.min(85, Math.floor(el.width * el.height / 16000)));
+      pts = Array.from({ length: n }, () => ({
+        x: Math.random() * el.width,
+        y: Math.random() * el.height,
+        vx: (Math.random() - 0.5) * 0.30,
+        vy: (Math.random() - 0.5) * 0.30,
+        r: Math.random() < 0.14 ? 2.6 : Math.random() * 1.1 + 0.7,
+        pulse: Math.random() * Math.PI * 2,
+        pulseSpd: 0.012 + Math.random() * 0.018,
+      }));
+    }
+
+    function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; init(); }
     resize();
     window.addEventListener('resize', resize);
 
-    function draw() {
-      ctx.clearRect(0, 0, el.width, el.height);
-      t += 0.003;
-      rings.forEach(ring => {
-        const cxPx = ring.cx * el.width;
-        const cyPx = ring.cy * el.height;
-        const angle = ring.angle + t * ring.speed * 0.035;
-        const N = 64;
-        ctx.beginPath();
-        for (let i = 0; i <= N; i++) {
-          const theta = (i / N) * Math.PI * 2;
-          const x = cxPx + ring.rx * Math.cos(theta) * Math.cos(angle) - ring.ry * Math.sin(theta) * Math.sin(angle);
-          const y = cyPx + ring.rx * Math.cos(theta) * Math.sin(angle) + ring.ry * Math.sin(theta) * Math.cos(angle);
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.strokeStyle = 'rgba(37,99,235,0.046)';
-        ctx.lineWidth = 1.25;
-        ctx.stroke();
+    function frame() {
+      const W = el.width, H = el.height;
+      ctx.clearRect(0, 0, W, H);
+      const maxD = Math.min(W, H) * 0.19;
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(8,12,26,0.022)';
+      const gx = W / 11, gy = H / 8;
+      for (let i = 1; i < 11; i++) { ctx.beginPath(); ctx.moveTo(i*gx,0); ctx.lineTo(i*gx,H); ctx.stroke(); }
+      for (let j = 1; j < 8;  j++) { ctx.beginPath(); ctx.moveTo(0,j*gy); ctx.lineTo(W,j*gy); ctx.stroke(); }
+
+      pts.forEach(p => {
+        p.x = ((p.x + p.vx) + W) % W;
+        p.y = ((p.y + p.vy) + H) % H;
+        p.pulse += p.pulseSpd;
       });
-      raf = requestAnimationFrame(draw);
+
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+          const d = Math.sqrt(dx*dx + dy*dy);
+          if (d < maxD) {
+            const t = 1 - d / maxD;
+            const act = 0.5 + 0.5 * Math.sin(pts[i].pulse) * Math.sin(pts[j].pulse);
+            const alpha = t * (0.09 + act * 0.06);
+            ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.strokeStyle = `rgba(8,12,26,${alpha.toFixed(3)})`; ctx.lineWidth = t * 1.1; ctx.stroke();
+          }
+        }
+      }
+
+      pts.forEach(p => {
+        const glow = 0.5 + 0.5 * Math.sin(p.pulse);
+        const glowR = p.r * (3.5 + glow * 2.5);
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
+        grad.addColorStop(0, `rgba(8,12,26,${(0.08 + glow * 0.06).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(8,12,26,0)');
+        ctx.beginPath(); ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
+        ctx.fillStyle = grad; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 + glow * 0.18), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(8,12,26,${(0.28 + glow * 0.14).toFixed(3)})`; ctx.fill();
+      });
+
+      raf = requestAnimationFrame(frame);
     }
-    draw();
+    frame();
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
   }, []);
-
   return <canvas ref={ref} style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />;
 }
 
@@ -396,30 +421,33 @@ const HW_SPECS = [
   { label: 'Revision', value: 'Rev A → B', sub: 'EVT prototype · production via Rev B' },
 ];
 
-const CHECKLIST = [
-  { done: true,  text: 'System definition complete' },
-  { done: true,  text: 'Power budget approved' },
-  { done: true,  text: 'Interface matrix signed off' },
-  { done: true,  text: 'Schematic sheets 01–02 done' },
-  { done: true,  text: 'ERC: 0 errors' },
-  { done: false, text: 'Schematic sheets 03–05 complete' },
-  { done: false, text: 'DRC: 0 errors, 0 warnings' },
-  { done: false, text: 'Controlled-impedance verified (SI9000)' },
-  { done: false, text: 'BOM: all critical parts received' },
-  { done: false, text: 'PCB outline locked for enclosure CAD' },
-  { done: false, text: 'Enclosure SolidWorks assembly complete' },
-  { done: false, text: 'FDM prototype printed + fit-checked' },
-  { done: false, text: 'Harness crimped + continuity checked' },
-  { done: false, text: 'Gerber package generated + DFM reviewed' },
-  { done: false, text: 'First-article boards received from fab' },
-  { done: false, text: 'Power-on: all rails nominal' },
-  { done: false, text: 'Compute bring-up: Linux boot confirmed' },
-  { done: false, text: 'Radar bring-up: SPI frames arriving' },
-  { done: false, text: 'Electrical validation pass (all 6 tests)' },
-  { done: false, text: 'Mechanical fit-check pass' },
-  { done: false, text: 'EMC pre-scan: 6 dB margin to FCC limits' },
-  { done: false, text: 'EVT sign-off — ready for DVT' },
+const CHECKLIST_ITEMS = [
+  'System definition complete',
+  'Power budget approved',
+  'Interface matrix signed off',
+  'Schematic sheets 01–02 done',
+  'ERC: 0 errors',
+  'Schematic sheets 03–05 complete',
+  'DRC: 0 errors, 0 warnings',
+  'Controlled-impedance verified (SI9000)',
+  'BOM: all critical parts received',
+  'PCB outline locked for enclosure CAD',
+  'Enclosure SolidWorks assembly complete',
+  'FDM prototype printed + fit-checked',
+  'Harness crimped + continuity checked',
+  'Gerber package generated + DFM reviewed',
+  'First-article boards received from fab',
+  'Power-on: all rails nominal',
+  'Compute bring-up: Linux boot confirmed',
+  'Radar bring-up: SPI frames arriving',
+  'Electrical validation pass (all 6 tests)',
+  'Mechanical fit-check pass',
+  'EMC pre-scan: 6 dB margin to FCC limits',
+  'EVT sign-off — ready for DVT',
 ];
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4]);
+const LS_KEY        = 'ambient-mechanical-checklist-v1';
+const LS_FREEZE_KEY = 'ambient-mechanical-frozen-v1';
 
 const OPEN_DECISIONS = [
   'PoE+ vs. barrel jack power input — PoE+ eliminates dedicated power cabling but adds PD controller cost. Decision needed before Rev B.',
@@ -431,7 +459,7 @@ const OPEN_DECISIONS = [
 const TAGS = ['All', 'Setup', 'PCB', 'Enclosure', 'Assembly', 'Validation'];
 
 // ── Pipeline strip ─────────────────────────────────────────────────────────────
-function PipelineStrip({ steps, active, onSelect }: { steps: Step[]; active: string; onSelect: (id: string) => void }) {
+function PipelineStrip({ steps, active, onSelect, designFrozen, frozenDate, ready, pct, onToggleFreeze }: { steps: Step[]; active: string; onSelect: (id: string) => void; designFrozen: boolean; frozenDate: string | null; ready: boolean; pct: number; onToggleFreeze: () => void }) {
   return (
     <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, padding: '16px 28px 18px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflowX: 'auto' }}>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#9CA3AF', marginBottom: 12 }}>Build Pipeline · EVT Rev A</div>
@@ -470,6 +498,54 @@ function PipelineStrip({ steps, active, onSelect }: { steps: Step[]; active: str
             </div>
           );
         })}
+
+        {/* DVT Sign-off milestone */}
+        <div style={{ display: 'flex', alignItems: 'center', marginLeft: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: 16 }}>
+            <div style={{ width: 28, height: 2, background: designFrozen || ready ? 'linear-gradient(90deg,#E5E7EB,#2563EB)' : '#E5E7EB', borderRadius: 2, opacity: 0.7 }} />
+            <svg width="6" height="10" viewBox="0 0 6 10" fill="none" style={{ flexShrink: 0 }}>
+              <path d="M1 1l4 4-4 4" stroke={designFrozen || ready ? '#2563EB' : '#D1D5DB'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 12 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF', fontWeight: 600 }}>
+              {designFrozen ? 'Saved ✓' : 'Goal'}
+            </div>
+            <button
+              onClick={onToggleFreeze}
+              className={designFrozen ? 'df-frozen' : ready ? 'df-ready' : ''}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '7px 13px', borderRadius: 9,
+                cursor: ready || designFrozen ? 'pointer' : 'default',
+                ...(!(designFrozen || ready) && { background: '#F9FAFB', border: '1.5px dashed #D1D5DB' }),
+                transition: 'all 0.25s',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                {designFrozen || ready ? (
+                  <>
+                    <path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke="#2563EB" strokeWidth="1.6" strokeLinecap="round"/>
+                    <circle cx="8" cy="8" r="2.2" fill="#2563EB" fillOpacity="0.25"/>
+                  </>
+                ) : (
+                  <>
+                    <rect x="4" y="7" width="8" height="7" rx="1.5" stroke="#9CA3AF" strokeWidth="1.4"/>
+                    <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="#9CA3AF" strokeWidth="1.4" strokeLinecap="round"/>
+                  </>
+                )}
+              </svg>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
+                <span className="df-title" style={{ fontFamily: 'var(--sans)', fontSize: 11.5, fontWeight: 600, color: designFrozen ? '#2563EB' : ready ? '#1D4ED8' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                  {designFrozen ? 'DVT Ready ✓' : 'DVT Sign-off'}
+                </span>
+                <span className="df-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9, color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF' }}>
+                  {designFrozen ? (frozenDate ? `Locked ${frozenDate}` : 'EVT locked') : ready ? 'Ready — click to lock' : `${pct}% complete`}
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -477,15 +553,54 @@ function PipelineStrip({ steps, active, onSelect }: { steps: Step[]; active: str
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function MechanicalPage() {
-  const [active, setActive] = useState('sysdef');
-  const [filterTag, setFilterTag] = useState('All');
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [active, setActive]           = useState('sysdef');
+  const [filterTag, setFilterTag]     = useState('All');
+  const [collapsed, setCollapsed]     = useState<Record<string, boolean>>({});
+  const [checked, setChecked]         = useState<Set<number>>(new Set(CHECKLIST_DONE));
+  const [designFrozen, setDesignFrozen] = useState(false);
+  const [frozenDate, setFrozenDate]     = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LS_KEY);
+      if (stored) setChecked(new Set(JSON.parse(stored)));
+      const fz = localStorage.getItem(LS_FREEZE_KEY);
+      if (fz) { const p = JSON.parse(fz); setDesignFrozen(true); setFrozenDate(p.date); }
+    } catch { /* ignore */ }
+  }, []);
 
   const step = STEPS.find(s => s.id === active)!;
   const filteredSteps = filterTag === 'All' ? STEPS : STEPS.filter(s => s.tag === filterTag);
-  const doneCount = CHECKLIST.filter(c => c.done).length;
+  const doneCount = checked.size;
+  const ready = doneCount === CHECKLIST_ITEMS.length;
+  const pct = Math.round((doneCount / CHECKLIST_ITEMS.length) * 100);
 
   function toggle(key: string) { setCollapsed(p => ({ ...p, [key]: !p[key] })); }
+
+  function toggleChecked(i: number) {
+    setChecked(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      try { localStorage.setItem(LS_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  }
+
+  function toggleFreeze() {
+    if (!ready && !designFrozen) return;
+    setDesignFrozen(f => {
+      const next = !f;
+      if (next) {
+        const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        setFrozenDate(date);
+        try { localStorage.setItem(LS_FREEZE_KEY, JSON.stringify({ frozen: true, date })); } catch { /* ignore */ }
+      } else {
+        setFrozenDate(null);
+        try { localStorage.removeItem(LS_FREEZE_KEY); } catch { /* ignore */ }
+      }
+      return next;
+    });
+  }
 
   const S = {
     page: { background: '#F1F3F6', minHeight: '100vh', position: 'relative' as const },
@@ -494,8 +609,36 @@ export default function MechanicalPage() {
   };
 
   return (
+    <>
+    <style dangerouslySetInnerHTML={{__html: `
+      @keyframes dfFlow {
+        0%   { background-position: 0% 50%; }
+        50%  { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes dfGlow {
+        0%, 100% { box-shadow: 0 0 0 2px rgba(37,99,235,0.18), 0 2px 8px rgba(37,99,235,0.10); }
+        50%       { box-shadow: 0 0 0 5px rgba(37,99,235,0.28), 0 4px 24px rgba(37,99,235,0.20); }
+      }
+      .df-ready {
+        background: linear-gradient(-45deg, #2563EB, #1D4ED8, #1E40AF, #2563EB);
+        background-size: 300% 300%;
+        animation: dfFlow 3s ease infinite;
+        border: 1.5px solid transparent;
+      }
+      .df-ready .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
+      .df-ready .df-sub   { color: rgba(255,255,255,0.82); }
+      .df-frozen {
+        background: linear-gradient(-45deg, #1D4ED8, #2563EB, #3B82F6, #60A5FA, #2563EB, #1D4ED8);
+        background-size: 300% 300%;
+        animation: dfFlow 4s ease infinite, dfGlow 2.5s ease-in-out infinite;
+        border: 1.5px solid transparent;
+      }
+      .df-frozen .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
+      .df-frozen .df-sub   { color: rgba(255,255,255,0.82); }
+    `}} />
     <div className="app" style={S.page}>
-      <TopographicCanvas />
+      <ConstellationCanvas />
 
       {/* ── Sidebar ── */}
       <aside style={S.sidebar}>
@@ -518,10 +661,10 @@ export default function MechanicalPage() {
           <div style={{ padding: '10px 12px', background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.07)', borderRadius: 10, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9CA3AF' }}>EVT Progress</span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#059669', fontWeight: 600 }}>{doneCount}/{CHECKLIST.length}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#059669', fontWeight: 600 }}>{doneCount}/{CHECKLIST_ITEMS.length}</span>
             </div>
             <div style={{ height: 4, borderRadius: 2, background: '#E5E7EB' }}>
-              <div style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #059669, #2563EB)', width: `${(doneCount / CHECKLIST.length) * 100}%`, transition: 'width 0.4s ease' }} />
+              <div style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #059669, #2563EB)', width: `${pct}%`, transition: 'width 0.4s ease' }} />
             </div>
           </div>
 
@@ -605,7 +748,7 @@ export default function MechanicalPage() {
         </div>
 
         {/* Pipeline strip */}
-        <PipelineStrip steps={STEPS} active={active} onSelect={setActive} />
+        <PipelineStrip steps={STEPS} active={active} onSelect={setActive} designFrozen={designFrozen} frozenDate={frozenDate} ready={ready} pct={pct} onToggleFreeze={toggleFreeze} />
 
         {/* Two-column layout */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 272px', gap: 24, alignItems: 'start' }}>
@@ -751,25 +894,28 @@ export default function MechanicalPage() {
             <div style={{ padding: '18px 18px 16px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>EVT Checklist</div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#059669', fontWeight: 600 }}>{doneCount}/{CHECKLIST.length}</div>
+                <button onClick={() => { setChecked(new Set(CHECKLIST_DONE)); try { localStorage.setItem(LS_KEY, JSON.stringify([...CHECKLIST_DONE])); } catch { /* ignore */ } }} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>reset</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {CHECKLIST.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
-                    <div style={{ width: 15, height: 15, borderRadius: 3, border: item.done ? 'none' : '1.5px solid #D1D5DB', background: item.done ? '#059669' : 'transparent', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {item.done && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                    </div>
-                    <span style={{ fontSize: 11.5, color: item.done ? '#374151' : '#9CA3AF', lineHeight: 1.45 }}>{item.text}</span>
-                  </div>
-                ))}
+                {CHECKLIST_ITEMS.map((text, i) => {
+                  const done = checked.has(i);
+                  return (
+                    <button key={i} onClick={() => toggleChecked(i)} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+                      <div style={{ width: 15, height: 15, borderRadius: 3, border: done ? 'none' : '1.5px solid #D1D5DB', background: done ? '#059669' : 'transparent', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                        {done && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      </div>
+                      <span style={{ fontSize: 11.5, color: done ? '#374151' : '#9CA3AF', lineHeight: 1.45, textDecoration: done ? 'line-through' : 'none', textDecorationColor: '#D1D5DB' }}>{text}</span>
+                    </button>
+                  );
+                })}
               </div>
               <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(0,0,0,0.07)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Complete</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#059669', fontWeight: 600 }}>{Math.round((doneCount / CHECKLIST.length) * 100)}%</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#059669', fontWeight: 600 }}>{pct}%</span>
                 </div>
                 <div style={{ height: 4, borderRadius: 2, background: '#E5E7EB' }}>
-                  <div style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #059669, #2563EB)', width: `${(doneCount / CHECKLIST.length) * 100}%` }} />
+                  <div style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #059669, #2563EB)', width: `${pct}%`, transition: 'width 0.3s ease' }} />
                 </div>
               </div>
             </div>
@@ -788,5 +934,6 @@ export default function MechanicalPage() {
         </div>
       </main>
     </div>
+    </>
   );
 }
