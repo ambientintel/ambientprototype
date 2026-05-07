@@ -43,6 +43,7 @@ export default authkitMiddleware({
       "/cloud",
       "/firmware",
       "/webapp",
+      "/mobileapp",
       "/mechanical",
       "/bom",
       "/control",
