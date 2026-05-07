@@ -134,6 +134,21 @@
       "description": "",
       "created": "May 7",
       "updated": "May 7"
+    },
+    {
+      "id": "ENG-L1778186518734",
+      "type": "task",
+      "title": "Route PCB with OSD62, and PMIC",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Gavin",
+      "assigneeInitial": "G",
+      "assigneeColor": "#00B4D8",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 7",
+      "updated": "May 7"
     }
   ],
   "personalTasks": {
@@ -145,7 +160,8 @@
       "finish routing PMIC to the OSD62",
       "add barrel jack",
       "add wifi module",
-      "Find Wifi module"
+      "Find Wifi module",
+      "Route PCB with OSD62, and PMIC"
     ],
     "Isaac": [
       "Test lambda function",
