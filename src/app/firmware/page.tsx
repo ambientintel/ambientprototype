@@ -2,29 +2,28 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
-// ── Constellation / neural-net background ─────────────────────────────────────
+// ── Waveform background — slow oscilloscope traces ────────────────────────────
 
-function ConstellationCanvas() {
+function WaveformCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const el = ref.current!;
     if (!el) return;
     const ctx = el.getContext('2d')!;
     let raf: number;
+    let t = 0;
 
-    type P = { x:number; y:number; vx:number; vy:number; r:number; pulse:number; pulseSpd:number };
-    let pts: P[] = [];
+    type Wave = { yFrac: number; freq: number; amp: number; spd: number; phase: number; alpha: number };
+    let waves: Wave[] = [];
 
     function init() {
-      const n = Math.max(55, Math.min(85, Math.floor(el.width * el.height / 16000)));
-      pts = Array.from({ length: n }, () => ({
-        x: Math.random() * el.width,
-        y: Math.random() * el.height,
-        vx: (Math.random() - 0.5) * 0.30,
-        vy: (Math.random() - 0.5) * 0.30,
-        r: Math.random() < 0.14 ? 2.6 : Math.random() * 1.1 + 0.7,
-        pulse: Math.random() * Math.PI * 2,
-        pulseSpd: 0.012 + Math.random() * 0.018,
+      waves = Array.from({ length: 9 }, (_, i) => ({
+        yFrac:  (i + 0.5) / 9,
+        freq:   0.0032 + (i % 3) * 0.0018 + Math.random() * 0.001,
+        amp:    8  + Math.random() * 18,
+        spd:    0.00055 + Math.random() * 0.00045,
+        phase:  (i / 9) * Math.PI * 2,
+        alpha:  0.016 + Math.random() * 0.018,
       }));
     }
 
@@ -35,44 +34,26 @@ function ConstellationCanvas() {
     function frame() {
       const W = el.width, H = el.height;
       ctx.clearRect(0, 0, W, H);
-      const maxD = Math.min(W, H) * 0.19;
+      t += 1;
 
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(8,12,26,0.022)';
+      // faint mathematical grid
+      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = 'rgba(8,12,26,0.010)';
       const gx = W / 11, gy = H / 8;
       for (let i = 1; i < 11; i++) { ctx.beginPath(); ctx.moveTo(i*gx,0); ctx.lineTo(i*gx,H); ctx.stroke(); }
       for (let j = 1; j < 8;  j++) { ctx.beginPath(); ctx.moveTo(0,j*gy); ctx.lineTo(W,j*gy); ctx.stroke(); }
 
-      pts.forEach(p => {
-        p.x = ((p.x + p.vx) + W) % W;
-        p.y = ((p.y + p.vy) + H) % H;
-        p.pulse += p.pulseSpd;
-      });
-
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
-          const d = Math.sqrt(dx*dx + dy*dy);
-          if (d < maxD) {
-            const t = 1 - d / maxD;
-            const act = 0.5 + 0.5 * Math.sin(pts[i].pulse) * Math.sin(pts[j].pulse);
-            const alpha = t * (0.09 + act * 0.06);
-            ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
-            ctx.strokeStyle = `rgba(8,12,26,${alpha.toFixed(3)})`; ctx.lineWidth = t * 1.1; ctx.stroke();
-          }
+      // waveform traces
+      waves.forEach(wave => {
+        const cy = wave.yFrac * H;
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 3) {
+          const y = cy + wave.amp * Math.sin(x * wave.freq + t * wave.spd + wave.phase);
+          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-      }
-
-      pts.forEach(p => {
-        const glow = 0.5 + 0.5 * Math.sin(p.pulse);
-        const glowR = p.r * (3.5 + glow * 2.5);
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
-        grad.addColorStop(0, `rgba(8,12,26,${(0.08 + glow * 0.06).toFixed(3)})`);
-        grad.addColorStop(1, 'rgba(8,12,26,0)');
-        ctx.beginPath(); ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
-        ctx.fillStyle = grad; ctx.fill();
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 + glow * 0.18), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(8,12,26,${(0.28 + glow * 0.14).toFixed(3)})`; ctx.fill();
+        ctx.strokeStyle = `rgba(8,12,26,${wave.alpha.toFixed(3)})`;
+        ctx.lineWidth = 0.65;
+        ctx.stroke();
       });
 
       raf = requestAnimationFrame(frame);
@@ -688,13 +669,17 @@ export default function FirmwarePage() {
       .df-frozen .df-sub   { color: rgba(255,255,255,0.82); }
     `}} />
     <div className="app" style={{ background: '#F1F3F6', minHeight: '100vh', position: 'relative' }}>
-      <ConstellationCanvas />
+      <WaveformCanvas />
 
       {/* ── Sidebar ── */}
       <aside style={{ background: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.08)', padding: '22px 14px 28px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0, zIndex: 10, boxShadow: '2px 0 8px rgba(0,0,0,0.04)' }}>
 
         {/* Brand */}
         <div style={{ marginBottom: 18 }}>
+          <Link href="/engineering" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 10, padding: '3px 6px' }}>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6L7.5 10" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#9CA3AF' }}>Engineering</span>
+          </Link>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <div style={{ padding: '4px 6px', marginBottom: 14 }}>
               <span style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 14, color: '#111827', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
