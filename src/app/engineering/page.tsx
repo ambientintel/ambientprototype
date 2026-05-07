@@ -2058,7 +2058,7 @@ function NavCard({ href, label, color, lsKey, total, defaultDone }: {
           userSelect: "none" as const,
         }}
       >
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom: pct !== null ? 7 : 0 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:7 }}>
           <span style={{
             fontFamily: "var(--mono)", fontSize: 10,
             textTransform: "uppercase" as const, letterSpacing: "0.12em",
@@ -2067,32 +2067,22 @@ function NavCard({ href, label, color, lsKey, total, defaultDone }: {
           }}>
             {label}
           </span>
-          {pct !== null ? (
-            <span style={{
-              fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600,
-              color: pct === 100 ? "#3DCC91" : hov ? color : "var(--text-3)",
-              transition: "color 0.18s",
-            }}>
-              {pct}%
-            </span>
-          ) : (
-            <span style={{
-              width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0,
-              boxShadow: hov ? `0 0 8px ${color}` : "none",
-              transition: "box-shadow 0.18s",
-            }} />
-          )}
+          <span style={{
+            fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600,
+            color: pct === 100 ? "#3DCC91" : hov ? color : "var(--text-3)",
+            transition: "color 0.18s",
+          }}>
+            {pct ?? 0}%
+          </span>
         </div>
-        {pct !== null && (
-          <div style={{ height: 3, borderRadius: 2, background: "var(--surface-3)" }}>
-            <div style={{
-              height: "100%", borderRadius: 2, width: `${pct}%`,
-              background: pct === 100 ? "#3DCC91" : color,
-              boxShadow: hov && pct > 0 ? `0 0 8px ${color}AA` : "none",
-              transition: "box-shadow 0.18s, width 0.4s ease",
-            }} />
-          </div>
-        )}
+        <div style={{ height: 3, borderRadius: 2, background: "var(--surface-3)" }}>
+          <div style={{
+            height: "100%", borderRadius: 2, width: `${pct ?? 0}%`,
+            background: (pct ?? 0) === 100 ? "#3DCC91" : color,
+            boxShadow: hov && (pct ?? 0) > 0 ? `0 0 8px ${color}AA` : "none",
+            transition: "box-shadow 0.18s, width 0.4s ease",
+          }} />
+        </div>
       </div>
     </Link>
   );
