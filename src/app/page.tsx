@@ -39,6 +39,7 @@ const MODULE_GROUPS = [
     cols: 3,
     modules: [
       { href: '/bom', tag: 'Engineering', label: 'Bill of Materials', description: 'Full parts library, assembly BOMs, and build orders for EVT-0.1 hardware. 57 components priced from DigiKey and Mouser.', meta: 'EVT-0.1 · 57 parts' },
+      { href: '/firmware', tag: 'Firmware', label: 'Firmware Development', description: 'Step-by-step build and test workflow for the TI AM62x + IWR6843AOP platform. Docker containerized cross-compilation, U-Boot, kernel, custom DTB, and first-boot runbook.', meta: 'AM62x · IWR6843AOP · SDK 11.02' },
       { href: '/cloud', tag: 'Infrastructure', label: 'Cloud Infrastructure', description: 'AWS backend — seven services across fall-alert hot path, Parquet cold path, Ella AI narratives, and the Nurse API. Architecture v4.', meta: 'ambientcloud · AWS · Terraform' },
       { href: '/engineering', tag: 'Engineering', label: 'Engineering Tracker', description: 'Sprint kanban and issue tracker for the Ambient engineering team. ENG-series tickets across firmware, backend, frontend, and ML.', meta: 'Sprint 18 · Kanban · Issues' },
     ],
