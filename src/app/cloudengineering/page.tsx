@@ -2,88 +2,93 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
-// ── Topographic / mathematical background ─────────────────────────────────────
+// ── Constellation / neural-net background ─────────────────────────────────────
 
-function TopoCanvas() {
+function ConstellationCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const el = ref.current!;
     if (!el) return;
     const ctx = el.getContext('2d')!;
     let raf: number;
-    let t = 0;
 
-    const PEAKS = [
-      { fx:0.18, fy:0.28, rx:230, ry:145, a:-0.28, n:9,  spd:0.00014 },
-      { fx:0.72, fy:0.16, rx:185, ry:115, a:0.42,  n:7,  spd:0.00021 },
-      { fx:0.54, fy:0.74, rx:265, ry:162, a:-0.10, n:11, spd:0.00010 },
-      { fx:0.90, fy:0.58, rx:145, ry:92,  a:0.68,  n:6,  spd:0.00018 },
-      { fx:0.06, fy:0.80, rx:165, ry:102, a:-0.52, n:6,  spd:0.00016 },
-      { fx:0.42, fy:0.42, rx:135, ry:88,  a:0.22,  n:5,  spd:0.00026 },
-    ];
+    type P = { x:number; y:number; vx:number; vy:number; r:number; pulse:number; pulseSpd:number };
+    let pts: P[] = [];
+
+    function init() {
+      const n = Math.max(55, Math.min(85, Math.floor(el.width * el.height / 16000)));
+      pts = Array.from({ length: n }, () => ({
+        x: Math.random() * el.width,
+        y: Math.random() * el.height,
+        vx: (Math.random() - 0.5) * 0.30,
+        vy: (Math.random() - 0.5) * 0.30,
+        r: Math.random() < 0.14 ? 2.6 : Math.random() * 1.1 + 0.7,
+        pulse: Math.random() * Math.PI * 2,
+        pulseSpd: 0.012 + Math.random() * 0.018,
+      }));
+    }
 
     function resize() {
-      el.width  = window.innerWidth;
-      el.height = window.innerHeight;
+      el.width  = el.offsetWidth;
+      el.height = el.offsetHeight;
+      init();
     }
     resize();
     window.addEventListener('resize', resize);
 
     function frame() {
       const W = el.width, H = el.height;
+      ctx.clearRect(0, 0, W, H);
 
-      // Dark background
-      ctx.fillStyle = '#04060D';
-      ctx.fillRect(0, 0, W, H);
+      const maxD = Math.min(W, H) * 0.19;
 
-      // Mathematical grid — horizontal and vertical lines every 80px
-      ctx.lineWidth = 0.5;
-      ctx.strokeStyle = 'rgba(48, 90, 160, 0.07)';
-      for (let x = 0; x < W; x += 80) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-      }
-      for (let y = 0; y < H; y += 80) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-      }
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(8,12,26,0.022)';
+      const gx = W / 11, gy = H / 8;
+      for (let i = 1; i < 11; i++) { ctx.beginPath(); ctx.moveTo(i*gx,0); ctx.lineTo(i*gx,H); ctx.stroke(); }
+      for (let j = 1; j < 8;  j++) { ctx.beginPath(); ctx.moveTo(0,j*gy); ctx.lineTo(W,j*gy); ctx.stroke(); }
 
-      // Diagonal survey lines at 45°, every 200px
-      ctx.lineWidth = 0.4;
-      ctx.strokeStyle = 'rgba(48, 90, 160, 0.04)';
-      const diag = 200;
-      for (let d = -H; d < W + H; d += diag) {
-        ctx.beginPath(); ctx.moveTo(d, 0); ctx.lineTo(d + H, H); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(d, 0); ctx.lineTo(d - H, H); ctx.stroke();
-      }
-
-      // Topographic peaks — concentric rotating ellipses
-      PEAKS.forEach((peak, peakIdx) => {
-        const cx = peak.fx * W;
-        const cy = peak.fy * H;
-        const angle = peak.a + t * peak.spd;
-
-        for (let r = 0; r < peak.n; r++) {
-          const frac = r / peak.n;
-          const scale = 1 - frac * 0.72;
-          let alpha = 0.03 + frac * 0.10;
-          // Breathing shimmer on every 4th ring
-          if (r % 4 === 0) {
-            alpha += 0.02 * Math.sin(t * 0.05 + peakIdx);
-          }
-          const lw = 0.5 + frac * 0.4;
-
-          ctx.save();
-          ctx.translate(cx, cy);
-          ctx.rotate(angle);
-          ctx.beginPath();
-          ctx.ellipse(0, 0, peak.rx * scale, peak.ry * scale, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(96, 165, 250, ${alpha.toFixed(4)})`;
-          ctx.lineWidth = lw;
-          ctx.stroke();
-          ctx.restore();
-        }
+      pts.forEach(p => {
+        p.x = ((p.x + p.vx) + W) % W;
+        p.y = ((p.y + p.vy) + H) % H;
+        p.pulse += p.pulseSpd;
       });
 
-      t++;
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x;
+          const dy = pts[i].y - pts[j].y;
+          const d = Math.sqrt(dx*dx + dy*dy);
+          if (d < maxD) {
+            const t = 1 - d / maxD;
+            const act = 0.5 + 0.5 * Math.sin(pts[i].pulse) * Math.sin(pts[j].pulse);
+            const alpha = t * (0.09 + act * 0.06);
+            ctx.beginPath();
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.strokeStyle = `rgba(8,12,26,${alpha.toFixed(3)})`;
+            ctx.lineWidth = t * 1.1;
+            ctx.stroke();
+          }
+        }
+      }
+
+      pts.forEach(p => {
+        const glow = 0.5 + 0.5 * Math.sin(p.pulse);
+        const glowR = p.r * (3.5 + glow * 2.5);
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
+        grad.addColorStop(0,   `rgba(8,12,26,${(0.08 + glow * 0.06).toFixed(3)})`);
+        grad.addColorStop(1,   'rgba(8,12,26,0)');
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * (1 + glow * 0.18), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(8,12,26,${(0.28 + glow * 0.14).toFixed(3)})`;
+        ctx.fill();
+      });
+
       raf = requestAnimationFrame(frame);
     }
     frame();
@@ -122,17 +127,17 @@ interface Cmd { label?: string; code: string; }
 interface Artifact { file: string; role: string; size?: string; }
 
 const SC: Record<StepStatus, { label: string; bg: string; border: string; color: string; dot: string }> = {
-  done:    { label: 'Complete',  bg: 'rgba(16,185,129,0.12)',  border: 'rgba(52,211,153,0.25)',  color: '#059669', dot: '#059669' },
-  pending: { label: 'Pending',   bg: 'rgba(245,158,11,0.1)',   border: 'rgba(251,191,36,0.25)',  color: '#FBBF24', dot: '#FBBF24' },
-  blocked: { label: 'Blocked',   bg: 'rgba(220,38,38,0.1)',    border: 'rgba(248,113,113,0.25)', color: '#F87171', dot: '#F87171' },
-  warning: { label: 'Attention', bg: 'rgba(234,88,12,0.1)',    border: 'rgba(251,146,60,0.25)',  color: '#FB923C', dot: '#FB923C' },
+  done:    { label: 'Complete',  bg: '#ECFDF5', border: '#A7F3D0', color: '#059669', dot: '#059669' },
+  pending: { label: 'Pending',   bg: '#FFFBEB', border: '#FDE68A', color: '#D97706', dot: '#D97706' },
+  blocked: { label: 'Blocked',   bg: '#FEF2F2', border: '#FECACA', color: '#DC2626', dot: '#DC2626' },
+  warning: { label: 'Attention', bg: '#FFF7ED', border: '#FED7AA', color: '#EA580C', dot: '#EA580C' },
 };
 
 const TAG_STYLE: Record<string, { bg: string; color: string }> = {
-  'Architect': { bg: 'rgba(67,56,202,0.12)',  color: '#818CF8' },
-  'Infra':     { bg: 'rgba(4,120,87,0.12)',   color: '#34D399' },
-  'Deploy':    { bg: 'rgba(180,83,9,0.12)',   color: '#FBBF24' },
-  'Validate':  { bg: 'rgba(109,40,217,0.12)', color: '#A78BFA' },
+  'Architect': { bg: '#EEF2FF', color: '#4338CA' },
+  'Infra':     { bg: '#ECFDF5', color: '#047857' },
+  'Deploy':    { bg: '#FFFBEB', color: '#B45309' },
+  'Validate':  { bg: '#FAF5FF', color: '#6D28D9' },
 };
 
 const PIPELINE_PHASES = [
@@ -794,33 +799,33 @@ export default function CloudEngineeringPage() {
       .pf-frozen .pf-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
       .pf-frozen .pf-sub   { color: rgba(255,255,255,0.82); }
     `}} />
-    <div className="app" style={{ background: 'transparent', minHeight: '100vh', position: 'relative' }}>
-      <TopoCanvas />
+    <div className="app" style={{ background: '#F1F3F6', minHeight: '100vh', position: 'relative' }}>
+      <ConstellationCanvas />
 
       {/* ── Sidebar ── */}
-      <aside style={{ background: 'rgba(5, 8, 16, 0.92)', borderRight: '1px solid rgba(255,255,255,0.07)', padding: '22px 14px 28px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0, zIndex: 10, boxShadow: '2px 0 24px rgba(0,0,0,0.5)' }}>
+      <aside style={{ background: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.08)', padding: '22px 14px 28px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0, zIndex: 10, boxShadow: '2px 0 8px rgba(0,0,0,0.04)' }}>
 
         {/* Brand */}
         <div style={{ marginBottom: 18 }}>
           <Link href="/engineering" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 10, padding: '3px 6px' }}>
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6L7.5 10" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#64748B' }}>Engineering</span>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6L7.5 10" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#9CA3AF' }}>Engineering</span>
           </Link>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <div style={{ padding: '4px 6px', marginBottom: 14 }}>
-              <span style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 14, color: '#E2E8F0', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
-                Ambient <em style={{ color: '#8892A4' }}>Cloud</em>
+              <span style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 14, color: '#111827', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                Ambient <em style={{ color: '#6B7280' }}>Cloud</em>
               </span>
             </div>
           </Link>
 
           {/* Progress bar */}
-          <div style={{ padding: '10px 12px', background: 'rgba(15, 20, 40, 0.7)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, marginBottom: 14 }}>
+          <div style={{ padding: '10px 12px', background: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: 10, marginBottom: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#64748B' }}>Progress</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9CA3AF' }}>Progress</span>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#059669', fontWeight: 600 }}>{doneCount}/{CHECKLIST_ITEMS.length}</span>
             </div>
-            <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)' }}>
+            <div style={{ height: 5, borderRadius: 3, background: '#E5E7EB' }}>
               <div style={{ height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #047857, #4338CA)', width: `${(doneCount / CHECKLIST_ITEMS.length) * 100}%`, transition: 'width 0.4s ease' }} />
             </div>
           </div>
@@ -828,7 +833,7 @@ export default function CloudEngineeringPage() {
           {/* Tag filter */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '0 2px', marginBottom: 6 }}>
             {TAGS.map(tag => (
-              <button key={tag} onClick={() => setFilterTag(tag)} style={{ padding: '3px 8px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', cursor: 'pointer', border: filterTag === tag ? '1.5px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.07)', background: filterTag === tag ? 'rgba(67,56,202,0.2)' : 'rgba(255,255,255,0.04)', color: filterTag === tag ? '#818CF8' : '#64748B', transition: 'all 0.12s' }}>
+              <button key={tag} onClick={() => setFilterTag(tag)} style={{ padding: '3px 8px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', cursor: 'pointer', border: filterTag === tag ? '1.5px solid #4338CA' : '1px solid #E5E7EB', background: filterTag === tag ? '#EEF2FF' : '#FFFFFF', color: filterTag === tag ? '#4338CA' : '#6B7280', transition: 'all 0.12s' }}>
                 {tag}
               </button>
             ))}
@@ -844,15 +849,15 @@ export default function CloudEngineeringPage() {
             if (phaseSteps.length === 0) return null;
             return (
               <div key={phase.label}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#64748B', padding: '0 8px', marginBottom: 5 }}>{phase.label}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF', padding: '0 8px', marginBottom: 5 }}>{phase.label}</div>
                 {phaseSteps.map(s => {
                   const sc = SC[s.status];
                   const isActive = active === s.id;
                   const warns = warnCounts[s.id] ?? 0;
                   return (
-                    <button key={s.id} onClick={() => setActive(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 7, background: isActive ? 'rgba(37, 99, 235, 0.18)' : 'transparent', border: isActive ? '1px solid rgba(99,102,241,0.35)' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s', marginBottom: 1 }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: isActive ? '#818CF8' : '#64748B', minWidth: 16, flexShrink: 0 }}>{s.phase}</span>
-                      <span style={{ flex: 1, fontSize: 12, color: isActive ? '#E2E8F0' : '#8892A4', fontWeight: isActive ? 500 : 400, lineHeight: 1.3 }}>{s.title}</span>
+                    <button key={s.id} onClick={() => setActive(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 7, background: isActive ? '#EEF2FF' : 'transparent', border: isActive ? '1px solid #C7D2FE' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s', marginBottom: 1 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: isActive ? '#4338CA' : '#9CA3AF', minWidth: 16, flexShrink: 0 }}>{s.phase}</span>
+                      <span style={{ flex: 1, fontSize: 12, color: isActive ? '#111827' : '#374151', fontWeight: isActive ? 500 : 400, lineHeight: 1.3 }}>{s.title}</span>
                       {warns > 0 && (
                         <span title={`${warns} warning${warns > 1 ? 's' : ''}`} style={{ fontSize: 9, background: '#FEF9C3', color: '#A16207', borderRadius: 3, padding: '1px 5px', fontFamily: 'var(--mono)', flexShrink: 0 }}>⚠{warns}</span>
                       )}
@@ -866,16 +871,16 @@ export default function CloudEngineeringPage() {
         </nav>
 
         {/* Footer */}
-        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #F3F4F6' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669', flexShrink: 0 }} />
-            <a href="https://github.com/ambientintel/ambientcloud" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#64748B', textDecoration: 'none', letterSpacing: '0.04em' }}>ambientintel/ambientcloud</a>
+            <a href="https://github.com/ambientintel/ambientcloud" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#6B7280', textDecoration: 'none', letterSpacing: '0.04em' }}>ambientintel/ambientcloud</a>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {(['j','k'] as const).map(k => (
-              <kbd key={k} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 4, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontFamily: 'var(--mono)', fontSize: 11, color: '#8892A4', boxShadow: '0 1px 0 rgba(255,255,255,0.06)' }}>{k}</kbd>
+              <kbd key={k} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 4, background: '#F9FAFB', border: '1px solid #E5E7EB', fontFamily: 'var(--mono)', fontSize: 11, color: '#6B7280', boxShadow: '0 1px 0 #D1D5DB' }}>{k}</kbd>
             ))}
-            <span style={{ fontSize: 11, color: '#64748B' }}>navigate steps</span>
+            <span style={{ fontSize: 11, color: '#9CA3AF' }}>navigate steps</span>
           </div>
         </div>
       </aside>
@@ -884,28 +889,28 @@ export default function CloudEngineeringPage() {
       <main style={{ padding: '24px 36px 60px', maxWidth: 1200, width: '100%', boxSizing: 'border-box', position: 'relative', zIndex: 1 }}>
 
         {/* Topbar */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: 22, borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: 22, borderBottom: '1px solid rgba(0,0,0,0.08)', marginBottom: 22 }}>
           <div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#8892A4', marginBottom: 7 }}>Ambient Intelligence · Cloud Engineering</div>
-            <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 40, lineHeight: 1.05, letterSpacing: '-0.02em', margin: 0, color: '#E2E8F0' }}>
-              AWS <em style={{ fontStyle: 'italic', color: '#8892A4' }}>Backend</em>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#9CA3AF', marginBottom: 7 }}>Ambient Intelligence · Cloud Engineering</div>
+            <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 40, lineHeight: 1.05, letterSpacing: '-0.02em', margin: 0, color: '#111827' }}>
+              AWS <em style={{ fontStyle: 'italic', color: '#6B7280' }}>Backend</em>
             </h1>
-            <p style={{ margin: '8px 0 0', color: '#8892A4', fontSize: 13.5, maxWidth: 520, lineHeight: 1.6 }}>
+            <p style={{ margin: '8px 0 0', color: '#6B7280', fontSize: 13.5, maxWidth: 520, lineHeight: 1.6 }}>
               Step-by-step AWS deployment runbook for the fall-detection platform. Architecture → Infrastructure → Services → Production.
             </p>
           </div>
-          <a href="https://github.com/ambientintel/ambientcloud" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 15px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(10,14,28,0.85)', fontSize: 12, fontFamily: 'var(--mono)', color: '#94A3B8', textDecoration: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', flexShrink: 0 }}>
+          <a href="https://github.com/ambientintel/ambientcloud" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 15px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#FFFFFF', fontSize: 12, fontFamily: 'var(--mono)', color: '#374151', textDecoration: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', flexShrink: 0 }}>
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" opacity={0.6}><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
             ambientintel/ambientcloud
           </a>
         </div>
 
         {/* Pipeline strip */}
-        <div style={{ background: 'rgba(8,10,20,0.85)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '14px 20px', marginBottom: 20, overflowX: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.35)' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, padding: '14px 20px', marginBottom: 20, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, minWidth: 'max-content' }}>
             {PIPELINE_PHASES.map((phase, pi) => (
-              <div key={phase.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pi === 0 ? '0 24px 0 0' : '0 24px', borderRight: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#64748B' }}>{phase.label}</div>
+              <div key={phase.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pi === 0 ? '0 24px 0 0' : '0 24px', borderRight: '1px solid #E5E7EB' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>{phase.label}</div>
                 <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                   {phase.ids.map((id, si) => {
                     const s = STEPS.find(x => x.id === id)!;
@@ -913,9 +918,9 @@ export default function CloudEngineeringPage() {
                     const isActive = active === id;
                     return (
                       <span key={id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-                        {si > 0 && <span style={{ display: 'inline-block', width: 12, height: 1, background: 'rgba(255,255,255,0.07)', margin: '0 -2px', alignSelf: 'center' }} />}
-                        <button onClick={() => setActive(id)} title={s.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 8px', borderRadius: 7, border: isActive ? '1.5px solid rgba(99,102,241,0.35)' : `1px solid ${sc.border}`, background: isActive ? 'rgba(37,99,235,0.2)' : sc.bg, cursor: 'pointer', transition: 'all 0.12s', minWidth: 44 }}>
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: isActive ? '#818CF8' : '#8892A4', fontWeight: isActive ? 600 : 400 }}>{s.phase}</span>
+                        {si > 0 && <span style={{ display: 'inline-block', width: 12, height: 1, background: '#E5E7EB', margin: '0 -2px', alignSelf: 'center' }} />}
+                        <button onClick={() => setActive(id)} title={s.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 8px', borderRadius: 7, border: isActive ? '1.5px solid #4338CA' : `1px solid ${sc.border}`, background: isActive ? '#EEF2FF' : sc.bg, cursor: 'pointer', transition: 'all 0.12s', minWidth: 44 }}>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: isActive ? '#4338CA' : '#6B7280', fontWeight: isActive ? 600 : 400 }}>{s.phase}</span>
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
                         </button>
                       </span>
@@ -928,13 +933,13 @@ export default function CloudEngineeringPage() {
             {/* Production Freeze milestone */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: 24, height: 1, background: prodFrozen ? 'linear-gradient(90deg,rgba(255,255,255,0.07),#059669)' : ready ? 'linear-gradient(90deg,rgba(255,255,255,0.07),#4338CA)' : 'rgba(255,255,255,0.07)' }} />
+                <div style={{ width: 24, height: 1, background: prodFrozen ? 'linear-gradient(90deg,#E5E7EB,#059669)' : ready ? 'linear-gradient(90deg,#E5E7EB,#4338CA)' : '#E5E7EB' }} />
                 <svg width="6" height="10" viewBox="0 0 6 10" fill="none" style={{ flexShrink: 0 }}>
-                  <path d="M1 1l4 4-4 4" stroke={prodFrozen ? '#059669' : ready ? '#4338CA' : 'rgba(255,255,255,0.15)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M1 1l4 4-4 4" stroke={prodFrozen ? '#059669' : ready ? '#4338CA' : '#D1D5DB'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: prodFrozen ? '#059669' : ready ? '#4338CA' : '#64748B' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: prodFrozen ? '#059669' : ready ? '#4338CA' : '#9CA3AF' }}>
                   {prodFrozen ? 'Live ✓' : 'Goal'}
                 </div>
                 <button
@@ -944,7 +949,7 @@ export default function CloudEngineeringPage() {
                     display: 'flex', alignItems: 'center', gap: 9,
                     padding: '8px 16px', borderRadius: 9,
                     cursor: ready || prodFrozen ? 'pointer' : 'default',
-                    ...(!(prodFrozen || ready) && { background: 'rgba(255,255,255,0.04)', border: '1.5px dashed rgba(255,255,255,0.15)' }),
+                    ...(!(prodFrozen || ready) && { background: '#F9FAFB', border: '1.5px dashed #D1D5DB' }),
                     transition: 'all 0.25s',
                   }}
                 >
@@ -956,16 +961,16 @@ export default function CloudEngineeringPage() {
                       </>
                     ) : (
                       <>
-                        <circle cx="8" cy="8" r="6.5" stroke="rgba(255,255,255,0.2)" strokeWidth="1.4"/>
-                        <path d="M8 5v3.5M8 10.5v.5" stroke="rgba(255,255,255,0.2)" strokeWidth="1.4" strokeLinecap="round"/>
+                        <circle cx="8" cy="8" r="6.5" stroke="#9CA3AF" strokeWidth="1.4"/>
+                        <path d="M8 5v3.5M8 10.5v.5" stroke="#9CA3AF" strokeWidth="1.4" strokeLinecap="round"/>
                       </>
                     )}
                   </svg>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
-                    <span className="pf-title" style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: prodFrozen ? '#059669' : ready ? '#4338CA' : '#64748B', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                    <span className="pf-title" style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: prodFrozen ? '#059669' : ready ? '#4338CA' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
                       {prodFrozen ? 'Production Live ✓' : 'Production Freeze'}
                     </span>
-                    <span className="pf-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: prodFrozen ? '#059669' : ready ? '#4338CA' : '#64748B' }}>
+                    <span className="pf-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: prodFrozen ? '#059669' : ready ? '#4338CA' : '#9CA3AF' }}>
                       {prodFrozen ? (frozenDate ? `Live ${frozenDate}` : 'IRB pilot active') : ready ? 'Ready — click to go live' : `${Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}% complete`}
                     </span>
                   </div>
@@ -978,10 +983,10 @@ export default function CloudEngineeringPage() {
         {/* Stack spec row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 22 }}>
           {STACK_SPECS.map(spec => (
-            <div key={spec.label} style={{ padding: '13px 15px', background: 'rgba(8,10,22,0.88)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, boxShadow: '0 2px 12px rgba(0,0,0,0.35)' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#8892A4', marginBottom: 4 }}>{spec.label}</div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: '#E2E8F0', fontWeight: 600, marginBottom: 3 }}>{spec.value}</div>
-              <div style={{ fontSize: 11, color: '#8892A4', lineHeight: 1.4 }}>{spec.sub}</div>
+            <div key={spec.label} style={{ padding: '13px 15px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF', marginBottom: 4 }}>{spec.label}</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: '#111827', fontWeight: 600, marginBottom: 3 }}>{spec.value}</div>
+              <div style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.4 }}>{spec.sub}</div>
             </div>
           ))}
         </div>
@@ -994,30 +999,30 @@ export default function CloudEngineeringPage() {
             {/* Step header */}
             {(() => {
               const sc = SC[step.status];
-              const tagStyle = TAG_STYLE[step.tag] || { bg: 'rgba(255,255,255,0.05)', color: '#CBD5E1' };
+              const tagStyle = TAG_STYLE[step.tag] || { bg: '#F3F4F6', color: '#374151' };
               return (
-                <div style={{ padding: '20px 24px', background: 'rgba(8,10,22,0.88)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, marginBottom: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.35)' }}>
+                <div style={{ padding: '20px 24px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#818CF8', background: 'rgba(67,56,202,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 4, padding: '2px 8px' }}>STEP {step.phase}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#4338CA', background: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: 4, padding: '2px 8px' }}>STEP {step.phase}</div>
                       <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', background: tagStyle.bg, color: tagStyle.color }}>{step.tag}</span>
-                      {step.time && <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', background: 'rgba(15,20,40,0.8)', color: '#8892A4', border: '1px solid rgba(255,255,255,0.08)' }}>&#9201; {step.time}</span>}
+                      {step.time && <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontFamily: 'var(--mono)', background: '#F8FAFC', color: '#6B7280', border: '1px solid #E5E7EB' }}>⏱ {step.time}</span>}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <button onClick={() => setFocusMode(f => !f)} title="Focus mode — show commands only" style={{ padding: '4px 10px', borderRadius: 6, border: focusMode ? '1.5px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.1)', background: focusMode ? 'rgba(67,56,202,0.2)' : 'rgba(255,255,255,0.04)', color: focusMode ? '#818CF8' : '#8892A4', fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.12s' }}>
+                      <button onClick={() => setFocusMode(f => !f)} title="Focus mode — show commands only" style={{ padding: '4px 10px', borderRadius: 6, border: focusMode ? '1.5px solid #4338CA' : '1px solid #E5E7EB', background: focusMode ? '#EEF2FF' : '#FFFFFF', color: focusMode ? '#4338CA' : '#6B7280', fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.12s' }}>
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6h2M9 6h2M6 1v2M6 9v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><circle cx="6" cy="6" r="2" stroke="currentColor" strokeWidth="1.4"/></svg>
                         {focusMode ? 'Focus ON' : 'Focus'}
                       </button>
-                      <button onClick={expandAll} style={{ padding: '4px 9px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#8892A4', fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer' }}>Expand all</button>
-                      <button onClick={collapseAll} style={{ padding: '4px 9px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#8892A4', fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer' }}>Collapse all</button>
+                      <button onClick={expandAll} style={{ padding: '4px 9px', borderRadius: 6, border: '1px solid #E5E7EB', background: '#FFFFFF', color: '#6B7280', fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer' }}>Expand all</button>
+                      <button onClick={collapseAll} style={{ padding: '4px 9px', borderRadius: 6, border: '1px solid #E5E7EB', background: '#FFFFFF', color: '#6B7280', fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer' }}>Collapse all</button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, background: sc.bg, border: `1px solid ${sc.border}` }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
                         <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: sc.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{sc.label}</span>
                       </div>
                     </div>
                   </div>
-                  <h2 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 26, margin: '0 0 8px', color: '#E2E8F0', letterSpacing: '-0.01em' }}>{step.title}</h2>
-                  <p style={{ margin: 0, color: '#CBD5E1', fontSize: 13.5, lineHeight: 1.65 }}>{step.summary}</p>
+                  <h2 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 26, margin: '0 0 8px', color: '#111827', letterSpacing: '-0.01em' }}>{step.title}</h2>
+                  <p style={{ margin: 0, color: '#4B5563', fontSize: 13.5, lineHeight: 1.65 }}>{step.summary}</p>
                 </div>
               );
             })()}
@@ -1031,23 +1036,23 @@ export default function CloudEngineeringPage() {
               if (focusMode && hasOnlyBody) return null;
 
               return (
-                <div key={key} style={{ marginBottom: 10, background: 'rgba(8,10,22,0.88)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.35)' }}>
+                <div key={key} style={{ marginBottom: 10, background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
                   {sec.heading && (
-                    <button onClick={() => toggleSection(key)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', background: isOpen ? 'rgba(255,255,255,0.03)' : 'transparent', cursor: 'pointer', border: 0, borderBottom: isOpen ? '1px solid rgba(255,255,255,0.05)' : 'none', textAlign: 'left' }}>
-                      <span style={{ display: 'inline-block', width: 3, height: 16, borderRadius: 2, background: isOpen ? '#4338CA' : 'rgba(255,255,255,0.15)', flexShrink: 0, transition: 'background 0.15s' }} />
-                      <span style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, color: '#CBD5E1', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>{sec.heading}</span>
-                      <span style={{ color: '#8892A4', fontSize: 13, transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.18s' }}>▾</span>
+                    <button onClick={() => toggleSection(key)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', background: isOpen ? '#FAFBFC' : '#FFFFFF', cursor: 'pointer', border: 0, borderBottom: isOpen ? '1px solid rgba(0,0,0,0.07)' : 'none', textAlign: 'left' }}>
+                      <span style={{ display: 'inline-block', width: 3, height: 16, borderRadius: 2, background: isOpen ? '#4338CA' : '#D1D5DB', flexShrink: 0, transition: 'background 0.15s' }} />
+                      <span style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 11, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>{sec.heading}</span>
+                      <span style={{ color: '#9CA3AF', fontSize: 13, transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.18s' }}>▾</span>
                     </button>
                   )}
                   {isOpen && (
                     <div style={{ padding: '16px 18px 18px' }}>
-                      {!focusMode && sec.body && <p style={{ margin: '0 0 14px', color: '#CBD5E1', fontSize: 13.5, lineHeight: 1.7 }}>{sec.body}</p>}
+                      {!focusMode && sec.body && <p style={{ margin: '0 0 14px', color: '#4B5563', fontSize: 13.5, lineHeight: 1.7 }}>{sec.body}</p>}
 
                       {sec.commands?.map((cmd, ci) => (
                         <div key={ci} style={{ marginBottom: 12 }}>
-                          {cmd.label && <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#8892A4', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 5 }}>$ {cmd.label}</div>}
-                          <div style={{ position: 'relative', background: 'rgba(4, 7, 18, 0.8)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9, padding: '14px 48px 14px 18px' }}>
-                            <pre style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 12.5, color: '#94A3B8', lineHeight: 1.75, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{cmd.code}</pre>
+                          {cmd.label && <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 5 }}>$ {cmd.label}</div>}
+                          <div style={{ position: 'relative', background: '#1E2433', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 9, padding: '14px 48px 14px 18px' }}>
+                            <pre style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 12.5, color: '#CBD5E1', lineHeight: 1.75, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{cmd.code}</pre>
                             <CopyBtn code={cmd.code} />
                           </div>
                         </div>
@@ -1055,35 +1060,35 @@ export default function CloudEngineeringPage() {
 
                       {sec.artifacts && sec.artifacts.length > 0 && (
                         <div style={{ marginTop: 14 }}>
-                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#8892A4', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 7 }}>Artifacts</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 7 }}>Artifacts</div>
                           {sec.artifacts.map((a, ai) => (
-                            <div key={ai} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '9px 13px', background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: 8, marginBottom: 6 }}>
-                              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#60A5FA', flexShrink: 0, marginTop: 2 }}>▸</span>
+                            <div key={ai} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '9px 13px', background: '#F0F7FF', border: '1px solid #BFDBFE', borderRadius: 8, marginBottom: 6 }}>
+                              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#4338CA', flexShrink: 0, marginTop: 2 }}>▸</span>
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#60A5FA', marginBottom: 2 }}>{a.file}</div>
-                                <div style={{ fontSize: 13, color: '#8892A4', lineHeight: 1.5 }}>{a.role}</div>
+                                <div style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#3730A3', marginBottom: 2 }}>{a.file}</div>
+                                <div style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.5 }}>{a.role}</div>
                               </div>
-                              {a.size && <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#8892A4', flexShrink: 0 }}>{a.size}</span>}
+                              {a.size && <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#9CA3AF', flexShrink: 0 }}>{a.size}</span>}
                             </div>
                           ))}
                         </div>
                       )}
 
                       {sec.table && (
-                        <div style={{ marginTop: 14, borderRadius: 9, border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                        <div style={{ marginTop: 14, borderRadius: 9, border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                             <thead>
-                              <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                              <tr style={{ background: '#F8FAFC' }}>
                                 {sec.table.cols.map((col, ci) => (
-                                  <th key={ci} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8892A4', padding: '9px 13px', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>{col}</th>
+                                  <th key={ci} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6B7280', padding: '9px 13px', textAlign: 'left', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>{col}</th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody>
                               {sec.table.rows.map((row, ri) => (
-                                <tr key={ri} style={{ borderBottom: ri < sec.table!.rows.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                                <tr key={ri} style={{ borderBottom: ri < sec.table!.rows.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
                                   {row.map((cell, ci) => (
-                                    <td key={ci} style={{ padding: '9px 13px', color: ci === 0 ? '#E2E8F0' : '#CBD5E1', fontFamily: ci === 0 ? 'var(--mono)' : 'inherit', fontSize: ci === 0 ? 12 : 13, lineHeight: 1.55, verticalAlign: 'top' }}>{cell}</td>
+                                    <td key={ci} style={{ padding: '9px 13px', color: ci === 0 ? '#1E293B' : '#4B5563', fontFamily: ci === 0 ? 'var(--mono)' : 'inherit', fontSize: ci === 0 ? 12 : 13, lineHeight: 1.55, verticalAlign: 'top' }}>{cell}</td>
                                   ))}
                                 </tr>
                               ))}
@@ -1095,18 +1100,18 @@ export default function CloudEngineeringPage() {
                       {!focusMode && sec.checklist && (
                         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
                           {sec.checklist.map((item, ii) => (
-                            <div key={ii} style={{ display: 'flex', gap: 10, padding: '8px 12px', background: 'rgba(4, 7, 18, 0.8)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 7 }}>
-                              <span style={{ color: '#818CF8', fontSize: 12, flexShrink: 0, marginTop: 1 }}>◆</span>
-                              <span style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 1.55 }}>{item}</span>
+                            <div key={ii} style={{ display: 'flex', gap: 10, padding: '8px 12px', background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.07)', borderRadius: 7 }}>
+                              <span style={{ color: '#4338CA', fontSize: 12, flexShrink: 0, marginTop: 1 }}>◆</span>
+                              <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.55 }}>{item}</span>
                             </div>
                           ))}
                         </div>
                       )}
 
                       {sec.warnings?.map((w, wi) => (
-                        <div key={wi} style={{ display: 'flex', gap: 10, padding: '10px 13px', background: 'rgba(40, 28, 8, 0.75)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 8, marginTop: 9 }}>
-                          <span style={{ color: '#FBBF24', fontSize: 13, flexShrink: 0, marginTop: 1 }}>⚠</span>
-                          <p style={{ margin: 0, fontSize: 13, color: '#FDE68A', lineHeight: 1.6 }}>{w}</p>
+                        <div key={wi} style={{ display: 'flex', gap: 10, padding: '10px 13px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, marginTop: 9 }}>
+                          <span style={{ color: '#D97706', fontSize: 13, flexShrink: 0, marginTop: 1 }}>⚠</span>
+                          <p style={{ margin: 0, fontSize: 13, color: '#78350F', lineHeight: 1.6 }}>{w}</p>
                         </div>
                       ))}
                     </div>
@@ -1116,15 +1121,15 @@ export default function CloudEngineeringPage() {
             })}
 
             {/* Prev / Next */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22, paddingTop: 16, borderTop: '1px solid rgba(0,0,0,0.08)' }}>
               {stepIdx > 0
-                ? <button onClick={() => setActive(STEPS[stepIdx - 1].id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, background: 'rgba(8,10,22,0.88)', color: '#CBD5E1', fontSize: 13, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-                    ← <kbd style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#64748B', background: 'none', border: 0, padding: 0 }}>k</kbd> {STEPS[stepIdx - 1].title}
+                ? <button onClick={() => setActive(STEPS[stepIdx - 1].id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', border: '1px solid #E5E7EB', borderRadius: 8, background: '#FFFFFF', color: '#374151', fontSize: 13, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                    ← <kbd style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#9CA3AF', background: 'none', border: 0, padding: 0 }}>k</kbd> {STEPS[stepIdx - 1].title}
                   </button>
                 : <div />}
               {stepIdx < STEPS.length - 1
-                ? <button onClick={() => setActive(STEPS[stepIdx + 1].id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, background: 'rgba(8,10,22,0.88)', color: '#CBD5E1', fontSize: 13, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-                    {STEPS[stepIdx + 1].title} <kbd style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#64748B', background: 'none', border: 0, padding: 0 }}>j</kbd> →
+                ? <button onClick={() => setActive(STEPS[stepIdx + 1].id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', border: '1px solid #E5E7EB', borderRadius: 8, background: '#FFFFFF', color: '#374151', fontSize: 13, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                    {STEPS[stepIdx + 1].title} <kbd style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#9CA3AF', background: 'none', border: 0, padding: 0 }}>j</kbd> →
                   </button>
                 : <div />}
             </div>
@@ -1134,42 +1139,42 @@ export default function CloudEngineeringPage() {
           <div style={{ position: 'sticky', top: 24 }}>
 
             {/* Interactive checklist */}
-            <div style={{ padding: '16px 16px 14px', background: 'rgba(8,10,22,0.88)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.35)', marginBottom: 14 }}>
+            <div style={{ padding: '16px 16px 14px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#64748B' }}>Production Checklist</div>
-                <button onClick={() => { setChecked(new Set(CHECKLIST_DONE)); try { localStorage.setItem(LS_KEY, JSON.stringify([...CHECKLIST_DONE])); } catch { /* ignore */ } }} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#64748B', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>reset</button>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>Production Checklist</div>
+                <button onClick={() => { setChecked(new Set(CHECKLIST_DONE)); try { localStorage.setItem(LS_KEY, JSON.stringify([...CHECKLIST_DONE])); } catch { /* ignore */ } }} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>reset</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {CHECKLIST_ITEMS.map((item, i) => {
                   const done = checked.has(i);
                   return (
                     <button key={i} onClick={() => toggleChecked(i)} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-                      <div style={{ width: 15, height: 15, borderRadius: 3, border: done ? 'none' : '1.5px solid rgba(255,255,255,0.15)', background: done ? '#059669' : 'transparent', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                      <div style={{ width: 15, height: 15, borderRadius: 3, border: done ? 'none' : '1.5px solid #D1D5DB', background: done ? '#059669' : 'transparent', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
                         {done && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                       </div>
-                      <span style={{ fontSize: 11.5, color: done ? '#CBD5E1' : '#64748B', lineHeight: 1.45, textDecoration: done ? 'line-through' : 'none', textDecorationColor: 'rgba(255,255,255,0.15)' }}>{item}</span>
+                      <span style={{ fontSize: 11.5, color: done ? '#374151' : '#9CA3AF', lineHeight: 1.45, textDecoration: done ? 'line-through' : 'none', textDecorationColor: '#D1D5DB' }}>{item}</span>
                     </button>
                   );
                 })}
               </div>
-              <div style={{ marginTop: 14, paddingTop: 11, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ marginTop: 14, paddingTop: 11, borderTop: '1px solid rgba(0,0,0,0.07)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Complete</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Complete</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#059669', fontWeight: 600 }}>{Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}%</span>
                 </div>
-                <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)' }}>
+                <div style={{ height: 4, borderRadius: 2, background: '#E5E7EB' }}>
                   <div style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #047857, #4338CA)', width: `${(doneCount / CHECKLIST_ITEMS.length) * 100}%`, transition: 'width 0.3s ease' }} />
                 </div>
               </div>
             </div>
 
             {/* Open decisions */}
-            <div style={{ padding: '14px 16px', background: 'rgba(40, 28, 8, 0.75)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 14 }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#FBBF24', marginBottom: 11 }}>Open Decisions</div>
+            <div style={{ padding: '14px 16px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 14 }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#D97706', marginBottom: 11 }}>Open Decisions</div>
               {OPEN_DECISIONS.map((d, i) => (
                 <div key={i} style={{ display: 'flex', gap: 9, marginBottom: 9 }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#FBBF24', opacity: 0.7, flexShrink: 0, marginTop: 2 }}>{i + 1}</span>
-                  <span style={{ fontSize: 12, color: '#FDE68A', lineHeight: 1.5 }}>{d}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#D97706', opacity: 0.7, flexShrink: 0, marginTop: 2 }}>{i + 1}</span>
+                  <span style={{ fontSize: 12, color: '#78350F', lineHeight: 1.5 }}>{d}</span>
                 </div>
               ))}
             </div>
