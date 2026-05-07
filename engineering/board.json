@@ -119,6 +119,21 @@
       "description": "",
       "created": "May 4",
       "updated": "May 4"
+    },
+    {
+      "id": "ENG-L1778186342559",
+      "type": "task",
+      "title": "hi",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Hanna",
+      "assigneeInitial": "H",
+      "assigneeColor": "#F472B6",
+      "labels": [],
+      "column": "todo",
+      "description": "",
+      "created": "May 7",
+      "updated": "May 7"
     }
   ],
   "personalTasks": {
@@ -135,6 +150,9 @@
     "Isaac": [
       "Test lambda function",
       "IAC aws git research"
+    ],
+    "Hanna": [
+      "hi"
     ]
   },
   "completedTasks": {
