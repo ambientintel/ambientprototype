@@ -145,7 +145,6 @@
       "finish routing PMIC to the OSD62",
       "add barrel jack",
       "add wifi module",
-      "route pcb",
       "Find Wifi module"
     ],
     "Isaac": [
