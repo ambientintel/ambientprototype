@@ -48,6 +48,7 @@ export default authkitMiddleware({
       "/mn",
       "/ee",
       "/cloudengineering",
+      "/eng",
       "/cloud",
       "/firmware",
       "/webapp",

@@ -578,7 +578,6 @@ export default function EngineeringPage() {
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
               <NavCard href="/firmware"  label="Firmware"   color="#00B4D8" />
               <NavCard href="/ee"        label="EE"         color="#2563EB" lsKey="ambient-ee-checklist-v1"        total={22} defaultDone={13} />
-              <NavCard href="/cloud"          label="Cloud"      color="#818CF8" />
               <NavCard href="/cloudengineering" label="Cloud Eng"  color="#38BDF8" lsKey="ambient-cloud-checklist-v1" total={22} defaultDone={13} />
               <NavCard href="/webapp"    label="Web App"    color="#3DCC91" lsKey="ambient-webapp-checklist-v1"    total={20} defaultDone={13} />
               <NavCard href="/mobileapp" label="Mobile App" color="#FB923C" lsKey="ambient-mobileapp-checklist-v1" total={20} defaultDone={7} />
