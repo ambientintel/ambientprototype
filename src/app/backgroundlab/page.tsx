@@ -3014,6 +3014,1072 @@ const cymaticsBg: BgDef = {
   },
 };
 
+// ─── 43. Mandelbrot ──────────────────────────────────────────────────────────
+
+const mandelbrotBg: BgDef = {
+  id: 'mandelbrot',
+  label: 'Mandelbrot',
+  description: 'The iconic fractal — escape time at every pixel maps the boundary of convergence',
+  defaults: { maxIter: 128, zoom: 1.0, panX: -0.5, panY: 0, drift: 0.04, palette: 0 },
+  sliders: [
+    { key: 'maxIter', label: 'Max iter',   min: 16,   max: 512,  step: 8    },
+    { key: 'zoom',    label: 'Zoom',       min: 0.1,  max: 15.0, step: 0.1  },
+    { key: 'panX',    label: 'Pan X',      min: -2.5, max: 1.0,  step: 0.01 },
+    { key: 'panY',    label: 'Pan Y',      min: -1.2, max: 1.2,  step: 0.01 },
+    { key: 'drift',   label: 'Auto drift', min: 0,    max: 0.5,  step: 0.01 },
+    { key: 'palette', label: 'Palette',    min: 0,    max: 3,    step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    let gw=1,gh=1,imgData=new ImageData(1,1);
+    let off: HTMLCanvasElement|null=null, offCtx: CanvasRenderingContext2D|null=null;
+    const resize = () => {
+      const r=canvas.getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height;
+      gw=Math.ceil(r.width/4); gh=Math.ceil(r.height/4);
+      imgData=new ImageData(gw,gh); off=document.createElement('canvas'); off.width=gw; off.height=gh; offCtx=off.getContext('2d')!;
+    };
+    const draw = () => {
+      const c=getCfg(); t+=c.drift*0.003;
+      const maxIter=Math.round(c.maxIter), sc=3.0/c.zoom, d=imgData.data, pal=Math.round(c.palette);
+      const cx2=c.panX+Math.sin(t*0.41)*0.015*c.drift, cy2=c.panY+Math.cos(t*0.31)*0.01*c.drift;
+      for(let py=0;py<gh;py++) for(let px=0;px<gw;px++){
+        const cr=(px/gw-0.5)*sc*(gw/gh)+cx2, ci=(py/gh-0.5)*sc+cy2;
+        let zr=0,zi=0,it=0;
+        while(it<maxIter){const zr2=zr*zr,zi2=zi*zi;if(zr2+zi2>4)break;zi=2*zr*zi+ci;zr=zr2-zi2+cr;it++;}
+        let val=0;
+        if(it<maxIter){const zr2=zr*zr,zi2=zi*zi;val=Math.max(0,(it+1-Math.log(Math.log(Math.sqrt(zr2+zi2))*Math.LOG2E)*Math.LOG2E)/maxIter);}
+        const idx=px+py*gw; let r2=0,g2=0,b2=0;
+        if(val>0){
+          if(pal===0){[r2,g2,b2]=hslToRgb(((val*300+240)%360)/360,0.85,0.45+val*0.35);}
+          else if(pal===1){r2=Math.floor(val*255);g2=Math.floor(val*val*200);b2=Math.floor(val<0.4?val*200:0);}
+          else if(pal===2){[r2,g2,b2]=hslToRgb((200+val*100)/360,0.75,0.15+val*0.65);}
+          else{[r2,g2,b2]=hslToRgb((val*6)%1,0.9,0.5);}
+        }
+        d[idx*4]=r2;d[idx*4+1]=g2;d[idx*4+2]=b2;d[idx*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0); ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize(); draw();
+    const ro=new ResizeObserver(()=>resize()); ro.observe(canvas);
+    return ()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 44. Rössler Attractor ────────────────────────────────────────────────────
+
+const rosslerBg: BgDef = {
+  id: 'rossler',
+  label: 'Rössler',
+  description: 'Rössler strange attractor — a single folded spiral band topologically distinct from Lorenz',
+  defaults: { a: 0.2, b: 0.2, c: 5.7, density: 300, zoom: 0.85, hue: 30 },
+  sliders: [
+    { key: 'a',       label: 'a',        min: 0.1,  max: 0.5,  step: 0.01 },
+    { key: 'b',       label: 'b',        min: 0.05, max: 1.0,  step: 0.01 },
+    { key: 'c',       label: 'c',        min: 2.0,  max: 12.0, step: 0.1  },
+    { key: 'density', label: 'Density',  min: 50,   max: 800,  step: 10   },
+    { key: 'zoom',    label: 'Zoom',     min: 0.3,  max: 3.0,  step: 0.05 },
+    { key: 'hue',     label: 'Hue',      min: 0,    max: 360,  step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, rx=0.1, ry=0, rz=0;
+    let lastA=NaN,lastB=NaN,lastC=NaN;
+    const dt=0.006;
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;lastA=NaN;};
+    const draw=()=>{
+      const c=getCfg(),cw=canvas.width,ch=canvas.height,steps=Math.round(c.density),sc=Math.min(cw,ch)*0.04*c.zoom;
+      if(c.a!==lastA||c.b!==lastB||c.c!==lastC){ctx.clearRect(0,0,cw,ch);rx=0.1;ry=0;rz=0;lastA=c.a;lastB=c.b;lastC=c.c;}
+      ctx.globalAlpha=0.012;
+      for(let i=0;i<steps;i++){
+        const dx=-(ry+rz),dy=rx+c.a*ry,dz=c.b+rz*(rx-c.c);
+        rx+=dx*dt;ry+=dy*dt;rz+=dz*dt;
+        const px=cw/2+rx*sc,py=ch*0.55-ry*sc;
+        const h=((rz/20*200+c.hue)%360+360)%360;
+        ctx.fillStyle=`hsl(${h},80%,65%)`;ctx.fillRect(Math.round(px),Math.round(py),1,1);
+      }
+      ctx.globalAlpha=1; animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 45. Thomas Attractor ─────────────────────────────────────────────────────
+
+const thomasBg: BgDef = {
+  id: 'thomas',
+  label: 'Thomas Attractor',
+  description: 'Thomas\' cyclically symmetric attractor — three-axis chaos filling a cube with sinusoidal coupling',
+  defaults: { b: 0.19, density: 350, zoom: 0.85, hue: 160, rotSpeed: 0.3 },
+  sliders: [
+    { key: 'b',        label: 'Damping b', min: 0.1,  max: 0.35, step: 0.005 },
+    { key: 'density',  label: 'Density',   min: 50,   max: 800,  step: 10    },
+    { key: 'zoom',     label: 'Zoom',      min: 0.3,  max: 3.0,  step: 0.05  },
+    { key: 'hue',      label: 'Hue',       min: 0,    max: 360,  step: 1     },
+    { key: 'rotSpeed', label: 'Rotation',  min: 0,    max: 1.0,  step: 0.05  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, tx=0.1,ty=0,tz=0,rot=0;
+    let lastB=NaN;
+    const dt=0.04;
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;lastB=NaN;};
+    const draw=()=>{
+      const c=getCfg(),steps=Math.round(c.density),cw=canvas.width,ch=canvas.height,sc=Math.min(cw,ch)*0.07*c.zoom;
+      rot+=c.rotSpeed*0.005;
+      if(c.b!==lastB){ctx.clearRect(0,0,cw,ch);tx=0.1;ty=0;tz=0;lastB=c.b;}
+      ctx.globalAlpha=0.015;
+      for(let i=0;i<steps;i++){
+        const dx=Math.sin(ty)-c.b*tx,dy=Math.sin(tz)-c.b*ty,dz=Math.sin(tx)-c.b*tz;
+        tx+=dx*dt;ty+=dy*dt;tz+=dz*dt;
+        const cosR=Math.cos(rot),sinR=Math.sin(rot);
+        const rx2=tx*cosR+tz*sinR,rz2=-tx*sinR+tz*cosR;
+        const px=cw/2+rx2*sc,py=ch/2-ty*sc;
+        const h=((rz2/5*100+c.hue)%360+360)%360;
+        ctx.fillStyle=`hsl(${h},80%,65%)`;ctx.fillRect(Math.round(px),Math.round(py),1,1);
+      }
+      ctx.globalAlpha=1; animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 46. Bifurcation Diagram ──────────────────────────────────────────────────
+
+const bifurcationBg: BgDef = {
+  id: 'bifurcation',
+  label: 'Bifurcation',
+  description: 'Logistic map x→rx(1-x) — period-doubling road to chaos rendered as living density',
+  defaults: { rMin: 2.6, rMax: 4.0, iterations: 200, transient: 150, hue: 200, brightness: 0.6 },
+  sliders: [
+    { key: 'rMin',       label: 'r min',      min: 2.0, max: 3.9,  step: 0.01 },
+    { key: 'rMax',       label: 'r max',      min: 3.0, max: 4.0,  step: 0.01 },
+    { key: 'iterations', label: 'Iterations', min: 50,  max: 500,  step: 10   },
+    { key: 'transient',  label: 'Transient',  min: 10,  max: 300,  step: 10   },
+    { key: 'hue',        label: 'Hue',        min: 0,   max: 360,  step: 1    },
+    { key: 'brightness', label: 'Brightness', min: 0.1, max: 1.0,  step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, frameN = 0;
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;ctx.clearRect(0,0,r.width,r.height);frameN=0;};
+    const draw=()=>{
+      const c=getCfg(),cw=canvas.width,ch=canvas.height;
+      ctx.fillStyle='rgba(8,10,14,0.004)';ctx.fillRect(0,0,cw,ch);
+      const colsPerFrame=Math.ceil(cw/40);
+      const startCol=(frameN%40)*colsPerFrame;
+      const rRange=c.rMax-c.rMin,iters=Math.round(c.iterations),trans=Math.round(c.transient);
+      ctx.fillStyle=`hsla(${c.hue},75%,65%,${c.brightness*0.28})`;
+      for(let px=startCol;px<Math.min(startCol+colsPerFrame,cw);px++){
+        const r2=c.rMin+(px/cw)*rRange;
+        let x2=Math.random()*0.4+0.3;
+        for(let i=0;i<trans;i++) x2=r2*x2*(1-x2);
+        for(let i=0;i<iters;i++){x2=r2*x2*(1-x2);const py=Math.round((1-x2)*ch);if(py>=0&&py<ch)ctx.fillRect(px,py,1,1);}
+      }
+      frameN++; animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 47. Sand Simulation ──────────────────────────────────────────────────────
+
+const sandBg: BgDef = {
+  id: 'sand',
+  label: 'Sand Sim',
+  description: 'Falling sand cellular automaton — gravity, slides, and angle of repose from local rules',
+  defaults: { dropRate: 4, palette: 0, maxFill: 0.55 },
+  sliders: [
+    { key: 'dropRate', label: 'Drop rate', min: 1,   max: 12,  step: 1    },
+    { key: 'palette',  label: 'Palette',   min: 0,   max: 2,   step: 1    },
+    { key: 'maxFill',  label: 'Max fill',  min: 0.2, max: 0.9, step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let gw=1,gh=1,grid: Uint8Array,hues: Float32Array,totalSand=0;
+    let imgData=new ImageData(1,1);
+    let off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    const resize=()=>{
+      const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;
+      gw=Math.ceil(r.width/3);gh=Math.ceil(r.height/3);
+      grid=new Uint8Array(gw*gh);hues=new Float32Array(gw*gh);totalSand=0;
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;
+    };
+    const draw=()=>{
+      const c=getCfg();
+      if(totalSand>gw*gh*c.maxFill){grid.fill(0);hues.fill(0);totalSand=0;}
+      for(let d2=0;d2<Math.round(c.dropRate);d2++){
+        const x=Math.floor(gw*0.15+Math.random()*gw*0.7),i=x;
+        if(!grid[i]){grid[i]=1;hues[i]=Math.random()*60+20;totalSand++;}
+      }
+      // Scan bottom-up to prevent double-move
+      for(let y=gh-2;y>=0;y--){
+        const dir=Math.random()<0.5?-1:1;
+        for(let x=0;x<gw;x++){
+          if(!grid[x+y*gw]) continue;
+          const below=x+(y+1)*gw;
+          if(!grid[below]){grid[below]=1;hues[below]=hues[x+y*gw];grid[x+y*gw]=0;hues[x+y*gw]=0;continue;}
+          // Try diagonal
+          let moved=false;
+          for(const sx of [dir,-dir]){
+            const nx=x+sx;if(nx<0||nx>=gw) continue;
+            const diag=nx+(y+1)*gw;
+            if(!grid[diag]){grid[diag]=1;hues[diag]=hues[x+y*gw];grid[x+y*gw]=0;hues[x+y*gw]=0;moved=true;break;}
+          }
+          if(!moved){/* stays */}
+        }
+      }
+      const d2=imgData.data,pal=Math.round(c.palette);
+      for(let i=0;i<gw*gh;i++){
+        if(!grid[i]){d2[i*4]=8;d2[i*4+1]=10;d2[i*4+2]=14;d2[i*4+3]=255;continue;}
+        const yFrac=Math.floor(i/gw)/gh;
+        let r2=0,g2=0,b2=0;
+        if(pal===0){[r2,g2,b2]=hslToRgb(hues[i]/360,0.75,0.4+yFrac*0.2);}
+        else if(pal===1){[r2,g2,b2]=hslToRgb((200+hues[i]*0.5)/360,0.7,0.5);}
+        else{[r2,g2,b2]=hslToRgb((100+hues[i])/360,0.65,0.5);}
+        d2[i*4]=r2;d2[i*4+1]=g2;d2[i*4+2]=b2;d2[i*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 48. Langton's Ant ────────────────────────────────────────────────────────
+
+const langtonBg: BgDef = {
+  id: 'langton',
+  label: "Langton's Ant",
+  description: "Multi-color Langton's ant — deterministic Turing machine builds unexpected highways",
+  defaults: { ants: 4, stepsPerFrame: 800, colorStates: 5, palette: 0 },
+  sliders: [
+    { key: 'ants',          label: 'Ants',        min: 1,   max: 20,   step: 1   },
+    { key: 'stepsPerFrame', label: 'Steps/frame', min: 100, max: 4000, step: 100 },
+    { key: 'colorStates',   label: 'States',      min: 2,   max: 8,    step: 1   },
+    { key: 'palette',       label: 'Palette',     min: 0,   max: 2,    step: 1   },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let gw=1,gh=1,grid: Uint8Array;
+    let imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    let antX: Int32Array,antY: Int32Array,antDir: Int8Array,lastAnts=-1,lastStates=-1;
+    const resize=()=>{
+      const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;
+      gw=Math.ceil(r.width/3);gh=Math.ceil(r.height/3);
+      grid=new Uint8Array(gw*gh);imgData=new ImageData(gw,gh);
+      off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;lastAnts=-1;
+    };
+    const init=(n: number)=>{
+      antX=new Int32Array(n);antY=new Int32Array(n);antDir=new Int8Array(n);
+      for(let i=0;i<n;i++){antX[i]=Math.floor(gw/2+(Math.random()-0.5)*gw*0.4);antY[i]=Math.floor(gh/2+(Math.random()-0.5)*gh*0.4);antDir[i]=Math.floor(Math.random()*4);}
+      grid.fill(0);lastAnts=n;
+    };
+    const dirs=[[0,-1],[1,0],[0,1],[-1,0]];
+    const draw=()=>{
+      const c=getCfg(),n=Math.round(c.ants),ns=Math.round(c.colorStates);
+      if(n!==lastAnts||ns!==lastStates){init(n);lastStates=ns;}
+      const spf=Math.round(c.stepsPerFrame);
+      for(let s=0;s<spf;s++){
+        for(let ai=0;ai<n;ai++){
+          const i=antX[ai]+antY[ai]*gw,st=grid[i];
+          grid[i]=(st+1)%ns;
+          antDir[ai]=st%2===0?(antDir[ai]+1)%4:(antDir[ai]+3)%4;
+          antX[ai]=((antX[ai]+dirs[antDir[ai]][0])%gw+gw)%gw;
+          antY[ai]=((antY[ai]+dirs[antDir[ai]][1])%gh+gh)%gh;
+        }
+      }
+      const d2=imgData.data,pal=Math.round(c.palette);
+      for(let i=0;i<gw*gh;i++){
+        if(!grid[i]){d2[i*4]=8;d2[i*4+1]=10;d2[i*4+2]=14;d2[i*4+3]=255;continue;}
+        const frac=grid[i]/ns;
+        const h=pal===0?frac*360:pal===1?frac*120+180:frac*240+60;
+        const [r2,g2,b2]=hslToRgb(h/360,0.8,0.6);
+        d2[i*4]=r2;d2[i*4+1]=g2;d2[i*4+2]=b2;d2[i*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 49. Ising Model ─────────────────────────────────────────────────────────
+
+const isingBg: BgDef = {
+  id: 'ising',
+  label: 'Ising Model',
+  description: 'Ferromagnetic spin lattice — Metropolis algorithm reveals the phase transition at T≈2.27',
+  defaults: { temperature: 2.4, stepsPerFrame: 8000, cellSize: 4, palette: 0 },
+  sliders: [
+    { key: 'temperature',   label: 'Temperature T', min: 0.5,  max: 5.0,   step: 0.05  },
+    { key: 'stepsPerFrame', label: 'Steps/frame',   min: 500,  max: 30000, step: 500   },
+    { key: 'cellSize',      label: 'Cell size',     min: 2,    max: 10,    step: 1     },
+    { key: 'palette',       label: 'Palette',       min: 0,    max: 2,     step: 1     },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let gw=1,gh=1,spins: Int8Array;
+    let imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    let lastCS=-1;
+    const initGrid=(cs: number)=>{
+      gw=Math.floor(canvas.width/cs);gh=Math.floor(canvas.height/cs);
+      spins=new Int8Array(gw*gh);for(let i=0;i<gw*gh;i++)spins[i]=Math.random()<0.5?1:-1;
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;lastCS=cs;
+    };
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;lastCS=-1;};
+    const draw=()=>{
+      const c=getCfg(),cs=Math.round(c.cellSize);
+      if(cs!==lastCS) initGrid(cs);
+      const steps=Math.round(c.stepsPerFrame),T=c.temperature;
+      for(let s=0;s<steps;s++){
+        const x=Math.floor(Math.random()*gw),y=Math.floor(Math.random()*gh),i=x+y*gw;
+        const nb=spins[(x>0?x-1:gw-1)+y*gw]+spins[(x<gw-1?x+1:0)+y*gw]+spins[x+(y>0?y-1:gh-1)*gw]+spins[x+(y<gh-1?y+1:0)*gw];
+        const dE=2*spins[i]*nb;
+        if(dE<0||Math.random()<Math.exp(-dE/T)) spins[i]*=-1;
+      }
+      const d2=imgData.data,pal=Math.round(c.palette);
+      for(let i=0;i<gw*gh;i++){
+        const s=spins[i]; let r2=0,g2=0,b2=0;
+        if(pal===0){r2=s>0?25:200;g2=s>0?90:45;b2=s>0?215:25;}
+        else if(pal===1){r2=s>0?215:25;g2=s>0?45:175;b2=s>0?25:210;}
+        else{const [hr,hg,hb]=hslToRgb(s>0?0.58:0.05,0.8,0.6);r2=hr;g2=hg;b2=hb;}
+        d2[i*4]=r2;d2[i*4+1]=g2;d2[i*4+2]=b2;d2[i*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 50. Lightning ────────────────────────────────────────────────────────────
+
+const lightningBg: BgDef = {
+  id: 'lightning',
+  label: 'Lightning',
+  description: 'Midpoint displacement fractal — stochastic branching bolt with recursive subdivision',
+  defaults: { depth: 8, spread: 0.28, branchProb: 0.35, glow: 0.7, rate: 3.0, hue: 210 },
+  sliders: [
+    { key: 'depth',      label: 'Depth',       min: 4,    max: 12,  step: 1    },
+    { key: 'spread',     label: 'Spread',      min: 0.05, max: 0.8, step: 0.05 },
+    { key: 'branchProb', label: 'Branch prob', min: 0,    max: 0.8, step: 0.05 },
+    { key: 'glow',       label: 'Glow',        min: 0,    max: 1.0, step: 0.05 },
+    { key: 'rate',       label: 'Rate',        min: 0.5,  max: 8.0, step: 0.5  },
+    { key: 'hue',        label: 'Hue',         min: 0,    max: 360, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t=0, lastBolt=0;
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;};
+    const bolt=(x1:number,y1:number,x2:number,y2:number,depth:number,spread:number,bp:number,hue:number,glw:number)=>{
+      if(depth===0){
+        if(glw>0){ctx.strokeStyle=`hsla(${hue},90%,90%,${glw*0.35})`;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+        ctx.strokeStyle=`hsl(${hue},90%,92%)`;ctx.lineWidth=0.7;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();return;
+      }
+      const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+      const px=-dy/len,py=dx/len;
+      const mx=(x1+x2)/2+px*spread*len*(Math.random()-0.5)*2;
+      const my=(y1+y2)/2+py*spread*len*(Math.random()-0.5)*2;
+      bolt(x1,y1,mx,my,depth-1,spread,bp,hue,glw);
+      bolt(mx,my,x2,y2,depth-1,spread,bp,hue,glw);
+      if(Math.random()<bp&&depth>2){
+        const bx=mx+(x2-x1)*0.4*(Math.random()-0.5)*2,by=my+(y2-y1)*0.4*(Math.random()-0.5)*2;
+        bolt(mx,my,bx,by,depth-2,spread*1.1,bp*0.6,hue,glw*0.5);
+      }
+    };
+    const draw=()=>{
+      t+=1/60;const c=getCfg(),cw=canvas.width,ch=canvas.height;
+      ctx.fillStyle='rgba(8,10,14,0.14)';ctx.fillRect(0,0,cw,ch);
+      if(t-lastBolt>1/c.rate){
+        lastBolt=t;ctx.lineCap='round';
+        bolt(cw*(0.2+Math.random()*0.6),0,cw*(0.1+Math.random()*0.8),ch,Math.round(c.depth),c.spread,c.branchProb,c.hue,c.glow);
+      }
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 51. Burning Ship ─────────────────────────────────────────────────────────
+
+const burningShipBg: BgDef = {
+  id: 'burningship',
+  label: 'Burning Ship',
+  description: 'z→(|Re|+i|Im|)²+c — absolute value twists the Mandelbrot into a flaming armada',
+  defaults: { maxIter: 128, zoom: 1.0, panX: -0.5, panY: -0.5, drift: 0.04, palette: 0 },
+  sliders: [
+    { key: 'maxIter', label: 'Max iter',   min: 16,   max: 512,  step: 8    },
+    { key: 'zoom',    label: 'Zoom',       min: 0.1,  max: 15.0, step: 0.1  },
+    { key: 'panX',    label: 'Pan X',      min: -2.5, max: 1.5,  step: 0.01 },
+    { key: 'panY',    label: 'Pan Y',      min: -2.0, max: 1.0,  step: 0.01 },
+    { key: 'drift',   label: 'Auto drift', min: 0,    max: 0.5,  step: 0.01 },
+    { key: 'palette', label: 'Palette',    min: 0,    max: 3,    step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number,t=0;
+    let gw=1,gh=1,imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    const resize=()=>{
+      const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;
+      gw=Math.ceil(r.width/5);gh=Math.ceil(r.height/5);
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;
+    };
+    const draw=()=>{
+      const c=getCfg();t+=c.drift*0.003;
+      const maxIter=Math.round(c.maxIter),sc=3.0/c.zoom,d=imgData.data,pal=Math.round(c.palette);
+      const cx2=c.panX+Math.sin(t*0.37)*0.01*c.drift,cy2=c.panY+Math.cos(t*0.29)*0.01*c.drift;
+      for(let py=0;py<gh;py++) for(let px=0;px<gw;px++){
+        const cr=(px/gw-0.5)*sc*(gw/gh)+cx2,ci=(py/gh-0.5)*sc+cy2;
+        let zr=0,zi=0,it=0;
+        while(it<maxIter){const ar=Math.abs(zr),ai=Math.abs(zi);if(ar*ar+ai*ai>4)break;zr=ar*ar-ai*ai+cr;zi=2*ar*ai+ci;it++;}
+        let val=0;
+        if(it<maxIter){const ar=Math.abs(zr),ai=Math.abs(zi);val=Math.max(0,(it+1-Math.log(Math.log(Math.sqrt(ar*ar+ai*ai))*Math.LOG2E)*Math.LOG2E)/maxIter);}
+        const idx=px+py*gw;let r2=0,g2=0,b2=0;
+        if(val>0){
+          if(pal===0){[r2,g2,b2]=hslToRgb(((val*300+10)%360)/360,0.9,0.45+val*0.35);}
+          else if(pal===1){r2=Math.floor(val*255);g2=Math.floor(val*val*180);b2=0;}
+          else if(pal===2){[r2,g2,b2]=hslToRgb((180+val*120)/360,0.8,0.2+val*0.6);}
+          else{[r2,g2,b2]=hslToRgb((val*5)%1,0.85,0.5);}
+        }
+        d[idx*4]=r2;d[idx*4+1]=g2;d[idx*4+2]=b2;d[idx*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 52. BZ Reaction ─────────────────────────────────────────────────────────
+
+const bzReactionBg: BgDef = {
+  id: 'bzreaction',
+  label: 'BZ Reaction',
+  description: 'Belousov-Zhabotinsky excitable medium — chemical waves spiral outward from spontaneous ignition',
+  defaults: { states: 12, threshold: 2, stepsPerFrame: 1, palette: 0, cellSize: 3 },
+  sliders: [
+    { key: 'states',        label: 'States',      min: 4,  max: 24,  step: 1 },
+    { key: 'threshold',     label: 'Threshold',   min: 1,  max: 6,   step: 1 },
+    { key: 'stepsPerFrame', label: 'Steps/frame', min: 1,  max: 4,   step: 1 },
+    { key: 'palette',       label: 'Palette',     min: 0,  max: 2,   step: 1 },
+    { key: 'cellSize',      label: 'Cell size',   min: 2,  max: 8,   step: 1 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let gw=1,gh=1,grid: Uint8Array,next: Uint8Array;
+    let imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    let lastCS=-1,lastSt=-1;
+    const initGrid=(cs: number,ns: number)=>{
+      gw=Math.floor(canvas.width/cs);gh=Math.floor(canvas.height/cs);
+      grid=new Uint8Array(gw*gh);next=new Uint8Array(gw*gh);
+      for(let i=0;i<gw*gh;i++) grid[i]=Math.floor(Math.random()*ns);
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;
+      lastCS=cs;lastSt=ns;
+    };
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;lastCS=-1;};
+    const step=(ns: number,thr: number)=>{
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){
+        const i=x+y*gw,s=grid[i];
+        if(s===0){
+          // Count excited (state=1) neighbors
+          let cnt=0;
+          if(x>0&&grid[i-1]===1)cnt++;if(x<gw-1&&grid[i+1]===1)cnt++;
+          if(y>0&&grid[i-gw]===1)cnt++;if(y<gh-1&&grid[i+gw]===1)cnt++;
+          next[i]=cnt>=thr?1:0;
+        } else {
+          next[i]=(s+1)%ns;
+        }
+      }
+      const tmp=grid;grid=next;next=tmp;
+    };
+    const draw=()=>{
+      const c=getCfg(),cs=Math.round(c.cellSize),ns=Math.round(c.states),thr=Math.round(c.threshold);
+      if(cs!==lastCS||ns!==lastSt) initGrid(cs,ns);
+      const spf=Math.round(c.stepsPerFrame);
+      for(let s=0;s<spf;s++) step(ns,thr);
+      const d2=imgData.data,pal=Math.round(c.palette);
+      for(let i=0;i<gw*gh;i++){
+        const frac=grid[i]/ns;let r2=0,g2=0,b2=0;
+        if(pal===0){[r2,g2,b2]=hslToRgb((200+frac*160)/360,0.85,0.15+frac*0.6);}
+        else if(pal===1){[r2,g2,b2]=hslToRgb((0+frac*120)/360,0.9,0.15+frac*0.65);}
+        else{[r2,g2,b2]=hslToRgb((260+frac*180)/360,0.8,0.15+frac*0.6);}
+        d2[i*4]=r2;d2[i*4+1]=g2;d2[i*4+2]=b2;d2[i*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 53. Perlin Marble ────────────────────────────────────────────────────────
+
+const marbleBg: BgDef = {
+  id: 'marble',
+  label: 'Marble',
+  description: 'Perlin turbulence marble — sinusoidal veins distorted by layered noise',
+  defaults: { scale: 2.5, octaves: 5, turbStr: 1.0, speed: 0.15, veinFreq: 3.0, palette: 0 },
+  sliders: [
+    { key: 'scale',    label: 'Scale',       min: 0.5, max: 6.0, step: 0.1  },
+    { key: 'octaves',  label: 'Octaves',     min: 1,   max: 7,   step: 1    },
+    { key: 'turbStr',  label: 'Turbulence',  min: 0,   max: 3.0, step: 0.1  },
+    { key: 'speed',    label: 'Speed',       min: 0,   max: 1.0, step: 0.01 },
+    { key: 'veinFreq', label: 'Vein freq',   min: 0.5, max: 8.0, step: 0.1  },
+    { key: 'palette',  label: 'Palette',     min: 0,   max: 2,   step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number,t=0;
+    let gw=1,gh=1,imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    const mh3=(n:number)=>{const x=Math.sin(n+13.7)*43758.5453;return x-Math.floor(x);};
+    const mn3=(x:number,y:number)=>{const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);return mh3(ix+iy*57)*(1-ux)*(1-uy)+mh3(ix+1+iy*57)*ux*(1-uy)+mh3(ix+(iy+1)*57)*(1-ux)*uy+mh3(ix+1+(iy+1)*57)*ux*uy;};
+    const turb=(x:number,y:number,oct:number)=>{let v=0,a=1,f=1;for(let i=0;i<oct;i++){v+=Math.abs(mn3(x*f+i*2.1,y*f+i*3.7)-0.5)*2*a;f*=2;a*=0.5;}return v;};
+    const resize=()=>{
+      const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;
+      gw=Math.ceil(r.width/4);gh=Math.ceil(r.height/4);
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;
+    };
+    const draw=()=>{
+      const c=getCfg();t+=c.speed*0.005;
+      const d=imgData.data,pal=Math.round(c.palette),oct=Math.round(c.octaves);
+      for(let py=0;py<gh;py++) for(let px=0;px<gw;px++){
+        const x=px/gw*c.scale+t,y=py/gh*c.scale;
+        const tb=turb(x,y,oct)*c.turbStr;
+        const v=(Math.sin((x+tb)*c.veinFreq*Math.PI)*0.5+0.5);
+        let r2=0,g2=0,b2=0;
+        if(pal===0){[r2,g2,b2]=hslToRgb(0,0,0.12+v*0.65);}
+        else if(pal===1){[r2,g2,b2]=hslToRgb((200+v*30)/360,0.6,0.1+v*0.7);}
+        else{[r2,g2,b2]=hslToRgb((30+v*20)/360,0.7*v+0.1,0.08+v*0.65);}
+        const idx=px+py*gw;d[idx*4]=r2;d[idx*4+1]=g2;d[idx*4+2]=b2;d[idx*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 54. Water Simulation ─────────────────────────────────────────────────────
+
+const waterSimBg: BgDef = {
+  id: 'watersim',
+  label: 'Water Sim',
+  description: 'Height-field shallow water — drop impacts ripple outward and interfere',
+  defaults: { dropRate: 0.5, damping: 0.985, dropSize: 3, palette: 0, dropAmp: 0.8 },
+  sliders: [
+    { key: 'dropRate', label: 'Drop rate',  min: 0.1, max: 3.0, step: 0.1  },
+    { key: 'damping',  label: 'Damping',    min: 0.96, max: 1.0, step: 0.001 },
+    { key: 'dropSize', label: 'Drop size',  min: 1,   max: 8,   step: 1    },
+    { key: 'palette',  label: 'Palette',    min: 0,   max: 2,   step: 1    },
+    { key: 'dropAmp',  label: 'Drop force', min: 0.1, max: 2.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number,t2=0;
+    let gw=1,gh=1;
+    let h1: Float32Array,h2: Float32Array;
+    let imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    const resize=()=>{
+      const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;
+      gw=Math.ceil(r.width/3);gh=Math.ceil(r.height/3);
+      h1=new Float32Array(gw*gh);h2=new Float32Array(gw*gh);
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;
+    };
+    const draw=()=>{
+      const c=getCfg();t2+=1/60;
+      // Random drops
+      while(Math.random()<c.dropRate/60){
+        const dx=Math.floor(Math.random()*gw),dy=Math.floor(Math.random()*gh),ds=Math.round(c.dropSize);
+        for(let dy2=-ds;dy2<=ds;dy2++) for(let dx2=-ds;dx2<=ds;dx2++){
+          const nx=dx+dx2,ny=dy+dy2;if(nx<0||nx>=gw||ny<0||ny>=gh) continue;
+          if(dx2*dx2+dy2*dy2<=ds*ds) h1[nx+ny*gw]=c.dropAmp*(1-Math.sqrt(dx2*dx2+dy2*dy2)/ds);
+        }
+      }
+      // Update wave equation
+      const damp=c.damping;
+      for(let y=1;y<gh-1;y++) for(let x=1;x<gw-1;x++){
+        const i=x+y*gw;
+        h2[i]=((h1[i-1]+h1[i+1]+h1[i-gw]+h1[i+gw])/2-h2[i])*damp;
+      }
+      const tmp=h1;h1=h2;h2=tmp;
+      const d2=imgData.data,pal=Math.round(c.palette);
+      for(let i=0;i<gw*gh;i++){
+        const v=Math.max(-1,Math.min(1,h1[i])),norm=(v+1)/2;let r2=0,g2=0,b2=0;
+        if(pal===0){[r2,g2,b2]=hslToRgb((210+v*20)/360,0.7,0.2+norm*0.55);}
+        else if(pal===1){[r2,g2,b2]=hslToRgb((10+norm*30)/360,0.6,0.15+norm*0.6);}
+        else{[r2,g2,b2]=hslToRgb((100+v*40)/360,0.65,0.2+norm*0.5);}
+        d2[i*4]=r2;d2[i*4+1]=g2;d2[i*4+2]=b2;d2[i*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 55. Cycloid Family ────────────────────────────────────────────────────────
+
+const cycloidBg: BgDef = {
+  id: 'cycloid',
+  label: 'Cycloid',
+  description: 'Animated epicycloid / hypotrochoid family — rolling circle geometry unrolled in time',
+  defaults: { R: 5, r: 3, d: 2.2, speed: 0.18, trails: 0.94, lineWidth: 1.2 },
+  sliders: [
+    { key: 'R',         label: 'Outer R',    min: 1,   max: 12,  step: 0.5  },
+    { key: 'r',         label: 'Inner r',    min: 0.5, max: 6,   step: 0.5  },
+    { key: 'd',         label: 'Pen dist',   min: 0,   max: 6,   step: 0.1  },
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 1.0, step: 0.01 },
+    { key: 'trails',    label: 'Trail',      min: 0.8, max: 1.0, step: 0.005 },
+    { key: 'lineWidth', label: 'Line width', min: 0.3, max: 4.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, tc=0;
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;};
+    let prevX=NaN,prevY=NaN;
+    const draw=()=>{
+      const c=getCfg(); tc+=c.speed*0.02;
+      const cw=canvas.width,ch=canvas.height;
+      ctx.fillStyle=`rgba(8,10,14,${1-c.trails})`; ctx.fillRect(0,0,cw,ch);
+      const sc=Math.min(cw,ch)*0.42/(c.R+c.d),ox=cw/2,oy=ch/2;
+      const R=c.R,r=c.r,d=c.d;
+      // Hypotrochoid: x=(R-r)cos(t)+d*cos((R-r)/r*t), y=(R-r)sin(t)-d*sin((R-r)/r*t)
+      const steps=Math.ceil(c.speed*30+2);
+      for(let s=0;s<steps;s++){
+        const tt=tc-c.speed*0.02*(steps-1-s)/steps;
+        const x=(R-r)*Math.cos(tt)+d*Math.cos((R-r)/r*tt);
+        const y=(R-r)*Math.sin(tt)-d*Math.sin((R-r)/r*tt);
+        const px=ox+x*sc,py=oy+y*sc;
+        if(!isNaN(prevX)){
+          const hue=((tc*30)%360+360)%360;
+          ctx.beginPath();ctx.moveTo(prevX,prevY);ctx.lineTo(px,py);
+          ctx.strokeStyle=`hsl(${hue},80%,68%)`;ctx.lineWidth=c.lineWidth;ctx.stroke();
+        }
+        prevX=px;prevY=py;
+      }
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 56. Supernova ────────────────────────────────────────────────────────────
+
+const supernovaBg: BgDef = {
+  id: 'supernova',
+  label: 'Supernova',
+  description: 'Stellar explosion simulation — shockwave, ejecta rings, and debris cloud with periodic rebirth',
+  defaults: { particles: 600, period: 4.0, speed: 1.0, glow: 0.7, hue: 30 },
+  sliders: [
+    { key: 'particles', label: 'Particles',  min: 100,  max: 1500, step: 50   },
+    { key: 'period',    label: 'Period (s)',  min: 1.0,  max: 10.0, step: 0.5  },
+    { key: 'speed',     label: 'Speed',      min: 0.2,  max: 3.0,  step: 0.1  },
+    { key: 'glow',      label: 'Glow',       min: 0,    max: 1.0,  step: 0.05 },
+    { key: 'hue',       label: 'Hue base',   min: 0,    max: 360,  step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t3=0;
+    type Spark = {vx:number;vy:number;hue:number;size:number;layer:number};
+    let sparks: Spark[] = [];
+    let lastN=-1;
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;};
+    const explode=(n:number,hue:number)=>{
+      sparks=Array.from({length:n},(_,i)=>{
+        const ang=Math.random()*Math.PI*2,spd=0.5+Math.random()*3,layer=Math.random();
+        return {vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,hue:(hue+layer*80)%360,size:0.5+Math.random()*2,layer};
+      });
+      lastN=n;
+    };
+    const draw=()=>{
+      const c=getCfg(); t3+=1/60;
+      const n=Math.round(c.particles);
+      if(n!==lastN||t3>c.period){if(t3>c.period)t3=0;explode(n,c.hue);}
+      const cw=canvas.width,ch=canvas.height,ox=cw/2,oy=ch/2;
+      ctx.fillStyle='rgba(8,10,14,0.18)';ctx.fillRect(0,0,cw,ch);
+      const age=t3/c.period,maxR=Math.min(cw,ch)*0.45;
+      // Shockwave ring
+      const swr=age*maxR;
+      if(swr>0){
+        ctx.beginPath();ctx.arc(ox,oy,swr,0,Math.PI*2);
+        ctx.strokeStyle=`hsla(${c.hue},90%,75%,${Math.max(0,(1-age)*0.5)})`;ctx.lineWidth=3+age*4;ctx.stroke();
+        if(c.glow>0){ctx.strokeStyle=`hsla(${c.hue},80%,70%,${Math.max(0,(1-age)*c.glow*0.3)})`;ctx.lineWidth=12+age*15;ctx.stroke();}
+      }
+      // Flash
+      if(age<0.05){const flash=ctx.createRadialGradient(ox,oy,0,ox,oy,maxR*0.4);flash.addColorStop(0,`rgba(255,255,200,${(1-age/0.05)*0.8})`);flash.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=flash;ctx.fillRect(0,0,cw,ch);}
+      // Debris
+      sparks.forEach(sp=>{
+        const px=ox+sp.vx*swr,py=oy+sp.vy*swr,alpha=Math.max(0,(1-age)*0.8);
+        if(c.glow>0){const g2=ctx.createRadialGradient(px,py,0,px,py,sp.size*4*c.glow);g2.addColorStop(0,`hsla(${sp.hue},90%,80%,${alpha*0.5})`);g2.addColorStop(1,'rgba(0,0,0,0)');ctx.beginPath();ctx.arc(px,py,sp.size*4*c.glow,0,Math.PI*2);ctx.fillStyle=g2;ctx.fill();}
+        ctx.beginPath();ctx.arc(px,py,sp.size,0,Math.PI*2);ctx.fillStyle=`hsla(${sp.hue},85%,78%,${alpha})`;ctx.fill();
+      });
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 57. Moiré Rings ─────────────────────────────────────────────────────────
+
+const moireBg: BgDef = {
+  id: 'moire',
+  label: 'Moiré',
+  description: 'Interference between two rotating concentric ring families — optical illusions from pure math',
+  defaults: { freq: 0.04, speed: 0.12, offset: 0.2, hue: 180, contrast: 0.8 },
+  sliders: [
+    { key: 'freq',     label: 'Frequency', min: 0.01, max: 0.12, step: 0.002 },
+    { key: 'speed',    label: 'Speed',     min: 0,    max: 0.5,  step: 0.01  },
+    { key: 'offset',   label: 'Offset',    min: 0,    max: 1.0,  step: 0.02  },
+    { key: 'hue',      label: 'Hue',       min: 0,    max: 360,  step: 1     },
+    { key: 'contrast', label: 'Contrast',  min: 0.2,  max: 1.0,  step: 0.05  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number,tm=0;
+    let gw=1,gh=1,imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    const resize=()=>{
+      const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;
+      gw=Math.ceil(r.width/4);gh=Math.ceil(r.height/4);
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;
+    };
+    const draw=()=>{
+      const c=getCfg();tm+=c.speed*0.02;
+      const d=imgData.data,f=c.freq,h=c.hue,cont=c.contrast;
+      const cx2=gw/2,cy2=gh/2,dx2=Math.cos(tm)*gw*c.offset,dy2=Math.sin(tm*0.7)*gh*c.offset;
+      const c1x=cx2+dx2,c1y=cy2+dy2,c2x=cx2-dx2,c2y=cy2-dy2;
+      for(let py=0;py<gh;py++) for(let px=0;px<gw;px++){
+        const r1=Math.sqrt((px-c1x)**2+(py-c1y)**2),r2=Math.sqrt((px-c2x)**2+(py-c2y)**2);
+        const v1=Math.sin(r1*f*Math.PI*2)*0.5+0.5,v2=Math.sin(r2*f*Math.PI*2+tm*3)*0.5+0.5;
+        const v=v1*v2,bright=0.1+v*cont;
+        const [r2v,gv,bv]=hslToRgb(h/360,0.75,bright);
+        const idx=px+py*gw;d[idx*4]=r2v;d[idx*4+1]=gv;d[idx*4+2]=bv;d[idx*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 58. Gravity Lens ─────────────────────────────────────────────────────────
+
+const gravityLensBg: BgDef = {
+  id: 'gravitylens',
+  label: 'Gravity Lens',
+  description: 'Gravitational lensing of star field — Einstein ring and radial distortion from a massive object',
+  defaults: { einsteinR: 0.18, starCount: 300, lensSpeed: 0.08, lensSize: 0.06, hue: 220 },
+  sliders: [
+    { key: 'einsteinR',  label: 'Einstein radius', min: 0.02, max: 0.4,  step: 0.01 },
+    { key: 'starCount',  label: 'Stars',           min: 50,   max: 800,  step: 25   },
+    { key: 'lensSpeed',  label: 'Drift speed',     min: 0,    max: 0.3,  step: 0.01 },
+    { key: 'lensSize',   label: 'Lens glow',       min: 0,    max: 0.15, step: 0.01 },
+    { key: 'hue',        label: 'Star hue',        min: 0,    max: 360,  step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number,tg=0;
+    let gw=1,gh=1,imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    type Star={sx:number;sy:number;brightness:number;size:number};
+    let stars: Star[]=[];let lastSC=-1;
+    const resize=()=>{
+      const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;
+      gw=Math.ceil(r.width/4);gh=Math.ceil(r.height/4);
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;lastSC=-1;
+    };
+    const initStars=(n:number)=>{stars=Array.from({length:n},()=>({sx:Math.random(),sy:Math.random(),brightness:0.3+Math.random()*0.7,size:0.3+Math.random()*1.2}));lastSC=n;};
+    const draw=()=>{
+      const c=getCfg();tg+=c.lensSpeed*0.008;
+      const n=Math.round(c.starCount);if(n!==lastSC) initStars(n);
+      const ER=c.einsteinR,lx=0.5+Math.cos(tg)*0.2,ly=0.5+Math.sin(tg*0.7)*0.15;
+      const d=imgData.data;
+      d.fill(0);for(let i=3;i<d.length;i+=4) d[i]=255;
+      // Render lensed stars
+      stars.forEach(s=>{
+        const dx2=s.sx-lx,dy2=s.sy-ly;
+        const r2=Math.sqrt(dx2*dx2+dy2*dy2)+1e-6;
+        const bend=ER*ER/r2;
+        const ax=s.sx-bend*(dx2/r2),ay=s.sy-bend*(dy2/r2);
+        const px=Math.round(ax*gw),py=Math.round(ay*gh);
+        if(px<0||px>=gw||py<0||py>=gh) return;
+        const idx=px+py*gw;
+        const [rv,gv,bv]=hslToRgb((c.hue+s.brightness*60)/360,0.7,s.brightness*0.75);
+        const a=Math.min(255,Math.round(s.brightness*200));
+        if(d[idx*4+3]<a){d[idx*4]=rv;d[idx*4+1]=gv;d[idx*4+2]=bv;d[idx*4+3]=a;}
+      });
+      offCtx!.putImageData(imgData,0,0);
+      ctx.imageSmoothingEnabled=true;ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      if(c.lensSize>0){
+        const lensGrad=ctx.createRadialGradient(lx*canvas.width,ly*canvas.height,0,lx*canvas.width,ly*canvas.height,c.lensSize*Math.min(canvas.width,canvas.height));
+        lensGrad.addColorStop(0,`hsla(${c.hue+40},90%,90%,0.85)`);lensGrad.addColorStop(0.4,`hsla(${c.hue},70%,60%,0.3)`);lensGrad.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=lensGrad;ctx.fillRect(0,0,canvas.width,canvas.height);
+      }
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 59. Euler Spiral ─────────────────────────────────────────────────────────
+
+const eulerSpiralBg: BgDef = {
+  id: 'eulerspiral',
+  label: 'Euler Spiral',
+  description: 'Cornu spiral — Fresnel integrals trace curvature proportional to arc length',
+  defaults: { tMax: 8.0, speed: 0.4, zoom: 0.9, lineWidth: 1.2, hue: 200, copies: 4 },
+  sliders: [
+    { key: 'tMax',      label: 'Extent',    min: 2,   max: 20,  step: 0.5  },
+    { key: 'speed',     label: 'Speed',     min: 0,   max: 2.0, step: 0.05 },
+    { key: 'zoom',      label: 'Zoom',      min: 0.3, max: 2.5, step: 0.05 },
+    { key: 'lineWidth', label: 'Width',     min: 0.3, max: 4.0, step: 0.1  },
+    { key: 'hue',       label: 'Hue',       min: 0,   max: 360, step: 1    },
+    { key: 'copies',    label: 'Copies',    min: 1,   max: 8,   step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number,te=0;
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;};
+    const draw=()=>{
+      const c=getCfg();te+=c.speed*0.012;
+      const cw=canvas.width,ch=canvas.height;
+      ctx.fillStyle='rgba(8,10,14,0.18)';ctx.fillRect(0,0,cw,ch);
+      const sc=Math.min(cw,ch)*c.zoom*0.28,tMax=c.tMax,dt=0.02,n2=Math.round(c.copies);
+      // Precompute Fresnel integral points
+      const pts: [number,number][]=[];
+      let cx3=0,cy3=0;
+      for(let s=0;s<=tMax*50;s++){
+        const t4=s*0.02;cx3+=Math.cos(Math.PI*t4*t4/2)*dt;cy3+=Math.sin(Math.PI*t4*t4/2)*dt;
+        pts.push([cx3,cy3]);
+      }
+      for(let ci=0;ci<n2;ci++){
+        const rot=(ci/n2)*Math.PI*2+te;
+        const hue=(c.hue+ci*(360/n2))%360;
+        ctx.beginPath();
+        pts.forEach(([px2,py2],i)=>{
+          const rx=Math.cos(rot)*px2-Math.sin(rot)*py2,ry=Math.sin(rot)*px2+Math.cos(rot)*py2;
+          const sx=cw/2+rx*sc,sy=ch/2-ry*sc;
+          i===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);
+        });
+        const t5=te*0.3,fade=0.4+0.5*Math.sin(t5+ci);
+        ctx.strokeStyle=`hsla(${hue},80%,68%,${fade})`;ctx.lineWidth=c.lineWidth;ctx.stroke();
+        // Mirror (other half)
+        ctx.beginPath();
+        pts.forEach(([px2,py2],i)=>{
+          const rx=Math.cos(rot)*(-px2)-Math.sin(rot)*(-py2),ry=Math.sin(rot)*(-px2)+Math.cos(rot)*(-py2);
+          const sx=cw/2+rx*sc,sy=ch/2-ry*sc;
+          i===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);
+        });
+        ctx.strokeStyle=`hsla(${(hue+30)%360},80%,68%,${fade*0.7})`;ctx.stroke();
+      }
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 60. Kaleidoscope ─────────────────────────────────────────────────────────
+
+const kaleidoscopeBg: BgDef = {
+  id: 'kaleidoscope',
+  label: 'Kaleidoscope',
+  description: 'n-fold mirror symmetry applied to animated noise — infinite reflection chambers',
+  defaults: { symmetry: 8, noiseScale: 2.5, speed: 0.15, zoom: 1.0, saturation: 0.8 },
+  sliders: [
+    { key: 'symmetry',   label: 'Symmetry',   min: 3,   max: 16,  step: 1    },
+    { key: 'noiseScale', label: 'Scale',      min: 0.5, max: 6.0, step: 0.1  },
+    { key: 'speed',      label: 'Speed',      min: 0,   max: 0.5, step: 0.01 },
+    { key: 'zoom',       label: 'Zoom',       min: 0.3, max: 3.0, step: 0.1  },
+    { key: 'saturation', label: 'Saturation', min: 0,   max: 1.0, step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number,tk=0;
+    let gw=1,gh=1,imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    const kh=(n:number)=>{const x=Math.sin(n+5.3)*43758.5453;return x-Math.floor(x);};
+    const kn=(x:number,y:number)=>{const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);return kh(ix+iy*57)*(1-ux)*(1-uy)+kh(ix+1+iy*57)*ux*(1-uy)+kh(ix+(iy+1)*57)*(1-ux)*uy+kh(ix+1+(iy+1)*57)*ux*uy;};
+    const resize=()=>{
+      const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;
+      gw=Math.ceil(r.width/4);gh=Math.ceil(r.height/4);
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;
+    };
+    const draw=()=>{
+      const c=getCfg();tk+=c.speed*0.008;
+      const d=imgData.data,sym=Math.round(c.symmetry),sc=c.noiseScale/c.zoom;
+      const sectorAng=Math.PI*2/sym;
+      for(let py=0;py<gh;py++) for(let px=0;px<gw;px++){
+        const dx2=px/gw-0.5,dy2=py/gh-0.5;
+        let ang=Math.atan2(dy2,dx2),r2=Math.sqrt(dx2*dx2+dy2*dy2);
+        ang=((ang%sectorAng)+sectorAng)%sectorAng;
+        if(ang>sectorAng/2) ang=sectorAng-ang;
+        const sx=Math.cos(ang)*r2*sc+tk,sy=Math.sin(ang)*r2*sc+tk*0.7;
+        const n1=kn(sx,sy),n2=kn(sx+100,sy+50);
+        const hue=(n1*360+tk*30)%360,lit=0.2+n1*0.55;
+        const [rv,gv,bv]=hslToRgb(hue/360,c.saturation,lit);
+        const idx=px+py*gw;d[idx*4]=rv;d[idx*4+1]=gv;d[idx*4+2]=bv;d[idx*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 61. Terrain ──────────────────────────────────────────────────────────────
+
+const terrainBg: BgDef = {
+  id: 'terrain',
+  label: 'Terrain',
+  description: 'Procedural aerial terrain — fBm elevation noise mapped to biome colors, infinite scroll',
+  defaults: { octaves: 6, scale: 2.5, speed: 0.1, seaLevel: 0.42, detail: 0.55 },
+  sliders: [
+    { key: 'octaves',  label: 'Octaves',   min: 1,    max: 8,   step: 1    },
+    { key: 'scale',    label: 'Scale',     min: 0.5,  max: 6.0, step: 0.1  },
+    { key: 'speed',    label: 'Fly speed', min: 0,    max: 0.5, step: 0.01 },
+    { key: 'seaLevel', label: 'Sea level', min: 0.2,  max: 0.7, step: 0.02 },
+    { key: 'detail',   label: 'Roughness', min: 0.3,  max: 0.7, step: 0.02 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number,tt=0;
+    let gw=1,gh=1,imgData=new ImageData(1,1),off: HTMLCanvasElement|null=null,offCtx: CanvasRenderingContext2D|null=null;
+    const th=(n:number)=>{const x=Math.sin(n+7.1)*43758.5453;return x-Math.floor(x);};
+    const tn=(x:number,y:number)=>{const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);return th(ix+iy*57)*(1-ux)*(1-uy)+th(ix+1+iy*57)*ux*(1-uy)+th(ix+(iy+1)*57)*(1-ux)*uy+th(ix+1+(iy+1)*57)*ux*uy;};
+    const tfbm=(x:number,y:number,oct:number,persist:number)=>{let v=0,a=0.5,f=1;for(let i=0;i<oct;i++){v+=tn(x*f,y*f)*a;f*=2;a*=persist;}return v;};
+    const resize=()=>{
+      const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;
+      gw=Math.ceil(r.width/4);gh=Math.ceil(r.height/4);
+      imgData=new ImageData(gw,gh);off=document.createElement('canvas');off.width=gw;off.height=gh;offCtx=off.getContext('2d')!;
+    };
+    const draw=()=>{
+      const c=getCfg();tt+=c.speed*0.005;
+      const d=imgData.data,oct=Math.round(c.octaves),sl=c.seaLevel,pers=c.detail;
+      for(let py=0;py<gh;py++) for(let px=0;px<gw;px++){
+        const x=px/gw*c.scale+tt,y=py/gh*c.scale;
+        const h2=tfbm(x,y,oct,pers);
+        let r2=0,g2=0,b2=0;
+        if(h2<sl-0.1){[r2,g2,b2]=[15,40,100];}
+        else if(h2<sl){const t2=(h2-sl+0.1)/0.1;[r2,g2,b2]=[Math.floor(195+t2*40),Math.floor(175+t2*20),Math.floor(120+t2*30)];}
+        else if(h2<sl+0.1){[r2,g2,b2]=[60,120,40];}
+        else if(h2<sl+0.2){[r2,g2,b2]=[45,95,30];}
+        else if(h2<sl+0.32){[r2,g2,b2]=[80,70,55];}
+        else{const t2=Math.min(1,(h2-sl-0.32)/0.1);[r2,g2,b2]=[Math.floor(200+t2*55),Math.floor(200+t2*55),Math.floor(200+t2*55)];}
+        const idx=px+py*gw;d[idx*4]=r2;d[idx*4+1]=g2;d[idx*4+2]=b2;d[idx*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0);ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
+// ─── 62. Ribbons ──────────────────────────────────────────────────────────────
+
+const ribbonsBg: BgDef = {
+  id: 'ribbons',
+  label: 'Ribbons',
+  description: '3D twisted ribbons — sinusoidal space curves rendered with depth glow and rotation',
+  defaults: { count: 6, twist: 4.0, speed: 0.3, thickness: 2.5, glow: 0.65, spread: 0.5 },
+  sliders: [
+    { key: 'count',     label: 'Ribbons',   min: 1,   max: 12,  step: 1    },
+    { key: 'twist',     label: 'Twist',     min: 0.5, max: 12,  step: 0.5  },
+    { key: 'speed',     label: 'Speed',     min: 0,   max: 1.5, step: 0.05 },
+    { key: 'thickness', label: 'Thickness', min: 0.5, max: 6.0, step: 0.25 },
+    { key: 'glow',      label: 'Glow',      min: 0,   max: 1.0, step: 0.05 },
+    { key: 'spread',    label: 'Spread',    min: 0.1, max: 1.5, step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number,tr=0;
+    const resize=()=>{const r=canvas.getBoundingClientRect();canvas.width=r.width;canvas.height=r.height;};
+    const draw=()=>{
+      const c=getCfg();tr+=c.speed*0.008;
+      const cw=canvas.width,ch=canvas.height;
+      ctx.fillStyle='rgba(8,10,14,0.22)';ctx.fillRect(0,0,cw,ch);
+      const n=Math.round(c.count),sc=Math.min(cw,ch)*0.35,steps=120;
+      for(let ri=0;ri<n;ri++){
+        const phase=(ri/n)*Math.PI*2;
+        const pts: [number,number,number][]=[];
+        for(let s=0;s<=steps;s++){
+          const t4=s/steps*Math.PI*2;
+          const x2=Math.cos(t4+phase+tr)*c.spread+Math.cos(c.twist*t4+phase)*0.3;
+          const y2=Math.sin(t4+phase+tr*0.7)*c.spread;
+          const z2=Math.cos(c.twist*t4+phase+tr*0.5)*0.5;
+          // Rotate
+          const cosr=Math.cos(tr*0.4),sinr=Math.sin(tr*0.4);
+          const rx2=x2*cosr+z2*sinr,rz2=-x2*sinr+z2*cosr;
+          const fov=2.5,persp=fov/(fov+rz2*0.5);
+          pts.push([rx2*persp*sc,y2*persp*sc,rz2]);
+        }
+        // Sort isn't needed for full loops - just draw with depth alpha
+        const hue=(phase*180/Math.PI+tr*30)%360;
+        for(let s=0;s<steps;s++){
+          const [px2,py2,pz]=pts[s],[qx,qy,qz]=pts[s+1];
+          const depth=(pz+qz)/2,alpha=0.35+(depth+0.5)*0.5;
+          if(c.glow>0){ctx.beginPath();ctx.moveTo(cw/2+px2,ch/2+py2);ctx.lineTo(cw/2+qx,ch/2+qy);ctx.strokeStyle=`hsla(${hue},85%,70%,${c.glow*alpha*0.4})`;ctx.lineWidth=c.thickness*3;ctx.stroke();}
+          ctx.beginPath();ctx.moveTo(cw/2+px2,ch/2+py2);ctx.lineTo(cw/2+qx,ch/2+qy);
+          ctx.strokeStyle=`hsla(${hue},80%,72%,${Math.max(0.1,alpha)})`;ctx.lineWidth=c.thickness;ctx.stroke();
+        }
+      }
+      animId=requestAnimationFrame(draw);
+    };
+    resize();draw();
+    const ro=new ResizeObserver(()=>resize());ro.observe(canvas);
+    return()=>{cancelAnimationFrame(animId);ro.disconnect();};
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
