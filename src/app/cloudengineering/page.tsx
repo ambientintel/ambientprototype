@@ -2,85 +2,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
-// ── Topographic contour background ────────────────────────────────────────────
-// Six terrain peaks rendered as slow-rotating concentric ellipses.
-// Three independent motions per peak — axis rotation, center drift, aspect morph —
-// create complex evolution that never exactly repeats.
-
-function TopoCanvas() {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const el = ref.current!;
-    if (!el) return;
-    const ctx = el.getContext('2d')!;
-    let raf: number;
-    let t = 0;
-
-    // fx/fy: fractional center, rx/ry: base radii, a: initial axis angle,
-    // n: ring count, rs: rotation speed, dr: drift radius (fraction of W),
-    // ds: drift speed, dp: drift phase, ms: morph speed
-    const PEAKS = [
-      { fx:0.16, fy:0.25, rx:320, ry:200, a:-0.30, n:12, rs:0.000115, dr:0.022, ds:0.000310, dp:0.00, ms:0.000205 },
-      { fx:0.76, fy:0.14, rx:255, ry:158, a: 0.42, n:10, rs:0.000188, dr:0.018, ds:0.000415, dp:1.10, ms:0.000282 },
-      { fx:0.53, fy:0.78, rx:345, ry:215, a:-0.09, n:13, rs:0.000092, dr:0.016, ds:0.000268, dp:2.30, ms:0.000158 },
-      { fx:0.91, fy:0.62, rx:205, ry:130, a: 0.68, n: 9, rs:0.000162, dr:0.020, ds:0.000352, dp:0.72, ms:0.000241 },
-      { fx:0.06, fy:0.84, rx:225, ry:142, a:-0.51, n: 9, rs:0.000140, dr:0.017, ds:0.000292, dp:3.58, ms:0.000198 },
-      { fx:0.44, fy:0.44, rx:188, ry:120, a: 0.21, n: 8, rs:0.000238, dr:0.026, ds:0.000475, dp:5.10, ms:0.000330 },
-    ];
-
-    function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; }
-    resize();
-    window.addEventListener('resize', resize);
-
-    function frame() {
-      const W = el.width, H = el.height;
-      ctx.clearRect(0, 0, W, H);
-      t++;
-
-      // Survey grid — mathematical foundation layer
-      ctx.lineWidth = 0.5;
-      ctx.strokeStyle = 'rgba(8,14,50,0.028)';
-      for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-      for (let y = 0; y < H; y += 80) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-      PEAKS.forEach(p => {
-        // Orbital drift — center traces a slow elliptical path
-        const cx = p.fx * W + p.dr * W       * Math.sin(t * p.ds + p.dp);
-        const cy = p.fy * H + p.dr * H * 0.6 * Math.cos(t * p.ds * 0.77 + p.dp + 0.5);
-
-        // Slow axis rotation
-        const angle = p.a + t * p.rs;
-
-        // Aspect ratio breathes — ry oscillates gently around baseline
-        const morph = 1 + 0.07 * Math.sin(t * p.ms + p.dp);
-
-        for (let r = 0; r < p.n; r++) {
-          const frac  = r / p.n;
-          const scale = 1 - frac * 0.75;
-          // Outer rings faint, inner rings clearly defined — reads as elevation
-          const alpha = 0.032 + frac * 0.072;
-          const lw    = 0.55 + frac * 0.60;
-
-          ctx.save();
-          ctx.translate(cx, cy);
-          ctx.rotate(angle);
-          ctx.beginPath();
-          ctx.ellipse(0, 0, p.rx * scale, p.ry * morph * scale, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(8,14,58,${alpha.toFixed(4)})`;
-          ctx.lineWidth = lw;
-          ctx.stroke();
-          ctx.restore();
-        }
-      });
-
-      raf = requestAnimationFrame(frame);
-    }
-    frame();
-
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
-  }, []);
-  return <canvas ref={ref} style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />;
-}
 
 // ── Copy button ────────────────────────────────────────────────────────────────
 
@@ -805,7 +726,6 @@ export default function CloudEngineeringPage() {
       .pf-frozen .pf-sub   { color: rgba(255,255,255,0.82); }
     `}} />
     <div className="app" style={{ background: '#F1F3F6', minHeight: '100vh', position: 'relative' }}>
-      <TopoCanvas />
 
       {/* ── Sidebar ── */}
       <aside style={{ background: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.08)', padding: '22px 14px 28px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0, zIndex: 10, boxShadow: '2px 0 8px rgba(0,0,0,0.04)' }}>
