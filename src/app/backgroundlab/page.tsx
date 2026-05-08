@@ -1278,6 +1278,328 @@ const voronoiBg: BgDef = {
   },
 };
 
+// ─── 19. Pendulum Wave ───────────────────────────────────────────────────────
+
+const pendulumBg: BgDef = {
+  id: 'pendulum',
+  label: 'Pendulum Wave',
+  description: 'N pendulums with tuned frequencies drift in and out of phase — chaos becomes order',
+  defaults: { count: 15, speed: 0.5, amplitude: 0.32, trailLength: 0.7, hue: 180, spread: 1.0 },
+  sliders: [
+    { key: 'count',       label: 'Pendulums',    min: 3,  max: 30,  step: 1    },
+    { key: 'speed',       label: 'Speed',         min: 0,  max: 2.0, step: 0.01 },
+    { key: 'amplitude',   label: 'Amplitude',     min: 0.1,max: 0.5, step: 0.01 },
+    { key: 'trailLength', label: 'Trail',         min: 0,  max: 1.0, step: 0.01 },
+    { key: 'hue',         label: 'Hue',           min: 0,  max: 360, step: 1    },
+    { key: 'spread',      label: 'Freq spread',   min: 0.1,max: 3.0, step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    type Pend = { freq: number; trail: [number, number][] };
+    let pends: Pend[] = [], lastN = -1;
+
+    const initPends = (n: number) => {
+      pends = Array.from({ length: n }, (_, i) => ({ freq: 2 + i * 0.18, trail: [] }));
+      lastN = n;
+    };
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; pends.forEach(p => p.trail = []); };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      const n = Math.floor(c.count);
+      if (n !== lastN) initPends(n);
+      t += c.speed * 0.007;
+
+      ctx.fillStyle = `rgba(8,10,14,${0.04 + (1 - c.trailLength) * 0.6})`; ctx.fillRect(0, 0, w, h);
+
+      const pivotY = h * 0.12, ampPx = h * c.amplitude, spacing = w / (n + 1);
+      const maxTrail = Math.round(c.trailLength * 300 + 30);
+
+      // Connect all bobs — shows the wave shape
+      ctx.beginPath();
+      pends.forEach((p, i) => {
+        const freq = p.freq * c.spread;
+        const bobX = (i + 1) * spacing, bobY = h * 0.55 + ampPx * Math.sin(freq * t);
+        i === 0 ? ctx.moveTo(bobX, bobY) : ctx.lineTo(bobX, bobY);
+      });
+      ctx.strokeStyle = `hsla(${c.hue},70%,65%,0.18)`; ctx.lineWidth = 1; ctx.stroke();
+
+      pends.forEach((p, i) => {
+        const freq = p.freq * c.spread;
+        const bobX = (i + 1) * spacing, bobY = h * 0.55 + ampPx * Math.sin(freq * t);
+        const hue = (c.hue + i * (120 / n)) % 360;
+
+        p.trail.push([bobX, bobY]);
+        if (p.trail.length > maxTrail) p.trail.shift();
+
+        // String
+        ctx.beginPath(); ctx.moveTo(bobX, pivotY); ctx.lineTo(bobX, bobY);
+        ctx.strokeStyle = `hsla(${hue},50%,55%,0.15)`; ctx.lineWidth = 0.6; ctx.stroke();
+
+        // Trail
+        if (p.trail.length > 1) {
+          ctx.beginPath();
+          p.trail.forEach(([tx, ty], j) => j === 0 ? ctx.moveTo(tx, ty) : ctx.lineTo(tx, ty));
+          ctx.strokeStyle = `hsla(${hue},75%,65%,0.4)`; ctx.lineWidth = 1; ctx.stroke();
+        }
+
+        // Bob
+        const g = ctx.createRadialGradient(bobX, bobY, 0, bobX, bobY, 6);
+        g.addColorStop(0, `hsla(${hue},85%,85%,0.95)`); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.beginPath(); ctx.arc(bobX, bobY, 6, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+
+        // Pivot dot
+        ctx.beginPath(); ctx.arc(bobX, pivotY, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${hue},60%,60%,0.4)`; ctx.fill();
+      });
+
+      // Bar
+      ctx.beginPath(); ctx.moveTo(spacing * 0.5, pivotY); ctx.lineTo(spacing * (n + 0.5), pivotY);
+      ctx.strokeStyle = `rgba(255,255,255,0.06)`; ctx.lineWidth = 1; ctx.stroke();
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); initPends(Math.floor(getCfg().count)); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 20. 3D Wireframe ────────────────────────────────────────────────────────
+
+const wireframeBg: BgDef = {
+  id: 'wireframe',
+  label: 'Wireframe',
+  description: 'Rotating 3D solids in perspective — cube, icosahedron, torus',
+  defaults: { shape: 2, rotSpeed: 0.3, tiltX: 0.5, fov: 7, glow: 0.7, hue: 200, edgeOpacity: 0.65 },
+  sliders: [
+    { key: 'shape',       label: 'Shape',        min: 0,   max: 2,   step: 1    },
+    { key: 'rotSpeed',    label: 'Rotation',     min: 0,   max: 2.0, step: 0.01 },
+    { key: 'tiltX',      label: 'X tilt',        min: 0,   max: 1.5, step: 0.01 },
+    { key: 'fov',        label: 'Field of view', min: 2,   max: 15,  step: 0.1  },
+    { key: 'glow',       label: 'Glow',          min: 0,   max: 1.0, step: 0.01 },
+    { key: 'hue',        label: 'Hue',           min: 0,   max: 360, step: 1    },
+    { key: 'edgeOpacity',label: 'Edge opacity',  min: 0.05,max: 1.0, step: 0.01 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, ry = 0;
+
+    // Cube
+    const cubeV: [number,number,number][] = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+    const cubeE: [number,number][] = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+
+    // Icosahedron
+    const phi = (1 + Math.sqrt(5)) / 2;
+    const icoV: [number,number,number][] = [[0,1,phi],[0,-1,phi],[0,1,-phi],[0,-1,-phi],[1,phi,0],[-1,phi,0],[1,-phi,0],[-1,-phi,0],[phi,0,1],[-phi,0,1],[phi,0,-1],[-phi,0,-1]]
+      .map(([x,y,z]) => { const l=Math.sqrt(x*x+y*y+z*z); return [x/l,y/l,z/l] as [number,number,number]; });
+    const icoE = icoV.flatMap((a,i) => icoV.map((b,j) => ({i,j,d:Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2])})).filter(e=>e.j>e.i&&e.d<1.1).map(e=>[e.i,e.j] as [number,number]));
+
+    // Torus
+    const nu=24,nv=12,TR=0.62,tr=0.38;
+    const torV: [number,number,number][] = [];
+    for(let i=0;i<nu;i++){const u=(i/nu)*Math.PI*2;for(let j=0;j<nv;j++){const v=(j/nv)*Math.PI*2;torV.push([(TR+tr*Math.cos(v))*Math.cos(u),(TR+tr*Math.cos(v))*Math.sin(u),tr*Math.sin(v)]);}}
+    const torE: [number,number][] = [];
+    for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){torE.push([i*nv+j,((i+1)%nu)*nv+j]);torE.push([i*nv+j,i*nv+(j+1)%nv]);}
+
+    const SHAPES = [{V:cubeV,E:cubeE},{V:icoV,E:icoE},{V:torV,E:torE}];
+
+    const proj = (v: [number,number,number], rx: number, ry2: number, fov: number, cx: number, cy: number, sc: number) => {
+      let [x,y,z] = v;
+      const y1=y*Math.cos(rx)-z*Math.sin(rx), z1=y*Math.sin(rx)+z*Math.cos(rx);
+      const x2=x*Math.cos(ry2)+z1*Math.sin(ry2), z2=-x*Math.sin(ry2)+z1*Math.cos(ry2);
+      const d=fov/(fov+z2+fov*0.9);
+      return {sx:cx+x2*d*sc, sy:cy+y1*d*sc, depth:z2};
+    };
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      ry += c.rotSpeed * 0.008;
+      ctx.clearRect(0, 0, w, h);
+
+      const shapeIdx = Math.min(2, Math.max(0, Math.round(c.shape)));
+      const { V, E } = SHAPES[shapeIdx];
+      const cx = w / 2, cy = h / 2, sc = Math.min(w, h) * 0.33;
+      const projected = V.map(v => proj(v, c.tiltX, ry, c.fov, cx, cy, sc));
+
+      // Sort edges back-to-front
+      const sorted = [...E].sort((a, b) => {
+        const da = (projected[a[0]].depth + projected[a[1]].depth) / 2;
+        const db = (projected[b[0]].depth + projected[b[1]].depth) / 2;
+        return da - db;
+      });
+
+      sorted.forEach(([i, j]) => {
+        const pa = projected[i], pb = projected[j];
+        const depth = (pa.depth + pb.depth) / 2;
+        const depthFactor = Math.max(0.2, (depth + 1.5) / 3);
+        const alpha = c.edgeOpacity * depthFactor;
+        const hue = (c.hue + depth * 20) % 360;
+
+        ctx.beginPath(); ctx.moveTo(pa.sx, pa.sy); ctx.lineTo(pb.sx, pb.sy);
+        ctx.strokeStyle = `hsla(${hue},75%,65%,${alpha})`;
+        ctx.lineWidth = 0.8 + depthFactor * 0.4;
+        if (c.glow > 0.1) { ctx.shadowBlur = c.glow * 10; ctx.shadowColor = `hsla(${hue},80%,65%,0.4)`; }
+        ctx.stroke(); ctx.shadowBlur = 0;
+      });
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 21. Harmonograph ────────────────────────────────────────────────────────
+
+const harmonographBg: BgDef = {
+  id: 'harmonograph',
+  label: 'Harmonograph',
+  description: 'Dual-pendulum drawing machine — two oscillators in slow phase drift',
+  defaults: { f1: 2.0, f2: 3.0, phase: 1.57, phaseSpeed: 0.04, trailLength: 0.92, hue: 150, lineWidth: 0.9 },
+  sliders: [
+    { key: 'f1',         label: 'Frequency X',  min: 1.0, max: 6.0, step: 0.05 },
+    { key: 'f2',         label: 'Frequency Y',  min: 1.0, max: 6.0, step: 0.05 },
+    { key: 'phase',      label: 'Phase offset', min: 0,   max: 6.28,step: 0.01  },
+    { key: 'phaseSpeed', label: 'Phase drift',  min: 0,   max: 0.2, step: 0.001 },
+    { key: 'trailLength',label: 'Trail',        min: 0,   max: 1.0, step: 0.01  },
+    { key: 'hue',        label: 'Hue',          min: 0,   max: 360, step: 1     },
+    { key: 'lineWidth',  label: 'Line width',   min: 0.3, max: 3.0, step: 0.1   },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0, phase = getCfg().phase, prevX = 0, prevY = 0;
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; t = 0; };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      phase += c.phaseSpeed * 0.002;
+      t += 0.025;
+
+      ctx.fillStyle = `rgba(8,10,14,${0.015 + (1 - c.trailLength) * 0.55})`; ctx.fillRect(0, 0, w, h);
+
+      const rx = w * 0.45, ry = h * 0.45, cx = w / 2, cy = h / 2;
+      const x = cx + rx * Math.sin(c.f1 * t + phase);
+      const y = cy + ry * Math.sin(c.f2 * t);
+
+      ctx.beginPath(); ctx.moveTo(prevX || x, prevY || y); ctx.lineTo(x, y);
+      const hue = (c.hue + t * 2) % 360;
+      ctx.strokeStyle = `hsla(${hue},80%,65%,0.55)`;
+      ctx.lineWidth = c.lineWidth;
+      ctx.shadowBlur = 4; ctx.shadowColor = `hsla(${hue},80%,65%,0.25)`;
+      ctx.stroke(); ctx.shadowBlur = 0;
+
+      prevX = x; prevY = y;
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 22. Neon Grid ───────────────────────────────────────────────────────────
+
+const neonGridBg: BgDef = {
+  id: 'neongrid',
+  label: 'Neon Grid',
+  description: 'Synthwave perspective grid — vanishing lines and scanning horizon',
+  defaults: { speed: 0.5, hue: 285, hue2: 195, gridLines: 16, brightness: 0.7, glow: 1.0, horizon: 0.42 },
+  sliders: [
+    { key: 'speed',     label: 'Speed',        min: 0,   max: 2.0, step: 0.01 },
+    { key: 'hue',       label: 'Hue 1',        min: 0,   max: 360, step: 1    },
+    { key: 'hue2',      label: 'Hue 2',        min: 0,   max: 360, step: 1    },
+    { key: 'gridLines', label: 'Grid density', min: 4,   max: 40,  step: 1    },
+    { key: 'brightness',label: 'Brightness',   min: 0.1, max: 1.0, step: 0.01 },
+    { key: 'glow',      label: 'Glow',         min: 0,   max: 1.5, step: 0.01 },
+    { key: 'horizon',   label: 'Horizon',      min: 0.2, max: 0.7, step: 0.01 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, offset = 0;
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      offset = (offset + c.speed * 0.006) % 1;
+      ctx.clearRect(0, 0, w, h);
+
+      const vx = w / 2, vy = h * c.horizon;
+      const ground = h - vy;
+
+      // Sky glow
+      const skyG = ctx.createLinearGradient(0, 0, 0, vy);
+      skyG.addColorStop(0, 'rgba(8,10,14,1)');
+      skyG.addColorStop(1, `hsla(${c.hue},60%,15%,${c.brightness * 0.4})`);
+      ctx.fillStyle = skyG; ctx.fillRect(0, 0, w, vy);
+
+      // Horizon glow
+      const horizG = ctx.createRadialGradient(vx, vy, 0, vx, vy, w * 0.55);
+      horizG.addColorStop(0, `hsla(${c.hue2},90%,70%,${c.brightness * 0.45})`);
+      horizG.addColorStop(0.35, `hsla(${c.hue},80%,55%,${c.brightness * 0.12})`);
+      horizG.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = horizG; ctx.fillRect(0, vy - h * 0.2, w, h * 0.4);
+
+      // Ground fill
+      const groundG = ctx.createLinearGradient(0, vy, 0, h);
+      groundG.addColorStop(0, `hsla(${c.hue},40%,8%,1)`);
+      groundG.addColorStop(1, 'rgba(8,10,14,1)');
+      ctx.fillStyle = groundG; ctx.fillRect(0, vy, w, ground);
+
+      const nl = Math.floor(c.gridLines);
+
+      // Vertical converging lines
+      ctx.save();
+      for (let i = -nl; i <= nl; i++) {
+        const xNear = vx + (i / nl) * w * 1.6;
+        const xFar = vx + (i / nl) * w * 0.04;
+        const fadeAlpha = c.brightness * Math.max(0, 1 - (Math.abs(i) / nl) * 0.85);
+        const hue = i % 2 === 0 ? c.hue : c.hue2;
+        const grad = ctx.createLinearGradient(0, vy, 0, h);
+        grad.addColorStop(0, `hsla(${hue},80%,60%,0)`);
+        grad.addColorStop(0.2, `hsla(${hue},80%,60%,${fadeAlpha * 0.6})`);
+        grad.addColorStop(1, `hsla(${hue},80%,60%,${fadeAlpha * 0.25})`);
+        ctx.beginPath(); ctx.moveTo(xFar, vy); ctx.lineTo(xNear, h);
+        ctx.strokeStyle = grad; ctx.lineWidth = c.glow * 0.8 + 0.3;
+        if (c.glow > 0.2) { ctx.shadowBlur = c.glow * 8; ctx.shadowColor = `hsla(${hue},90%,65%,0.5)`; }
+        ctx.stroke(); ctx.shadowBlur = 0;
+      }
+      ctx.restore();
+
+      // Horizontal scan lines (moving)
+      const scanCount = 14;
+      for (let i = 0; i < scanCount; i++) {
+        const raw = ((i / scanCount) + offset) % 1;
+        const t2 = raw * raw; // perspective foreshortening
+        const y = vy + t2 * ground;
+        const frac = (y - vy) / ground;
+        const xSpan = frac * w * 1.6;
+        const alpha = c.brightness * Math.pow(frac, 0.4) * 0.55;
+        const hue = i % 2 === 0 ? c.hue : c.hue2;
+        ctx.beginPath(); ctx.moveTo(Math.max(-50, vx - xSpan), y); ctx.lineTo(Math.min(w + 50, vx + xSpan), y);
+        ctx.strokeStyle = `hsla(${hue},80%,65%,${alpha})`;
+        ctx.lineWidth = (0.4 + frac * 1.2) * c.glow;
+        if (c.glow > 0.4 && frac > 0.5) { ctx.shadowBlur = c.glow * 6 * frac; ctx.shadowColor = `hsla(${hue},90%,65%,0.4)`; }
+        ctx.stroke(); ctx.shadowBlur = 0;
+      }
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
@@ -1285,6 +1607,7 @@ const BACKGROUNDS: BgDef[] = [
   starfieldBg, orbitalBg, flowFieldBg, gradientMeshBg,
   matrixBg, bokehBg, plasmaBg, rippleBg, lissajousBg,
   fourierBg, attractorBg, spirographBg, waveInterferenceBg, voronoiBg,
+  pendulumBg, wireframeBg, harmonographBg, neonGridBg,
 ];
 
 // ─── persistence ──────────────────────────────────────────────────────────────
@@ -1309,19 +1632,22 @@ export default function BackgroundLab() {
   );
   const [saved, setSaved] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+  const [slideshow, setSlideshow] = React.useState(false);
+  const [shuffled, setShuffled] = React.useState(false);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const cfgRef = React.useRef<Cfg>(configs[activeId]);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeIdRef = React.useRef(activeId);
+  const configsRef = React.useRef(configs);
+  activeIdRef.current = activeId;
+  configsRef.current = configs;
 
-  // Load from localStorage once mounted
   React.useEffect(() => {
     setConfigs(Object.fromEntries(BACKGROUNDS.map(bg => [bg.id, loadCfg(bg)])));
   }, []);
 
-  // Keep ref current for live reads inside animation loop
   cfgRef.current = configs[activeId] ?? BACKGROUNDS.find(b => b.id === activeId)!.defaults;
 
-  // Restart renderer when active background changes
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1336,6 +1662,39 @@ export default function BackgroundLab() {
     }
     return bg.create(canvas, () => cfgRef.current);
   }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Slideshow auto-advance
+  React.useEffect(() => {
+    if (!slideshow) return;
+    const id = setInterval(() => {
+      setActiveId(prev => {
+        const idx = BACKGROUNDS.findIndex(b => b.id === prev);
+        return BACKGROUNDS[(idx + 1) % BACKGROUNDS.length].id;
+      });
+    }, 9000);
+    return () => clearInterval(id);
+  }, [slideshow]);
+
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+      if (e.key === 'ArrowRight') {
+        setActiveId(prev => { const i = BACKGROUNDS.findIndex(b => b.id === prev); return BACKGROUNDS[(i + 1) % BACKGROUNDS.length].id; });
+      } else if (e.key === 'ArrowLeft') {
+        setActiveId(prev => { const i = BACKGROUNDS.findIndex(b => b.id === prev); return BACKGROUNDS[(i - 1 + BACKGROUNDS.length) % BACKGROUNDS.length].id; });
+      } else if (e.key === 'r' || e.key === 'R') {
+        const bg = BACKGROUNDS.find(b => b.id === activeIdRef.current)!;
+        setConfigs(prev => ({ ...prev, [activeIdRef.current]: { ...bg.defaults } }));
+        localStorage.removeItem(lsKey(activeIdRef.current));
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        shuffle();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeBg = BACKGROUNDS.find(b => b.id === activeId)!;
   const cfg = configs[activeId] ?? activeBg.defaults;
@@ -1356,12 +1715,26 @@ export default function BackgroundLab() {
     localStorage.removeItem(lsKey(activeId));
   };
 
+  const shuffle = () => {
+    const bg = BACKGROUNDS.find(b => b.id === activeIdRef.current)!;
+    const rand: Cfg = {};
+    bg.sliders.forEach(s => {
+      const steps = Math.floor(Math.random() * Math.round((s.max - s.min) / s.step + 1));
+      rand[s.key] = parseFloat((s.min + steps * s.step).toFixed(6));
+    });
+    setConfigs(prev => ({ ...prev, [activeIdRef.current]: rand }));
+    setShuffled(true);
+    setTimeout(() => setShuffled(false), 900);
+  };
+
   const handleCopy = () => {
     const lines = Object.entries(cfg).map(([k, v]) => `  ${k}: ${v},`).join('\n');
     navigator.clipboard.writeText(`// ${activeBg.label}\nconst config = {\n${lines}\n};`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const btnBase: React.CSSProperties = { padding: '7px 0', borderRadius: 7, fontSize: 11, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.45)' };
 
   return (
     <div style={{ background: '#0c0d0f', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', color: '#fff' }}>
@@ -1375,94 +1748,116 @@ export default function BackgroundLab() {
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 6,
-        background: 'linear-gradient(to bottom, rgba(12,13,15,0.9) 0%, rgba(12,13,15,0) 100%)',
+        background: 'linear-gradient(to bottom, rgba(12,13,15,0.92) 0%, rgba(12,13,15,0) 100%)',
         overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
       }}>
-        <span style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap', marginRight: 6, flexShrink: 0 }}>
+        <span style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', whiteSpace: 'nowrap', marginRight: 6, flexShrink: 0 }}>
           Bg Lab
         </span>
         {BACKGROUNDS.map(bg => (
-          <button
-            key={bg.id}
-            onClick={() => setActiveId(bg.id)}
-            style={{
-              padding: '5px 13px', borderRadius: 20, cursor: 'pointer',
-              background: activeId === bg.id ? 'rgba(45,114,210,0.3)' : 'rgba(255,255,255,0.05)',
-              border: activeId === bg.id ? '1px solid rgba(45,114,210,0.55)' : '1px solid rgba(255,255,255,0.08)',
-              color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.4)',
-              fontSize: 11, whiteSpace: 'nowrap', flexShrink: 0,
-              transition: 'all 0.15s',
-            }}
-          >
+          <button key={bg.id} onClick={() => setActiveId(bg.id)} style={{
+            padding: '5px 13px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
+            background: activeId === bg.id ? 'rgba(45,114,210,0.3)' : 'rgba(255,255,255,0.05)',
+            border: activeId === bg.id ? '1px solid rgba(45,114,210,0.55)' : '1px solid rgba(255,255,255,0.07)',
+            color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.38)',
+            fontSize: 11, whiteSpace: 'nowrap', transition: 'all 0.15s',
+          }}>
             {bg.label}
           </button>
         ))}
       </div>
 
+      {/* ← → arrows */}
+      {['left','right'].map(dir => (
+        <button key={dir} onClick={() => setActiveId(prev => {
+          const i = BACKGROUNDS.findIndex(b => b.id === prev);
+          return BACKGROUNDS[dir === 'right' ? (i+1)%BACKGROUNDS.length : (i-1+BACKGROUNDS.length)%BACKGROUNDS.length].id;
+        })} style={{
+          position: 'fixed', top: '50%', [dir]: 16, transform: 'translateY(-50%)',
+          zIndex: 150, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 8, width: 32, height: 48, cursor: 'pointer', color: 'rgba(255,255,255,0.4)',
+          fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {dir === 'left' ? '‹' : '›'}
+        </button>
+      ))}
+
       {/* Center title */}
-      <div style={{
-        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-        textAlign: 'center', zIndex: 10, pointerEvents: 'none', width: '90%', maxWidth: 520,
-      }}>
-        <div style={{ fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', marginBottom: 14 }}>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center', zIndex: 10, pointerEvents: 'none', width: '80%', maxWidth: 480 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.18)', marginBottom: 12 }}>
           Background Lab
         </div>
-        <h1 style={{ fontSize: 'clamp(22px,4vw,52px)', fontWeight: 600, lineHeight: 1.1, margin: '0 0 12px', color: 'rgba(255,255,255,0.85)' }}>
+        <h1 style={{ fontSize: 'clamp(20px,3.5vw,48px)', fontWeight: 600, lineHeight: 1.1, margin: '0 0 10px', color: 'rgba(255,255,255,0.82)' }}>
           {activeBg.label}
         </h1>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', margin: 0, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.24)', margin: 0, lineHeight: 1.65 }}>
           {activeBg.description}
         </p>
+        <div style={{ marginTop: 14, fontSize: 9, color: 'rgba(255,255,255,0.13)', letterSpacing: 1.5 }}>
+          ← → navigate &nbsp;·&nbsp; R reset &nbsp;·&nbsp; Space shuffle
+        </div>
       </div>
 
       {/* Control panel */}
       <div style={{
         position: 'fixed', bottom: 24, right: 24, zIndex: 200,
-        background: 'rgba(13,15,19,0.95)',
-        backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        borderRadius: 14, padding: '16px 20px 14px', width: 260,
-        boxShadow: '0 14px 48px rgba(0,0,0,0.75)',
+        background: 'rgba(12,14,18,0.96)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14,
+        padding: '15px 19px 13px', width: 256,
+        boxShadow: '0 16px 52px rgba(0,0,0,0.8)',
         maxHeight: 'calc(100vh - 80px)', overflowY: 'auto',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 13 }}>
-          <span style={{ fontSize: 9, letterSpacing: 2.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)' }}>
-            Controls
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <span style={{ fontSize: 9, letterSpacing: 2.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>
+            {activeBg.label}
           </span>
-          <span style={{ fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', color: saved ? 'rgba(80,190,100,0.8)' : 'transparent', transition: 'color 0.3s' }}>
-            Saved
-          </span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', color: saved ? 'rgba(80,190,100,0.8)' : 'transparent', transition: 'color 0.3s' }}>
+              Saved
+            </span>
+            <button onClick={() => setSlideshow(s => !s)} title="Slideshow" style={{
+              padding: '3px 8px', borderRadius: 5, fontSize: 10, cursor: 'pointer',
+              background: slideshow ? 'rgba(45,114,210,0.25)' : 'rgba(255,255,255,0.05)',
+              border: slideshow ? '1px solid rgba(45,114,210,0.5)' : '1px solid rgba(255,255,255,0.08)',
+              color: slideshow ? '#7ab4f8' : 'rgba(255,255,255,0.35)',
+            }}>
+              {slideshow ? '⏸' : '▶'} Auto
+            </button>
+          </div>
         </div>
 
+        {/* Sliders */}
         {activeBg.sliders.map(s => (
           <div key={s.key} style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{s.label}</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.43)' }}>{s.label}</span>
               <span style={{ fontSize: 11, color: '#5b9cf6', fontVariantNumeric: 'tabular-nums', minWidth: 38, textAlign: 'right' }}>
                 {cfg[s.key] ?? s.min}
               </span>
             </div>
-            <input
-              type="range" min={s.min} max={s.max} step={s.step}
-              value={cfg[s.key] ?? s.min}
+            <input type="range" min={s.min} max={s.max} step={s.step} value={cfg[s.key] ?? s.min}
               onChange={e => setCfgKey(s.key, parseFloat(e.target.value))}
-              style={{ width: '100%', accentColor: '#2D72D2', cursor: 'pointer', height: 3 }}
-            />
+              style={{ width: '100%', accentColor: '#2D72D2', cursor: 'pointer', height: 3 }} />
           </div>
         ))}
 
-        <div style={{ display: 'flex', gap: 7, marginTop: 12 }}>
-          <button
-            onClick={handleReset}
-            style={{ flex: 1, padding: '7px 0', borderRadius: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)', fontSize: 11, cursor: 'pointer' }}
-          >
-            Reset
-          </button>
-          <button
-            onClick={handleCopy}
-            style={{ flex: 2, padding: '7px 0', borderRadius: 7, background: copied ? 'rgba(45,114,210,0.3)' : 'rgba(45,114,210,0.15)', border: '1px solid rgba(45,114,210,0.35)', color: '#5b9cf6', fontSize: 11, cursor: 'pointer', transition: 'background 0.2s' }}
-          >
-            {copied ? 'Copied!' : 'Copy config'}
+        {/* Buttons */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+          <button onClick={handleReset} style={{ ...btnBase, flex: 1 }}>Reset</button>
+          <button onClick={shuffle} style={{
+            ...btnBase, flex: 1,
+            background: shuffled ? 'rgba(150,80,210,0.25)' : 'rgba(255,255,255,0.05)',
+            border: shuffled ? '1px solid rgba(150,80,210,0.5)' : '1px solid rgba(255,255,255,0.08)',
+            color: shuffled ? '#c084fc' : 'rgba(255,255,255,0.45)',
+            transition: 'all 0.2s',
+          }}>Shuffle</button>
+          <button onClick={handleCopy} style={{
+            ...btnBase, flex: 1,
+            background: copied ? 'rgba(45,114,210,0.3)' : 'rgba(45,114,210,0.12)',
+            border: '1px solid rgba(45,114,210,0.35)', color: '#5b9cf6', transition: 'background 0.2s',
+          }}>
+            {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
       </div>
