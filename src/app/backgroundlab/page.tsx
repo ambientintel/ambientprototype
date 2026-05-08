@@ -4301,6 +4301,111 @@ const ambientGlowBg: BgDef = {
   },
 };
 
+// ─── Axi Glow ─────────────────────────────────────────────────────────────────
+
+const axiGlowBg: BgDef = {
+  id: 'axiglow',
+  label: 'Axi Glow',
+  description: 'Apple Glow border expanded to flood the entire canvas — rotating conic fill with bloom and vignette',
+  defaults: { rotSpeed: 0.4, brightness: 0.82, bloom: 0.55, vignette: 0.55 },
+  sliders: [
+    { key: 'rotSpeed',   label: 'Rotation speed', min: 0,   max: 2.0, step: 0.01 },
+    { key: 'brightness', label: 'Brightness',     min: 0,   max: 1.0, step: 0.01 },
+    { key: 'bloom',      label: 'Bloom',          min: 0,   max: 1.0, step: 0.01 },
+    { key: 'vignette',   label: 'Vignette',       min: 0,   max: 1.0, step: 0.01 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let angle = 0;
+    let lastTs = performance.now();
+
+    const BASE_COLORS = ['#BC82F3','#F5B9EA','#8D9FFF','#FF6778','#FFBA71','#C686FF'];
+    let curColors = [...BASE_COLORS];
+    let tgtColors = [...BASE_COLORS];
+    let lerpT = 1.0;
+    let nextSwap = 0.45;
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect();
+      canvas.width = r.width || window.innerWidth;
+      canvas.height = r.height || window.innerHeight;
+    };
+
+    const hexToRgb = (h: string): [number, number, number] => {
+      const v = parseInt(h.replace('#', ''), 16);
+      return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+    };
+
+    const lerpColor = (a: string, b: string, t: number) => {
+      const [ar,ag,ab] = hexToRgb(a), [br,bg,bb] = hexToRgb(b);
+      return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+    };
+
+    const makeConic = (cx: number, cy: number, colors: string[]) => {
+      const g = (ctx as CanvasRenderingContext2D & { createConicGradient:(a:number,x:number,y:number)=>CanvasGradient }).createConicGradient(angle - Math.PI / 2, cx, cy);
+      colors.forEach((c, i) => g.addColorStop(i / colors.length, c));
+      g.addColorStop(1, colors[0]);
+      return g;
+    };
+
+    const draw = (ts: number) => {
+      const dt = Math.min((ts - lastTs) / 1000, 0.05);
+      lastTs = ts;
+      const c = getCfg();
+      const cw = canvas.width, ch = canvas.height;
+      const cx = cw / 2, cy = ch / 2;
+
+      angle += c.rotSpeed * dt;
+
+      lerpT = Math.min(1, lerpT + dt / 0.55);
+      nextSwap -= dt;
+      if (nextSwap <= 0 && lerpT >= 1) {
+        nextSwap = 0.4 + Math.random() * 0.15;
+        curColors = [...tgtColors];
+        lerpT = 0;
+        tgtColors = [...BASE_COLORS].sort(() => Math.random() - 0.5);
+      }
+      const live = curColors.map((a, i) => lerpColor(a, tgtColors[i], lerpT));
+
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.fillStyle = '#080810';
+      ctx.fillRect(0, 0, cw, ch);
+
+      // Base conic fill
+      ctx.save();
+      ctx.globalAlpha = c.brightness;
+      ctx.fillStyle = makeConic(cx, cy, live);
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.restore();
+
+      // Bloom pass — blurred conic in screen blend
+      ctx.save();
+      ctx.filter = `blur(${Math.round(48 * c.bloom)}px)`;
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = c.bloom * 0.55;
+      ctx.fillStyle = makeConic(cx, cy, live);
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.restore();
+
+      // Vignette — dark radial overlay
+      const vig = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(cw, ch) * 0.72);
+      vig.addColorStop(0,   `rgba(0,0,0,0)`);
+      vig.addColorStop(0.5, `rgba(0,0,0,${c.vignette * 0.28})`);
+      vig.addColorStop(1,   `rgba(0,0,0,${c.vignette * 0.88})`);
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, cw, ch);
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize();
+    animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
@@ -4317,11 +4422,11 @@ const BACKGROUNDS: BgDef[] = [
   langtonBg, isingBg, lightningBg, burningShipBg, bzReactionBg,
   marbleBg, waterSimBg, cycloidBg, supernovaBg, moireBg,
   gravityLensBg, eulerSpiralBg, kaleidoscopeBg, terrainBg, ribbonsBg,
-  appleGlowBg, ambientGlowBg,
+  appleGlowBg, ambientGlowBg, axiGlowBg,
 ];
 
 const CATEGORIES: { id: string; label: string; color: string; ids: string[] }[] = [
-  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','ambientglow','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
+  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','ambientglow','axiglow','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
   { id: 'physics',  label: 'Physics',  color: '#34d399', ids: ['particles','ripple','pendulum','doublependulum','fluid','boids','nbody','sand','watersim','gravitylens'] },
   { id: 'math',     label: 'Math',     color: '#60a5fa', ids: ['topographic','lissajous','fourier','spirograph','waveinterference','wireframe','harmonograph','torusknot','cymatics','cycloid','moire','eulerspiral'] },
   { id: 'networks', label: 'Networks', color: '#fb923c', ids: ['sparknetwork','orbital','flowfield','voronoi','magneticfield','curlnoise','domainwarp'] },
