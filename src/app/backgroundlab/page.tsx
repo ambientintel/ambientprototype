@@ -4193,6 +4193,117 @@ const appleGlowBg: BgDef = {
   },
 };
 
+// ─── Ambient Glow ─────────────────────────────────────────────────────────────
+
+const ambientGlowBg: BgDef = {
+  id: 'ambientglow',
+  label: 'Ambient Glow',
+  description: 'Full-screen color wash — six radial blobs orbiting in screen blend mode, Apple Intelligence palette',
+  defaults: { speed: 0.12, blobSize: 0.72, intensity: 0.82, orbit: 0.32, innerOrbit: 0.12 },
+  sliders: [
+    { key: 'speed',       label: 'Speed',        min: 0,   max: 1.0, step: 0.01 },
+    { key: 'blobSize',    label: 'Blob size',    min: 0.1, max: 1.5, step: 0.01 },
+    { key: 'intensity',   label: 'Intensity',    min: 0,   max: 1.0, step: 0.01 },
+    { key: 'orbit',       label: 'Orbit radius', min: 0,   max: 0.7, step: 0.01 },
+    { key: 'innerOrbit',  label: 'Inner orbit',  min: 0,   max: 0.5, step: 0.01 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let angle = 0;
+    let lastTs = performance.now();
+
+    const BASE_COLORS = ['#BC82F3','#F5B9EA','#8D9FFF','#FF6778','#FFBA71','#C686FF'];
+    let curColors = [...BASE_COLORS];
+    let tgtColors = [...BASE_COLORS];
+    let lerpT = 1.0;
+    let nextSwap = 0.45;
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect();
+      canvas.width = r.width || window.innerWidth;
+      canvas.height = r.height || window.innerHeight;
+    };
+
+    const hexToRgb = (h: string): [number, number, number] => {
+      const v = parseInt(h.replace('#', ''), 16);
+      return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+    };
+
+    const lerpColor = (a: string, b: string, t: number) => {
+      const [ar, ag, ab] = hexToRgb(a), [br, bg, bb] = hexToRgb(b);
+      return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+    };
+
+    const blob = (bx: number, by: number, r: number, color: string, alpha: number) => {
+      const [ri, gi, bi] = hexToRgb(color);
+      const grad = ctx.createRadialGradient(bx, by, 0, bx, by, r);
+      grad.addColorStop(0,   `rgba(${ri},${gi},${bi},${alpha})`);
+      grad.addColorStop(0.45,`rgba(${ri},${gi},${bi},${alpha * 0.45})`);
+      grad.addColorStop(1,   `rgba(${ri},${gi},${bi},0)`);
+      ctx.beginPath();
+      ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    };
+
+    const draw = (ts: number) => {
+      const dt = Math.min((ts - lastTs) / 1000, 0.05);
+      lastTs = ts;
+      const c = getCfg();
+      const cw = canvas.width, ch = canvas.height;
+      const cx = cw / 2, cy = ch / 2;
+      const sc = Math.min(cw, ch);
+
+      angle += c.speed * dt;
+
+      lerpT = Math.min(1, lerpT + dt / 0.55);
+      nextSwap -= dt;
+      if (nextSwap <= 0 && lerpT >= 1) {
+        nextSwap = 0.4 + Math.random() * 0.15;
+        curColors = [...tgtColors];
+        lerpT = 0;
+        tgtColors = [...BASE_COLORS].sort(() => Math.random() - 0.5);
+      }
+      const live = curColors.map((a, i) => lerpColor(a, tgtColors[i], lerpT));
+
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.fillStyle = '#07070f';
+      ctx.fillRect(0, 0, cw, ch);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+
+      const n = live.length;
+      const orbitR  = sc * c.orbit;
+      const innerR  = sc * c.innerOrbit;
+      const blobR   = sc * c.blobSize;
+      const blobR2  = blobR * 0.55;
+
+      // Outer ring — 6 blobs
+      live.forEach((color, i) => {
+        const a = angle + (i / n) * Math.PI * 2;
+        blob(cx + Math.cos(a) * orbitR, cy + Math.sin(a) * orbitR, blobR, color, c.intensity * 0.75);
+      });
+
+      // Inner counter-rotating ring — 6 blobs, offset phase
+      live.forEach((color, i) => {
+        const a = -angle * 1.4 + ((i + 0.5) / n) * Math.PI * 2;
+        blob(cx + Math.cos(a) * innerR, cy + Math.sin(a) * innerR, blobR2, color, c.intensity * 0.55);
+      });
+
+      ctx.restore();
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize();
+    animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
@@ -4209,11 +4320,11 @@ const BACKGROUNDS: BgDef[] = [
   langtonBg, isingBg, lightningBg, burningShipBg, bzReactionBg,
   marbleBg, waterSimBg, cycloidBg, supernovaBg, moireBg,
   gravityLensBg, eulerSpiralBg, kaleidoscopeBg, terrainBg, ribbonsBg,
-  appleGlowBg,
+  appleGlowBg, ambientGlowBg,
 ];
 
 const CATEGORIES: { id: string; label: string; color: string; ids: string[] }[] = [
-  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
+  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','ambientglow','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
   { id: 'physics',  label: 'Physics',  color: '#34d399', ids: ['particles','ripple','pendulum','doublependulum','fluid','boids','nbody','sand','watersim','gravitylens'] },
   { id: 'math',     label: 'Math',     color: '#60a5fa', ids: ['topographic','lissajous','fourier','spirograph','waveinterference','wireframe','harmonograph','torusknot','cymatics','cycloid','moire','eulerspiral'] },
   { id: 'networks', label: 'Networks', color: '#fb923c', ids: ['sparknetwork','orbital','flowfield','voronoi','magneticfield','curlnoise','domainwarp'] },
