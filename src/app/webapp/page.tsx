@@ -668,27 +668,14 @@ export default function WebAppPage() {
   return (
     <>
     <style dangerouslySetInnerHTML={{__html: `
-      @keyframes dfFlow {
-        0%   { background-position: 0% 50%; }
-        50%  { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      @keyframes dfGlow {
-        0%, 100% { box-shadow: 0 0 0 2px rgba(124,58,237,0.18), 0 2px 8px rgba(124,58,237,0.10); }
-        50%       { box-shadow: 0 0 0 5px rgba(124,58,237,0.28), 0 4px 24px rgba(124,58,237,0.20); }
-      }
       .df-ready {
-        background: linear-gradient(-45deg, #7C3AED, #6D28D9, #2563EB, #7C3AED);
-        background-size: 300% 300%;
-        animation: dfFlow 3s ease infinite;
+        background: #7C3AED;
         border: 1.5px solid transparent;
       }
       .df-ready .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
       .df-ready .df-sub   { color: rgba(255,255,255,0.82); }
       .df-frozen {
-        background: linear-gradient(-45deg, #6D28D9, #7C3AED, #8B5CF6, #A78BFA, #7C3AED, #6D28D9);
-        background-size: 300% 300%;
-        animation: dfFlow 4s ease infinite, dfGlow 2.5s ease-in-out infinite;
+        background: #6D28D9;
         border: 1.5px solid transparent;
       }
       .df-frozen .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }

@@ -715,27 +715,14 @@ export default function MobileAppPage() {
   return (
     <>
     <style dangerouslySetInnerHTML={{__html: `
-      @keyframes dfFlow {
-        0%   { background-position: 0% 50%; }
-        50%  { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      @keyframes dfGlow {
-        0%, 100% { box-shadow: 0 0 0 2px rgba(13,148,136,0.18), 0 2px 8px rgba(13,148,136,0.10); }
-        50%       { box-shadow: 0 0 0 5px rgba(13,148,136,0.28), 0 4px 24px rgba(13,148,136,0.20); }
-      }
       .df-ready {
-        background: linear-gradient(-45deg, #0D9488, #0F766E, #2563EB, #0D9488);
-        background-size: 300% 300%;
-        animation: dfFlow 3s ease infinite;
+        background: #0D9488;
         border: 1.5px solid transparent;
       }
       .df-ready .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
       .df-ready .df-sub   { color: rgba(255,255,255,0.82); }
       .df-frozen {
-        background: linear-gradient(-45deg, #0F766E, #0D9488, #14B8A6, #5EEAD4, #0D9488, #0F766E);
-        background-size: 300% 300%;
-        animation: dfFlow 4s ease infinite, dfGlow 2.5s ease-in-out infinite;
+        background: #0F766E;
         border: 1.5px solid transparent;
       }
       .df-frozen .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }

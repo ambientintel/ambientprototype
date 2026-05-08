@@ -532,27 +532,14 @@ export default function MechanicalPage() {
   return (
     <>
     <style dangerouslySetInnerHTML={{__html: `
-      @keyframes dfFlow {
-        0%   { background-position: 0% 50%; }
-        50%  { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      @keyframes dfGlow {
-        0%, 100% { box-shadow: 0 0 0 2px rgba(37,99,235,0.18), 0 2px 8px rgba(37,99,235,0.10); }
-        50%       { box-shadow: 0 0 0 5px rgba(37,99,235,0.28), 0 4px 24px rgba(37,99,235,0.20); }
-      }
       .df-ready {
-        background: linear-gradient(-45deg, #2563EB, #1D4ED8, #1E40AF, #2563EB);
-        background-size: 300% 300%;
-        animation: dfFlow 3s ease infinite;
+        background: #2563EB;
         border: 1.5px solid transparent;
       }
       .df-ready .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
       .df-ready .df-sub   { color: rgba(255,255,255,0.82); }
       .df-frozen {
-        background: linear-gradient(-45deg, #1D4ED8, #2563EB, #3B82F6, #60A5FA, #2563EB, #1D4ED8);
-        background-size: 300% 300%;
-        animation: dfFlow 4s ease infinite, dfGlow 2.5s ease-in-out infinite;
+        background: #1D4ED8;
         border: 1.5px solid transparent;
       }
       .df-frozen .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }

@@ -699,27 +699,14 @@ export default function CloudEngineeringPage() {
   return (
     <>
     <style dangerouslySetInnerHTML={{__html: `
-      @keyframes pfFlow {
-        0%   { background-position: 0% 50%; }
-        50%  { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      @keyframes pfGlow {
-        0%, 100% { box-shadow: 0 0 0 2px rgba(5,150,105,0.18), 0 2px 8px rgba(5,150,105,0.10); }
-        50%       { box-shadow: 0 0 0 5px rgba(5,150,105,0.28), 0 4px 24px rgba(5,150,105,0.20); }
-      }
       .pf-ready {
-        background: linear-gradient(-45deg, #4338CA, #2563EB, #047857, #10B981, #4338CA);
-        background-size: 300% 300%;
-        animation: pfFlow 3s ease infinite;
+        background: #4338CA;
         border: 1.5px solid transparent;
       }
       .pf-ready .pf-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
       .pf-ready .pf-sub   { color: rgba(255,255,255,0.82); }
       .pf-frozen {
-        background: linear-gradient(-45deg, #047857, #059669, #10B981, #34D399, #059669, #047857);
-        background-size: 300% 300%;
-        animation: pfFlow 4s ease infinite, pfGlow 2.5s ease-in-out infinite;
+        background: #059669;
         border: 1.5px solid transparent;
       }
       .pf-frozen .pf-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
