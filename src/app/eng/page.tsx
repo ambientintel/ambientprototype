@@ -253,6 +253,57 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
   ],
 };
 
+// ── Sprint focus (this week) ───────────────────────────────────────────────────
+
+const SPRINT_FOCUS: Record<string, string[]> = {
+  firmware: [
+    'Patch DTB for OSD62x-PM — target first boot with IWR SPI GPIO mapped',
+    'Run kernel CI on SK-AM62-LP, confirm mmWave driver loads at boot',
+  ],
+  ee: [
+    'Final Gerber review — stackup, drill files, controlled-impedance spec sign-off',
+    'Place BOM order at DigiKey — confirm IWR6843AOP + OSD62x-PM lead times',
+  ],
+  mobileapp: [
+    'Complete Cognito sign-in / token refresh / sign-out flows (step 03)',
+    'Register APNS token and test SNS → APNS delivery end-to-end',
+  ],
+  cloudengineering: [
+    'Deploy Parquet Lambda to staging — validate presigned URL minter against device agent',
+    'Stand up nurse FastAPI with Cognito JWT validation and facility scoping',
+  ],
+  mechanical: [
+    'Route all Altium traces, run DRC to zero errors, export preliminary Gerber',
+    'Finalize ceiling-mount bracket geometry and print FDM prototype for fit-check',
+  ],
+  webapp: [
+    'Implement VAPID service worker and wire fall event web push end-to-end (step 09)',
+    'Replace all mock API calls with Cloud REST endpoints — align on contract with Cloud team',
+  ],
+};
+
+// ── Open decisions ─────────────────────────────────────────────────────────────
+
+const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text: string }[] = [
+  { domain: 'Mechanical',        urgency: 'high',   text: 'PoE+ vs barrel jack — affects power routing, BOM cost, and enclosure cutout geometry.' },
+  { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk if Gerbers not submitted by end of sprint.' },
+  { domain: 'Firmware',          urgency: 'high',   text: 'Mender vs SWUpdate for OTA — Mender adds ~8 MB to rootfs; SWUpdate is lighter but less managed.' },
+  { domain: 'Cloud Engineering', urgency: 'medium', text: 'MQTT broker: AWS IoT Core vs self-hosted Mosquitto — cost vs operational complexity.' },
+  { domain: 'Mobile App',        urgency: 'medium', text: 'iOS TestFlight vs Enterprise Distribution for the 10-room clinical pilot.' },
+  { domain: 'Web App',           urgency: 'medium', text: 'Ella narrative poll interval — 30 s vs WebSocket for real-time nurse alert delivery.' },
+  { domain: 'Firmware',          urgency: 'low',    text: 'Kernel version pin: 6.1 LTS vs 6.6 LTS — both supported by TI SDK 11, no urgency.' },
+  { domain: 'Mechanical',        urgency: 'low',    text: 'Enclosure finish: matte vs glossy ABS — cosmetic only, deferred to Rev B.' },
+];
+
+// ── Cross-domain blockers ──────────────────────────────────────────────────────
+
+const BLOCKERS: { blocked: string; blocking: string; issue: string }[] = [
+  { blocked: 'Firmware',   blocking: 'EE Hardware',      issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
+  { blocked: 'Mobile App', blocking: 'Cloud Engineering', issue: 'Cognito user pool + SNS ARN not yet provisioned; app can\'t register push tokens' },
+  { blocked: 'Web App',    blocking: 'Cloud Engineering', issue: 'REST alert + Ella narrative endpoints not deployed; dashboard running on mock data' },
+  { blocked: 'Mechanical', blocking: 'EE Hardware',       issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
+];
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function EngDashboard() {
@@ -430,9 +481,15 @@ export default function EngDashboard() {
                       <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF', marginBottom: 2 }}>Current step</div>
                       <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: '#374151' }}>{d.currentStep}</div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: '#9CA3AF' }}>{d.stepsDone}/{d.stepsTotal} steps</div>
-                      <Link href={d.href} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: d.colorBg, border: `1px solid ${d.colorBorder}`, color: d.color, fontSize: 12, fontFamily: 'var(--mono)', textDecoration: 'none', fontWeight: 500, transition: 'all 0.12s' }}>
+                      <a href={`https://github.com/${d.repo}/issues`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 7, background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.08)', color: '#6B7280', fontSize: 11, fontFamily: 'var(--mono)', textDecoration: 'none' }}>
+                        Issues
+                      </a>
+                      <a href={`https://github.com/${d.repo}/pulls`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 7, background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.08)', color: '#6B7280', fontSize: 11, fontFamily: 'var(--mono)', textDecoration: 'none' }}>
+                        PRs
+                      </a>
+                      <Link href={d.href} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, background: d.colorBg, border: `1px solid ${d.colorBorder}`, color: d.color, fontSize: 12, fontFamily: 'var(--mono)', textDecoration: 'none', fontWeight: 500, transition: 'all 0.12s' }}>
                         Runbook →
                       </Link>
                     </div>
@@ -441,6 +498,45 @@ export default function EngDashboard() {
               </div>
             );
           })}
+        </div>
+
+        {/* ── Sprint Focus (This Week) ── */}
+        <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, padding: '20px 24px', marginBottom: 28, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#9CA3AF', marginBottom: 16 }}>This Week · Sprint Focus</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            {DOMAINS.map(d => (
+              <div key={d.id} style={{ borderLeft: `3px solid ${d.color}`, paddingLeft: 12 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, color: d.color, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{d.label}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {(SPRINT_FOCUS[d.id] ?? []).map((item, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: d.color, flexShrink: 0, marginTop: 2 }}>▸</span>
+                      <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.5 }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Cross-domain Blockers ── */}
+        <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, padding: '20px 24px', marginBottom: 28, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#9CA3AF', marginBottom: 14 }}>Cross-Domain Blockers</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {BLOCKERS.map((b, i) => {
+              const blockedDom  = DOMAINS.find(d => d.label === b.blocked);
+              const blockingDom = DOMAINS.find(d => d.label === b.blocking);
+              return (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '148px 30px 160px 1fr', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: i < BLOCKERS.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, background: blockedDom?.colorBg ?? '#F8FAFC', color: blockedDom?.color ?? '#374151', border: `1px solid ${blockedDom?.colorBorder ?? '#E5E7EB'}`, borderRadius: 999, padding: '3px 9px', whiteSpace: 'nowrap', display: 'inline-block' }}>{b.blocked}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#EF4444', textAlign: 'center' }}>⊘</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, background: blockingDom?.colorBg ?? '#F8FAFC', color: blockingDom?.color ?? '#374151', border: `1px solid ${blockingDom?.colorBorder ?? '#E5E7EB'}`, borderRadius: 999, padding: '3px 9px', whiteSpace: 'nowrap', display: 'inline-block' }}>needs {b.blocking}</span>
+                  <span style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.55 }}>{b.issue}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* ── Cross-domain integration ── */}
@@ -466,6 +562,36 @@ export default function EngDashboard() {
               );
             })}
           </div>
+        </div>
+
+        {/* ── Open Decisions ── */}
+        <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, padding: '20px 24px', marginBottom: 28, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#9CA3AF', marginBottom: 16 }}>Open Decisions</div>
+          {(['high', 'medium', 'low'] as const).map(urgency => {
+            const items = OPEN_DECISIONS.filter(item => item.urgency === urgency);
+            if (!items.length) return null;
+            const urgencyColor  = urgency === 'high' ? '#EF4444' : urgency === 'medium' ? '#D97706' : '#9CA3AF';
+            const urgencyBg     = urgency === 'high' ? '#FEF2F2' : urgency === 'medium' ? '#FFFBEB' : '#F8FAFC';
+            const urgencyBorder = urgency === 'high' ? '#FECACA' : urgency === 'medium' ? '#FDE68A' : '#E5E7EB';
+            return (
+              <div key={urgency} style={{ marginBottom: urgency !== 'low' ? 16 : 0 }}>
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', background: urgencyBg, color: urgencyColor, border: `1px solid ${urgencyBorder}`, borderRadius: 999, padding: '2px 9px' }}>{urgency} priority</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {items.map((item, i) => {
+                    const dom = DOMAINS.find(d => d.label === item.domain);
+                    return (
+                      <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 12px', background: '#F8FAFC', borderRadius: 8, border: '1px solid rgba(0,0,0,0.05)' }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: dom?.color ?? '#6B7280', background: dom?.colorBg ?? '#F8FAFC', border: `1px solid ${dom?.colorBorder ?? '#E5E7EB'}`, borderRadius: 999, padding: '2px 9px', whiteSpace: 'nowrap', flexShrink: 0 }}>{item.domain}</span>
+                        <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.55 }}>{item.text}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* ── Overall platform progress bar ── */}
