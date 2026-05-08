@@ -2,59 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
-// ── Constellation background ───────────────────────────────────────────────────
 
-function ConstellationCanvas() {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const el = ref.current!;
-    if (!el) return;
-    const ctx = el.getContext('2d')!;
-    let raf: number;
-    type P = { x:number; y:number; vx:number; vy:number; r:number; pulse:number; pulseSpd:number };
-    let pts: P[] = [];
-    function init() {
-      const n = Math.max(55, Math.min(85, Math.floor(el.width * el.height / 16000)));
-      pts = Array.from({ length: n }, () => ({
-        x: Math.random() * el.width, y: Math.random() * el.height,
-        vx: (Math.random() - 0.5) * 0.28, vy: (Math.random() - 0.5) * 0.28,
-        r: Math.random() < 0.14 ? 2.6 : Math.random() * 1.1 + 0.7,
-        pulse: Math.random() * Math.PI * 2, pulseSpd: 0.011 + Math.random() * 0.017,
-      }));
-    }
-    function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; init(); }
-    resize();
-    window.addEventListener('resize', resize);
-    function frame() {
-      const W = el.width, H = el.height;
-      ctx.clearRect(0, 0, W, H);
-      const maxD = Math.min(W, H) * 0.19;
-      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(8,12,26,0.018)';
-      const gx = W/11, gy = H/8;
-      for (let i=1;i<11;i++){ctx.beginPath();ctx.moveTo(i*gx,0);ctx.lineTo(i*gx,H);ctx.stroke();}
-      for (let j=1;j<8;j++){ctx.beginPath();ctx.moveTo(0,j*gy);ctx.lineTo(W,j*gy);ctx.stroke();}
-      pts.forEach(p => { p.x=((p.x+p.vx)+W)%W; p.y=((p.y+p.vy)+H)%H; p.pulse+=p.pulseSpd; });
-      for (let i=0;i<pts.length;i++) for (let j=i+1;j<pts.length;j++) {
-        const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y, d=Math.sqrt(dx*dx+dy*dy);
-        if (d<maxD) { const t=1-d/maxD, act=0.5+0.5*Math.sin(pts[i].pulse)*Math.sin(pts[j].pulse);
-          ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
-          ctx.strokeStyle=`rgba(8,12,26,${(t*(0.08+act*0.05)).toFixed(3)})`;ctx.lineWidth=t*1.1;ctx.stroke(); }
-      }
-      pts.forEach(p => {
-        const glow=0.5+0.5*Math.sin(p.pulse), glowR=p.r*(3.5+glow*2.5);
-        const grad=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,glowR);
-        grad.addColorStop(0,`rgba(8,12,26,${(0.07+glow*0.05).toFixed(3)})`);grad.addColorStop(1,'rgba(8,12,26,0)');
-        ctx.beginPath();ctx.arc(p.x,p.y,glowR,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();
-        ctx.beginPath();ctx.arc(p.x,p.y,p.r*(1+glow*0.18),0,Math.PI*2);
-        ctx.fillStyle=`rgba(8,12,26,${(0.26+glow*0.13).toFixed(3)})`;ctx.fill();
-      });
-      raf=requestAnimationFrame(frame);
-    }
-    frame();
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
-  }, []);
-  return <canvas ref={ref} style={{ position:'fixed', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }} />;
-}
 
 // ── Domain definitions ─────────────────────────────────────────────────────────
 
@@ -244,7 +192,6 @@ export default function EngDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F1F3F6', position: 'relative' }}>
-      <ConstellationCanvas />
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 1160, margin: '0 auto', padding: '36px 40px 80px' }}>
 
         {/* ── Header ── */}
