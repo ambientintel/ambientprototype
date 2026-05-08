@@ -131,6 +131,68 @@ const DOMAINS = [
     freezeKey: 'ambient-cloud-frozen-v1',
     freezeLabel: 'Production Freeze',
   },
+  {
+    id: 'mechanical',
+    href: '/mechanical',
+    label: 'Mechanical',
+    subtitle: 'IWR6843AOP enclosure · harness · fab',
+    color: '#0891B2',
+    colorBg: '#ECFEFF',
+    colorBorder: '#A5F3FC',
+    repo: 'ambientintel/ambientmechanical',
+    lsKey: 'ambient-mechanical-checklist-v1',
+    checklistTotal: 22,
+    checklistDefault: 5,
+    stepsTotal: 7,
+    stepsDone: 1,
+    phases: [
+      { label: 'Design',    done: 1, total: 3 },
+      { label: 'Enclosure', done: 0, total: 1 },
+      { label: 'Fab',       done: 0, total: 2 },
+      { label: 'Validate',  done: 0, total: 1 },
+    ],
+    specs: [
+      { k: 'Footprint', v: '100×80 mm' },
+      { k: 'Compute',   v: 'OSD62x-PM' },
+      { k: 'Radar',     v: 'IWR6843AOP' },
+      { k: 'Enclosure', v: 'IP42' },
+    ],
+    description: 'PCB design, enclosure, cable harness, fabrication, and validation for the Ambient ceiling-mount radar compute node.',
+    currentStep: '02 · PCB Design (Altium)',
+    freezeKey: 'ambient-mechanical-frozen-v1',
+    freezeLabel: 'EVT Freeze',
+  },
+  {
+    id: 'webapp',
+    href: '/webapp',
+    label: 'Web App',
+    subtitle: 'Next.js 16 · pnpm monorepo',
+    color: '#7C3AED',
+    colorBg: '#F5F3FF',
+    colorBorder: '#DDD6FE',
+    repo: 'ambientintel/ambientweb',
+    lsKey: 'ambient-webapp-checklist-v1',
+    checklistTotal: 20,
+    checklistDefault: 13,
+    stepsTotal: 13,
+    stepsDone: 8,
+    phases: [
+      { label: 'Setup',     done: 4, total: 4 },
+      { label: 'Build',     done: 4, total: 4 },
+      { label: 'Integrate', done: 0, total: 2 },
+      { label: 'Ship',      done: 0, total: 3 },
+    ],
+    specs: [
+      { k: 'Runtime',  v: 'Next.js 16' },
+      { k: 'Auth',     v: 'WorkOS' },
+      { k: 'Workspace', v: 'pnpm 9' },
+      { k: 'Pilot',    v: '10 Rooms' },
+    ],
+    description: 'Ella Memory nurse dashboard — WorkOS SSO, HIPAA de-identification, floor map, Ella narrative, web push alerts. Vercel deploy.',
+    currentStep: '09 · Web Push',
+    freezeKey: 'ambient-webapp-frozen-v1',
+    freezeLabel: 'Deployment Lock',
+  },
 ] as const;
 
 type Domain = typeof DOMAINS[number];
@@ -140,6 +202,8 @@ const INTEGRATIONS = [
   { from: 'Firmware', to: 'Cloud Engineering', desc: 'Device agent publishes MQTT fall events + uploads Parquet batches via url-minter presigned URLs' },
   { from: 'EE Hardware', to: 'Firmware',       desc: 'Power rail sequencing, JTAG header, UART debug pin positions — PCB stackup drives DTB addresses' },
   { from: 'Cloud Engineering', to: 'Mobile App', desc: 'FastAPI + Cognito JWT auth; SNS → APNS/FCM push; facility-scoped alert endpoints feed the app' },
+  { from: 'Mechanical', to: 'EE Hardware', desc: 'PCB outline and mounting hole pattern locks enclosure form factor; ceiling bracket bolt pattern matches PCB stackup' },
+  { from: 'Cloud Engineering', to: 'Web App', desc: 'Ella narrative API + REST alert endpoints; WorkOS JWT validated server-side; Parquet cold path feeds analytics charts' },
 ];
 
 // ── Priority tasks per domain ──────────────────────────────────────────────────
@@ -173,6 +237,20 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Run device → MQTT → alert → SNS → push end-to-end integration test', owner: 'Cloud+Mobile' },
     { task: 'Validate CloudTrail audit logs satisfy HIPAA §164.514(c) coded-data requirement', owner: 'Security' },
   ],
+  mechanical: [
+    { task: 'Complete PCB layout in Altium — route controlled-impedance traces, run DRC to zero errors', owner: 'Layout' },
+    { task: 'Finalize BOM — confirm IWR6843AOP, OSD62x-PM, and all critical passives are in stock', owner: 'Procurement' },
+    { task: 'Complete SolidWorks enclosure assembly and print FDM prototype for ceiling-mount fit-check', owner: 'ME' },
+    { task: 'Generate Gerber package and submit for DFM review with fab house', owner: 'Layout' },
+    { task: 'Resolve PoE+ vs barrel jack decision before Rev B — affects power routing and BOM cost', owner: 'Lead' },
+  ],
+  webapp: [
+    { task: 'Implement Web Push — generate VAPID keys, register service worker, wire fall event push end-to-end', owner: 'FE' },
+    { task: 'Replace mock data with ambientcloud REST API — coordinate endpoint contracts with Cloud team', owner: 'FE+Cloud' },
+    { task: 'Validate pnpm build: zero TypeScript strict errors, zero ESLint errors', owner: 'FE' },
+    { task: 'Deploy to Vercel production and verify ellamemory.com is live with WorkOS SSO', owner: 'FE+DevOps' },
+    { task: 'Run pilot validation across MOH 301–310 and collect nurse feedback for iteration', owner: 'Product' },
+  ],
 };
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -199,7 +277,7 @@ export default function EngDashboard() {
     setFrozen(f);
     // Overlay with server-side shared state
     const domainKeyMap: Record<string, string> = {
-      firmware: 'firmware', ee: 'ee', mobileapp: 'mobileapp', cloudengineering: 'cloud',
+      firmware: 'firmware', ee: 'ee', mobileapp: 'mobileapp', cloudengineering: 'cloud', mechanical: 'mechanical', webapp: 'webapp',
     };
     fetch('/api/eng/state').then(r => r.json()).then((all) => {
       const sp: Record<string, number> = {};
