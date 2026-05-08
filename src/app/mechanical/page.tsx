@@ -379,71 +379,65 @@ const OPEN_DECISIONS = [
 
 const TAGS = ['All', 'Setup', 'PCB', 'Enclosure', 'Assembly', 'Validation'];
 
+const PIPELINE_PHASES = [
+  { label: 'Setup',      ids: ['sysdef'] },
+  { label: 'PCB',        ids: ['pcb', 'bom'] },
+  { label: 'Enclosure',  ids: ['enclosure'] },
+  { label: 'Assembly',   ids: ['harness', 'fab'] },
+  { label: 'Validation', ids: ['validation'] },
+];
+
 // ── Pipeline strip ─────────────────────────────────────────────────────────────
 function PipelineStrip({ steps, active, onSelect, designFrozen, frozenDate, ready, pct, onToggleFreeze }: { steps: Step[]; active: string; onSelect: (id: string) => void; designFrozen: boolean; frozenDate: string | null; ready: boolean; pct: number; onToggleFreeze: () => void }) {
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, padding: '16px 28px 18px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflowX: 'auto' }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#9CA3AF', marginBottom: 12 }}>Build Pipeline · EVT Rev A</div>
-      <div style={{ display: 'flex', alignItems: 'center', minWidth: 560 }}>
-        {PHASES.map((phase, pi) => {
-          const phaseSteps = steps.filter(s => s.tag === phase);
-          const pc = PHASE_COLORS[phase];
-          const allDone = phaseSteps.every(s => s.status === 'done');
-          const anyActive = phaseSteps.some(s => s.status === 'active');
-          const lineColor = allDone ? '#059669' : anyActive ? '#2563EB' : '#E5E7EB';
-          const isLast = pi === PHASES.length - 1;
-
-          return (
-            <div key={phase} style={{ display: 'flex', alignItems: 'center', flex: isLast ? 0 : 1 }}>
-              {/* Phase block */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: pc.text, fontWeight: 600 }}>{phase}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  {phaseSteps.map(s => {
-                    const sc = SC[s.status];
-                    const isActive = active === s.id;
-                    return (
-                      <button key={s.id} onClick={() => onSelect(s.id)} title={s.title}
-                        style={{ width: 32, height: 32, borderRadius: '50%', border: isActive ? `2px solid ${sc.dot}` : `1.5px solid ${isActive ? sc.border : 'rgba(0,0,0,0.1)'}`, background: isActive ? sc.bg : '#F8FAFC', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'all 0.14s', boxShadow: isActive ? `0 0 0 3px ${sc.bg}` : 'none' }}>
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: isActive ? sc.color : '#6B7280', fontWeight: 600, lineHeight: 1 }}>{s.phase}</span>
-                        <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: sc.dot, border: '1.5px solid #FFFFFF' }} />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              {/* Connector line */}
-              {!isLast && (
-                <div style={{ flex: 1, height: 2, minWidth: 24, background: `linear-gradient(90deg, ${lineColor}, #E5E7EB)`, margin: '16px 8px 0', borderRadius: 2, opacity: 0.7 }} />
-              )}
+    <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, padding: '14px 20px', marginBottom: 24, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, minWidth: 'max-content' }}>
+        {PIPELINE_PHASES.map((phase, pi) => (
+          <div key={phase.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pi === 0 ? '0 24px 0 0' : '0 24px', borderRight: '1px solid #E5E7EB' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>{phase.label}</div>
+            <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+              {phase.ids.map((id, si) => {
+                const s = steps.find(x => x.id === id)!;
+                const sc = SC[s.status];
+                const isActive = active === id;
+                return (
+                  <span key={id} style={{ display: 'flex', alignItems: 'center' }}>
+                    {si > 0 && <span style={{ display: 'inline-block', width: 12, height: 1, background: '#E5E7EB', margin: '0 -2px', alignSelf: 'center' }} />}
+                    <button onClick={() => onSelect(id)} title={s.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 8px', borderRadius: 7, border: isActive ? '1.5px solid #2563EB' : `1px solid ${sc.border}`, background: isActive ? '#EFF6FF' : sc.bg, cursor: 'pointer', transition: 'all 0.12s', minWidth: 44 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: isActive ? '#2563EB' : '#6B7280', fontWeight: isActive ? 600 : 400 }}>{s.phase}</span>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
+                    </button>
+                  </span>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
 
         {/* DVT Sign-off milestone */}
-        <div style={{ display: 'flex', alignItems: 'center', marginLeft: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginTop: 16 }}>
-            <div style={{ width: 28, height: 2, background: designFrozen || ready ? 'linear-gradient(90deg,#E5E7EB,#2563EB)' : '#E5E7EB', borderRadius: 2, opacity: 0.7 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ width: 24, height: 1, background: designFrozen || ready ? 'linear-gradient(90deg,#E5E7EB,#2563EB)' : '#E5E7EB' }} />
             <svg width="6" height="10" viewBox="0 0 6 10" fill="none" style={{ flexShrink: 0 }}>
               <path d="M1 1l4 4-4 4" stroke={designFrozen || ready ? '#2563EB' : '#D1D5DB'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 12 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF', fontWeight: 600 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF' }}>
               {designFrozen ? 'Saved ✓' : 'Goal'}
             </div>
             <button
               onClick={onToggleFreeze}
               className={designFrozen ? 'df-frozen' : ready ? 'df-ready' : ''}
               style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '7px 13px', borderRadius: 9,
+                display: 'flex', alignItems: 'center', gap: 9,
+                padding: '8px 16px', borderRadius: 9,
                 cursor: ready || designFrozen ? 'pointer' : 'default',
                 ...(!(designFrozen || ready) && { background: '#F9FAFB', border: '1.5px dashed #D1D5DB' }),
                 transition: 'all 0.25s',
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
                 {designFrozen || ready ? (
                   <>
                     <path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke="#2563EB" strokeWidth="1.6" strokeLinecap="round"/>
@@ -457,7 +451,7 @@ function PipelineStrip({ steps, active, onSelect, designFrozen, frozenDate, read
                 )}
               </svg>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
-                <span className="df-title" style={{ fontFamily: 'var(--sans)', fontSize: 11.5, fontWeight: 600, color: designFrozen ? '#2563EB' : ready ? '#1D4ED8' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                <span className="df-title" style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: designFrozen ? '#2563EB' : ready ? '#1D4ED8' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
                   {designFrozen ? 'DVT Ready ✓' : 'DVT Sign-off'}
                 </span>
                 <span className="df-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9, color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF' }}>
