@@ -2377,6 +2377,643 @@ const ifsFractalBg: BgDef = {
   },
 };
 
+// ─── 33. Fluid Simulation ────────────────────────────────────────────────────
+
+const fluidBg: BgDef = {
+  id: 'fluid',
+  label: 'Fluid Sim',
+  description: 'Semi-Lagrangian advection — ink injected into self-stirring turbulent flow',
+  defaults: { turbulence: 0.7, inkRate: 1.0, viscosity: 0.985, persistence: 0.998, palette: 0 },
+  sliders: [
+    { key: 'turbulence',   label: 'Turbulence',   min: 0,    max: 2.0,  step: 0.05  },
+    { key: 'inkRate',      label: 'Ink rate',     min: 0,    max: 3.0,  step: 0.1   },
+    { key: 'viscosity',    label: 'Viscosity',    min: 0.9,  max: 1.0,  step: 0.001 },
+    { key: 'persistence',  label: 'Persistence',  min: 0.99, max: 1.0,  step: 0.0005 },
+    { key: 'palette',      label: 'Palette',      min: 0,    max: 2,    step: 1     },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    let gw = 1, gh = 1;
+    let u: Float32Array, v: Float32Array, dens: Float32Array;
+    let imgData = new ImageData(1, 1);
+    let off: HTMLCanvasElement | null = null, offCtx: CanvasRenderingContext2D | null = null;
+
+    const sample = (f: Float32Array, x: number, y: number) => {
+      x = Math.max(0, Math.min(gw - 1.001, x)); y = Math.max(0, Math.min(gh - 1.001, y));
+      const ix = Math.floor(x), iy = Math.floor(y), fx = x-ix, fy = y-iy;
+      return f[ix+iy*gw]*(1-fx)*(1-fy) + f[(ix+1)+iy*gw]*fx*(1-fy) + f[ix+(iy+1)*gw]*(1-fx)*fy + f[(ix+1)+(iy+1)*gw]*fx*fy;
+    };
+
+    const advect = (dst: Float32Array, src: Float32Array) => {
+      for (let y2 = 0; y2 < gh; y2++) for (let x2 = 0; x2 < gw; x2++) {
+        const i = x2 + y2*gw; dst[i] = sample(src, x2 - u[i], y2 - v[i]);
+      }
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height;
+      gw = Math.ceil(r.width / 3); gh = Math.ceil(r.height / 3);
+      u = new Float32Array(gw*gh); v = new Float32Array(gw*gh); dens = new Float32Array(gw*gh);
+      imgData = new ImageData(gw, gh);
+      off = document.createElement('canvas'); off.width = gw; off.height = gh; offCtx = off.getContext('2d')!;
+    };
+
+    const draw = () => {
+      t += 0.008; const c = getCfg(), turb = c.turbulence * 0.018;
+      for (let y2 = 0; y2 < gh; y2++) for (let x2 = 0; x2 < gw; x2++) {
+        const i = x2+y2*gw, fx = x2/gw, fy = y2/gh;
+        u[i] = (u[i] + turb*(Math.sin(fx*4.7+t*1.3+fy*2.1)+Math.cos(fy*3.1+t*0.8))) * c.viscosity;
+        v[i] = (v[i] + turb*(Math.cos(fy*3.9+t*1.1+fx*1.6)+Math.sin(fx*2.8+t*0.6))) * c.viscosity;
+      }
+      const nu = new Float32Array(gw*gh), nv = new Float32Array(gw*gh);
+      advect(nu, u); advect(nv, v); u.set(nu); v.set(nv);
+      const ia = t*1.7, ix2 = Math.floor(gw/2 + Math.cos(ia)*gw*0.2), iy2 = Math.floor(gh/2 + Math.sin(ia*0.61)*gh*0.18);
+      for (let dy2 = -2; dy2 <= 2; dy2++) for (let dx2 = -2; dx2 <= 2; dx2++) {
+        const ni = (ix2+dx2)+(iy2+dy2)*gw;
+        if (ni >= 0 && ni < dens.length) dens[ni] = Math.min(3, dens[ni] + c.inkRate*0.35);
+      }
+      const nd = new Float32Array(gw*gh); advect(nd, dens);
+      for (let i = 0; i < nd.length; i++) nd[i] *= c.persistence; dens.set(nd);
+      const d = imgData.data, cm = Math.round(c.palette);
+      for (let i = 0; i < gw*gh; i++) {
+        const val = Math.min(1, dens[i]*0.55);
+        let r2=0, g2=0, b2=0;
+        if (cm===0){r2=Math.floor(val*18);g2=Math.floor(val*130);b2=Math.floor(val*255);}
+        else if (cm===1){r2=Math.floor(val*255);g2=Math.floor(val*val*160+val*40);b2=Math.floor(val*30);}
+        else{r2=Math.floor(val*210+val*val*45);g2=Math.floor(val*50);b2=Math.floor(val*230);}
+        d[i*4]=r2;d[i*4+1]=g2;d[i*4+2]=b2;d[i*4+3]=255;
+      }
+      offCtx!.putImageData(imgData, 0, 0); ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!, 0, 0, gw, gh, 0, 0, canvas.width, canvas.height);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 34. Boids ───────────────────────────────────────────────────────────────
+
+const boidsBg: BgDef = {
+  id: 'boids',
+  label: 'Boids',
+  description: 'Reynolds flocking — alignment, cohesion, and separation create emergent murmuration',
+  defaults: { count: 280, maxSpeed: 3.5, separation: 22, alignment: 65, cohesion: 90, trailLen: 12 },
+  sliders: [
+    { key: 'count',      label: 'Flock size',  min: 30,  max: 600, step: 10  },
+    { key: 'maxSpeed',   label: 'Max speed',   min: 0.5, max: 8.0, step: 0.1 },
+    { key: 'separation', label: 'Separation',  min: 5,   max: 60,  step: 1   },
+    { key: 'alignment',  label: 'Alignment',   min: 10,  max: 150, step: 5   },
+    { key: 'cohesion',   label: 'Cohesion',    min: 10,  max: 200, step: 5   },
+    { key: 'trailLen',   label: 'Trail',       min: 0,   max: 50,  step: 1   },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    type Boid = { x: number; y: number; vx: number; vy: number; trail: Array<[number,number]>; hue: number };
+    let boids: Boid[] = []; let lastCount = -1;
+
+    const initBoids = (n: number) => {
+      const cw = canvas.width, ch = canvas.height;
+      boids = Array.from({ length: n }, (_, i) => {
+        const a = Math.random()*Math.PI*2;
+        return { x: Math.random()*cw, y: Math.random()*ch, vx: Math.cos(a)*2, vy: Math.sin(a)*2, trail: [], hue: (i/n)*360 };
+      });
+      lastCount = n;
+    };
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; lastCount = -1; };
+
+    const draw = () => {
+      const c = getCfg(), n = Math.round(c.count);
+      if (n !== lastCount) initBoids(n);
+      const cw = canvas.width, ch = canvas.height;
+      ctx.fillStyle = 'rgba(8,10,14,0.28)'; ctx.fillRect(0, 0, cw, ch);
+      const sep = c.separation, ali = c.alignment, coh = c.cohesion, ms = c.maxSpeed, tl = Math.round(c.trailLen);
+      boids.forEach((b, bi) => {
+        let sx=0,sy=0,sc2=0, avx=0,avy=0,ac=0, cx2=0,cy2=0,cc=0;
+        for (let j=0;j<n;j++) {
+          if (j===bi) continue;
+          const dx=boids[j].x-b.x, dy=boids[j].y-b.y, d2=dx*dx+dy*dy;
+          if (d2<sep*sep){sx-=dx;sy-=dy;sc2++;}
+          if (d2<ali*ali){avx+=boids[j].vx;avy+=boids[j].vy;ac++;}
+          if (d2<coh*coh){cx2+=boids[j].x;cy2+=boids[j].y;cc++;}
+        }
+        const ss=0.05;
+        if(sc2>0){b.vx+=(sx/sc2)*ss*1.8;b.vy+=(sy/sc2)*ss*1.8;}
+        if(ac>0){b.vx+=(avx/ac-b.vx)*ss;b.vy+=(avy/ac-b.vy)*ss;}
+        if(cc>0){b.vx+=(cx2/cc-b.x)*ss*0.35;b.vy+=(cy2/cc-b.y)*ss*0.35;}
+        const sp=Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+        if(sp>ms){b.vx=b.vx/sp*ms;b.vy=b.vy/sp*ms;}
+        if(sp<0.8){b.vx+=(Math.random()-0.5)*0.6;b.vy+=(Math.random()-0.5)*0.6;}
+        b.trail.push([b.x,b.y]); if(b.trail.length>tl) b.trail.shift();
+        b.x+=b.vx; b.y+=b.vy;
+        if(b.x<0)b.x=cw;if(b.x>cw)b.x=0;if(b.y<0)b.y=ch;if(b.y>ch)b.y=0;
+      });
+      boids.forEach(b => {
+        if(b.trail.length>1){ctx.beginPath();b.trail.forEach(([tx,ty],i)=>i===0?ctx.moveTo(tx,ty):ctx.lineTo(tx,ty));ctx.strokeStyle=`hsla(${b.hue},70%,65%,0.45)`;ctx.lineWidth=0.8;ctx.stroke();}
+        const ang=Math.atan2(b.vy,b.vx);ctx.save();ctx.translate(b.x,b.y);ctx.rotate(ang);
+        ctx.beginPath();ctx.moveTo(5,0);ctx.lineTo(-3,2.5);ctx.lineTo(-3,-2.5);ctx.closePath();
+        ctx.fillStyle=`hsl(${b.hue},70%,72%)`;ctx.fill();ctx.restore();
+      });
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 35. Julia Set ───────────────────────────────────────────────────────────
+
+const juliaBg: BgDef = {
+  id: 'julia',
+  label: 'Julia Set',
+  description: 'Animated Julia set — c orbits the Mandelbrot boundary revealing infinite fractal depth',
+  defaults: { maxIter: 96, zoom: 1.0, orbitRadius: 0.75, orbitSpeed: 0.25, palette: 0 },
+  sliders: [
+    { key: 'maxIter',     label: 'Max iterations', min: 16,  max: 256, step: 8    },
+    { key: 'zoom',        label: 'Zoom',           min: 0.3, max: 4.0, step: 0.05 },
+    { key: 'orbitRadius', label: 'c orbit radius', min: 0.1, max: 1.5, step: 0.01 },
+    { key: 'orbitSpeed',  label: 'c orbit speed',  min: 0,   max: 1.0, step: 0.01 },
+    { key: 'palette',     label: 'Palette',        min: 0,   max: 3,   step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    let gw = 1, gh = 1, imgData = new ImageData(1,1);
+    let off: HTMLCanvasElement|null=null, offCtx: CanvasRenderingContext2D|null=null;
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height;
+      gw=Math.ceil(r.width/4); gh=Math.ceil(r.height/4);
+      imgData=new ImageData(gw,gh); off=document.createElement('canvas'); off.width=gw; off.height=gh; offCtx=off.getContext('2d')!;
+    };
+
+    const draw = () => {
+      const c = getCfg(); t += c.orbitSpeed*0.008;
+      const pulsR = c.orbitRadius*(0.72+0.22*Math.cos(t*0.29));
+      const cReal = pulsR*Math.cos(t), cImag = pulsR*Math.sin(t);
+      const maxIter = Math.round(c.maxIter), sc = 2.5/c.zoom, d = imgData.data, pal = Math.round(c.palette);
+      for (let py=0; py<gh; py++) for (let px=0; px<gw; px++) {
+        let zr=(px/gw-0.5)*sc*(gw/gh), zi=(py/gh-0.5)*sc, it=0;
+        while(it<maxIter){const zr2=zr*zr,zi2=zi*zi;if(zr2+zi2>4)break;zi=2*zr*zi+cImag;zr=zr2-zi2+cReal;it++;}
+        let val=0;
+        if(it<maxIter){const zr2=zr*zr,zi2=zi*zi;val=(it+1-Math.log(Math.log(Math.sqrt(zr2+zi2))*Math.LOG2E)*Math.LOG2E)/maxIter;val=Math.max(0,val);}
+        const idx=px+py*gw; let r2=0,g2=0,b2=0;
+        if(val>0){
+          if(pal===0){[r2,g2,b2]=hslToRgb(((val*300+240)%360)/360,0.85,0.45+val*0.35);}
+          else if(pal===1){r2=Math.floor(val*255);g2=Math.floor(val*val*200);b2=Math.floor(val<0.4?val*2.5*80:0);}
+          else if(pal===2){[r2,g2,b2]=hslToRgb((200+val*80)/360,0.75,0.2+val*0.6);}
+          else{[r2,g2,b2]=hslToRgb((40+val*40)/360,0.9,0.1+val*0.75);}
+        }
+        d[idx*4]=r2;d[idx*4+1]=g2;d[idx*4+2]=b2;d[idx*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0); ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 36. Curl Noise ──────────────────────────────────────────────────────────
+
+const curlNoiseBg: BgDef = {
+  id: 'curlnoise',
+  label: 'Curl Noise',
+  description: 'Particles follow the curl of fBm noise — divergence-free flow with infinite turbulent detail',
+  defaults: { count: 2500, noiseScale: 2.2, speed: 1.4, fadeAlpha: 0.96, hue: 195, octaves: 3 },
+  sliders: [
+    { key: 'count',      label: 'Particles',  min: 200,  max: 6000, step: 100  },
+    { key: 'noiseScale', label: 'Scale',      min: 0.5,  max: 5.0,  step: 0.1  },
+    { key: 'speed',      label: 'Speed',      min: 0.1,  max: 5.0,  step: 0.1  },
+    { key: 'fadeAlpha',  label: 'Trail fade', min: 0.8,  max: 1.0,  step: 0.005 },
+    { key: 'hue',        label: 'Hue',        min: 0,    max: 360,  step: 1    },
+    { key: 'octaves',    label: 'Octaves',    min: 1,    max: 5,    step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    let px2: Float32Array, py2: Float32Array;
+    let lastN = -1;
+
+    const h2 = (n: number) => { const x = Math.sin(n)*43758.5453; return x-Math.floor(x); };
+    const noise2 = (x: number, y: number) => {
+      const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);
+      return h2(ix+iy*57)*(1-ux)*(1-uy)+h2(ix+1+iy*57)*ux*(1-uy)+h2(ix+(iy+1)*57)*(1-ux)*uy+h2(ix+1+(iy+1)*57)*ux*uy;
+    };
+    const fbm2 = (x: number, y: number, oct: number) => { let v=0,a=0.5,f=1; for(let i=0;i<oct;i++){v+=noise2(x*f+i*3.7,y*f+i*1.3)*a;f*=2;a*=0.5;} return v; };
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height; ctx.clearRect(0,0,r.width,r.height); lastN=-1; };
+    const initP = (n: number) => { px2=new Float32Array(n); py2=new Float32Array(n); for(let i=0;i<n;i++){px2[i]=Math.random()*canvas.width;py2[i]=Math.random()*canvas.height;} lastN=n; };
+
+    const draw = () => {
+      t += 0.003; const c = getCfg(), n = Math.round(c.count);
+      if(n!==lastN) initP(n);
+      const cw=canvas.width, ch=canvas.height, spd=c.speed*3, sc=c.noiseScale, oct=Math.round(c.octaves);
+      ctx.fillStyle=`rgba(8,10,14,${(1-c.fadeAlpha).toFixed(3)})`; ctx.fillRect(0,0,cw,ch);
+      const eps=0.002;
+      for(let i=0;i<n;i++){
+        const nx=px2[i]/cw*sc, ny=py2[i]/ch*sc;
+        const vx=(fbm2(nx,ny+t+eps,oct)-fbm2(nx,ny+t-eps,oct))/(2*eps)*spd;
+        const vy=-(fbm2(nx+eps,ny+t,oct)-fbm2(nx-eps,ny+t,oct))/(2*eps)*spd;
+        const ox=px2[i], oy=py2[i];
+        px2[i]+=vx; py2[i]+=vy;
+        if(px2[i]<0||px2[i]>cw||py2[i]<0||py2[i]>ch){px2[i]=Math.random()*cw;py2[i]=Math.random()*ch;continue;}
+        const spd2=Math.sqrt(vx*vx+vy*vy), hue=(c.hue+spd2*60)%360;
+        ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(px2[i],py2[i]);
+        ctx.strokeStyle=`hsla(${hue},75%,65%,0.55)`;ctx.lineWidth=0.7;ctx.stroke();
+      }
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 37. Clifford Attractor ──────────────────────────────────────────────────
+
+const cliffordBg: BgDef = {
+  id: 'clifford',
+  label: 'Clifford',
+  description: 'Clifford strange attractor — x\'=sin(ay)+c·cos(ax), y\'=sin(bx)+d·cos(by)',
+  defaults: { a: -1.4, b: 1.6, c: 1.0, d: 0.7, density: 6000, brightness: 0.5, hue: 280 },
+  sliders: [
+    { key: 'a',          label: 'a',          min: -3,   max: 3,     step: 0.01 },
+    { key: 'b',          label: 'b',          min: -3,   max: 3,     step: 0.01 },
+    { key: 'c',          label: 'c',          min: -3,   max: 3,     step: 0.01 },
+    { key: 'd',          label: 'd',          min: -3,   max: 3,     step: 0.01 },
+    { key: 'density',    label: 'Density',    min: 500,  max: 20000, step: 500  },
+    { key: 'brightness', label: 'Brightness', min: 0.1,  max: 1.0,   step: 0.01 },
+    { key: 'hue',        label: 'Hue',        min: 0,    max: 360,   step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, cx2 = 0.1, cy2 = 0.1;
+    let lastA = NaN, lastB = NaN, lastC = NaN, lastD = NaN;
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height; lastA=NaN; };
+    const draw = () => {
+      const c = getCfg(); const cw=canvas.width, ch=canvas.height;
+      if(c.a!==lastA||c.b!==lastB||c.c!==lastC||c.d!==lastD){ctx.clearRect(0,0,cw,ch);cx2=0.1;cy2=0.1;lastA=c.a;lastB=c.b;lastC=c.c;lastD=c.d;}
+      const iters=Math.floor(c.density), sc=Math.min(cw,ch)*0.19, ox=cw/2, oy=ch/2;
+      ctx.fillStyle=`hsla(${c.hue},80%,65%,${c.brightness*0.018})`;
+      for(let i=0;i<iters;i++){
+        const nx=Math.sin(c.a*cy2)+c.c*Math.cos(c.a*cx2), ny=Math.sin(c.b*cx2)+c.d*Math.cos(c.b*cy2);
+        cx2=nx; cy2=ny;
+        const px=Math.round(ox+cx2*sc), py=Math.round(oy+cy2*sc);
+        if(px>=0&&px<cw&&py>=0&&py<ch) ctx.fillRect(px,py,1,1);
+      }
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 38. Game of Life ────────────────────────────────────────────────────────
+
+const gameOfLifeBg: BgDef = {
+  id: 'gameoflife',
+  label: 'Game of Life',
+  description: 'Conway\'s B3/S23 cellular automaton — age-based luminosity reveals generational history',
+  defaults: { cellSize: 7, speed: 6, glowBirth: 0.7, palette: 0, initDensity: 0.32 },
+  sliders: [
+    { key: 'cellSize',   label: 'Cell size',    min: 3,   max: 18,  step: 1    },
+    { key: 'speed',      label: 'Frames/step',  min: 1,   max: 30,  step: 1    },
+    { key: 'glowBirth',  label: 'Birth glow',   min: 0,   max: 1.0, step: 0.05 },
+    { key: 'palette',    label: 'Palette',      min: 0,   max: 2,   step: 1    },
+    { key: 'initDensity',label: 'Density',      min: 0.1, max: 0.6, step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, frame = 0;
+    let gw = 1, gh = 1;
+    let cells: Uint8Array, ages: Uint16Array;
+    let lastCS = -1, lastDens = -1;
+
+    const initGrid = (cs: number, density: number) => {
+      gw=Math.floor(canvas.width/cs); gh=Math.floor(canvas.height/cs);
+      cells=new Uint8Array(gw*gh); ages=new Uint16Array(gw*gh);
+      for(let i=0;i<gw*gh;i++) cells[i]=Math.random()<density?1:0;
+      lastCS=cs; lastDens=density;
+    };
+
+    const step = () => {
+      const next=new Uint8Array(gw*gh);
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){
+        let n=0;
+        for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;n+=cells[((x+dx+gw)%gw)+((y+dy+gh)%gh)*gw];}
+        const i=x+y*gw, alive=cells[i];
+        next[i]=(alive&&(n===2||n===3))||(!alive&&n===3)?1:0;
+        ages[i]=next[i]?(alive?Math.min(1000,ages[i]+1):0):0;
+      }
+      cells.set(next);
+    };
+
+    const resize = () => { const r=canvas.getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height; lastCS=-1; };
+
+    const draw = () => {
+      frame++; const c=getCfg(), cs=Math.round(c.cellSize);
+      if(cs!==lastCS||c.initDensity!==lastDens) initGrid(cs,c.initDensity);
+      if(frame%Math.max(1,Math.round(c.speed))===0) step();
+      ctx.fillStyle='rgba(8,10,14,0.85)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      const pal=Math.round(c.palette);
+      for(let y=0;y<gh;y++) for(let x=0;x<gw;x++){
+        const i=x+y*gw; if(!cells[i]) continue;
+        const age=ages[i], ageT=Math.min(1,age/30);
+        let col='';
+        if(pal===0) col=`hsl(${200+ageT*50},85%,${60-ageT*15}%)`;
+        else if(pal===1) col=ageT<0.4?`hsl(${130-ageT*80},80%,65%)`:`hsl(45,90%,${70-ageT*15}%)`;
+        else col=`hsl(${270+ageT*70},80%,${58+ageT*12}%)`;
+        ctx.fillStyle=col; ctx.fillRect(x*cs,y*cs,cs-1,cs-1);
+        if(c.glowBirth>0&&age<4){ctx.fillStyle=`rgba(255,255,255,${c.glowBirth*(1-age/4)*0.35})`;ctx.fillRect(x*cs-1,y*cs-1,cs+1,cs+1);}
+      }
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 39. Newton Fractal ───────────────────────────────────────────────────────
+
+const newtonFractalBg: BgDef = {
+  id: 'newtonfractal',
+  label: 'Newton Fractal',
+  description: 'Newton\'s method basins of attraction — z³=1 exposes infinite territory boundaries',
+  defaults: { maxIter: 40, zoom: 1.0, drift: 0.08, palette: 0, shading: 0.65 },
+  sliders: [
+    { key: 'maxIter', label: 'Max iter',     min: 8,   max: 100, step: 2    },
+    { key: 'zoom',    label: 'Zoom',         min: 0.3, max: 5.0, step: 0.1  },
+    { key: 'drift',   label: 'Drift speed',  min: 0,   max: 0.4, step: 0.01 },
+    { key: 'palette', label: 'Palette',      min: 0,   max: 2,   step: 1    },
+    { key: 'shading', label: 'Depth shade',  min: 0,   max: 1.0, step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    let gw=1,gh=1,imgData=new ImageData(1,1);
+    let off: HTMLCanvasElement|null=null, offCtx: CanvasRenderingContext2D|null=null;
+
+    const roots=[[1,0],[Math.cos(2*Math.PI/3),Math.sin(2*Math.PI/3)],[Math.cos(4*Math.PI/3),Math.sin(4*Math.PI/3)]];
+
+    const resize = () => {
+      const r=canvas.getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height;
+      gw=Math.ceil(r.width/4); gh=Math.ceil(r.height/4);
+      imgData=new ImageData(gw,gh); off=document.createElement('canvas'); off.width=gw; off.height=gh; offCtx=off.getContext('2d')!;
+    };
+
+    const draw = () => {
+      const c=getCfg(); t+=c.drift*0.005;
+      const maxIter=Math.round(c.maxIter), sc=2.0/c.zoom, d=imgData.data, pal=Math.round(c.palette);
+      const panX=Math.cos(t*0.31)*0.08, panY=Math.sin(t*0.19)*0.08;
+      const pals=[[[ 0.2,0.55,1.0],[0.15,0.9,0.3],[1.0,0.15,0.35]],[[ 1.0,0.7,0.0],[0.75,0.1,0.9],[0.0,0.85,0.8]],[[ 0.95,0.45,0.1],[0.1,0.6,0.95],[0.65,0.9,0.1]]];
+      for(let py=0;py<gh;py++) for(let px=0;px<gw;px++){
+        let zr=(px/gw-0.5)*sc*(gw/gh)+panX, zi=(py/gh-0.5)*sc+panY, it=0;
+        for(;it<maxIter;it++){
+          const zr2=zr*zr-zi*zi, zi2=2*zr*zi;
+          const zr3=zr*zr2-zi*zi2, zi3=zr*zi2+zi*zr2;
+          const nr=2*zr3+1, ni=2*zi3;
+          const dr=3*zr2, di=3*zi2;
+          const den=dr*dr+di*di; if(den<1e-10) break;
+          const dz_r=(nr*dr+ni*di)/den-zr, dz_i=(ni*dr-nr*di)/den-zi;
+          zr+=dz_r; zi+=dz_i;
+          if(dz_r*dz_r+dz_i*dz_i<1e-12) break;
+        }
+        let closest=0, minD=Infinity;
+        for(let ri=0;ri<3;ri++){const dr2=zr-roots[ri][0],di2=zi-roots[ri][1];const d2=dr2*dr2+di2*di2;if(d2<minD){minD=d2;closest=ri;}}
+        const shade=1-(it/maxIter)*c.shading;
+        const pc=pals[pal][closest];
+        const idx=px+py*gw;
+        d[idx*4]=Math.floor(pc[0]*shade*255); d[idx*4+1]=Math.floor(pc[1]*shade*255); d[idx*4+2]=Math.floor(pc[2]*shade*255); d[idx*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0); ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 40. Torus Knot ──────────────────────────────────────────────────────────
+
+const torusKnotBg: BgDef = {
+  id: 'torusknot',
+  label: 'Torus Knot',
+  description: '3D torus knot rotating in space — parametric geometry wrapped into living sculpture',
+  defaults: { p: 2, q: 3, tubeR: 0.4, speed: 0.3, thickness: 3.0, glow: 0.65 },
+  sliders: [
+    { key: 'p',         label: 'p (wraps)',    min: 1,   max: 7,   step: 1    },
+    { key: 'q',         label: 'q (loops)',    min: 2,   max: 8,   step: 1    },
+    { key: 'tubeR',     label: 'Tube radius',  min: 0.1, max: 1.0, step: 0.05 },
+    { key: 'speed',     label: 'Rotation',     min: 0,   max: 1.5, step: 0.05 },
+    { key: 'thickness', label: 'Line width',   min: 0.5, max: 6.0, step: 0.25 },
+    { key: 'glow',      label: 'Glow',         min: 0,   max: 1.0, step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, rx = 0.2, ry = 0;
+
+    const resize = () => { const r=canvas.getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height; };
+
+    const project = (x: number, y: number, z: number, cw: number, ch: number): [number,number,number] => {
+      const fov = Math.min(cw,ch)*1.8, d = fov/(fov+z*0.6);
+      return [cw/2+x*d, ch/2+y*d, z];
+    };
+
+    const draw = () => {
+      const c = getCfg(); rx += c.speed*0.006; ry += c.speed*0.004;
+      const cw=canvas.width, ch=canvas.height;
+      ctx.fillStyle='rgba(8,10,14,0.22)'; ctx.fillRect(0,0,cw,ch);
+      const p=Math.round(c.p), q=Math.round(c.q), R=2, r=c.tubeR;
+      const steps=600, sc=Math.min(cw,ch)*0.15;
+      const pts: Array<[number,number,number]> = [];
+      for(let i=0;i<=steps;i++){
+        const t2=(i/steps)*Math.PI*2*p;
+        let x=( R+r*Math.cos(q*t2/p))*Math.cos(t2);
+        let y=( R+r*Math.cos(q*t2/p))*Math.sin(t2);
+        let z=r*Math.sin(q*t2/p);
+        // Rotate y-axis
+        const cosy=Math.cos(ry), siny=Math.sin(ry);
+        const x2=x*cosy+z*siny; z=-x*siny+z*cosy; x=x2;
+        // Rotate x-axis
+        const cosx=Math.cos(rx), sinx=Math.sin(rx);
+        const y2=y*cosx-z*sinx; z=y*sinx+z*cosx; y=y2;
+        pts.push([x*sc, y*sc, z*sc]);
+      }
+      // Sort segments by avg z
+      const segs: Array<{z:number,i:number}> = [];
+      for(let i=0;i<steps;i++) segs.push({z:(pts[i][2]+pts[i+1][2])/2,i});
+      segs.sort((a,b)=>a.z-b.z);
+      segs.forEach(({i,z:sz}) => {
+        const [px1,py1] = project(pts[i][0],pts[i][1],pts[i][2],cw,ch);
+        const [px2,py2] = project(pts[i+1][0],pts[i+1][1],pts[i+1][2],cw,ch);
+        const depth=(sz+sc*2)/(sc*4), hue=((i/steps)*360+120)%360;
+        const alpha=0.4+depth*0.55;
+        if(c.glow>0){ctx.beginPath();ctx.moveTo(px1,py1);ctx.lineTo(px2,py2);ctx.strokeStyle=`hsla(${hue},85%,70%,${c.glow*alpha*0.35})`;ctx.lineWidth=c.thickness*3;ctx.stroke();}
+        ctx.beginPath();ctx.moveTo(px1,py1);ctx.lineTo(px2,py2);
+        ctx.strokeStyle=`hsla(${hue},90%,72%,${alpha})`; ctx.lineWidth=c.thickness; ctx.stroke();
+      });
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 41. N-Body Gravity ───────────────────────────────────────────────────────
+
+const nBodyBg: BgDef = {
+  id: 'nbody',
+  label: 'N-Body',
+  description: 'Newtonian gravitational simulation — bodies spiral, orbit, and slingshot through space',
+  defaults: { bodies: 7, trailLen: 280, softening: 12, timeStep: 0.15, massRange: 0.7, glow: 0.6 },
+  sliders: [
+    { key: 'bodies',    label: 'Bodies',     min: 2,   max: 14,   step: 1   },
+    { key: 'trailLen',  label: 'Trail',      min: 20,  max: 600,  step: 10  },
+    { key: 'softening', label: 'Softening',  min: 2,   max: 40,   step: 1   },
+    { key: 'timeStep',  label: 'Time step',  min: 0.02,max: 0.5,  step: 0.01 },
+    { key: 'massRange', label: 'Mass range', min: 0,   max: 1.0,  step: 0.05 },
+    { key: 'glow',      label: 'Glow',       min: 0,   max: 1.0,  step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    type Body = { x:number; y:number; vx:number; vy:number; m:number; hue:number; trail:Array<[number,number]> };
+    let bodies: Body[] = []; let lastN = -1;
+
+    const initBodies = (n: number, mr: number) => {
+      const cw=canvas.width, ch=canvas.height, cx=cw/2, cy=ch/2, sc=Math.min(cw,ch)*0.22;
+      bodies=Array.from({length:n},(_,i)=>{
+        const a=(i/n)*Math.PI*2, r=sc*(0.3+Math.random()*0.7);
+        const m=0.3+Math.random()*mr*1.5+(!mr?0:0);
+        const spd=Math.sqrt(n*m/r)*0.4;
+        return {x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,vx:-Math.sin(a)*spd,vy:Math.cos(a)*spd,m,hue:(i/n)*360,trail:[]};
+      });
+      lastN=n;
+    };
+
+    const resize = () => { const r=canvas.getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height; lastN=-1; };
+
+    const draw = () => {
+      const c=getCfg(), n=Math.round(c.bodies);
+      if(n!==lastN) initBodies(n,c.massRange);
+      const cw=canvas.width, ch=canvas.height, trLen=Math.round(c.trailLen), soft2=c.softening*c.softening;
+      ctx.fillStyle='rgba(8,10,14,0.18)'; ctx.fillRect(0,0,cw,ch);
+
+      // Compute accelerations
+      const ax=new Float32Array(n), ay=new Float32Array(n);
+      for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+        const dx=bodies[j].x-bodies[i].x, dy=bodies[j].y-bodies[i].y;
+        const dist2=dx*dx+dy*dy+soft2, dist=Math.sqrt(dist2);
+        const f=1/(dist2*dist);
+        ax[i]+=bodies[j].m*dx*f*600; ay[i]+=bodies[j].m*dy*f*600;
+        ax[j]-=bodies[i].m*dx*f*600; ay[j]-=bodies[i].m*dy*f*600;
+      }
+      bodies.forEach((b,i)=>{
+        b.vx+=ax[i]*c.timeStep; b.vy+=ay[i]*c.timeStep;
+        b.trail.push([b.x,b.y]); if(b.trail.length>trLen) b.trail.shift();
+        b.x+=b.vx*c.timeStep; b.y+=b.vy*c.timeStep;
+        // Soft boundary — reflect if far off screen
+        if(b.x<-cw||b.x>2*cw||b.y<-ch||b.y>2*ch){b.vx*=-0.5;b.vy*=-0.5;b.x=Math.max(-cw/2,Math.min(cw*1.5,b.x));b.y=Math.max(-ch/2,Math.min(ch*1.5,b.y));}
+      });
+
+      bodies.forEach(b=>{
+        if(b.trail.length>1){
+          ctx.beginPath(); b.trail.forEach(([tx,ty],i)=>i===0?ctx.moveTo(tx,ty):ctx.lineTo(tx,ty));
+          ctx.strokeStyle=`hsla(${b.hue},75%,65%,0.5)`; ctx.lineWidth=0.8; ctx.stroke();
+        }
+        const r2=3+b.m*3, grd=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,r2*(1+c.glow*4));
+        grd.addColorStop(0,`hsl(${b.hue},90%,90%)`); grd.addColorStop(0.3,`hsla(${b.hue},80%,65%,0.6)`); grd.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.beginPath(); ctx.arc(b.x,b.y,r2*(1+c.glow*4),0,Math.PI*2); ctx.fillStyle=grd; ctx.fill();
+        ctx.beginPath(); ctx.arc(b.x,b.y,r2,0,Math.PI*2); ctx.fillStyle=`hsl(${b.hue},90%,85%)`; ctx.fill();
+      });
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 42. Cymatics ────────────────────────────────────────────────────────────
+
+const cymaticsBg: BgDef = {
+  id: 'cymatics',
+  label: 'Cymatics',
+  description: 'Chladni figures — standing wave nodal patterns morph between resonance modes',
+  defaults: { modeM: 3, modeN: 4, morphSpeed: 0.4, colorMode: 0, nodeWidth: 0.08, zoom: 1.0 },
+  sliders: [
+    { key: 'modeM',     label: 'Mode m',      min: 1,   max: 10,  step: 1    },
+    { key: 'modeN',     label: 'Mode n',      min: 1,   max: 10,  step: 1    },
+    { key: 'morphSpeed',label: 'Morph speed', min: 0,   max: 2.0, step: 0.05 },
+    { key: 'colorMode', label: 'Palette',     min: 0,   max: 2,   step: 1    },
+    { key: 'nodeWidth', label: 'Node width',  min: 0.01,max: 0.3, step: 0.01 },
+    { key: 'zoom',      label: 'Zoom',        min: 0.5, max: 2.5, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    let gw=1,gh=1,imgData=new ImageData(1,1);
+    let off: HTMLCanvasElement|null=null, offCtx: CanvasRenderingContext2D|null=null;
+
+    const resize = () => {
+      const r=canvas.getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height;
+      gw=Math.ceil(r.width/5); gh=Math.ceil(r.height/5);
+      imgData=new ImageData(gw,gh); off=document.createElement('canvas'); off.width=gw; off.height=gh; offCtx=off.getContext('2d')!;
+    };
+
+    const draw = () => {
+      const c=getCfg(); t+=c.morphSpeed*0.006;
+      // Smoothly interpolate mode parameters
+      const m1=Math.round(c.modeM), n1=Math.round(c.modeN);
+      const m2=(m1%10)+1, n2=(n1%10)+1;
+      const blend=(Math.sin(t)*0.5+0.5);
+      const ma=m1+(m2-m1)*blend, na=n1+(n2-n1)*blend;
+      const d=imgData.data, nw=c.nodeWidth, sc=c.zoom, cm=Math.round(c.colorMode);
+      for(let py=0;py<gh;py++) for(let px=0;px<gw;px++){
+        const x=((px/gw)-0.5)*sc*2*Math.PI, y=((py/gh)-0.5)*sc*2*Math.PI;
+        const f=Math.cos(ma*x)*Math.cos(na*y)-Math.cos(na*x)*Math.cos(ma*y);
+        const af=Math.abs(f);
+        const onNode=af<nw;
+        const intensity=onNode?0:Math.min(1,(af-nw)*3);
+        const idx=px+py*gw;
+        let r2=0,g2=0,b2=0;
+        if(cm===0){r2=Math.floor(intensity*8);g2=Math.floor(intensity*100);b2=Math.floor(intensity*220+30);}
+        else if(cm===1){const h=(af*180+t*30)%360;[r2,g2,b2]=hslToRgb(h/360,0.8,intensity*0.65);}
+        else{r2=Math.floor(intensity*210);g2=Math.floor(intensity*180);b2=Math.floor(intensity*60);}
+        d[idx*4]=r2;d[idx*4+1]=g2;d[idx*4+2]=b2;d[idx*4+3]=255;
+      }
+      offCtx!.putImageData(imgData,0,0); ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(off!,0,0,gw,gh,0,0,canvas.width,canvas.height);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
@@ -2387,6 +3024,8 @@ const BACKGROUNDS: BgDef[] = [
   pendulumBg, wireframeBg, harmonographBg, neonGridBg,
   reactionDiffBg, physarumBg, doublePendulumBg, lorenzBg, domainWarpBg,
   galaxyBg, dlaBg, fractalTreeBg, magneticFieldBg, ifsFractalBg,
+  fluidBg, boidsBg, juliaBg, curlNoiseBg, cliffordBg,
+  gameOfLifeBg, newtonFractalBg, torusKnotBg, nBodyBg, cymaticsBg,
 ];
 
 // ─── persistence ──────────────────────────────────────────────────────────────
