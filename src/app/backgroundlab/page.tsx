@@ -4230,13 +4230,7 @@ const ambientGlowBg: BgDef = {
       return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
     };
 
-    const lerpColor = (a: string, b: string, t: number) => {
-      const [ar, ag, ab] = hexToRgb(a), [br, bg, bb] = hexToRgb(b);
-      return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
-    };
-
-    const blob = (bx: number, by: number, r: number, color: string, alpha: number) => {
-      const [ri, gi, bi] = hexToRgb(color);
+    const blob = (bx: number, by: number, r: number, [ri,gi,bi]: [number,number,number], alpha: number) => {
       const grad = ctx.createRadialGradient(bx, by, 0, bx, by, r);
       grad.addColorStop(0,   `rgba(${ri},${gi},${bi},${alpha})`);
       grad.addColorStop(0.45,`rgba(${ri},${gi},${bi},${alpha * 0.45})`);
@@ -4265,7 +4259,10 @@ const ambientGlowBg: BgDef = {
         lerpT = 0;
         tgtColors = [...BASE_COLORS].sort(() => Math.random() - 0.5);
       }
-      const live = curColors.map((a, i) => lerpColor(a, tgtColors[i], lerpT));
+      const live: [number,number,number][] = curColors.map((a, i) => {
+        const [ar,ag,ab] = hexToRgb(a), [br,bg,bb] = hexToRgb(tgtColors[i]);
+        return [Math.round(ar+(br-ar)*lerpT), Math.round(ag+(bg-ag)*lerpT), Math.round(ab+(bb-ab)*lerpT)];
+      });
 
       ctx.clearRect(0, 0, cw, ch);
       ctx.fillStyle = '#07070f';
