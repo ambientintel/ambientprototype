@@ -581,11 +581,347 @@ const gradientMeshBg: BgDef = {
   },
 };
 
+// ─── 9. Matrix Rain ──────────────────────────────────────────────────────────
+
+const matrixBg: BgDef = {
+  id: 'matrix',
+  label: 'Matrix Rain',
+  description: 'Cascading character streams — katakana and digits fall through the void',
+  defaults: { speed: 0.8, density: 0.7, charSize: 14, hue: 120, trailLength: 0.6, glowIntensity: 0.8 },
+  sliders: [
+    { key: 'speed',         label: 'Fall speed',   min: 0.1, max: 3.0,  step: 0.05 },
+    { key: 'density',       label: 'Density',       min: 0.1, max: 1.0,  step: 0.01 },
+    { key: 'charSize',      label: 'Char size',     min: 8,   max: 32,   step: 1    },
+    { key: 'hue',           label: 'Color hue',     min: 0,   max: 360,  step: 1    },
+    { key: 'trailLength',   label: 'Trail length',  min: 0,   max: 1.0,  step: 0.01 },
+    { key: 'glowIntensity', label: 'Glow',          min: 0,   max: 1.0,  step: 0.01 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    type Col = { y: number; acc: number; speed: number; char: string; active: boolean };
+    let cols: Col[] = [], lastCs = -1;
+
+    const initCols = (cs: number) => {
+      const n = Math.floor(canvas.width / cs);
+      const density = getCfg().density;
+      cols = Array.from({ length: n }, () => ({
+        y: -Math.floor(Math.random() * 40),
+        acc: Math.random(),
+        speed: 0.4 + Math.random() * 1.2,
+        char: CHARS[Math.floor(Math.random() * CHARS.length)],
+        active: Math.random() < density,
+      }));
+      lastCs = cs;
+    };
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; initCols(Math.round(getCfg().charSize)); };
+
+    const draw = () => {
+      const c = getCfg(); const cs = Math.round(c.charSize); const w = canvas.width, h = canvas.height;
+      if (cs !== lastCs) initCols(cs);
+
+      ctx.fillStyle = `rgba(8,10,14,${0.05 + (1 - c.trailLength) * 0.5})`;
+      ctx.fillRect(0, 0, w, h);
+      ctx.font = `${cs}px monospace`;
+
+      cols.forEach((col, i) => {
+        if (!col.active) return;
+        col.acc += c.speed * col.speed * 0.04;
+        if (col.acc >= 1) {
+          col.acc -= 1;
+          col.char = CHARS[Math.floor(Math.random() * CHARS.length)];
+          col.y++;
+          if (col.y * cs > h + cs * 6) {
+            col.y = -Math.floor(Math.random() * 30);
+            col.active = Math.random() < c.density;
+          }
+        }
+        const x = i * cs, y = col.y * cs;
+        ctx.shadowBlur = c.glowIntensity * 14;
+        ctx.shadowColor = `hsla(${c.hue},100%,65%,1)`;
+        ctx.fillStyle = `rgba(255,255,255,0.95)`;
+        ctx.fillText(col.char, x, y);
+        ctx.shadowBlur = 0;
+      });
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 10. Bokeh ───────────────────────────────────────────────────────────────
+
+const bokehBg: BgDef = {
+  id: 'bokeh',
+  label: 'Bokeh',
+  description: 'Soft defocused light orbs drifting with depth-of-field glow',
+  defaults: { count: 35, speed: 0.3, size: 1.0, opacity: 0.6, saturation: 0.7, hueShift: 200, hueSpread: 120 },
+  sliders: [
+    { key: 'count',      label: 'Orbs',        min: 5,   max: 80,  step: 1    },
+    { key: 'speed',      label: 'Speed',        min: 0,   max: 1.5, step: 0.01 },
+    { key: 'size',       label: 'Size',         min: 0.2, max: 3.0, step: 0.05 },
+    { key: 'opacity',    label: 'Opacity',      min: 0.1, max: 1.0, step: 0.01 },
+    { key: 'saturation', label: 'Saturation',   min: 0,   max: 1.0, step: 0.01 },
+    { key: 'hueShift',   label: 'Base hue',     min: 0,   max: 360, step: 1    },
+    { key: 'hueSpread',  label: 'Hue spread',   min: 0,   max: 360, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    type Orb = { x: number; y: number; vx: number; vy: number; r: number; hue: number; phase: number; ps: number };
+    let orbs: Orb[] = [], lastCount = -1;
+
+    const initOrbs = (n: number) => {
+      const c = getCfg();
+      orbs = Array.from({ length: n }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        return { x: Math.random() * canvas.width, y: Math.random() * canvas.height, vx: Math.cos(angle) * 0.4, vy: Math.sin(angle) * 0.4, r: 30 + Math.random() * 90, hue: (c.hueShift + Math.random() * c.hueSpread) % 360, phase: Math.random() * Math.PI * 2, ps: 0.003 + Math.random() * 0.007 };
+      });
+      lastCount = n;
+    };
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      const n = Math.floor(c.count);
+      if (n !== lastCount) initOrbs(n);
+      ctx.clearRect(0, 0, w, h);
+      ctx.save(); ctx.globalCompositeOperation = 'screen';
+
+      orbs.forEach(o => {
+        o.phase += o.ps;
+        const r = o.r * (0.88 + 0.12 * Math.sin(o.phase)) * c.size;
+        const alpha = c.opacity * (0.25 + 0.15 * Math.sin(o.phase * 0.7));
+        const sat = Math.round(c.saturation * 80);
+
+        for (let layer = 0; layer < 3; layer++) {
+          const lr = r * (1 + layer * 0.6);
+          const la = alpha * (1 - layer * 0.28);
+          const g = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, lr);
+          g.addColorStop(0, `hsla(${o.hue},${sat}%,65%,${la})`);
+          g.addColorStop(0.45, `hsla(${o.hue},${sat}%,55%,${la * 0.4})`);
+          g.addColorStop(1, `hsla(${o.hue},${sat}%,50%,0)`);
+          ctx.beginPath(); ctx.arc(o.x, o.y, lr, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+        }
+
+        o.x += o.vx * c.speed; o.y += o.vy * c.speed;
+        if (o.x < -r * 2) o.x = w + r * 2; if (o.x > w + r * 2) o.x = -r * 2;
+        if (o.y < -r * 2) o.y = h + r * 2; if (o.y > h + r * 2) o.y = -r * 2;
+      });
+
+      ctx.restore();
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); initOrbs(Math.floor(getCfg().count)); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 11. Plasma ──────────────────────────────────────────────────────────────
+
+const plasmaBg: BgDef = {
+  id: 'plasma',
+  label: 'Plasma',
+  description: 'Demoscene classic — overlapping sine waves create shifting color fields',
+  defaults: { speed: 0.5, scale: 4.0, complexity: 4, hueShift: 0, saturation: 0.9, brightness: 0.55 },
+  sliders: [
+    { key: 'speed',      label: 'Speed',       min: 0,   max: 2.0, step: 0.01 },
+    { key: 'scale',      label: 'Scale',        min: 1,   max: 12,  step: 0.1  },
+    { key: 'complexity', label: 'Complexity',   min: 1,   max: 6,   step: 1    },
+    { key: 'hueShift',   label: 'Hue shift',   min: 0,   max: 360, step: 1    },
+    { key: 'saturation', label: 'Saturation',   min: 0,   max: 1.0, step: 0.01 },
+    { key: 'brightness', label: 'Brightness',   min: 0.1, max: 0.8, step: 0.01 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    let off: HTMLCanvasElement | null = null, offCtx: CanvasRenderingContext2D | null = null;
+
+    const hslToRgb = (h: number, s: number, l: number) => {
+      const c2 = (1 - Math.abs(2 * l - 1)) * s, hh = h / 60;
+      const x = c2 * (1 - Math.abs(hh % 2 - 1)), m = l - c2 / 2;
+      let r = 0, g = 0, b = 0;
+      if (hh < 1) { r = c2; g = x; } else if (hh < 2) { r = x; g = c2; }
+      else if (hh < 3) { g = c2; b = x; } else if (hh < 4) { g = x; b = c2; }
+      else if (hh < 5) { r = x; b = c2; } else { r = c2; b = x; }
+      return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height;
+      off = document.createElement('canvas');
+      off.width = Math.ceil(r.width / 5); off.height = Math.ceil(r.height / 5);
+      offCtx = off.getContext('2d')!;
+    };
+
+    const draw = () => {
+      const c = getCfg(); t += c.speed * 0.018;
+      if (!off || !offCtx) { animId = requestAnimationFrame(draw); return; }
+      const ow = off.width, oh = off.height;
+      const img = offCtx.createImageData(ow, oh); const data = img.data;
+      const layers = Math.floor(c.complexity), sc = c.scale * 0.018;
+
+      for (let y = 0; y < oh; y++) for (let x = 0; x < ow; x++) {
+        let v = 0;
+        if (layers >= 1) v += Math.sin(x * sc + t);
+        if (layers >= 2) v += Math.sin(y * sc + t * 0.7);
+        if (layers >= 3) v += Math.sin((x + y) * sc * 0.7 + t * 1.1);
+        if (layers >= 4) v += Math.sin(Math.sqrt((x - ow / 2) ** 2 + (y - oh / 2) ** 2) * sc * 0.8 + t * 0.6);
+        if (layers >= 5) v += Math.sin(x * sc * 0.5 - y * sc * 0.3 + t * 1.4);
+        if (layers >= 6) v += Math.sin(Math.sqrt(x * x + y * y) * sc * 0.4 - t * 0.9);
+        v /= layers;
+
+        const hue = ((v * 180 + c.hueShift + t * 25) % 360 + 360) % 360;
+        const [r2, g2, b2] = hslToRgb(hue, c.saturation, c.brightness);
+        const i = (y * ow + x) * 4;
+        data[i] = r2; data[i + 1] = g2; data[i + 2] = b2; data[i + 3] = 255;
+      }
+      offCtx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 12. Ripple ──────────────────────────────────────────────────────────────
+
+const rippleBg: BgDef = {
+  id: 'ripple',
+  label: 'Ripple',
+  description: 'Concentric wave rings expanding from auto-spawned epicenters',
+  defaults: { spawnRate: 0.4, speed: 1.2, ringCount: 4, opacity: 0.5, lineWidth: 1.0, hue: 195, hueSpread: 60 },
+  sliders: [
+    { key: 'spawnRate', label: 'Spawn rate', min: 0.05, max: 1.0,  step: 0.01 },
+    { key: 'speed',     label: 'Expand speed', min: 0.2, max: 4.0, step: 0.1  },
+    { key: 'ringCount', label: 'Rings',       min: 1,   max: 8,    step: 1    },
+    { key: 'opacity',   label: 'Opacity',      min: 0.1, max: 1.0,  step: 0.01 },
+    { key: 'lineWidth', label: 'Line width',  min: 0.3, max: 4.0,  step: 0.1  },
+    { key: 'hue',       label: 'Base hue',    min: 0,   max: 360,  step: 1    },
+    { key: 'hueSpread', label: 'Hue spread',  min: 0,   max: 180,  step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    type Ripple = { x: number; y: number; age: number; maxAge: number; hue: number };
+    let ripples: Ripple[] = [], spawnTimer = 0;
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      spawnTimer += c.spawnRate * 0.02;
+      if (spawnTimer >= 1) {
+        spawnTimer -= 1;
+        ripples.push({ x: Math.random() * w, y: Math.random() * h, age: 0, maxAge: 180 + Math.random() * 80, hue: (c.hue + Math.random() * c.hueSpread - c.hueSpread / 2 + 360) % 360 });
+      }
+
+      const maxR = Math.max(w, h) * 0.55;
+      ripples = ripples.filter(rp => rp.age < rp.maxAge);
+      ripples.forEach(rp => {
+        rp.age += c.speed;
+        const prog = rp.age / rp.maxAge;
+        const rings = Math.floor(c.ringCount);
+        for (let k = 0; k < rings; k++) {
+          const ringProg = Math.max(0, prog - k / rings / 1.5);
+          if (ringProg <= 0) continue;
+          const r = ringProg * maxR;
+          const alpha = c.opacity * (1 - ringProg) * (1 - k / rings * 0.6);
+          ctx.beginPath(); ctx.arc(rp.x, rp.y, r, 0, Math.PI * 2);
+          ctx.strokeStyle = `hsla(${rp.hue},70%,65%,${alpha})`;
+          ctx.lineWidth = c.lineWidth * (1 - ringProg * 0.5);
+          ctx.stroke();
+        }
+      });
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 13. Lissajous ───────────────────────────────────────────────────────────
+
+const lissajousBg: BgDef = {
+  id: 'lissajous',
+  label: 'Lissajous',
+  description: 'Parametric curves tracing x=sin(at+δ), y=sin(bt) — phase drift reveals form',
+  defaults: { freqA: 3, freqB: 2, speed: 0.3, trailLength: 0.7, lineWidth: 1.5, hue: 260, saturation: 0.8 },
+  sliders: [
+    { key: 'freqA',      label: 'Frequency A',  min: 1,   max: 10,  step: 0.05 },
+    { key: 'freqB',      label: 'Frequency B',  min: 1,   max: 10,  step: 0.05 },
+    { key: 'speed',      label: 'Phase speed',  min: 0,   max: 1.5, step: 0.01 },
+    { key: 'trailLength',label: 'Trail length', min: 0,   max: 1.0, step: 0.01 },
+    { key: 'lineWidth',  label: 'Line width',   min: 0.3, max: 5.0, step: 0.1  },
+    { key: 'hue',        label: 'Color hue',    min: 0,   max: 360, step: 1    },
+    { key: 'saturation', label: 'Saturation',   min: 0,   max: 1.0, step: 0.01 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, phase = 0;
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      phase += c.speed * 0.012;
+
+      ctx.fillStyle = `rgba(8,10,14,${0.04 + (1 - c.trailLength) * 0.55})`;
+      ctx.fillRect(0, 0, w, h);
+
+      const rx = w * 0.44, ry = h * 0.44;
+      const cx = w / 2, cy = h / 2;
+      const steps = 600;
+
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const t = (i / steps) * Math.PI * 2;
+        const x = cx + rx * Math.sin(c.freqA * t + phase);
+        const y = cy + ry * Math.sin(c.freqB * t);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      // Color shifts slowly with phase
+      const hue = (c.hue + (phase * 30) % 360) % 360;
+      const sat = Math.round(c.saturation * 85);
+      ctx.strokeStyle = `hsla(${hue},${sat}%,65%,0.55)`;
+      ctx.lineWidth = c.lineWidth;
+      ctx.shadowBlur = 8; ctx.shadowColor = `hsla(${hue},${sat}%,65%,0.4)`;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
   particlesBg, auroraBg, topographicBg, sparkNetworkBg,
   starfieldBg, orbitalBg, flowFieldBg, gradientMeshBg,
+  matrixBg, bokehBg, plasmaBg, rippleBg, lissajousBg,
 ];
 
 // ─── persistence ──────────────────────────────────────────────────────────────
