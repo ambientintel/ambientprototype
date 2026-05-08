@@ -4080,6 +4080,119 @@ const ribbonsBg: BgDef = {
   },
 };
 
+// ─── Apple Intelligence Glow ──────────────────────────────────────────────────
+
+const appleGlowBg: BgDef = {
+  id: 'appleglow',
+  label: 'Apple Glow',
+  description: 'Rotating prismatic border inspired by Apple Intelligence — layered angular gradient with soft bloom halos',
+  defaults: { cornerRadius: 56, rotSpeed: 0.4, glowIntensity: 0.9, strokeWidth: 7, padding: 32 },
+  sliders: [
+    { key: 'cornerRadius',  label: 'Corner radius',   min: 0,   max: 160, step: 1    },
+    { key: 'rotSpeed',      label: 'Rotation speed',  min: 0,   max: 2.0, step: 0.01 },
+    { key: 'glowIntensity', label: 'Glow intensity',  min: 0,   max: 1.0, step: 0.01 },
+    { key: 'strokeWidth',   label: 'Stroke width',    min: 1,   max: 40,  step: 0.5  },
+    { key: 'padding',       label: 'Inset',           min: 0,   max: 200, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let angle = 0;
+    let lastTs = performance.now();
+
+    const BASE_COLORS = ['#BC82F3','#F5B9EA','#8D9FFF','#FF6778','#FFBA71','#C686FF'];
+    let curColors = [...BASE_COLORS];
+    let tgtColors = [...BASE_COLORS];
+    let lerpT = 1.0;
+    let nextSwap = 0.45;
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect();
+      canvas.width = r.width || window.innerWidth;
+      canvas.height = r.height || window.innerHeight;
+    };
+
+    const hexToRgb = (h: string): [number,number,number] => {
+      const v = parseInt(h.replace('#',''), 16);
+      return [(v>>16)&255,(v>>8)&255,v&255];
+    };
+    const lerpColor = (a: string, b: string, t: number) => {
+      const [ar,ag,ab]=hexToRgb(a), [br,bg,bb]=hexToRgb(b);
+      return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+    };
+
+    const rrectPath = (x: number, y: number, w: number, h: number, r: number) => {
+      r = Math.max(0, Math.min(r, w/2, h/2));
+      ctx.beginPath();
+      ctx.moveTo(x+r, y);
+      ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+      ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+      ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+      ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+      ctx.closePath();
+    };
+
+    const drawLayer = (
+      x: number, y: number, w: number, h: number, r: number,
+      sw: number, blur: number, alpha: number,
+      colors: string[], cx: number, cy: number
+    ) => {
+      ctx.save();
+      if (blur > 0) ctx.filter = `blur(${blur}px)`;
+      ctx.globalAlpha = alpha;
+      const grad = (ctx as CanvasRenderingContext2D & { createConicGradient: (a:number,x:number,y:number)=>CanvasGradient }).createConicGradient(angle - Math.PI/2, cx, cy);
+      colors.forEach((c, i) => grad.addColorStop(i / colors.length, c));
+      grad.addColorStop(1, colors[0]);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = sw;
+      ctx.lineCap = 'round';
+      rrectPath(x, y, w, h, r);
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    const draw = (ts: number) => {
+      const dt = Math.min((ts - lastTs) / 1000, 0.05);
+      lastTs = ts;
+      const c = getCfg();
+      const cw = canvas.width, ch = canvas.height;
+
+      angle += c.rotSpeed * dt;
+
+      // Smooth color cycling
+      lerpT = Math.min(1, lerpT + dt / 0.55);
+      nextSwap -= dt;
+      if (nextSwap <= 0 && lerpT >= 1) {
+        nextSwap = 0.4 + Math.random() * 0.15;
+        curColors = [...tgtColors];
+        lerpT = 0;
+        tgtColors = [...BASE_COLORS].sort(() => Math.random() - 0.5);
+      }
+      const live = curColors.map((a, i) => lerpColor(a, tgtColors[i], lerpT));
+
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.fillStyle = '#080810';
+      ctx.fillRect(0, 0, cw, ch);
+
+      const pad = c.padding, sw = c.strokeWidth, gi = c.glowIntensity;
+      const x = pad, y = pad, w = cw - pad*2, h = ch - pad*2;
+      const r = c.cornerRadius, cx = cw/2, cy = ch/2;
+
+      drawLayer(x, y, w, h, r, sw*4.5, 26*gi, 0.30*gi, live, cx, cy);
+      drawLayer(x, y, w, h, r, sw*2.8, 14*gi, 0.50*gi, live, cx, cy);
+      drawLayer(x, y, w, h, r, sw*1.6,  5*gi, 0.72*gi, live, cx, cy);
+      drawLayer(x, y, w, h, r, sw,         0, 1.0,     live, cx, cy);
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize();
+    animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
@@ -4096,10 +4209,11 @@ const BACKGROUNDS: BgDef[] = [
   langtonBg, isingBg, lightningBg, burningShipBg, bzReactionBg,
   marbleBg, waterSimBg, cycloidBg, supernovaBg, moireBg,
   gravityLensBg, eulerSpiralBg, kaleidoscopeBg, terrainBg, ribbonsBg,
+  appleGlowBg,
 ];
 
 const CATEGORIES: { id: string; label: string; color: string; ids: string[] }[] = [
-  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
+  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
   { id: 'physics',  label: 'Physics',  color: '#34d399', ids: ['particles','ripple','pendulum','doublependulum','fluid','boids','nbody','sand','watersim','gravitylens'] },
   { id: 'math',     label: 'Math',     color: '#60a5fa', ids: ['topographic','lissajous','fourier','spirograph','waveinterference','wireframe','harmonograph','torusknot','cymatics','cycloid','moire','eulerspiral'] },
   { id: 'networks', label: 'Networks', color: '#fb923c', ids: ['sparknetwork','orbital','flowfield','voronoi','magneticfield','curlnoise','domainwarp'] },
