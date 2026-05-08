@@ -1600,6 +1600,783 @@ const neonGridBg: BgDef = {
   },
 };
 
+// ─── 23. Reaction Diffusion ───────────────────────────────────────────────────
+
+const reactionDiffBg: BgDef = {
+  id: 'reactiondiff',
+  label: 'Reaction Diffusion',
+  description: 'Gray-Scott Turing patterns — chemistry spontaneously forms spots, stripes, and coral',
+  defaults: { feed: 0.035, kill: 0.065, speed: 5, da: 1.0, db: 0.5, colorMode: 0 },
+  sliders: [
+    { key: 'feed',       label: 'Feed rate',    min: 0.010, max: 0.080, step: 0.001 },
+    { key: 'kill',       label: 'Kill rate',    min: 0.040, max: 0.075, step: 0.001 },
+    { key: 'speed',      label: 'Steps/frame',  min: 1,     max: 12,    step: 1     },
+    { key: 'da',         label: 'Diffuse A',    min: 0.5,   max: 1.5,   step: 0.05  },
+    { key: 'db',         label: 'Diffuse B',    min: 0.1,   max: 0.9,   step: 0.05  },
+    { key: 'colorMode',  label: 'Palette',      min: 0,     max: 2,     step: 1     },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let gw = 1, gh = 1;
+    let A = new Float32Array(1), B = new Float32Array(1);
+    let nA = new Float32Array(1), nB = new Float32Array(1);
+    let imgData = new ImageData(1, 1);
+    let offCanvas: HTMLCanvasElement | null = null;
+    let offCtx: CanvasRenderingContext2D | null = null;
+    let lastF = -1, lastK = -1;
+
+    const seed = () => {
+      A.fill(1); B.fill(0);
+      for (let s = 0; s < 8; s++) {
+        const cx = Math.floor(Math.random() * gw), cy = Math.floor(Math.random() * gh);
+        const rad = 2 + Math.floor(Math.random() * 4);
+        for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+          const ix = cx + dx, iy = cy + dy;
+          if (ix >= 0 && ix < gw && iy >= 0 && iy < gh) {
+            const i = iy * gw + ix; A[i] = 0.5 + Math.random() * 0.1; B[i] = 0.25 + Math.random() * 0.1;
+          }
+        }
+      }
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height;
+      gw = Math.ceil(r.width / 3); gh = Math.ceil(r.height / 3);
+      A = new Float32Array(gw * gh); B = new Float32Array(gw * gh);
+      nA = new Float32Array(gw * gh); nB = new Float32Array(gw * gh);
+      imgData = new ImageData(gw, gh);
+      offCanvas = document.createElement('canvas'); offCanvas.width = gw; offCanvas.height = gh;
+      offCtx = offCanvas.getContext('2d')!;
+      lastF = -1; lastK = -1; seed();
+    };
+
+    const step = (f: number, k: number, da: number, db: number) => {
+      for (let y = 1; y < gh - 1; y++) for (let x = 1; x < gw - 1; x++) {
+        const i = y * gw + x, a = A[i], b = B[i];
+        const lapA = A[i-1] + A[i+1] + A[i-gw] + A[i+gw] - 4 * a;
+        const lapB = B[i-1] + B[i+1] + B[i-gw] + B[i+gw] - 4 * b;
+        const abb = a * b * b;
+        nA[i] = Math.max(0, Math.min(1, a + da * lapA - abb + f * (1 - a)));
+        nB[i] = Math.max(0, Math.min(1, b + db * lapB + abb - (f + k) * b));
+      }
+      const tA = A; A = nA; nA = tA; const tB = B; B = nB; nB = tB;
+    };
+
+    const draw = () => {
+      const c = getCfg();
+      const f = c.feed, k = c.kill, da = c.da * 0.2, db = c.db * 0.1, sps = Math.round(c.speed), cm = Math.round(c.colorMode);
+      if (f !== lastF || k !== lastK) { seed(); lastF = f; lastK = k; }
+      for (let s = 0; s < sps; s++) step(f, k, da, db);
+      const d = imgData.data;
+      for (let i = 0; i < gw * gh; i++) {
+        const bv = Math.max(0, Math.min(1, B[i]));
+        let r = 0, g = 0, bl = 0;
+        if (cm === 0) { r = Math.floor(bv * 8); g = Math.floor(bv * 100); bl = Math.floor(bv * 255 + 10); }
+        else if (cm === 1) { r = Math.floor(bv * 255); g = Math.floor(bv * 140 * (1 - bv) * 2); bl = Math.floor((1-bv)*20); }
+        else { r = Math.floor(bv * 180 + 20); g = Math.floor(A[i] * 30); bl = Math.floor(bv * 160 + A[i] * 60); }
+        d[i*4] = r; d[i*4+1] = g; d[i*4+2] = bl; d[i*4+3] = 255;
+      }
+      offCtx!.putImageData(imgData, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(offCanvas!, 0, 0, gw, gh, 0, 0, canvas.width, canvas.height);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 24. Physarum ─────────────────────────────────────────────────────────────
+
+const physarumBg: BgDef = {
+  id: 'physarum',
+  label: 'Physarum',
+  description: 'Slime mold agent simulation — thousands of agents weave living vascular networks',
+  defaults: { agents: 6000, sensorAngle: 45, sensorDist: 9, turnSpeed: 35, evaporation: 0.97, speed: 1.0 },
+  sliders: [
+    { key: 'agents',      label: 'Agents',       min: 500,  max: 15000, step: 500  },
+    { key: 'sensorAngle', label: 'Sensor angle', min: 10,   max: 90,    step: 1    },
+    { key: 'sensorDist',  label: 'Sensor dist',  min: 2,    max: 30,    step: 1    },
+    { key: 'turnSpeed',   label: 'Turn speed',   min: 5,    max: 90,    step: 1    },
+    { key: 'evaporation', label: 'Persistence',  min: 0.85, max: 0.995, step: 0.005 },
+    { key: 'speed',       label: 'Move speed',   min: 0.3,  max: 3.0,   step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let gw = 1, gh = 1;
+    let trail = new Float32Array(1), blurred = new Float32Array(1);
+    let agX = new Float32Array(1), agY = new Float32Array(1), agA = new Float32Array(1);
+    let imgData = new ImageData(1, 1);
+    let offCanvas: HTMLCanvasElement | null = null;
+    let offCtx: CanvasRenderingContext2D | null = null;
+    let lastN = -1;
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height;
+      gw = Math.ceil(r.width / 2); gh = Math.ceil(r.height / 2);
+      trail = new Float32Array(gw * gh); blurred = new Float32Array(gw * gh);
+      imgData = new ImageData(gw, gh);
+      offCanvas = document.createElement('canvas'); offCanvas.width = gw; offCanvas.height = gh;
+      offCtx = offCanvas.getContext('2d')!;
+      lastN = -1;
+    };
+
+    const initAgents = (n: number) => {
+      agX = new Float32Array(n); agY = new Float32Array(n); agA = new Float32Array(n);
+      const cx = gw / 2, cy = gh / 2;
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, r = Math.random() * Math.min(gw, gh) * 0.28;
+        agX[i] = cx + Math.cos(a) * r; agY[i] = cy + Math.sin(a) * r; agA[i] = a + Math.PI;
+      }
+      lastN = n;
+    };
+
+    const sense = (x: number, y: number, ang: number, sd: number) => {
+      const sx = Math.floor(x + Math.cos(ang) * sd), sy = Math.floor(y + Math.sin(ang) * sd);
+      if (sx < 0 || sx >= gw || sy < 0 || sy >= gh) return 0;
+      return trail[sy * gw + sx];
+    };
+
+    const draw = () => {
+      const c = getCfg();
+      const n = Math.round(c.agents);
+      if (n !== lastN) initAgents(n);
+      const sa = c.sensorAngle * Math.PI / 180, sd = c.sensorDist;
+      const ts = c.turnSpeed * Math.PI / 180, ev = c.evaporation, spd = c.speed;
+
+      for (let i = 0; i < n; i++) {
+        const fwd = sense(agX[i], agY[i], agA[i], sd);
+        const lft = sense(agX[i], agY[i], agA[i] - sa, sd);
+        const rgt = sense(agX[i], agY[i], agA[i] + sa, sd);
+        if (fwd < lft && fwd < rgt) agA[i] += (Math.random() < 0.5 ? ts : -ts);
+        else if (lft > rgt) agA[i] -= ts;
+        else if (rgt > lft) agA[i] += ts;
+        const nx = agX[i] + Math.cos(agA[i]) * spd, ny = agY[i] + Math.sin(agA[i]) * spd;
+        if (nx < 0 || nx >= gw || ny < 0 || ny >= gh) { agA[i] = Math.random() * Math.PI * 2; agX[i] = Math.max(0, Math.min(gw-1, nx)); agY[i] = Math.max(0, Math.min(gh-1, ny)); }
+        else { agX[i] = nx; agY[i] = ny; }
+        const gi = Math.floor(agY[i]) * gw + Math.floor(agX[i]);
+        if (gi >= 0 && gi < trail.length) trail[gi] = Math.min(1, trail[gi] + 0.12);
+      }
+
+      for (let y = 1; y < gh-1; y++) for (let x = 1; x < gw-1; x++) {
+        const i = y * gw + x;
+        blurred[i] = ((trail[i]*2 + trail[i-1] + trail[i+1] + trail[i-gw] + trail[i+gw]) / 6) * ev;
+      }
+      const tmp = trail; trail = blurred; blurred = tmp;
+
+      const d = imgData.data;
+      for (let i = 0; i < gw * gh; i++) {
+        const v = Math.min(1, trail[i]), v2 = v * v;
+        d[i*4] = Math.floor(v * 30 + v2 * 100); d[i*4+1] = Math.floor(v * 200 + v2 * 55);
+        d[i*4+2] = Math.floor(v * 50); d[i*4+3] = 255;
+      }
+      offCtx!.putImageData(imgData, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(offCanvas!, 0, 0, gw, gh, 0, 0, canvas.width, canvas.height);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 25. Double Pendulum ──────────────────────────────────────────────────────
+
+const doublePendulumBg: BgDef = {
+  id: 'doublependulum',
+  label: 'Double Pendulum',
+  description: 'Coupled chaotic oscillators — near-identical initial conditions diverge into fractal orbits',
+  defaults: { count: 14, trailLen: 500, speed: 1.5, gravity: 9.8, arm1: 1.0, arm2: 1.0 },
+  sliders: [
+    { key: 'count',   label: 'Pendulums', min: 1,   max: 30,   step: 1    },
+    { key: 'trailLen',label: 'Trail',     min: 50,  max: 1200, step: 25   },
+    { key: 'speed',   label: 'Speed',     min: 0.1, max: 4.0,  step: 0.1  },
+    { key: 'gravity', label: 'Gravity',   min: 1,   max: 20,   step: 0.5  },
+    { key: 'arm1',    label: 'Arm 1',     min: 0.3, max: 2.0,  step: 0.05 },
+    { key: 'arm2',    label: 'Arm 2',     min: 0.3, max: 2.0,  step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    type P = { t1: number; t2: number; w1: number; w2: number; trail: Array<[number,number]> };
+    let pends: P[] = [];
+    let lastCount = -1, lastG = -1, lastL1 = -1, lastL2 = -1;
+    const palette = ['#4af','#f4a','#4fa','#fa4','#a4f','#af4','#f84','#84f','#4f8','#8f4','#f48','#48f','#fa8','#8af','#af8'];
+
+    const init = (n: number) => {
+      pends = Array.from({ length: n }, (_, i) => ({
+        t1: Math.PI * 0.72 + i * 0.0015, t2: Math.PI * 0.52 + i * 0.0015, w1: 0, w2: 0, trail: []
+      }));
+      lastCount = n;
+    };
+
+    const stepPend = (p: P, dt: number, g: number, l1: number, l2: number) => {
+      const d = p.t1 - p.t2, den = 3 - Math.cos(2 * d);
+      const a1 = (-g*3*Math.sin(p.t1) - g*Math.sin(p.t1-2*p.t2) - 2*Math.sin(d)*(p.w2*p.w2*l2+p.w1*p.w1*l1*Math.cos(d))) / (l1*den);
+      const a2 = (2*Math.sin(d)*(p.w1*p.w1*l1*2+g*2*Math.cos(p.t1)+p.w2*p.w2*l2*Math.cos(d))) / (l2*den);
+      p.w1 += a1*dt; p.w2 += a2*dt; p.t1 += p.w1*dt; p.t2 += p.w2*dt;
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height); lastCount = -1;
+    };
+
+    const draw = () => {
+      const c = getCfg();
+      const n = Math.round(c.count), g = c.gravity, l1 = c.arm1, l2 = c.arm2, spd = c.speed, trLen = Math.round(c.trailLen);
+      if (n !== lastCount || g !== lastG || l1 !== lastL1 || l2 !== lastL2) { init(n); lastG = g; lastL1 = l1; lastL2 = l2; }
+      const cw = canvas.width, ch = canvas.height;
+      ctx.fillStyle = 'rgba(8,10,14,0.18)'; ctx.fillRect(0, 0, cw, ch);
+      const ox = cw / 2, oy = ch * 0.36, sc = Math.min(cw, ch) * 0.21, dt = 0.016 * spd;
+      for (let s = 0; s < Math.max(1, Math.round(spd)); s++) pends.forEach(p => stepPend(p, dt / Math.max(1,Math.round(spd)), g, l1, l2));
+      pends.forEach((p, idx) => {
+        const x1 = ox + Math.sin(p.t1)*l1*sc, y1 = oy + Math.cos(p.t1)*l1*sc;
+        const x2 = x1 + Math.sin(p.t2)*l2*sc, y2 = y1 + Math.cos(p.t2)*l2*sc;
+        p.trail.push([x2, y2]); if (p.trail.length > trLen) p.trail.shift();
+        if (p.trail.length > 1) {
+          ctx.beginPath();
+          p.trail.forEach(([tx,ty], i) => i === 0 ? ctx.moveTo(tx,ty) : ctx.lineTo(tx,ty));
+          ctx.strokeStyle = palette[idx % palette.length]; ctx.lineWidth = 0.7; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
+        }
+      });
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 26. Lorenz Attractor ─────────────────────────────────────────────────────
+
+const lorenzBg: BgDef = {
+  id: 'lorenz',
+  label: 'Lorenz Attractor',
+  description: 'Strange attractor — chaos butterfly from three coupled differential equations',
+  defaults: { sigma: 10, rho: 28, beta: 2.67, density: 300, zoom: 0.85, hue: 200 },
+  sliders: [
+    { key: 'sigma',   label: 'Sigma σ',   min: 2,   max: 20,  step: 0.1  },
+    { key: 'rho',     label: 'Rho ρ',     min: 10,  max: 45,  step: 0.1  },
+    { key: 'beta',    label: 'Beta β',    min: 0.5, max: 5.0, step: 0.05 },
+    { key: 'density', label: 'Density',   min: 50,  max: 800, step: 10   },
+    { key: 'zoom',    label: 'Zoom',      min: 0.3, max: 2.5, step: 0.05 },
+    { key: 'hue',     label: 'Hue',       min: 0,   max: 360, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, x = 0.1, y = 0, z = 0;
+    let lastSigma = NaN, lastRho = NaN, lastBeta = NaN;
+    const dt = 0.005;
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; lastSigma = NaN; };
+
+    const draw = () => {
+      const c = getCfg();
+      const { sigma, rho, beta, zoom, hue } = c, steps = Math.round(c.density);
+      const cw = canvas.width, ch = canvas.height;
+      if (sigma !== lastSigma || rho !== lastRho || beta !== lastBeta) {
+        ctx.clearRect(0, 0, cw, ch); x = 0.1 + Math.random()*0.01; y = 0; z = 0;
+        lastSigma = sigma; lastRho = rho; lastBeta = beta;
+      }
+      const sc = Math.min(cw, ch) * 0.018 * zoom, ox = cw / 2, oy = ch * 0.5;
+      ctx.globalAlpha = 0.012;
+      for (let i = 0; i < steps; i++) {
+        const dx = sigma*(y-x), dy = x*(rho-z)-y, dz = x*y-beta*z;
+        x += dx*dt; y += dy*dt; z += dz*dt;
+        const px = ox + x*sc, py = oy + (z - rho*0.62)*(-sc);
+        const h = (((z/rho)*280 + hue) % 360 + 360) % 360;
+        ctx.fillStyle = `hsl(${h},80%,68%)`;
+        ctx.fillRect(Math.round(px), Math.round(py), 1, 1);
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 27. Domain Warp ─────────────────────────────────────────────────────────
+
+const domainWarpBg: BgDef = {
+  id: 'domainwarp',
+  label: 'Domain Warp',
+  description: 'Layered fBm domain warping — f(p+f(p)) creates infinite fluid complexity',
+  defaults: { octaves: 4, warpStr: 1.2, speed: 0.18, scale: 2.0, hueBase: 240, hueRange: 120 },
+  sliders: [
+    { key: 'octaves',  label: 'Octaves',    min: 1,   max: 6,   step: 1    },
+    { key: 'warpStr',  label: 'Warp strength', min: 0, max: 3.0, step: 0.05 },
+    { key: 'speed',    label: 'Speed',      min: 0,   max: 1.0, step: 0.01 },
+    { key: 'scale',    label: 'Scale',      min: 0.5, max: 5.0, step: 0.1  },
+    { key: 'hueBase',  label: 'Hue base',   min: 0,   max: 360, step: 1    },
+    { key: 'hueRange', label: 'Hue range',  min: 0,   max: 360, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    let gw = 1, gh = 1, imgData = new ImageData(1, 1);
+    let offCanvas: HTMLCanvasElement | null = null;
+    let offCtx: CanvasRenderingContext2D | null = null;
+
+    const hash = (n: number) => { let x = Math.sin(n) * 43758.5453123; return x - Math.floor(x); };
+    const noise2 = (x: number, y: number) => {
+      const ix = Math.floor(x), iy = Math.floor(y), fx = x-ix, fy = y-iy;
+      const ux = fx*fx*(3-2*fx), uy = fy*fy*(3-2*fy);
+      const a = hash(ix+iy*57), b = hash(ix+1+iy*57), c2 = hash(ix+(iy+1)*57), d = hash(ix+1+(iy+1)*57);
+      return a*(1-ux)*(1-uy)+b*ux*(1-uy)+c2*(1-ux)*uy+d*ux*uy;
+    };
+    const fbm = (x: number, y: number, oct: number) => {
+      let v = 0, amp = 0.5, freq = 1;
+      for (let i = 0; i < oct; i++) { v += noise2(x*freq+i*3.7, y*freq+i*1.3)*amp; freq*=2; amp*=0.5; }
+      return v;
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height;
+      gw = Math.ceil(r.width / 5); gh = Math.ceil(r.height / 5);
+      imgData = new ImageData(gw, gh);
+      offCanvas = document.createElement('canvas'); offCanvas.width = gw; offCanvas.height = gh;
+      offCtx = offCanvas.getContext('2d')!;
+    };
+
+    const draw = () => {
+      const c = getCfg(); t += c.speed * 0.004;
+      const oct = Math.round(c.octaves), ws = c.warpStr, sc = c.scale;
+      const hb = c.hueBase, hr = c.hueRange, d = imgData.data;
+      for (let py = 0; py < gh; py++) for (let px = 0; px < gw; px++) {
+        const x = (px / gw) * sc, y = (py / gh) * sc;
+        const q1 = fbm(x + t, y, oct), q2 = fbm(x + t + 5.2, y + 1.3, oct);
+        const r1 = fbm(x + ws*q1 + 1.7, y + ws*q2 + 9.2 + t*0.5, oct);
+        const r2 = fbm(x + ws*q1 + 8.3, y + ws*q2 + 2.8 + t*0.5, oct);
+        const v = fbm(x + ws*r1, y + ws*r2, oct);
+        const hue = (hb + v * hr) % 360;
+        const sat = 65 + v * 25, lit = 25 + v * 45;
+        const [rv, gv, bv] = hslToRgb(hue/360, sat/100, lit/100);
+        const i = py * gw + px;
+        d[i*4] = rv; d[i*4+1] = gv; d[i*4+2] = bv; d[i*4+3] = 255;
+      }
+      offCtx!.putImageData(imgData, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(offCanvas!, 0, 0, gw, gh, 0, 0, canvas.width, canvas.height);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+function hslToRgb(h: number, s: number, l: number): [number,number,number] {
+  const q = l < 0.5 ? l*(1+s) : l+s-l*s, p = 2*l-q;
+  const hue2rgb = (t: number) => { if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p; };
+  return [Math.round(hue2rgb(h+1/3)*255), Math.round(hue2rgb(h)*255), Math.round(hue2rgb(h-1/3)*255)];
+}
+
+// ─── 28. Galaxy ───────────────────────────────────────────────────────────────
+
+const galaxyBg: BgDef = {
+  id: 'galaxy',
+  label: 'Galaxy',
+  description: 'Logarithmic spiral arms with differential orbital rotation and stellar color gradients',
+  defaults: { stars: 8000, arms: 3, spread: 0.28, speed: 0.06, armTwist: 3.5, brightness: 0.6 },
+  sliders: [
+    { key: 'stars',      label: 'Stars',       min: 1000,  max: 20000, step: 500  },
+    { key: 'arms',       label: 'Arms',        min: 1,     max: 6,     step: 1    },
+    { key: 'spread',     label: 'Arm spread',  min: 0.05,  max: 0.8,   step: 0.01 },
+    { key: 'speed',      label: 'Rotation',    min: 0,     max: 0.3,   step: 0.005 },
+    { key: 'armTwist',   label: 'Arm twist',   min: 0.5,   max: 8.0,   step: 0.1  },
+    { key: 'brightness', label: 'Brightness',  min: 0.2,   max: 1.0,   step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    type Star = { r: number; baseAngle: number; arm: number; size: number; speed: number; colorT: number };
+    let stars: Star[] = [];
+    let lastStars = -1, lastArms = -1;
+
+    const initStars = (n: number, arms: number) => {
+      stars = Array.from({ length: n }, () => {
+        const r = Math.pow(Math.random(), 0.6), arm = Math.floor(Math.random() * arms);
+        const baseAngle = (arm / arms) * Math.PI * 2;
+        return { r, baseAngle, arm, size: 0.4 + Math.random() * 1.2, speed: 1 / (0.2 + r * 0.8), colorT: Math.random() };
+      });
+      lastStars = n; lastArms = arms;
+    };
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; };
+
+    const draw = () => {
+      const c = getCfg();
+      const n = Math.round(c.stars), arms = Math.round(c.arms);
+      if (n !== lastStars || arms !== lastArms) initStars(n, arms);
+      t += c.speed * 0.001;
+      const cw = canvas.width, ch = canvas.height;
+      ctx.clearRect(0, 0, cw, ch);
+      const sc = Math.min(cw, ch) * 0.44, ox = cw/2, oy = ch/2;
+
+      // Bulge
+      const bg = ctx.createRadialGradient(ox, oy, 0, ox, oy, sc*0.15);
+      bg.addColorStop(0, `rgba(255,230,180,${c.brightness*0.9})`);
+      bg.addColorStop(0.5, `rgba(200,170,100,${c.brightness*0.3})`);
+      bg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, cw, ch);
+
+      stars.forEach(s => {
+        const spiralAngle = s.baseAngle + s.r * c.armTwist;
+        const noise = (Math.random() - 0.5) * c.spread * 2;
+        const ang = spiralAngle + t * s.speed * 0.4 + noise;
+        const px = ox + Math.cos(ang) * s.r * sc, py = oy + Math.sin(ang) * s.r * sc;
+        const dist = s.r;
+        const alpha = (1 - dist * 0.6) * c.brightness * (0.5 + Math.random() * 0.5);
+        const temp = s.colorT;
+        let r = 255, g = 255, bl = 255;
+        if (temp < 0.3) { r=180; g=210; bl=255; }
+        else if (temp < 0.6) { r=255; g=255; bl=220; }
+        else { r=255; g=200; bl=150; }
+        ctx.beginPath(); ctx.arc(px, py, s.size, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${r},${g},${bl},${alpha.toFixed(2)})`; ctx.fill();
+      });
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); initStars(Math.round(getCfg().stars), Math.round(getCfg().arms)); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 29. DLA Crystal ─────────────────────────────────────────────────────────
+
+const dlaBg: BgDef = {
+  id: 'dla',
+  label: 'DLA Crystal',
+  description: 'Diffusion-limited aggregation — random walkers crystallize into lightning and coral',
+  defaults: { walkersPerFrame: 6, glowStr: 0.7, resetSpeed: 0, hue: 190, saturate: 0.8, maxFill: 0.35 },
+  sliders: [
+    { key: 'walkersPerFrame', label: 'Growth rate',  min: 1,   max: 20,  step: 1    },
+    { key: 'glowStr',         label: 'Glow',         min: 0.1, max: 1.0, step: 0.05 },
+    { key: 'hue',             label: 'Hue',          min: 0,   max: 360, step: 1    },
+    { key: 'saturate',        label: 'Saturation',   min: 0.2, max: 1.0, step: 0.05 },
+    { key: 'maxFill',         label: 'Max density',  min: 0.1, max: 0.7, step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let gw = 1, gh = 1;
+    let grid: Uint8Array;
+    let stuckCount = 0;
+    let imgData = new ImageData(1, 1);
+    let offCanvas: HTMLCanvasElement | null = null;
+    let offCtx: CanvasRenderingContext2D | null = null;
+    let dirty = true;
+
+    const reset = () => {
+      grid = new Uint8Array(gw * gh);
+      const cx = Math.floor(gw/2), cy = Math.floor(gh/2);
+      grid[cy*gw+cx] = 1; stuckCount = 1; dirty = true;
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height;
+      gw = Math.ceil(r.width / 3); gh = Math.ceil(r.height / 3);
+      imgData = new ImageData(gw, gh);
+      offCanvas = document.createElement('canvas'); offCanvas.width = gw; offCanvas.height = gh;
+      offCtx = offCanvas.getContext('2d')!;
+      reset();
+    };
+
+    const isAdjacentToStuck = (x: number, y: number) =>
+      (x>0 && grid[y*gw+(x-1)]) || (x<gw-1 && grid[y*gw+(x+1)]) ||
+      (y>0 && grid[(y-1)*gw+x]) || (y<gh-1 && grid[(y+1)*gw+x]);
+
+    const draw = () => {
+      const c = getCfg();
+      if (stuckCount > gw * gh * c.maxFill) reset();
+      const wpf = Math.round(c.walkersPerFrame);
+      for (let w = 0; w < wpf; w++) {
+        let wx = Math.floor(Math.random() * gw), wy = Math.floor(Math.random() * gh);
+        for (let step = 0; step < 5000; step++) {
+          const dir = Math.floor(Math.random() * 4);
+          if (dir === 0 && wx > 0) wx--; else if (dir === 1 && wx < gw-1) wx++;
+          else if (dir === 2 && wy > 0) wy--; else if (dir === 3 && wy < gh-1) wy++;
+          if (isAdjacentToStuck(wx, wy)) { grid[wy*gw+wx] = 1; stuckCount++; dirty = true; break; }
+        }
+      }
+      if (dirty) {
+        const d = imgData.data;
+        const h = c.hue, sat = c.saturate * 80, glw = c.glowStr;
+        for (let i = 0; i < gw * gh; i++) {
+          if (grid[i]) {
+            const x = i % gw, y = Math.floor(i / gw);
+            const distC = Math.sqrt((x-gw/2)**2+(y-gh/2)**2) / Math.max(gw,gh) * 2;
+            const lit = Math.floor(40 + distC * 60 + Math.random() * 20);
+            const [rv, gv, bv] = hslToRgb(h/360, sat/100, lit/100);
+            d[i*4] = rv; d[i*4+1] = gv; d[i*4+2] = bv; d[i*4+3] = 255;
+          } else { d[i*4] = 8; d[i*4+1] = 10; d[i*4+2] = 14; d[i*4+3] = 255; }
+        }
+        offCtx!.putImageData(imgData, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(offCanvas!, 0, 0, gw, gh, 0, 0, canvas.width, canvas.height);
+        if (glw > 0) {
+          ctx.filter = `blur(${Math.round(glw * 8)}px)`;
+          ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = glw * 0.5;
+          ctx.drawImage(offCanvas!, 0, 0, gw, gh, 0, 0, canvas.width, canvas.height);
+          ctx.filter = 'none'; ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+        }
+        dirty = false;
+      }
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 30. Fractal Tree ────────────────────────────────────────────────────────
+
+const fractalTreeBg: BgDef = {
+  id: 'fractaltree',
+  label: 'Fractal Tree',
+  description: 'Recursive branching with wind sway — L-system grown into living architecture',
+  defaults: { depth: 10, angle: 26, lengthRatio: 0.68, wind: 0.4, speed: 0.5, leafDensity: 0.7 },
+  sliders: [
+    { key: 'depth',       label: 'Depth',        min: 4,   max: 14,  step: 1    },
+    { key: 'angle',       label: 'Branch angle', min: 5,   max: 60,  step: 1    },
+    { key: 'lengthRatio', label: 'Length ratio', min: 0.4, max: 0.85,step: 0.01 },
+    { key: 'wind',        label: 'Wind',         min: 0,   max: 1.5, step: 0.05 },
+    { key: 'speed',       label: 'Sway speed',   min: 0.1, max: 2.0, step: 0.1  },
+    { key: 'leafDensity', label: 'Leaf density', min: 0,   max: 1.0, step: 0.05 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; };
+
+    const branch = (x: number, y: number, len: number, ang: number, depth: number, maxDepth: number, ratio: number, branchAng: number) => {
+      if (depth === 0 || len < 1) return;
+      const x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+      const thickness = Math.max(0.3, (depth / maxDepth) * 3.5);
+      const g = depth / maxDepth;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2);
+      ctx.strokeStyle = depth <= 2
+        ? `rgba(80,160,60,0.75)`
+        : `rgba(${Math.floor(80+g*60)},${Math.floor(50+g*40)},${Math.floor(20+g*20)},0.8)`;
+      ctx.lineWidth = thickness; ctx.stroke();
+      if (depth <= 2 && Math.random() < getCfg().leafDensity) {
+        ctx.beginPath(); ctx.arc(x2, y2, 2.5 + Math.random()*2, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${60+Math.floor(Math.random()*80)},${150+Math.floor(Math.random()*80)},40,0.55)`; ctx.fill();
+      }
+      branch(x2, y2, len*ratio, ang - branchAng, depth-1, maxDepth, ratio, branchAng);
+      branch(x2, y2, len*ratio, ang + branchAng, depth-1, maxDepth, ratio, branchAng);
+    };
+
+    const draw = () => {
+      const c = getCfg(); t += c.speed * 0.012;
+      const cw = canvas.width, ch = canvas.height;
+      ctx.clearRect(0, 0, cw, ch);
+      const trunkLen = ch * 0.22, depth = Math.round(c.depth);
+      const windAngle = Math.sin(t) * c.wind * 0.08 + Math.cos(t * 0.37) * c.wind * 0.04;
+      ctx.lineCap = 'round';
+      branch(cw/2, ch*0.92, trunkLen, -Math.PI/2 + windAngle, depth, depth, c.lengthRatio, c.angle * Math.PI/180);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 31. Magnetic Field ──────────────────────────────────────────────────────
+
+const magneticFieldBg: BgDef = {
+  id: 'magneticfield',
+  label: 'Magnetic Field',
+  description: 'Magnetic dipole field lines — charge particles drift along invisible force geometry',
+  defaults: { poleStrength: 1.0, poleSpacing: 0.35, lineCount: 28, particleCount: 80, speed: 0.8, hue: 200 },
+  sliders: [
+    { key: 'poleStrength',  label: 'Pole strength', min: 0.2, max: 3.0,  step: 0.1  },
+    { key: 'poleSpacing',   label: 'Pole spacing',  min: 0.1, max: 0.8,  step: 0.05 },
+    { key: 'lineCount',     label: 'Field lines',   min: 4,   max: 60,   step: 2    },
+    { key: 'particleCount', label: 'Particles',     min: 0,   max: 200,  step: 5    },
+    { key: 'speed',         label: 'Particle speed',min: 0,   max: 3.0,  step: 0.1  },
+    { key: 'hue',           label: 'Hue',           min: 0,   max: 360,  step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    type Particle = { t: number; lineIdx: number; speed: number };
+    let particles: Particle[] = [];
+    let fieldLines: Array<[number,number][]> = [];
+    let lastLineCount = -1, lastSpacing = -1, lastStrength = -1, lastParticleCount = -1;
+
+    const computeB = (x: number, y: number, ps: number, py1: number, py2: number) => {
+      const dx1 = x, dy1 = y - py1, r1sq = dx1*dx1+dy1*dy1+0.0001, r1 = Math.sqrt(r1sq);
+      const dx2 = x, dy2 = y - py2, r2sq = dx2*dx2+dy2*dy2+0.0001, r2 = Math.sqrt(r2sq);
+      const bx = ps*(dx1/(r1sq*r1) - dx2/(r2sq*r2));
+      const by = ps*(dy1/(r1sq*r1) - dy2/(r2sq*r2));
+      return [bx, by];
+    };
+
+    const buildLines = (count: number, spacing: number, strength: number, cw: number, ch: number) => {
+      const cx = cw/2, cy = ch/2;
+      const sep = Math.min(cw,ch)*spacing*0.5;
+      fieldLines = [];
+      for (let i = 0; i < count; i++) {
+        const startAng = (i/count)*Math.PI*2;
+        const r0 = Math.min(cw,ch)*0.06;
+        let px = cx + Math.cos(startAng)*r0, py = cy - sep + Math.sin(startAng)*r0*0.3;
+        const line: [number,number][] = [[px, py]];
+        const stepSize = Math.min(cw,ch)*0.008;
+        for (let s = 0; s < 300; s++) {
+          const [bx, by] = computeB(px-cx, py-cy, strength, -sep, sep);
+          const len = Math.sqrt(bx*bx+by*by)+0.0001;
+          px += (bx/len)*stepSize; py += (by/len)*stepSize;
+          if (px < 0||px > cw||py < 0||py > ch) break;
+          line.push([px, py]);
+        }
+        fieldLines.push(line);
+      }
+      lastLineCount = count; lastSpacing = spacing; lastStrength = strength;
+    };
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; lastLineCount = -1; };
+
+    const draw = () => {
+      const c = getCfg();
+      const lc = Math.round(c.lineCount), pc = Math.round(c.particleCount);
+      const cw = canvas.width, ch = canvas.height;
+      if (lc !== lastLineCount || c.poleSpacing !== lastSpacing || c.poleStrength !== lastStrength)
+        buildLines(lc, c.poleSpacing, c.poleStrength, cw, ch);
+      if (pc !== lastParticleCount) {
+        particles = Array.from({ length: pc }, () => ({
+          t: Math.random(), lineIdx: Math.floor(Math.random()*fieldLines.length), speed: 0.003+Math.random()*0.004
+        }));
+        lastParticleCount = pc;
+      }
+      ctx.fillStyle = 'rgba(8,10,14,0.25)'; ctx.fillRect(0, 0, cw, ch);
+      const cx = cw/2, cy = ch/2, sep = Math.min(cw,ch)*c.poleSpacing*0.5;
+
+      fieldLines.forEach(line => {
+        if (line.length < 2) return;
+        ctx.beginPath(); ctx.moveTo(line[0][0], line[0][1]);
+        line.forEach(([x,y]) => ctx.lineTo(x,y));
+        ctx.strokeStyle = `hsla(${c.hue},65%,55%,0.12)`; ctx.lineWidth = 0.8; ctx.stroke();
+      });
+
+      [cy-sep, cy+sep].forEach((py, i) => {
+        const grad = ctx.createRadialGradient(cx,py,0,cx,py,Math.min(cw,ch)*0.07);
+        grad.addColorStop(0, i===0 ? 'rgba(255,80,80,0.9)' : 'rgba(80,120,255,0.9)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.beginPath(); ctx.arc(cx,py,Math.min(cw,ch)*0.07,0,Math.PI*2);
+        ctx.fillStyle = grad; ctx.fill();
+      });
+
+      particles.forEach(p => {
+        p.t = (p.t + p.speed * c.speed) % 1;
+        const line = fieldLines[p.lineIdx];
+        if (!line || line.length < 2) return;
+        const idx = Math.floor(p.t * (line.length-1));
+        const [px, py] = line[idx];
+        const grd = ctx.createRadialGradient(px,py,0,px,py,4);
+        grd.addColorStop(0, `hsla(${c.hue+40},90%,80%,0.9)`); grd.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.beginPath(); ctx.arc(px,py,3,0,Math.PI*2); ctx.fillStyle=grd; ctx.fill();
+      });
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 32. IFS Fractal ─────────────────────────────────────────────────────────
+
+const ifsFractalBg: BgDef = {
+  id: 'ifsfractal',
+  label: 'IFS Fractal',
+  description: 'Iterated function system chaos game — affine transforms weave Barnsley ferns and crystals',
+  defaults: { density: 8000, hue: 120, brightness: 0.6, morphSpeed: 0.0, zoom: 0.85, variant: 0 },
+  sliders: [
+    { key: 'density',    label: 'Density',    min: 1000,  max: 30000, step: 500  },
+    { key: 'hue',        label: 'Hue',        min: 0,     max: 360,   step: 1    },
+    { key: 'brightness', label: 'Brightness', min: 0.1,   max: 1.0,   step: 0.05 },
+    { key: 'morphSpeed', label: 'Morph speed',min: 0,     max: 0.5,   step: 0.01 },
+    { key: 'zoom',       label: 'Zoom',       min: 0.3,   max: 2.0,   step: 0.05 },
+    { key: 'variant',    label: 'Variant',    min: 0,     max: 3,     step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    let lastVariant = -1;
+    type IFSTransform = { a:number; b:number; c:number; d:number; e:number; f:number; p:number };
+    let transforms: IFSTransform[] = [];
+
+    const variants: IFSTransform[][] = [
+      // Barnsley Fern
+      [{a:0,b:0,c:0,d:0.16,e:0,f:0,p:0.01},{a:0.85,b:0.04,c:-0.04,d:0.85,e:0,f:1.6,p:0.85},{a:0.2,b:-0.26,c:0.23,d:0.22,e:0,f:1.6,p:0.07},{a:-0.15,b:0.28,c:0.26,d:0.24,e:0,f:0.44,p:0.07}],
+      // Sierpinski-like
+      [{a:0.5,b:0,c:0,d:0.5,e:0,f:0,p:0.33},{a:0.5,b:0,c:0,d:0.5,e:0.5,f:0,p:0.33},{a:0.5,b:0,c:0,d:0.5,e:0.25,f:0.43,p:0.34}],
+      // Coral / tree
+      [{a:0.787,b:-0.234,c:0.234,d:0.787,e:0.1,f:0.16,p:0.9},{a:0.149,b:0.0,c:0.0,d:-0.149,e:0.5,f:0.31,p:0.05},{a:0.149,b:0.0,c:0.0,d:0.149,e:-0.5,f:0.31,p:0.05}],
+      // Dragon
+      [{a:0.824,b:0.281,c:-0.212,d:0.864,e:-1.882,f:-0.110,p:0.87},{a:0.088,b:0.520,c:-0.463,d:-0.378,e:0.785,f:8.095,p:0.13}],
+    ];
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; lastVariant = -1; };
+
+    const draw = () => {
+      const c = getCfg();
+      t += c.morphSpeed * 0.005;
+      const vIdx = Math.round(c.variant) % variants.length;
+      if (vIdx !== lastVariant) {
+        transforms = variants[vIdx].map(tf => ({...tf})); ctx.clearRect(0,0,canvas.width,canvas.height); lastVariant = vIdx;
+      }
+      const iters = Math.round(c.density), cw = canvas.width, ch = canvas.height;
+      const sc = Math.min(cw, ch) * 0.09 * c.zoom;
+      const ox = cw*0.5, oy = ch*0.85;
+      let px = 0, py = 0;
+      const tfs = transforms;
+      const cumProbs: number[] = []; let cum = 0;
+      tfs.forEach(tf => { cum += tf.p; cumProbs.push(cum); });
+      ctx.globalAlpha = c.brightness * 0.02;
+      for (let i = 0; i < iters; i++) {
+        const r2 = Math.random(); let idx = 0;
+        while (idx < cumProbs.length-1 && r2 > cumProbs[idx]) idx++;
+        const tf = tfs[idx];
+        const nx = tf.a*px + tf.b*py + tf.e, ny = tf.c*px + tf.d*py + tf.f;
+        px = nx; py = ny;
+        const sx = ox + px*sc, sy = oy - py*sc;
+        const hue = ((c.hue + py*20) % 360 + 360) % 360;
+        ctx.fillStyle = `hsl(${hue},75%,65%)`;
+        ctx.fillRect(Math.round(sx), Math.round(sy), 1, 1);
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
@@ -1608,6 +2385,8 @@ const BACKGROUNDS: BgDef[] = [
   matrixBg, bokehBg, plasmaBg, rippleBg, lissajousBg,
   fourierBg, attractorBg, spirographBg, waveInterferenceBg, voronoiBg,
   pendulumBg, wireframeBg, harmonographBg, neonGridBg,
+  reactionDiffBg, physarumBg, doublePendulumBg, lorenzBg, domainWarpBg,
+  galaxyBg, dlaBg, fractalTreeBg, magneticFieldBg, ifsFractalBg,
 ];
 
 // ─── persistence ──────────────────────────────────────────────────────────────
@@ -1635,6 +2414,7 @@ export default function BackgroundLab() {
   const [slideshow, setSlideshow] = React.useState(false);
   const [shuffled, setShuffled] = React.useState(false);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const navRef = React.useRef<HTMLDivElement>(null);
   const cfgRef = React.useRef<Cfg>(configs[activeId]);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdRef = React.useRef(activeId);
@@ -1674,6 +2454,14 @@ export default function BackgroundLab() {
     }, 9000);
     return () => clearInterval(id);
   }, [slideshow]);
+
+  // Auto-scroll active pill into view
+  React.useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const active = nav.querySelector('[data-active="true"]') as HTMLElement | null;
+    active?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [activeId]);
 
   // Keyboard shortcuts
   React.useEffect(() => {
@@ -1745,26 +2533,35 @@ export default function BackgroundLab() {
       </div>
 
       {/* Top navigation */}
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 6,
-        background: 'linear-gradient(to bottom, rgba(12,13,15,0.92) 0%, rgba(12,13,15,0) 100%)',
-        overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
-      }}>
-        <span style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', whiteSpace: 'nowrap', marginRight: 6, flexShrink: 0 }}>
-          Bg Lab
-        </span>
-        {BACKGROUNDS.map(bg => (
-          <button key={bg.id} onClick={() => setActiveId(bg.id)} style={{
-            padding: '5px 13px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
-            background: activeId === bg.id ? 'rgba(45,114,210,0.3)' : 'rgba(255,255,255,0.05)',
-            border: activeId === bg.id ? '1px solid rgba(45,114,210,0.55)' : '1px solid rgba(255,255,255,0.07)',
-            color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.38)',
-            fontSize: 11, whiteSpace: 'nowrap', transition: 'all 0.15s',
-          }}>
-            {bg.label}
-          </button>
-        ))}
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
+        {/* Left fade mask */}
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 80, background: 'linear-gradient(to right, rgba(12,13,15,0.95), rgba(12,13,15,0))', zIndex: 1, pointerEvents: 'none' }} />
+        {/* Right fade mask */}
+        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 80, background: 'linear-gradient(to left, rgba(12,13,15,0.95), rgba(12,13,15,0))', zIndex: 1, pointerEvents: 'none' }} />
+        {/* Scrollable pill row */}
+        <div ref={navRef} style={{
+          overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
+          display: 'flex', alignItems: 'center', gap: 5, padding: '12px 88px 10px',
+          background: 'linear-gradient(to bottom, rgba(12,13,15,0.92), rgba(12,13,15,0))',
+        }}>
+          <span style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', whiteSpace: 'nowrap', marginRight: 4, flexShrink: 0 }}>
+            BG LAB
+          </span>
+          {BACKGROUNDS.map(bg => (
+            <button key={bg.id} data-active={activeId === bg.id ? 'true' : 'false'} onClick={() => setActiveId(bg.id)} style={{
+              padding: '5px 13px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
+              background: activeId === bg.id ? 'rgba(45,114,210,0.3)' : 'rgba(255,255,255,0.05)',
+              border: activeId === bg.id ? '1px solid rgba(45,114,210,0.55)' : '1px solid rgba(255,255,255,0.07)',
+              color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.38)',
+              fontSize: 11, whiteSpace: 'nowrap', transition: 'all 0.15s',
+            }}>
+              {bg.label}
+            </button>
+          ))}
+          <span style={{ flexShrink: 0, marginLeft: 8, fontSize: 9, letterSpacing: 1.5, color: 'rgba(255,255,255,0.18)', whiteSpace: 'nowrap' }}>
+            {BACKGROUNDS.findIndex(b => b.id === activeId) + 1} / {BACKGROUNDS.length}
+          </span>
+        </div>
       </div>
 
       {/* ← → arrows */}
