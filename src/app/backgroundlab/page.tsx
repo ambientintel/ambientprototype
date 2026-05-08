@@ -916,12 +916,375 @@ const lissajousBg: BgDef = {
   },
 };
 
+// ─── 14. Fourier Epicycles ───────────────────────────────────────────────────
+
+const fourierBg: BgDef = {
+  id: 'fourier',
+  label: 'Fourier',
+  description: 'Epicyclic arms trace Fourier series — superimposed harmonics draw emergent curves',
+  defaults: { termCount: 8, speed: 0.4, trailLength: 0.8, lineWidth: 1.2, hue: 200, armOpacity: 0.5 },
+  sliders: [
+    { key: 'termCount',  label: 'Terms',      min: 1,   max: 24,  step: 1    },
+    { key: 'speed',      label: 'Speed',       min: 0,   max: 1.5, step: 0.01 },
+    { key: 'trailLength',label: 'Trail',       min: 0,   max: 1.0, step: 0.01 },
+    { key: 'lineWidth',  label: 'Line width',  min: 0.3, max: 4.0, step: 0.1  },
+    { key: 'hue',        label: 'Hue',         min: 0,   max: 360, step: 1    },
+    { key: 'armOpacity', label: 'Arm opacity', min: 0,   max: 1.0, step: 0.01 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0;
+    type Arm = { r: number; freq: number };
+    let arms: Arm[] = [], trail: [number, number][] = [], lastN = -1;
+
+    const initArms = (n: number) => {
+      const scale = Math.min(canvas.width, canvas.height) * 0.42;
+      const sum = Array.from({ length: n }, (_, i) => 1 / (2 * i + 1)).reduce((a, b) => a + b, 0);
+      arms = Array.from({ length: n }, (_, i) => ({ r: (scale / sum) / (2 * i + 1), freq: 2 * i + 1 }));
+      trail = []; lastN = n;
+    };
+
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; trail = []; lastN = -1; };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      const n = Math.floor(c.termCount);
+      if (n !== lastN) initArms(n);
+      t += c.speed * 0.012;
+
+      ctx.clearRect(0, 0, w, h);
+      const cx = w / 2, cy = h / 2;
+
+      // Draw trail
+      const maxLen = Math.round(c.trailLength * 3000 + 100);
+      if (trail.length > maxLen) trail.splice(0, trail.length - maxLen);
+      if (trail.length > 1) {
+        ctx.beginPath();
+        trail.forEach(([tx, ty], i) => i === 0 ? ctx.moveTo(tx, ty) : ctx.lineTo(tx, ty));
+        const hue = c.hue;
+        ctx.strokeStyle = `hsla(${hue},85%,68%,0.55)`;
+        ctx.lineWidth = c.lineWidth;
+        ctx.shadowBlur = 7; ctx.shadowColor = `hsla(${hue},85%,68%,0.3)`;
+        ctx.stroke(); ctx.shadowBlur = 0;
+      }
+
+      // Arm chain
+      let x = cx, y = cy;
+      const positions: [number, number][] = [[x, y]];
+      arms.forEach(arm => {
+        const angle = arm.freq * t;
+        x += arm.r * Math.cos(angle); y += arm.r * Math.sin(angle);
+        positions.push([x, y]);
+      });
+
+      if (c.armOpacity > 0.01) {
+        arms.forEach((arm, i) => {
+          const [ox, oy] = positions[i];
+          ctx.beginPath(); ctx.arc(ox, oy, arm.r, 0, Math.PI * 2);
+          ctx.strokeStyle = `hsla(${c.hue},50%,60%,${c.armOpacity * 0.12})`; ctx.lineWidth = 0.5; ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(positions[i + 1][0], positions[i + 1][1]);
+          ctx.strokeStyle = `hsla(${c.hue},60%,65%,${c.armOpacity * 0.35})`; ctx.lineWidth = 0.8; ctx.stroke();
+        });
+      }
+
+      // Tip
+      trail.push([x, y]);
+      ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fill();
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); initArms(Math.floor(getCfg().termCount)); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 15. Strange Attractor ───────────────────────────────────────────────────
+
+const attractorBg: BgDef = {
+  id: 'attractor',
+  label: 'Attractor',
+  description: 'De Jong strange attractor — chaos theory rendered as emergent density geometry',
+  defaults: { a: 1.4, b: -2.3, c: 2.4, d: -2.1, density: 5000, brightness: 0.5, hue: 210 },
+  sliders: [
+    { key: 'a',         label: 'a',          min: -3,   max: 3,     step: 0.01  },
+    { key: 'b',         label: 'b',          min: -3,   max: 3,     step: 0.01  },
+    { key: 'c',         label: 'c',          min: -3,   max: 3,     step: 0.01  },
+    { key: 'd',         label: 'd',          min: -3,   max: 3,     step: 0.01  },
+    { key: 'density',   label: 'Density',    min: 500,  max: 20000, step: 500   },
+    { key: 'brightness',label: 'Brightness', min: 0.1,  max: 1.0,   step: 0.01  },
+    { key: 'hue',       label: 'Hue',        min: 0,    max: 360,   step: 1     },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, x = 0.1, y = 0.1;
+    let lastA = NaN, lastB = NaN, lastC = NaN, lastD = NaN;
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      if (c.a !== lastA || c.b !== lastB || c.c !== lastC || c.d !== lastD) {
+        ctx.clearRect(0, 0, w, h); x = 0.1; y = 0.1;
+        lastA = c.a; lastB = c.b; lastC = c.c; lastD = c.d;
+      }
+      const iters = Math.floor(c.density), scale = Math.min(w, h) * 0.23, cx = w / 2, cy = h / 2;
+      ctx.fillStyle = `hsla(${c.hue},75%,65%,${c.brightness * 0.018})`;
+      for (let i = 0; i < iters; i++) {
+        const nx = Math.sin(c.a * y) - Math.cos(c.b * x);
+        const ny = Math.sin(c.c * x) - Math.cos(c.d * y);
+        x = nx; y = ny;
+        const px = Math.round(cx + x * scale), py = Math.round(cy + y * scale);
+        if (px >= 0 && px < w && py >= 0 && py < h) ctx.fillRect(px, py, 1, 1);
+      }
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 16. Spirograph ──────────────────────────────────────────────────────────
+
+const spirographBg: BgDef = {
+  id: 'spirograph',
+  label: 'Spirograph',
+  description: 'Hypotrochoid parametric curves — x=(R−r)cos t + d cos((R−r)t/r)',
+  defaults: { R: 1.0, r: 0.38, d: 0.65, speed: 0.3, trailLength: 0.88, hue: 280, lineWidth: 1.0 },
+  sliders: [
+    { key: 'R',          label: 'Outer R',    min: 0.5, max: 3.0, step: 0.01 },
+    { key: 'r',          label: 'Inner r',    min: 0.05,max: 1.5, step: 0.01 },
+    { key: 'd',          label: 'Offset d',   min: 0,   max: 2.0, step: 0.01 },
+    { key: 'speed',      label: 'Speed',      min: 0,   max: 1.5, step: 0.01 },
+    { key: 'trailLength',label: 'Trail',      min: 0,   max: 1.0, step: 0.01 },
+    { key: 'hue',        label: 'Hue',        min: 0,   max: 360, step: 1    },
+    { key: 'lineWidth',  label: 'Line width', min: 0.3, max: 3.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, t = 0, prevT = 0;
+    const resize = () => { const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height; t = 0; prevT = 0; };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      prevT = t; t += c.speed * 0.018;
+
+      ctx.fillStyle = `rgba(8,10,14,${0.02 + (1 - c.trailLength) * 0.55})`; ctx.fillRect(0, 0, w, h);
+
+      const scale = Math.min(w, h) * 0.42, cx = w / 2, cy = h / 2;
+      const R = c.R, r = c.r, d = c.d;
+      const steps = Math.max(8, Math.round(Math.abs(t - prevT) * 300));
+
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const a = prevT + (t - prevT) * i / steps;
+        const px = cx + scale * ((R - r) * Math.cos(a) + d * Math.cos((R - r) * a / r));
+        const py = cy + scale * ((R - r) * Math.sin(a) - d * Math.sin((R - r) * a / r));
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      const hue = (c.hue + t * 8) % 360;
+      ctx.strokeStyle = `hsla(${hue},82%,66%,0.65)`; ctx.lineWidth = c.lineWidth;
+      ctx.shadowBlur = 5; ctx.shadowColor = `hsla(${hue},82%,66%,0.3)`;
+      ctx.stroke(); ctx.shadowBlur = 0;
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 17. Wave Interference ───────────────────────────────────────────────────
+
+const waveInterferenceBg: BgDef = {
+  id: 'waveinterference',
+  label: 'Wave Interference',
+  description: 'Point sources emit circular waves — constructive and destructive interference',
+  defaults: { sourceCount: 3, wavelength: 80, speed: 0.8, hueShift: 200, contrast: 1.4, brightness: 0.55 },
+  sliders: [
+    { key: 'sourceCount', label: 'Sources',    min: 1,   max: 8,   step: 1    },
+    { key: 'wavelength',  label: 'Wavelength', min: 20,  max: 200, step: 5    },
+    { key: 'speed',       label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hueShift',    label: 'Hue',        min: 0,   max: 360, step: 1    },
+    { key: 'contrast',    label: 'Contrast',   min: 0.5, max: 3.0, step: 0.1  },
+    { key: 'brightness',  label: 'Brightness', min: 0.1, max: 1.0, step: 0.01 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number, wt = 0;
+    let off: HTMLCanvasElement | null = null, offCtx: CanvasRenderingContext2D | null = null;
+    type Src = { x: number; y: number };
+    let sources: Src[] = [], lastN = -1;
+
+    const h2rgb = (h: number, s: number, l: number) => {
+      const c2=(1-Math.abs(2*l-1))*s,hh=h/60,x2=c2*(1-Math.abs(hh%2-1)),m=l-c2/2;
+      let r=0,g=0,b=0;
+      if(hh<1){r=c2;g=x2;}else if(hh<2){r=x2;g=c2;}
+      else if(hh<3){g=c2;b=x2;}else if(hh<4){g=x2;b=c2;}
+      else if(hh<5){r=x2;b=c2;}else{r=c2;b=x2;}
+      return[Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];
+    };
+
+    const initSources = (n: number, w: number, h: number) => {
+      const orbitR = Math.min(w, h) * 0.28;
+      sources = Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * Math.PI * 2;
+        return { x: w / 2 + Math.cos(a) * orbitR, y: h / 2 + Math.sin(a) * orbitR };
+      });
+      lastN = n;
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height;
+      off = document.createElement('canvas');
+      off.width = Math.ceil(r.width / 5); off.height = Math.ceil(r.height / 5);
+      offCtx = off.getContext('2d')!; lastN = -1;
+    };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      wt += c.speed * 0.04;
+      const n = Math.floor(c.sourceCount);
+      if (n !== lastN) initSources(n, w, h);
+      if (!off || !offCtx) { animId = requestAnimationFrame(draw); return; }
+
+      const ow = off.width, oh = off.height, scaleX = w / ow, scaleY = h / oh;
+      const k = (2 * Math.PI) / c.wavelength;
+      const img = offCtx.createImageData(ow, oh); const data = img.data;
+
+      for (let py = 0; py < oh; py++) for (let px = 0; px < ow; px++) {
+        const wx = px * scaleX, wy = py * scaleY;
+        let sum = 0;
+        sources.forEach(s => sum += Math.sin(k * Math.hypot(wx - s.x, wy - s.y) - wt));
+        const v = Math.tanh((sum / n) * c.contrast);
+        const hue = ((v + 1) * 90 + c.hueShift) % 360;
+        const light = Math.min(0.65, c.brightness * 0.3 + (v + 1) * 0.1);
+        const [r2, g2, b2] = h2rgb(hue, 0.85, light);
+        const i = (py * ow + px) * 4;
+        data[i] = r2; data[i+1] = g2; data[i+2] = b2; data[i+3] = 255;
+      }
+
+      offCtx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = true; ctx.drawImage(off, 0, 0, w, h);
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── 18. Voronoi ─────────────────────────────────────────────────────────────
+
+const voronoiBg: BgDef = {
+  id: 'voronoi',
+  label: 'Voronoi',
+  description: 'Animated Voronoi tessellation — glowing crystalline cells in motion',
+  defaults: { seedCount: 18, speed: 0.3, edgeGlow: 0.9, cellFill: 0.25, hue: 200, hueSpread: 130 },
+  sliders: [
+    { key: 'seedCount', label: 'Cells',      min: 4,  max: 40,  step: 1    },
+    { key: 'speed',     label: 'Speed',       min: 0,  max: 1.5, step: 0.01 },
+    { key: 'edgeGlow',  label: 'Edge glow',  min: 0,  max: 1.0, step: 0.01 },
+    { key: 'cellFill',  label: 'Cell fill',  min: 0,  max: 0.6, step: 0.01 },
+    { key: 'hue',       label: 'Base hue',   min: 0,  max: 360, step: 1    },
+    { key: 'hueSpread', label: 'Hue spread', min: 0,  max: 360, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let off: HTMLCanvasElement | null = null, offCtx: CanvasRenderingContext2D | null = null;
+    type Seed = { x: number; y: number; vx: number; vy: number; hue: number };
+    let seeds: Seed[] = [], lastN = -1;
+
+    const h2rgb = (h: number, s: number, l: number) => {
+      const c2=(1-Math.abs(2*l-1))*s,hh=h/60,x2=c2*(1-Math.abs(hh%2-1)),m=l-c2/2;
+      let r=0,g=0,b=0;
+      if(hh<1){r=c2;g=x2;}else if(hh<2){r=x2;g=c2;}
+      else if(hh<3){g=c2;b=x2;}else if(hh<4){g=x2;b=c2;}
+      else if(hh<5){r=x2;b=c2;}else{r=c2;b=x2;}
+      return[Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];
+    };
+
+    const initSeeds = (n: number, w: number, h: number) => {
+      const c = getCfg();
+      seeds = Array.from({ length: n }, () => {
+        const a = Math.random() * Math.PI * 2;
+        return { x: Math.random() * w, y: Math.random() * h, vx: Math.cos(a) * 0.7, vy: Math.sin(a) * 0.7, hue: (c.hue + Math.random() * c.hueSpread) % 360 };
+      });
+      lastN = n;
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect(); canvas.width = r.width; canvas.height = r.height;
+      off = document.createElement('canvas');
+      off.width = Math.ceil(r.width / 5); off.height = Math.ceil(r.height / 5);
+      offCtx = off.getContext('2d')!; lastN = -1;
+    };
+
+    const draw = () => {
+      const c = getCfg(); const w = canvas.width, h = canvas.height;
+      const n = Math.floor(c.seedCount);
+      if (n !== lastN) initSeeds(n, w, h);
+
+      seeds.forEach(s => {
+        s.x += s.vx * c.speed * 0.4; s.y += s.vy * c.speed * 0.4;
+        if (s.x <= 0 || s.x >= w) s.vx *= -1;
+        if (s.y <= 0 || s.y >= h) s.vy *= -1;
+        s.x = Math.max(0, Math.min(w, s.x)); s.y = Math.max(0, Math.min(h, s.y));
+      });
+
+      if (!off || !offCtx) { animId = requestAnimationFrame(draw); return; }
+      const ow = off.width, oh = off.height, scaleX = w / ow, scaleY = h / oh;
+      const img = offCtx.createImageData(ow, oh); const data = img.data;
+      const edgeThresh = Math.min(w, h) / ow * 10;
+
+      for (let py = 0; py < oh; py++) for (let px = 0; px < ow; px++) {
+        const wx = px * scaleX, wy = py * scaleY;
+        let d1 = Infinity, d2 = Infinity, near = 0;
+        seeds.forEach((s, i) => {
+          const d = Math.hypot(wx - s.x, wy - s.y);
+          if (d < d1) { d2 = d1; d1 = d; near = i; } else if (d < d2) d2 = d;
+        });
+        const edge = Math.max(0, 1 - (d2 - d1) / edgeThresh);
+        const fill = Math.max(0, c.cellFill * (1 - d1 / (Math.min(w, h) * 0.5)));
+        const brightness = Math.min(0.72, edge * edge * c.edgeGlow * 0.65 + fill);
+        const hue = seeds[near].hue;
+        const [r2, g2, b2] = h2rgb(hue, 0.75, brightness);
+        const i = (py * ow + px) * 4;
+        data[i] = r2; data[i+1] = g2; data[i+2] = b2; data[i+3] = 255;
+      }
+
+      offCtx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = true; ctx.drawImage(off, 0, 0, w, h);
+
+      seeds.forEach(s => {
+        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 9);
+        g.addColorStop(0, `hsla(${s.hue},80%,92%,0.85)`); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+      });
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize(); draw();
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
   particlesBg, auroraBg, topographicBg, sparkNetworkBg,
   starfieldBg, orbitalBg, flowFieldBg, gradientMeshBg,
   matrixBg, bokehBg, plasmaBg, rippleBg, lissajousBg,
+  fourierBg, attractorBg, spirographBg, waveInterferenceBg, voronoiBg,
 ];
 
 // ─── persistence ──────────────────────────────────────────────────────────────
