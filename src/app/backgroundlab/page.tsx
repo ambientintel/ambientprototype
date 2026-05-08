@@ -4132,7 +4132,7 @@ export default function BackgroundLab() {
   const [copied, setCopied] = React.useState(false);
   const [slideshow, setSlideshow] = React.useState(false);
   const [shuffled, setShuffled] = React.useState(false);
-  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const [drawerOpen, setDrawerOpen] = React.useState(true);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const cfgRef = React.useRef<Cfg>(configs[activeId]);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
