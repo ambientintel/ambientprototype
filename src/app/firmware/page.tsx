@@ -2,9 +2,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
-// ── Waveform background — slow oscilloscope traces ────────────────────────────
+// ── Topographic contour background ────────────────────────────────────────────
+// Six terrain peaks as slow-rotating concentric ellipses.
+// Axis rotation + orbital center drift + aspect-ratio morph at independent
+// speeds — complex evolution that never exactly repeats.
 
-function WaveformCanvas() {
+function TopoCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const el = ref.current!;
@@ -13,47 +16,52 @@ function WaveformCanvas() {
     let raf: number;
     let t = 0;
 
-    type Wave = { yFrac: number; freq: number; amp: number; spd: number; phase: number; alpha: number };
-    let waves: Wave[] = [];
+    const PEAKS = [
+      { fx:0.16, fy:0.25, rx:320, ry:200, a:-0.30, n:12, rs:0.000115, dr:0.022, ds:0.000310, dp:0.00, ms:0.000205 },
+      { fx:0.76, fy:0.14, rx:255, ry:158, a: 0.42, n:10, rs:0.000188, dr:0.018, ds:0.000415, dp:1.10, ms:0.000282 },
+      { fx:0.53, fy:0.78, rx:345, ry:215, a:-0.09, n:13, rs:0.000092, dr:0.016, ds:0.000268, dp:2.30, ms:0.000158 },
+      { fx:0.91, fy:0.62, rx:205, ry:130, a: 0.68, n: 9, rs:0.000162, dr:0.020, ds:0.000352, dp:0.72, ms:0.000241 },
+      { fx:0.06, fy:0.84, rx:225, ry:142, a:-0.51, n: 9, rs:0.000140, dr:0.017, ds:0.000292, dp:3.58, ms:0.000198 },
+      { fx:0.44, fy:0.44, rx:188, ry:120, a: 0.21, n: 8, rs:0.000238, dr:0.026, ds:0.000475, dp:5.10, ms:0.000330 },
+    ];
 
-    function init() {
-      waves = Array.from({ length: 9 }, (_, i) => ({
-        yFrac:  (i + 0.5) / 9,
-        freq:   0.0032 + (i % 3) * 0.0018 + Math.random() * 0.001,
-        amp:    8  + Math.random() * 18,
-        spd:    0.00055 + Math.random() * 0.00045,
-        phase:  (i / 9) * Math.PI * 2,
-        alpha:  0.016 + Math.random() * 0.018,
-      }));
-    }
-
-    function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; init(); }
+    function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; }
     resize();
     window.addEventListener('resize', resize);
 
     function frame() {
       const W = el.width, H = el.height;
       ctx.clearRect(0, 0, W, H);
-      t += 1;
+      t++;
 
-      // faint mathematical grid
+      // Survey grid — mathematical foundation layer
       ctx.lineWidth = 0.5;
-      ctx.strokeStyle = 'rgba(8,12,26,0.010)';
-      const gx = W / 11, gy = H / 8;
-      for (let i = 1; i < 11; i++) { ctx.beginPath(); ctx.moveTo(i*gx,0); ctx.lineTo(i*gx,H); ctx.stroke(); }
-      for (let j = 1; j < 8;  j++) { ctx.beginPath(); ctx.moveTo(0,j*gy); ctx.lineTo(W,j*gy); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(8,14,50,0.028)';
+      for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+      for (let y = 0; y < H; y += 80) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
 
-      // waveform traces
-      waves.forEach(wave => {
-        const cy = wave.yFrac * H;
-        ctx.beginPath();
-        for (let x = 0; x <= W; x += 3) {
-          const y = cy + wave.amp * Math.sin(x * wave.freq + t * wave.spd + wave.phase);
-          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      PEAKS.forEach(p => {
+        const cx = p.fx * W + p.dr * W       * Math.sin(t * p.ds + p.dp);
+        const cy = p.fy * H + p.dr * H * 0.6 * Math.cos(t * p.ds * 0.77 + p.dp + 0.5);
+        const angle = p.a + t * p.rs;
+        const morph = 1 + 0.07 * Math.sin(t * p.ms + p.dp);
+
+        for (let r = 0; r < p.n; r++) {
+          const frac  = r / p.n;
+          const scale = 1 - frac * 0.75;
+          const alpha = 0.032 + frac * 0.072;
+          const lw    = 0.55 + frac * 0.60;
+
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(angle);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, p.rx * scale, p.ry * morph * scale, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(8,14,58,${alpha.toFixed(4)})`;
+          ctx.lineWidth = lw;
+          ctx.stroke();
+          ctx.restore();
         }
-        ctx.strokeStyle = `rgba(8,12,26,${wave.alpha.toFixed(3)})`;
-        ctx.lineWidth = 0.65;
-        ctx.stroke();
       });
 
       raf = requestAnimationFrame(frame);
@@ -690,7 +698,7 @@ export default function FirmwarePage() {
       .df-frozen .df-sub   { color: rgba(255,255,255,0.82); }
     `}} />
     <div className="app" style={{ background: '#F1F3F6', minHeight: '100vh', position: 'relative' }}>
-      <WaveformCanvas />
+      <TopoCanvas />
 
       {/* ── Sidebar ── */}
       <aside style={{ background: '#FFFFFF', borderRight: '1px solid rgba(0,0,0,0.08)', padding: '22px 14px 28px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0, zIndex: 10, boxShadow: '2px 0 8px rgba(0,0,0,0.04)' }}>
