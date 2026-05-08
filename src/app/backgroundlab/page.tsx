@@ -4551,6 +4551,155 @@ const deepGlowBg: BgDef = {
   },
 };
 
+// ─── Flow Glow ────────────────────────────────────────────────────────────────
+
+const flowGlowBg: BgDef = {
+  id: 'flowglow',
+  label: 'Flow Glow',
+  description: 'Freely morphing Apple Intelligence blobs on Lissajous paths — organic, never-repeating, screen blend with glowing border',
+  defaults: { cornerRadius: 56, speed: 0.15, blobSize: 0.58, intensity: 0.88, strokeWidth: 7, padding: 32 },
+  sliders: [
+    { key: 'cornerRadius', label: 'Corner radius', min: 0,   max: 160, step: 1    },
+    { key: 'speed',        label: 'Flow speed',    min: 0,   max: 1.0, step: 0.01 },
+    { key: 'blobSize',     label: 'Blob size',     min: 0.1, max: 1.2, step: 0.01 },
+    { key: 'intensity',    label: 'Intensity',     min: 0,   max: 1.0, step: 0.01 },
+    { key: 'strokeWidth',  label: 'Stroke width',  min: 1,   max: 40,  step: 0.5  },
+    { key: 'padding',      label: 'Inset',         min: 0,   max: 200, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let flowT = 0;
+    let borderAngle = 0;
+    let lastTs = performance.now();
+
+    // Apple Intelligence RGB tuples
+    const COLORS: [number,number,number][] = [
+      [188,130,243],[245,185,234],[141,159,255],[255,103,120],[255,186,113],[198,134,255],
+    ];
+
+    // Lissajous blob descriptors — irrational frequency ratios keep paths non-repeating
+    const BLOBS = [
+      { fx: 0.31, fy: 0.47, px: 0,            py: Math.PI * 0.50 },
+      { fx: 0.53, fy: 0.29, px: Math.PI,      py: Math.PI * 1.20 },
+      { fx: 0.41, fy: 0.67, px: Math.PI * 0.7,py: 0              },
+      { fx: 0.23, fy: 0.53, px: Math.PI * 1.5,py: Math.PI * 0.80 },
+      { fx: 0.59, fy: 0.37, px: Math.PI * 0.3,py: Math.PI * 1.70 },
+      { fx: 0.43, fy: 0.61, px: Math.PI * 1.1,py: Math.PI * 0.30 },
+    ];
+
+    // Border color cycling (same as Apple Glow)
+    const BASE_HEX = ['#BC82F3','#F5B9EA','#8D9FFF','#FF6778','#FFBA71','#C686FF'];
+    let curC = [...BASE_HEX], tgtC = [...BASE_HEX], lerpT = 1.0, nextSwap = 0.45;
+
+    const hexToRgb = (h: string): [number,number,number] => {
+      const v = parseInt(h.replace('#',''), 16);
+      return [(v>>16)&255,(v>>8)&255,v&255];
+    };
+    const lerpHex = (a: string, b: string, t: number) => {
+      const [ar,ag,ab]=hexToRgb(a),[br,bg,bb]=hexToRgb(b);
+      return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect();
+      canvas.width = r.width || window.innerWidth;
+      canvas.height = r.height || window.innerHeight;
+    };
+
+    const rrectPath = (x: number, y: number, w: number, h: number, r: number) => {
+      r = Math.max(0, Math.min(r, w/2, h/2));
+      ctx.beginPath();
+      ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+      ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+      ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+      ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+      ctx.closePath();
+    };
+
+    type CC = CanvasRenderingContext2D & { createConicGradient:(a:number,x:number,y:number)=>CanvasGradient };
+
+    const draw = (ts: number) => {
+      const dt = Math.min((ts - lastTs) / 1000, 0.05);
+      lastTs = ts;
+      const c = getCfg();
+      const cw = canvas.width, ch = canvas.height;
+      const cx = cw/2, cy = ch/2;
+      const sc = Math.min(cw, ch);
+
+      flowT      += c.speed * dt;
+      borderAngle += 0.4 * dt;
+
+      lerpT = Math.min(1, lerpT + dt / 0.55);
+      nextSwap -= dt;
+      if (nextSwap <= 0 && lerpT >= 1) {
+        nextSwap = 0.4 + Math.random() * 0.15;
+        curC = [...tgtC]; lerpT = 0;
+        tgtC = [...BASE_HEX].sort(() => Math.random() - 0.5);
+      }
+      const borderCols = curC.map((a, i) => lerpHex(a, tgtC[i], lerpT));
+
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.fillStyle = '#080810';
+      ctx.fillRect(0, 0, cw, ch);
+
+      const pad = c.padding, sw = c.strokeWidth, gi = c.intensity;
+      const rx = pad, ry = pad, rw = cw - pad*2, rh = ch - pad*2;
+      const cr = c.cornerRadius;
+      const blobR = sc * c.blobSize;
+
+      // ── Blob fill clipped to rrect ─────────────────────────────────────────
+      ctx.save();
+      rrectPath(rx, ry, rw, rh, cr);
+      ctx.clip();
+      ctx.globalCompositeOperation = 'screen';
+
+      BLOBS.forEach((blob, i) => {
+        const [rr,gg,bb] = COLORS[i];
+        const bx = cx + (rw * 0.40) * Math.sin(flowT * blob.fx + blob.px);
+        const by = cy + (rh * 0.40) * Math.cos(flowT * blob.fy + blob.py);
+        const grad = ctx.createRadialGradient(bx, by, 0, bx, by, blobR);
+        grad.addColorStop(0,    `rgba(${rr},${gg},${bb},${gi * 0.82})`);
+        grad.addColorStop(0.42, `rgba(${rr},${gg},${bb},${gi * 0.36})`);
+        grad.addColorStop(1,    `rgba(${rr},${gg},${bb},0)`);
+        ctx.beginPath(); ctx.arc(bx, by, blobR, 0, Math.PI*2);
+        ctx.fillStyle = grad; ctx.fill();
+      });
+
+      ctx.restore();
+
+      // ── Apple Glow border ──────────────────────────────────────────────────
+      const makeBorderGrad = () => {
+        const g = (ctx as CC).createConicGradient(borderAngle - Math.PI/2, cx, cy);
+        borderCols.forEach((col, i) => g.addColorStop(i / borderCols.length, col));
+        g.addColorStop(1, borderCols[0]);
+        return g;
+      };
+      const drawBorder = (lw: number, blur: number, alpha: number) => {
+        ctx.save();
+        if (blur > 0) ctx.filter = `blur(${blur}px)`;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = makeBorderGrad();
+        ctx.lineWidth = lw; ctx.lineCap = 'round';
+        rrectPath(rx, ry, rw, rh, cr); ctx.stroke();
+        ctx.restore();
+      };
+
+      drawBorder(sw*4.5, 26*gi, 0.30*gi);
+      drawBorder(sw*2.8, 14*gi, 0.50*gi);
+      drawBorder(sw*1.6,  5*gi, 0.72*gi);
+      drawBorder(sw,       0,   1.0);
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize();
+    animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
@@ -4567,11 +4716,11 @@ const BACKGROUNDS: BgDef[] = [
   langtonBg, isingBg, lightningBg, burningShipBg, bzReactionBg,
   marbleBg, waterSimBg, cycloidBg, supernovaBg, moireBg,
   gravityLensBg, eulerSpiralBg, kaleidoscopeBg, terrainBg, ribbonsBg,
-  appleGlowBg, ambientGlowBg, axiGlowBg, deepGlowBg,
+  appleGlowBg, ambientGlowBg, axiGlowBg, deepGlowBg, flowGlowBg,
 ];
 
 const CATEGORIES: { id: string; label: string; color: string; ids: string[] }[] = [
-  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','ambientglow','axiglow','deepglow','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
+  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','ambientglow','axiglow','deepglow','flowglow','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
   { id: 'physics',  label: 'Physics',  color: '#34d399', ids: ['particles','ripple','pendulum','doublependulum','fluid','boids','nbody','sand','watersim','gravitylens'] },
   { id: 'math',     label: 'Math',     color: '#60a5fa', ids: ['topographic','lissajous','fourier','spirograph','waveinterference','wireframe','harmonograph','torusknot','cymatics','cycloid','moire','eulerspiral'] },
   { id: 'networks', label: 'Networks', color: '#fb923c', ids: ['sparknetwork','orbital','flowfield','voronoi','magneticfield','curlnoise','domainwarp'] },
