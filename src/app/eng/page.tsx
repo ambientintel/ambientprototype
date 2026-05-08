@@ -408,7 +408,7 @@ export default function EngDashboard() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                        <span style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, color: '#111827', letterSpacing: '-0.01em' }}>{d.label}</span>
+                        <Link href={d.href} style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, color: '#111827', letterSpacing: '-0.01em', textDecoration: 'none' }}>{d.label} <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: d.color }}>↗</span></Link>
                         {isFrozen && (
                           <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', borderRadius: 999, padding: '2px 8px' }}>
                             {frozen[d.id]!.startsWith('Locked') || frozen[d.id]!.match(/[A-Za-z]+ \d/) ? `✓ ${d.freezeLabel}` : `✓ ${d.freezeLabel}`}
