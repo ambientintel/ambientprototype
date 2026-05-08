@@ -20,12 +20,12 @@ function TopoCanvas() {
     // n: ring count, rs: rotation speed, dr: drift radius (fraction of W),
     // ds: drift speed, dp: drift phase, ms: morph speed
     const PEAKS = [
-      { fx:0.14, fy:0.24, rx:245, ry:152, a:-0.30, n: 9, rs:0.000115, dr:0.024, ds:0.000310, dp:0.00, ms:0.000205 },
-      { fx:0.73, fy:0.14, rx:192, ry:119, a: 0.42, n: 7, rs:0.000188, dr:0.019, ds:0.000415, dp:1.10, ms:0.000282 },
-      { fx:0.54, fy:0.77, rx:272, ry:170, a:-0.09, n:11, rs:0.000092, dr:0.017, ds:0.000268, dp:2.30, ms:0.000158 },
-      { fx:0.89, fy:0.61, rx:150, ry: 96, a: 0.68, n: 6, rs:0.000162, dr:0.021, ds:0.000352, dp:0.72, ms:0.000241 },
-      { fx:0.07, fy:0.83, rx:168, ry:106, a:-0.51, n: 6, rs:0.000140, dr:0.018, ds:0.000292, dp:3.58, ms:0.000198 },
-      { fx:0.43, fy:0.43, rx:140, ry: 90, a: 0.21, n: 5, rs:0.000238, dr:0.028, ds:0.000475, dp:5.10, ms:0.000330 },
+      { fx:0.16, fy:0.25, rx:320, ry:200, a:-0.30, n:12, rs:0.000115, dr:0.022, ds:0.000310, dp:0.00, ms:0.000205 },
+      { fx:0.76, fy:0.14, rx:255, ry:158, a: 0.42, n:10, rs:0.000188, dr:0.018, ds:0.000415, dp:1.10, ms:0.000282 },
+      { fx:0.53, fy:0.78, rx:345, ry:215, a:-0.09, n:13, rs:0.000092, dr:0.016, ds:0.000268, dp:2.30, ms:0.000158 },
+      { fx:0.91, fy:0.62, rx:205, ry:130, a: 0.68, n: 9, rs:0.000162, dr:0.020, ds:0.000352, dp:0.72, ms:0.000241 },
+      { fx:0.06, fy:0.84, rx:225, ry:142, a:-0.51, n: 9, rs:0.000140, dr:0.017, ds:0.000292, dp:3.58, ms:0.000198 },
+      { fx:0.44, fy:0.44, rx:188, ry:120, a: 0.21, n: 8, rs:0.000238, dr:0.026, ds:0.000475, dp:5.10, ms:0.000330 },
     ];
 
     function resize() { el.width = el.offsetWidth; el.height = el.offsetHeight; }
@@ -37,9 +37,9 @@ function TopoCanvas() {
       ctx.clearRect(0, 0, W, H);
       t++;
 
-      // Faint survey grid — mathematical foundation layer
-      ctx.lineWidth = 0.45;
-      ctx.strokeStyle = 'rgba(8,14,50,0.013)';
+      // Survey grid — mathematical foundation layer
+      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = 'rgba(8,14,50,0.028)';
       for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
       for (let y = 0; y < H; y += 80) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
 
@@ -56,10 +56,10 @@ function TopoCanvas() {
 
         for (let r = 0; r < p.n; r++) {
           const frac  = r / p.n;
-          const scale = 1 - frac * 0.74;
-          // Outer rings most faint, inner rings slightly more defined
-          const alpha = 0.012 + frac * 0.036;
-          const lw    = 0.38 + frac * 0.34;
+          const scale = 1 - frac * 0.75;
+          // Outer rings faint, inner rings clearly defined — reads as elevation
+          const alpha = 0.032 + frac * 0.072;
+          const lw    = 0.55 + frac * 0.60;
 
           ctx.save();
           ctx.translate(cx, cy);
