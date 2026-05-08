@@ -544,16 +544,12 @@ export default function MechanicalPage() {
       {/* ── Sidebar ── */}
       <aside style={S.sidebar}>
         <div style={{ marginBottom: 20 }}>
+          <Link href="/engineering" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 10, padding: '3px 6px' }}>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6L7.5 10" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#9CA3AF' }}>Engineering</span>
+          </Link>
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 6px', marginBottom: 12 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 6, background: '#EFF6FF', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <rect x="1" y="1" width="12" height="12" rx="2" stroke="#2563EB" strokeWidth="1.2" fill="none"/>
-                  <rect x="3" y="4" width="3" height="3" rx="0.5" fill="#2563EB" opacity="0.7"/>
-                  <rect x="8" y="4" width="3" height="3" rx="0.5" fill="#2563EB" opacity="0.4"/>
-                  <rect x="3" y="8.5" width="8" height="1" rx="0.5" fill="#2563EB" opacity="0.3"/>
-                </svg>
-              </div>
+            <div style={{ padding: '4px 6px', marginBottom: 12 }}>
               <span style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 14.5, color: '#111827', letterSpacing: '-0.01em' }}>Ambient <em style={{ fontStyle: 'italic', color: '#6B7280' }}>Mechanical</em></span>
             </div>
           </Link>
