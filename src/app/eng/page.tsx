@@ -331,15 +331,15 @@ export default function EngDashboard() {
                   </div>
 
                   {/* Priority tasks */}
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF', marginBottom: 8 }}>Priority Tasks</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ marginBottom: 16, background: d.colorBg, border: `1px solid ${d.colorBorder}`, borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: d.color, fontWeight: 700, marginBottom: 10 }}>▸ Priority Tasks</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                       {(PRIORITY_TASKS[d.id] ?? []).map((item, i) => (
-                        <div key={i} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: d.color, fontWeight: 700, flexShrink: 0, lineHeight: '18px' }}>{i + 1}</span>
+                        <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#FFFFFF', fontWeight: 700, flexShrink: 0, background: d.color, borderRadius: 4, width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, marginTop: 1 }}>{i + 1}</span>
                           <div style={{ flex: 1 }}>
-                            <span style={{ fontSize: 12, color: '#1F2937', lineHeight: 1.5 }}>{item.task}</span>
-                            <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: '#9CA3AF', marginLeft: 6 }}>[{item.owner}]</span>
+                            <span style={{ fontSize: 12.5, color: '#111827', lineHeight: 1.5 }}>{item.task}</span>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: d.color, marginLeft: 7, opacity: 0.7 }}>{item.owner}</span>
                           </div>
                         </div>
                       ))}
