@@ -4092,6 +4092,20 @@ const BACKGROUNDS: BgDef[] = [
   galaxyBg, dlaBg, fractalTreeBg, magneticFieldBg, ifsFractalBg,
   fluidBg, boidsBg, juliaBg, curlNoiseBg, cliffordBg,
   gameOfLifeBg, newtonFractalBg, torusKnotBg, nBodyBg, cymaticsBg,
+  mandelbrotBg, rosslerBg, thomasBg, bifurcationBg, sandBg,
+  langtonBg, isingBg, lightningBg, burningShipBg, bzReactionBg,
+  marbleBg, waterSimBg, cycloidBg, supernovaBg, moireBg,
+  gravityLensBg, eulerSpiralBg, kaleidoscopeBg, terrainBg, ribbonsBg,
+];
+
+const CATEGORIES: { id: string; label: string; color: string; ids: string[] }[] = [
+  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
+  { id: 'physics',  label: 'Physics',  color: '#34d399', ids: ['particles','ripple','pendulum','doublependulum','fluid','boids','nbody','sand','watersim','gravitylens'] },
+  { id: 'math',     label: 'Math',     color: '#60a5fa', ids: ['topographic','lissajous','fourier','spirograph','waveinterference','wireframe','harmonograph','torusknot','cymatics','cycloid','moire','eulerspiral'] },
+  { id: 'networks', label: 'Networks', color: '#fb923c', ids: ['sparknetwork','orbital','flowfield','voronoi','magneticfield','curlnoise','domainwarp'] },
+  { id: 'fractals', label: 'Fractals', color: '#f472b6', ids: ['fractaltree','ifsfractal','julia','newtonfractal','mandelbrot','burningship'] },
+  { id: 'chaos',    label: 'Chaos',    color: '#fbbf24', ids: ['attractor','lorenz','clifford','rossler','thomas','bifurcation'] },
+  { id: 'cellular', label: 'Cellular', color: '#2dd4bf', ids: ['reactiondiffusion','physarum','dlacrystal','gameoflife','langton','ising','bzreaction'] },
 ];
 
 // ─── persistence ──────────────────────────────────────────────────────────────
@@ -4118,8 +4132,8 @@ export default function BackgroundLab() {
   const [copied, setCopied] = React.useState(false);
   const [slideshow, setSlideshow] = React.useState(false);
   const [shuffled, setShuffled] = React.useState(false);
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const navRef = React.useRef<HTMLDivElement>(null);
   const cfgRef = React.useRef<Cfg>(configs[activeId]);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdRef = React.useRef(activeId);
@@ -4160,14 +4174,6 @@ export default function BackgroundLab() {
     return () => clearInterval(id);
   }, [slideshow]);
 
-  // Auto-scroll active pill into view
-  React.useEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-    const active = nav.querySelector('[data-active="true"]') as HTMLElement | null;
-    active?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }, [activeId]);
-
   // Keyboard shortcuts
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -4183,6 +4189,10 @@ export default function BackgroundLab() {
       } else if (e.key === ' ') {
         e.preventDefault();
         shuffle();
+      } else if (e.key === 'Escape') {
+        setDrawerOpen(false);
+      } else if (e.key === 'm' || e.key === 'M') {
+        setDrawerOpen(o => !o);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -4237,35 +4247,95 @@ export default function BackgroundLab() {
         <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
       </div>
 
-      {/* Top navigation */}
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
-        {/* Left fade mask */}
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 80, background: 'linear-gradient(to right, rgba(12,13,15,0.95), rgba(12,13,15,0))', zIndex: 1, pointerEvents: 'none' }} />
-        {/* Right fade mask */}
-        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 80, background: 'linear-gradient(to left, rgba(12,13,15,0.95), rgba(12,13,15,0))', zIndex: 1, pointerEvents: 'none' }} />
-        {/* Scrollable pill row */}
-        <div ref={navRef} style={{
-          overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
-          display: 'flex', alignItems: 'center', gap: 5, padding: '12px 88px 10px',
-          background: 'linear-gradient(to bottom, rgba(12,13,15,0.92), rgba(12,13,15,0))',
+      {/* Drawer toggle button */}
+      <button onClick={() => setDrawerOpen(o => !o)} title="Browse backgrounds (M)" style={{
+        position: 'fixed', top: 16, left: 16, zIndex: 300,
+        background: drawerOpen ? 'rgba(45,114,210,0.2)' : 'rgba(255,255,255,0.06)',
+        border: drawerOpen ? '1px solid rgba(45,114,210,0.4)' : '1px solid rgba(255,255,255,0.09)',
+        borderRadius: 8, color: drawerOpen ? '#7ab4f8' : 'rgba(255,255,255,0.5)',
+        width: 36, height: 36, cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+        transition: 'all 0.2s',
+      }}>
+        <span style={{ display: 'block', width: 14, height: 1.5, background: 'currentColor', borderRadius: 1 }} />
+        <span style={{ display: 'block', width: 14, height: 1.5, background: 'currentColor', borderRadius: 1 }} />
+        <span style={{ display: 'block', width: 14, height: 1.5, background: 'currentColor', borderRadius: 1 }} />
+      </button>
+
+      {/* Backdrop */}
+      {drawerOpen && (
+        <div onClick={() => setDrawerOpen(false)} style={{
+          position: 'fixed', inset: 0, zIndex: 199,
+          background: 'rgba(0,0,0,0.35)',
+        }} />
+      )}
+
+      {/* Side drawer */}
+      <div style={{
+        position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 200,
+        width: 224, transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
+        background: 'rgba(10,11,14,0.97)',
+        backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+        borderRight: '1px solid rgba(255,255,255,0.06)',
+        display: 'flex', flexDirection: 'column',
+        boxShadow: '6px 0 40px rgba(0,0,0,0.7)',
+      }}>
+        {/* Drawer header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 14px 12px',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          flexShrink: 0,
         }}>
-          <span style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', whiteSpace: 'nowrap', marginRight: 4, flexShrink: 0 }}>
-            BG LAB
-          </span>
-          {BACKGROUNDS.map(bg => (
-            <button key={bg.id} data-active={activeId === bg.id ? 'true' : 'false'} onClick={() => setActiveId(bg.id)} style={{
-              padding: '5px 13px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
-              background: activeId === bg.id ? 'rgba(45,114,210,0.3)' : 'rgba(255,255,255,0.05)',
-              border: activeId === bg.id ? '1px solid rgba(45,114,210,0.55)' : '1px solid rgba(255,255,255,0.07)',
-              color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.38)',
-              fontSize: 11, whiteSpace: 'nowrap', transition: 'all 0.15s',
-            }}>
-              {bg.label}
-            </button>
-          ))}
-          <span style={{ flexShrink: 0, marginLeft: 8, fontSize: 9, letterSpacing: 1.5, color: 'rgba(255,255,255,0.18)', whiteSpace: 'nowrap' }}>
-            {BACKGROUNDS.findIndex(b => b.id === activeId) + 1} / {BACKGROUNDS.length}
-          </span>
+          <div>
+            <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', marginBottom: 3 }}>
+              Background Lab
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)' }}>
+              {BACKGROUNDS.findIndex(b => b.id === activeId) + 1} / {BACKGROUNDS.length}
+            </div>
+          </div>
+          <button onClick={() => setDrawerOpen(false)} style={{
+            background: 'none', border: 'none', color: 'rgba(255,255,255,0.28)',
+            cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '4px 6px',
+          }}>×</button>
+        </div>
+
+        {/* Scrollable category list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0 16px', scrollbarWidth: 'none' }}>
+          {CATEGORIES.map(cat => {
+            const catBgs = cat.ids
+              .map(id => BACKGROUNDS.find(b => b.id === id))
+              .filter((b): b is BgDef => b !== undefined);
+            if (catBgs.length === 0) return null;
+            return (
+              <div key={cat.id}>
+                <div style={{
+                  padding: '10px 14px 5px',
+                  fontSize: 9, letterSpacing: 2.5, textTransform: 'uppercase',
+                  color: cat.color, opacity: 0.75,
+                }}>
+                  {cat.label}
+                </div>
+                {catBgs.map(bg => (
+                  <button key={bg.id} onClick={() => setActiveId(bg.id)} style={{
+                    display: 'block', width: '100%', padding: '6px 14px 6px 16px',
+                    background: activeId === bg.id ? 'rgba(45,114,210,0.12)' : 'transparent',
+                    border: 'none',
+                    borderLeft: activeId === bg.id ? '2px solid #3b82f6' : '2px solid transparent',
+                    cursor: 'pointer', textAlign: 'left',
+                    fontSize: 12,
+                    color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.4)',
+                    fontWeight: activeId === bg.id ? 500 : 400,
+                    transition: 'all 0.1s',
+                  }}>
+                    {bg.label}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -4296,7 +4366,7 @@ export default function BackgroundLab() {
           {activeBg.description}
         </p>
         <div style={{ marginTop: 14, fontSize: 9, color: 'rgba(255,255,255,0.13)', letterSpacing: 1.5 }}>
-          ← → navigate &nbsp;·&nbsp; R reset &nbsp;·&nbsp; Space shuffle
+          M menu &nbsp;·&nbsp; ← → navigate &nbsp;·&nbsp; R reset &nbsp;·&nbsp; Space shuffle
         </div>
       </div>
 
