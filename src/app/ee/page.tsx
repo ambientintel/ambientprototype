@@ -819,7 +819,7 @@ export default function EEPage() {
       .df-frozen .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
       .df-frozen .df-sub   { color: rgba(255,255,255,0.82); }
     `}} />
-    <div className="app" style={{ background: '#F1F3F6', minHeight: '100vh', position: 'relative' }}>
+    <div className="app" style={{ background: '#f5f5f7', minHeight: '100vh', position: 'relative' }}>
       <ConstellationCanvas />
 
       {/* ── Sidebar ── */}
