@@ -4132,7 +4132,6 @@ export default function BackgroundLab() {
   const [copied, setCopied] = React.useState(false);
   const [slideshow, setSlideshow] = React.useState(false);
   const [shuffled, setShuffled] = React.useState(false);
-  const [drawerOpen, setDrawerOpen] = React.useState(true);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const cfgRef = React.useRef<Cfg>(configs[activeId]);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -4189,10 +4188,6 @@ export default function BackgroundLab() {
       } else if (e.key === ' ') {
         e.preventDefault();
         shuffle();
-      } else if (e.key === 'Escape') {
-        setDrawerOpen(false);
-      } else if (e.key === 'm' || e.key === 'M') {
-        setDrawerOpen(o => !o);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -4247,34 +4242,10 @@ export default function BackgroundLab() {
         <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
       </div>
 
-      {/* Drawer toggle button */}
-      <button onClick={() => setDrawerOpen(o => !o)} title="Browse backgrounds (M)" style={{
-        position: 'fixed', top: 16, left: 16, zIndex: 300,
-        background: drawerOpen ? 'rgba(45,114,210,0.2)' : 'rgba(255,255,255,0.06)',
-        border: drawerOpen ? '1px solid rgba(45,114,210,0.4)' : '1px solid rgba(255,255,255,0.09)',
-        borderRadius: 8, color: drawerOpen ? '#7ab4f8' : 'rgba(255,255,255,0.5)',
-        width: 36, height: 36, cursor: 'pointer',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-        transition: 'all 0.2s',
-      }}>
-        <span style={{ display: 'block', width: 14, height: 1.5, background: 'currentColor', borderRadius: 1 }} />
-        <span style={{ display: 'block', width: 14, height: 1.5, background: 'currentColor', borderRadius: 1 }} />
-        <span style={{ display: 'block', width: 14, height: 1.5, background: 'currentColor', borderRadius: 1 }} />
-      </button>
-
-      {/* Backdrop */}
-      {drawerOpen && (
-        <div onClick={() => setDrawerOpen(false)} style={{
-          position: 'fixed', inset: 0, zIndex: 199,
-          background: 'rgba(0,0,0,0.35)',
-        }} />
-      )}
-
       {/* Side drawer */}
       <div style={{
         position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 200,
-        width: 224, transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
-        transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
+        width: 224,
         background: 'rgba(10,11,14,0.97)',
         backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
         borderRight: '1px solid rgba(255,255,255,0.06)',
@@ -4283,23 +4254,16 @@ export default function BackgroundLab() {
       }}>
         {/* Drawer header */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 14px 12px',
           borderBottom: '1px solid rgba(255,255,255,0.05)',
           flexShrink: 0,
         }}>
-          <div>
-            <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', marginBottom: 3 }}>
-              Background Lab
-            </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)' }}>
-              {BACKGROUNDS.findIndex(b => b.id === activeId) + 1} / {BACKGROUNDS.length}
-            </div>
+          <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', marginBottom: 3 }}>
+            Background Lab
           </div>
-          <button onClick={() => setDrawerOpen(false)} style={{
-            background: 'none', border: 'none', color: 'rgba(255,255,255,0.28)',
-            cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '4px 6px',
-          }}>×</button>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)' }}>
+            {BACKGROUNDS.findIndex(b => b.id === activeId) + 1} / {BACKGROUNDS.length}
+          </div>
         </div>
 
         {/* Scrollable category list */}
@@ -4366,7 +4330,7 @@ export default function BackgroundLab() {
           {activeBg.description}
         </p>
         <div style={{ marginTop: 14, fontSize: 9, color: 'rgba(255,255,255,0.13)', letterSpacing: 1.5 }}>
-          M menu &nbsp;·&nbsp; ← → navigate &nbsp;·&nbsp; R reset &nbsp;·&nbsp; Space shuffle
+          ← → navigate &nbsp;·&nbsp; R reset &nbsp;·&nbsp; Space shuffle
         </div>
       </div>
 
