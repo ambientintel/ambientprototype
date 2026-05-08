@@ -142,6 +142,39 @@ const INTEGRATIONS = [
   { from: 'Cloud Engineering', to: 'Mobile App', desc: 'FastAPI + Cognito JWT auth; SNS → APNS/FCM push; facility-scoped alert endpoints feed the app' },
 ];
 
+// ── Priority tasks per domain ──────────────────────────────────────────────────
+
+const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
+  firmware: [
+    { task: 'Boot custom DTB on OSD62x-PM carrier — confirm IWR6843AOP GPIO/SPI pin assignments', owner: 'BSP' },
+    { task: 'Validate IWR6843AOP SPI data path in Linux userspace (mmWave SDK driver)', owner: 'BSP' },
+    { task: 'Integrate Mender OTA client and run a remote update end-to-end', owner: 'DevOps' },
+    { task: 'Complete bring-up test sequence steps 08–11 (power rails, UART, JTAG, clocks)', owner: 'HW+BSP' },
+    { task: 'Sign off EVT bring-up checklist to unlock Production phase', owner: 'Lead' },
+  ],
+  ee: [
+    { task: 'Submit Gerber package to fab — confirm 8-layer stackup, drill files, impedance spec', owner: 'Layout' },
+    { task: 'Place BOM order: IWR6843AOP, OSD62x-PM, decoupling network, connectors', owner: 'Procurement' },
+    { task: 'Assemble EVT-0.1 boards and perform power rail sequencing bring-up', owner: 'HW' },
+    { task: 'Validate JTAG, UART debug headers, and IWR6843AOP SPI connectivity on bench', owner: 'HW' },
+    { task: 'Open DHF and begin 21 CFR 820 design history documentation', owner: 'QA' },
+  ],
+  mobileapp: [
+    { task: 'Complete Cognito sign-in, token refresh, and sign-out flows (step 03)', owner: 'Mobile' },
+    { task: 'Register APNS + FCM tokens and wire SNS push notification end-to-end', owner: 'Mobile' },
+    { task: 'Build alert list and detail screens with facility-scoped data from Cloud API', owner: 'Mobile' },
+    { task: 'Configure EAS build profile and submit first build to TestFlight', owner: 'Mobile+DevOps' },
+    { task: 'Resolve remaining Environment setup item to unblock step 04', owner: 'Mobile' },
+  ],
+  cloudengineering: [
+    { task: 'Deploy Parquet cold path Lambda — WAL design, presigned URL minter, S3 sink', owner: 'Cloud' },
+    { task: 'Deploy Ella narrative Lambda (Claude Sonnet 4.5) behind API Gateway', owner: 'Cloud+AI' },
+    { task: 'Stand up nurse FastAPI service with Cognito JWT validation and facility scoping', owner: 'Cloud' },
+    { task: 'Run device → MQTT → alert → SNS → push end-to-end integration test', owner: 'Cloud+Mobile' },
+    { task: 'Validate CloudTrail audit logs satisfy HIPAA §164.514(c) coded-data requirement', owner: 'Security' },
+  ],
+};
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function EngDashboard() {
@@ -295,6 +328,22 @@ export default function EngDashboard() {
                         <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#111827', fontWeight: 600 }}>{spec.v}</div>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Priority tasks */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF', marginBottom: 8 }}>Priority Tasks</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {(PRIORITY_TASKS[d.id] ?? []).map((item, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: d.color, fontWeight: 700, flexShrink: 0, lineHeight: '18px' }}>{i + 1}</span>
+                          <div style={{ flex: 1 }}>
+                            <span style={{ fontSize: 12, color: '#1F2937', lineHeight: 1.5 }}>{item.task}</span>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: '#9CA3AF', marginLeft: 6 }}>[{item.owner}]</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Footer row */}
