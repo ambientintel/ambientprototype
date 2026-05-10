@@ -104,7 +104,7 @@ const DOMAINS = [
     id: 'cloudengineering',
     href: '/cloudengineering',
     label: 'Cloud Engineering',
-    subtitle: 'AWS · Python 3.12 · Terraform',
+    subtitle: 'AWS CDK v2 · Python 3.12',
     color: '#4338CA',
     colorBg: '#EEF2FF',
     colorBorder: '#C7D2FE',
@@ -124,10 +124,10 @@ const DOMAINS = [
       { k: 'Region',  v: 'us-east-1' },
       { k: 'Runtime', v: 'Python 3.12' },
       { k: 'AI',      v: 'Sonnet 4.5' },
-      { k: 'IaC',     v: 'Terraform' },
+      { k: 'IaC',     v: 'CDK v2' },
     ],
-    description: 'Five AWS data paths: fall alerts, Parquet cold path, Ella narrative, nurse API, CloudTrail audit. HIPAA coded data.',
-    currentStep: '08 · Cold Path Deploy',
+    description: 'CDK v2 · 10 CloudFormation stacks · Five data paths: fall alerts, Parquet cold path, Ella narrative, nurse API, reconciler. HIPAA §164.514(c) coded data.',
+    currentStep: '08 · Cold Path — URL Minter + Parquet',
     freezeKey: 'ambient-cloud-frozen-v1',
     freezeLabel: 'Production Freeze',
   },
@@ -231,11 +231,11 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve remaining Environment setup item to unblock step 04', owner: 'Mobile' },
   ],
   cloudengineering: [
-    { task: 'Deploy Parquet cold path Lambda — WAL design, presigned URL minter, S3 sink', owner: 'Cloud' },
-    { task: 'Deploy Ella narrative Lambda (Claude Sonnet 4.5) behind API Gateway', owner: 'Cloud+AI' },
-    { task: 'Stand up nurse FastAPI service with Cognito JWT validation and facility scoping', owner: 'Cloud' },
-    { task: 'Run device → MQTT → alert → SNS → push end-to-end integration test', owner: 'Cloud+Mobile' },
-    { task: 'Validate CloudTrail audit logs satisfy HIPAA §164.514(c) coded-data requirement', owner: 'Security' },
+    { task: 'cdk deploy Ambient-dev-UrlMinter — presigned S3 URL Lambda, IoT role alias, device mTLS policy (step 08)', owner: 'Cloud' },
+    { task: 'Validate dual-write reconciler — TelemetryDivergence alarm on AmbientIntelligence/Telemetry, promote one facility to parquet_only', owner: 'Cloud' },
+    { task: 'cdk deploy Ambient-dev-Ella — Claude Sonnet 4.5 narrative, EventBridge crons 07:00 + 19:00 CT, de-id prompt eval (step 09)', owner: 'Cloud+AI' },
+    { task: 'cdk deploy Ambient-dev-Api — FastAPI + Cognito JWT, 12 facility-scoped endpoints, cross-facility denial test (step 10)', owner: 'Cloud' },
+    { task: 'Run integration test suite — FakeDevice end-to-end, 75 unit tests green, production sign-off checklist (steps 11–12)', owner: 'Cloud+Security' },
   ],
   mechanical: [
     { task: 'Complete PCB layout in Altium — route controlled-impedance traces, run DRC to zero errors', owner: 'Layout' },
@@ -269,8 +269,8 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Register APNS token and test SNS → APNS delivery end-to-end',
   ],
   cloudengineering: [
-    'Deploy Parquet Lambda to staging — validate presigned URL minter against device agent',
-    'Stand up nurse FastAPI with Cognito JWT validation and facility scoping',
+    'cdk deploy Ambient-dev-UrlMinter — test presigned URL issuance, IoT role alias, device shadow check',
+    'cdk deploy Ambient-dev-Ella — verify cron(0 12) + cron(0 0) rules fire, de-id narrative eval on 5 subjects',
   ],
   mechanical: [
     'Route all Altium traces, run DRC to zero errors, export preliminary Gerber',
@@ -288,7 +288,8 @@ const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text
   { domain: 'Mechanical',        urgency: 'high',   text: 'PoE+ vs barrel jack — affects power routing, BOM cost, and enclosure cutout geometry.' },
   { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk if Gerbers not submitted by end of sprint.' },
   { domain: 'Firmware',          urgency: 'high',   text: 'Mender vs SWUpdate for OTA — Mender adds ~8 MB to rootfs; SWUpdate is lighter but less managed.' },
-  { domain: 'Cloud Engineering', urgency: 'medium', text: 'MQTT broker: AWS IoT Core vs self-hosted Mosquitto — cost vs operational complexity.' },
+  { domain: 'Cloud Engineering', urgency: 'medium', text: 'Sonnet 4.6 upgrade for Ella — evaluate de-id system prompt fidelity before flipping model ID in EllaStack.' },
+  { domain: 'Cloud Engineering', urgency: 'low',    text: 'Firehose retirement timeline — 90-day window after all facilities reach parquet_only; not yet contractually nailed down.' },
   { domain: 'Mobile App',        urgency: 'medium', text: 'iOS TestFlight vs Enterprise Distribution for the 10-room clinical pilot.' },
   { domain: 'Web App',           urgency: 'medium', text: 'Ella narrative poll interval — 30 s vs WebSocket for real-time nurse alert delivery.' },
   { domain: 'Firmware',          urgency: 'low',    text: 'Kernel version pin: 6.1 LTS vs 6.6 LTS — both supported by TI SDK 11, no urgency.' },
@@ -299,8 +300,8 @@ const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text
 
 const BLOCKERS: { blocked: string; blocking: string; issue: string }[] = [
   { blocked: 'Firmware',   blocking: 'EE Hardware',      issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
-  { blocked: 'Mobile App', blocking: 'Cloud Engineering', issue: 'Cognito user pool + SNS ARN not yet provisioned; app can\'t register push tokens' },
-  { blocked: 'Web App',    blocking: 'Cloud Engineering', issue: 'REST alert + Ella narrative endpoints not deployed; dashboard running on mock data' },
+  { blocked: 'Mobile App', blocking: 'Cloud Engineering', issue: 'Cognito UserPool (Ambient-dev-Api, step 10) not yet deployed — app can\'t register push tokens or authenticate' },
+  { blocked: 'Web App',    blocking: 'Cloud Engineering', issue: 'FastAPI + Ella narrative endpoints (steps 09–10) not deployed — dashboard running on mock data' },
   { blocked: 'Mechanical', blocking: 'EE Hardware',       issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
 ];
 
