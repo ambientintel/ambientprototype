@@ -21,9 +21,11 @@ const SERVICES = [
   { id: 'url-minter', tag: 'Upload',       label: 'URL Minter',      path: 'services/url-minter/',  tests: null, desc: 'Presigned S3 upload URLs for device Parquet batches — eliminates MQTT overhead for analytic cold-path data.', tf: true,  lambdaFn: 'ambient-dev-url-minter' },
   { id: 'athena',     tag: 'Analytics',    label: 'Athena',          path: 'services/athena/',      tests: null, desc: 'Glue table and partition projection for raw radar frames on the cold path — queryable without ETL.', tf: true,  lambdaFn: null },
   { id: 'cloudtrail',    tag: 'Audit',      label: 'CloudTrail',      path: 'services/cloudtrail/',    tests: null, desc: 'Data-event audit logging on all sensitive DynamoDB tables — every read/write attributed for HIPAA compliance.', tf: true,  lambdaFn: null },
-  { id: 'iot-core',     tag: 'IoT',        label: 'IoT Core',        path: 'services/iot-core/',      tests: null, desc: 'Role alias (temp AWS creds for devices via mTLS), Device Shadow, and IoT Rules for fall-enricher and legacy Firehose paths.', tf: true,  lambdaFn: null },
-  { id: 'kms',          tag: 'Security',   label: 'KMS',             path: 'services/kms/',           tests: null, desc: 'Tenant CMK with 30-day deletion window, automatic annual rotation, and scoped key policy for DynamoDB, S3, SNS, and SQS.', tf: true,  lambdaFn: null },
-  { id: 'observability',tag: 'Monitoring', label: 'Observability',   path: 'services/observability/', tests: null, desc: 'CloudWatch Metric Streams to central account — scalar metrics only (Lambda, DynamoDB, Ambient/* namespace). No PHI crosses the boundary.', tf: true,  lambdaFn: null },
+  { id: 'iot-core',     tag: 'IoT',        label: 'IoT Core',        path: 'infra/stacks/',           tests: null, desc: 'IoT rules (fall-enricher + legacy Firehose) in TelemetryStack; role alias + device mTLS policy in UrlMinterStack. No standalone CDK stack.', tf: true,  lambdaFn: null },
+  { id: 'kms',          tag: 'Security',   label: 'KMS',             path: 'infra/stacks/kms_stack.py',  tests: null, desc: 'Tenant CMK — 4 keys (data, s3, sns, sqs) with auto-rotation and RemovalPolicy.RETAIN. Scoped key policies for each consumer.', tf: true,  lambdaFn: null },
+  { id: 'storage',      tag: 'Storage',    label: 'Storage',         path: 'infra/stacks/storage_stack.py', tests: null, desc: 'Four S3 buckets: Parquet data (raw frames + Firehose telemetry), Athena results (30-day expiry), IoT error DLQ, and CloudTrail audit (HIPAA 7-yr retain). All PHI-adjacent use SSE-KMS.', tf: true, lambdaFn: null },
+  { id: 'data',         tag: 'Database',   label: 'Data',            path: 'infra/stacks/data_stack.py',    tests: null, desc: 'Three DynamoDB tables (PAY_PER_REQUEST + PITR): devices (facility-index GSI), alerts (subject_date PK + facility-time GSI), daily-updates (subjectId PK, 90-day TTL). All encrypted with tenant CMK.', tf: true, lambdaFn: null },
+  { id: 'observability',tag: 'Monitoring', label: 'Observability',   path: 'infra/stacks/observability_stack.py', tests: null, desc: 'CloudWatch Metric Streams to central account — scalar metrics only (AmbientIntelligence/Telemetry, Lambda, ApiGateway, DynamoDB, Athena). No PHI crosses the boundary. Optional stack.', tf: true,  lambdaFn: null },
   { id: 'reconciler',  tag: 'Ops',        label: 'Reconciler',      path: 'services/reconciler/',   tests: 2,    desc: 'EventBridge 15-min cron compares device-path vs Firehose Athena row counts per facility — emits TelemetryDivergence metric, alarms at >0.1%.', tf: true, lambdaFn: 'ambient-dev-reconciler' },
 ];
 
@@ -48,16 +50,16 @@ const RUNBOOKS = [
 ];
 
 const CDK_STATE: Record<string, { cfnResources: number; lastDeploy: string }> = {
+  kms:           { cfnResources: 4,  lastDeploy: '6h ago' },
+  storage:       { cfnResources: 5,  lastDeploy: '6h ago' },
+  data:          { cfnResources: 9,  lastDeploy: '6h ago' },
+  'url-minter':  { cfnResources: 8,  lastDeploy: '5h ago' },
+  telemetry:     { cfnResources: 22, lastDeploy: '3h ago' },
+  athena:        { cfnResources: 12, lastDeploy: '5h ago' },
   ella:          { cfnResources: 14, lastDeploy: '2h ago' },
   api:           { cfnResources: 22, lastDeploy: '2h ago' },
-  telemetry:     { cfnResources: 18, lastDeploy: '3h ago' },
-  'url-minter':  { cfnResources: 8,  lastDeploy: '5h ago' },
-  athena:        { cfnResources: 12, lastDeploy: '5h ago' },
   cloudtrail:    { cfnResources: 6,  lastDeploy: '5h ago' },
-  'iot-core':    { cfnResources: 9,  lastDeploy: '4h ago' },
-  kms:           { cfnResources: 4,  lastDeploy: '6h ago' },
   observability: { cfnResources: 7,  lastDeploy: '1d ago' },
-  reconciler:    { cfnResources: 5,  lastDeploy: '2h ago' },
 };
 
 const PIPELINE: Record<string, {
@@ -65,16 +67,16 @@ const PIPELINE: Record<string, {
   deploy: { status: RunStatus; age: string; duration: string; sha: string };
   env: 'dev' | 'prod';
 }> = {
+  kms:           { synth: { status: 'success', age: '6h ago', duration: '0m 14s', sha: '9f02abc' }, deploy: { status: 'success', age: '6h ago', duration: '0m 47s', sha: '9f02abc' }, env: 'prod' },
+  storage:       { synth: { status: 'success', age: '6h ago', duration: '0m 11s', sha: '9f02abc' }, deploy: { status: 'success', age: '6h ago', duration: '0m 38s', sha: '9f02abc' }, env: 'prod' },
+  data:          { synth: { status: 'success', age: '6h ago', duration: '0m 13s', sha: '9f02abc' }, deploy: { status: 'success', age: '6h ago', duration: '0m 44s', sha: '9f02abc' }, env: 'prod' },
+  'url-minter':  { synth: { status: 'success', age: '5h ago', duration: '0m 18s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '0m 55s', sha: 'b7d1055' }, env: 'prod' },
+  telemetry:     { synth: { status: 'success', age: '3h ago', duration: '0m 31s', sha: 'c91e340' }, deploy: { status: 'success', age: '3h ago', duration: '2m 11s', sha: 'c91e340' }, env: 'prod' },
+  athena:        { synth: { status: 'success', age: '5h ago', duration: '0m 22s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '1m 44s', sha: 'b7d1055' }, env: 'prod' },
   ella:          { synth: { status: 'success', age: '2h ago', duration: '0m 29s', sha: '3a7f2c1' }, deploy: { status: 'success', age: '2h ago', duration: '2m 04s', sha: '3a7f2c1' }, env: 'prod' },
   api:           { synth: { status: 'success', age: '2h ago', duration: '0m 24s', sha: '3a7f2c1' }, deploy: { status: 'success', age: '2h ago', duration: '1m 47s', sha: '3a7f2c1' }, env: 'prod' },
-  telemetry:     { synth: { status: 'success', age: '3h ago', duration: '0m 31s', sha: 'c91e340' }, deploy: { status: 'success', age: '3h ago', duration: '2m 11s', sha: 'c91e340' }, env: 'prod' },
-  'url-minter':  { synth: { status: 'success', age: '5h ago', duration: '0m 18s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '0m 55s', sha: 'b7d1055' }, env: 'prod' },
-  athena:        { synth: { status: 'success', age: '5h ago', duration: '0m 22s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '1m 44s', sha: 'b7d1055' }, env: 'prod' },
   cloudtrail:    { synth: { status: 'success', age: '5h ago', duration: '0m 19s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '1m 01s', sha: 'b7d1055' }, env: 'prod' },
-  'iot-core':    { synth: { status: 'failure', age: '4h ago', duration: '0m 27s', sha: 'a4c891f' }, deploy: { status: 'skipped', age: '4h ago', duration: '—',      sha: 'a4c891f' }, env: 'dev' },
-  kms:           { synth: { status: 'success', age: '6h ago', duration: '0m 14s', sha: '9f02abc' }, deploy: { status: 'success', age: '6h ago', duration: '0m 47s', sha: '9f02abc' }, env: 'prod' },
   observability: { synth: { status: 'running', age: 'now',    duration: '—',      sha: 'f91c234' }, deploy: { status: 'queued',  age: '—',       duration: '—',      sha: 'f91c234' }, env: 'dev' },
-  reconciler:    { synth: { status: 'success', age: '2h ago', duration: '0m 17s', sha: '3a7f2c1' }, deploy: { status: 'success', age: '2h ago', duration: '0m 44s', sha: '3a7f2c1' }, env: 'prod' },
 };
 
 const HEALTH: Record<string, {
@@ -84,42 +86,43 @@ const HEALTH: Record<string, {
   ddb?: { reads: number; writes: number; throttles: number };
   lastSeen: string;
 }> = {
+  kms:           { status: 'healthy',  lastSeen: 'passive' },
+  storage:       { status: 'healthy',  lastSeen: 'passive' },
+  data:          { status: 'healthy',  ddb: { reads: 5132, writes: 450, throttles: 0 }, lastSeen: '<1m ago' },
+  'url-minter':  { status: 'healthy',  lambda: { invocations: 312,  errors: 0,  p50: '44ms',  p99: '210ms', throttles: 0 }, ddb: { reads: 936,   writes: 312,  throttles: 0 }, lastSeen: '1m ago' },
+  telemetry:     { status: 'healthy',  lambda: { invocations: 8821, errors: 12, p50: '18ms',  p99: '94ms',  throttles: 0 }, ddb: { reads: 26463, writes: 8833, throttles: 0 }, lastSeen: '<1m ago' },
+  athena:        { status: 'healthy',  lastSeen: '8m ago' },
   ella:          { status: 'healthy',  lambda: { invocations: 48,   errors: 0,  p50: '4.2s',  p99: '12.1s', throttles: 0 }, ddb: { reads: 144,   writes: 48,   throttles: 0 }, lastSeen: '2m ago' },
   api:           { status: 'healthy',  lambda: { invocations: 1247, errors: 3,  p50: '89ms',  p99: '420ms', throttles: 0 }, ddb: { reads: 3741,  writes: 89,   throttles: 0 }, lastSeen: '<1m ago' },
-  telemetry:     { status: 'healthy',  lambda: { invocations: 8821, errors: 12, p50: '18ms',  p99: '94ms',  throttles: 0 }, ddb: { reads: 26463, writes: 8833, throttles: 0 }, lastSeen: '<1m ago' },
-  'url-minter':  { status: 'healthy',  lambda: { invocations: 312,  errors: 0,  p50: '44ms',  p99: '210ms', throttles: 0 }, ddb: { reads: 936,   writes: 312,  throttles: 0 }, lastSeen: '1m ago' },
-  athena:        { status: 'healthy',  lastSeen: '8m ago' },
   cloudtrail:    { status: 'healthy',  lastSeen: 'always-on' },
-  'iot-core':    { status: 'degraded', issue: 'IoT rule missing — fall-enricher not routing (apply failed)', lastSeen: 'n/a' },
-  kms:           { status: 'healthy',  lastSeen: 'passive' },
   observability: { status: 'degraded', issue: 'Metric stream pending deploy', lastSeen: 'pending' },
-  reconciler:    { status: 'healthy',  lambda: { invocations: 96, errors: 0, p50: '3.1s', p99: '8.4s', throttles: 0 }, lastSeen: '2m ago' },
 };
 
 const COSTS = [
-  { id: 'ella',          label: 'Ella',          monthly: 1284, budget: 1500, trend: [920,  1050, 1140, 1210, 1284], driver: 'Bedrock Claude Sonnet' },
-  { id: 'api',           label: 'Nurse/Admin API',monthly: 342,  budget: 600,  trend: [240,  280,  310,  325,  342],  driver: 'Lambda + DDB' },
-  { id: 'telemetry',     label: 'Telemetry',     monthly: 891,  budget: 1000, trend: [720,  790,  830,  860,  891],  driver: 'Firehose + S3' },
+  { id: 'kms',           label: 'KMS',           monthly: 12,   budget: 50,   trend: [8,    9,    10,   11,   12],   driver: 'API calls' },
+  { id: 'storage',       label: 'Storage (S3)',  monthly: 124,  budget: 300,  trend: [80,   95,   108,  118,  124],  driver: 'S3 + lifecycle' },
+  { id: 'data',          label: 'Data (DDB)',    monthly: 89,   budget: 200,  trend: [62,   71,   79,   85,   89],   driver: 'DynamoDB reads/writes' },
   { id: 'url-minter',    label: 'URL Minter',    monthly: 78,   budget: 200,  trend: [60,   65,   68,   72,   78],   driver: 'S3 + Lambda' },
+  { id: 'telemetry',     label: 'Telemetry',     monthly: 891,  budget: 1000, trend: [720,  790,  830,  860,  891],  driver: 'Firehose + S3' },
   { id: 'athena',        label: 'Athena',        monthly: 224,  budget: 400,  trend: [180,  195,  205,  218,  224],  driver: 'Athena scans' },
+  { id: 'ella',          label: 'Ella',          monthly: 1284, budget: 1500, trend: [920,  1050, 1140, 1210, 1284], driver: 'Bedrock Claude Sonnet' },
+  { id: 'api',           label: 'Nurse/Admin API',monthly: 342, budget: 600,  trend: [240,  280,  310,  325,  342],  driver: 'Lambda + DDB' },
   { id: 'cloudtrail',    label: 'CloudTrail',    monthly: 43,   budget: 100,  trend: [38,   40,   41,   42,   43],   driver: 'S3 storage' },
   { id: 'iot-core',      label: 'IoT Core',      monthly: 156,  budget: 300,  trend: [120,  130,  140,  148,  156],  driver: 'IoT messaging' },
-  { id: 'kms',           label: 'KMS',           monthly: 12,   budget: 50,   trend: [8,    9,    10,   11,   12],   driver: 'API calls' },
   { id: 'observability', label: 'Observability', monthly: 67,   budget: 150,  trend: [50,   55,   59,   63,   67],   driver: 'Firehose egress' },
-  { id: 'reconciler',    label: 'Reconciler',    monthly: 8,    budget: 50,   trend: [0,    0,    0,    4,    8],    driver: 'Athena queries' },
 ];
 
 const DEP_NODES: Array<{ id: string; label: string; wave: number; deps: string[]; outputs: string[] }> = [
-  { id: 'kms',           label: 'KMS',          wave: 0, deps: [],                                             outputs: ['kms_key_arn', 'kms_key_alias'] },
-  { id: 'url-minter',    label: 'URL Minter',   wave: 0, deps: [],                                             outputs: ['device_table_name', 'parquet_bucket'] },
-  { id: 'athena',        label: 'Athena',       wave: 0, deps: [],                                             outputs: ['glue_database', 'athena_workgroup', 'athena_results_bucket'] },
-  { id: 'observability', label: 'Observability',wave: 0, deps: [],                                             outputs: ['metric_stream_arn', 'firehose_stream_arn'] },
-  { id: 'telemetry',     label: 'Telemetry',    wave: 1, deps: ['url-minter'],                                 outputs: ['alerts_table', 'fall_alerts_topic'] },
-  { id: 'iot-core',      label: 'IoT Core',     wave: 2, deps: ['telemetry'],                                  outputs: ['role_alias_name', 'role_alias_arn'] },
-  { id: 'ella',          label: 'Ella',         wave: 2, deps: ['url-minter', 'athena', 'telemetry'],          outputs: ['lambda_name', 'updates_table'] },
-  { id: 'api',           label: 'API',          wave: 3, deps: ['url-minter', 'athena', 'telemetry', 'ella'],  outputs: ['api_endpoint', 'cognito_pool_id'] },
-  { id: 'cloudtrail',    label: 'CloudTrail',   wave: 3, deps: ['telemetry', 'ella'],                          outputs: ['trail_arn', 'trail_s3'] },
-  { id: 'reconciler',   label: 'Reconciler',   wave: 2, deps: ['athena', 'telemetry'],                         outputs: ['divergence_pct', 'facilities_checked'] },
+  { id: 'kms',           label: 'KMS',          wave: 0, deps: [],                                          outputs: ['data_key_arn', 's3_key_arn', 'sns_key_arn', 'sqs_key_arn'] },
+  { id: 'storage',       label: 'Storage',      wave: 0, deps: ['kms'],                                     outputs: ['parquet_bucket', 'athena_results_bucket', 'cloudtrail_bucket', 'iot_errors_bucket'] },
+  { id: 'data',          label: 'Data',         wave: 1, deps: ['kms'],                                     outputs: ['devices_table', 'alerts_table', 'updates_table'] },
+  { id: 'url-minter',    label: 'URL Minter',   wave: 2, deps: ['kms', 'storage', 'data'],                  outputs: ['upload_url_fn', 'device_role_alias'] },
+  { id: 'telemetry',     label: 'Telemetry',    wave: 2, deps: ['kms', 'storage', 'data'],                  outputs: ['alerts_sns_topic', 'fall_enricher_fn', 'telemetry_divergence_alarm'] },
+  { id: 'athena',        label: 'Athena',       wave: 2, deps: ['kms', 'storage'],                          outputs: ['glue_database', 'athena_workgroup'] },
+  { id: 'ella',          label: 'Ella',         wave: 2, deps: ['data', 'athena', 'storage'],               outputs: ['ella_fn', 'updates_table_ref'] },
+  { id: 'api',           label: 'API',          wave: 3, deps: ['data', 'ella', 'athena', 'storage'],       outputs: ['api_endpoint', 'cognito_pool_id'] },
+  { id: 'cloudtrail',    label: 'CloudTrail',   wave: 3, deps: ['data', 'storage'],                         outputs: ['trail_arn', 'trail_s3'] },
+  { id: 'observability', label: 'Observability',wave: 4, deps: [],                                          outputs: ['metric_stream_arn', 'firehose_stream_arn'] },
 ];
 
 // ── CDK stack content per service ────────────────────────────────────────────
@@ -1121,6 +1124,202 @@ class ObservabilityStack(Stack):
   "tenant_id": "PILOT-TENANT-001",
   "enable_observability": "true",
   "observability_account": "CENTRAL_ACCOUNT_ID",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+  },
+
+  storage: {
+    'stack.py':
+`# infra/stacks/storage_stack.py
+from aws_cdk import Stack, Duration, RemovalPolicy
+from aws_cdk import aws_s3 as s3
+from constructs import Construct
+from config.constants import S3_IA_DAYS, S3_GLACIER_DAYS, HIPAA_RETENTION_DAYS
+from stacks.kms_stack import KmsStack
+
+class StorageStack(Stack):
+    def __init__(self, scope, id, *, kms_stack: KmsStack, tenant_id: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
+        slug = tenant_id.lower().replace("-", "")
+        acct = self.account
+
+        self.access_logs_bucket = s3.Bucket(self, "AccessLogs",
+            bucket_name=f"ambient-{slug}-access-logs-{acct}",
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True,
+            removal_policy=RemovalPolicy.RETAIN,
+            lifecycle_rules=[s3.LifecycleRule(id="expire", expiration=Duration.days(90))])
+
+        self.parquet_bucket = s3.Bucket(self, "Parquet",
+            bucket_name=f"ambient-{slug}-parquet-{acct}",
+            encryption=s3.BucketEncryption.KMS,
+            encryption_key=kms_stack.s3_key, bucket_key_enabled=True,
+            versioned=True,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True,
+            removal_policy=RemovalPolicy.RETAIN,
+            server_access_logs_bucket=self.access_logs_bucket,
+            server_access_logs_prefix="parquet/",
+            lifecycle_rules=[
+                s3.LifecycleRule(id="tier-raw", prefix="raw/",
+                    transitions=[
+                        s3.Transition(storage_class=s3.StorageClass.INFREQUENT_ACCESS,
+                                      transition_after=Duration.days(S3_IA_DAYS)),
+                        s3.Transition(storage_class=s3.StorageClass.GLACIER,
+                                      transition_after=Duration.days(S3_GLACIER_DAYS))]),
+                s3.LifecycleRule(id="tier-telemetry", prefix="telemetry/",
+                    transitions=[
+                        s3.Transition(storage_class=s3.StorageClass.INFREQUENT_ACCESS,
+                                      transition_after=Duration.days(S3_IA_DAYS)),
+                        s3.Transition(storage_class=s3.StorageClass.GLACIER,
+                                      transition_after=Duration.days(S3_GLACIER_DAYS))])])
+
+        self.athena_results_bucket = s3.Bucket(self, "AthenaResults",
+            bucket_name=f"ambient-{slug}-athena-results-{acct}",
+            encryption=s3.BucketEncryption.KMS,
+            encryption_key=kms_stack.s3_key, bucket_key_enabled=True,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True,
+            removal_policy=RemovalPolicy.DESTROY,
+            lifecycle_rules=[
+                s3.LifecycleRule(id="expire-results", prefix="queries/",
+                    expiration=Duration.days(30))])
+
+        self.iot_errors_bucket = s3.Bucket(self, "IotErrors",
+            bucket_name=f"ambient-{slug}-iot-errors-{acct}",
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True,
+            removal_policy=RemovalPolicy.DESTROY,
+            lifecycle_rules=[s3.LifecycleRule(id="expire", expiration=Duration.days(30))])
+
+        # CloudTrail audit — HIPAA 7-year retain
+        self.cloudtrail_bucket = s3.Bucket(self, "CloudTrail",
+            bucket_name=f"ambient-{slug}-cloudtrail-{acct}",
+            encryption=s3.BucketEncryption.KMS,
+            encryption_key=kms_stack.s3_key, bucket_key_enabled=True,
+            versioned=True,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True,
+            removal_policy=RemovalPolicy.RETAIN,
+            lifecycle_rules=[
+                s3.LifecycleRule(id="tier-and-retain",
+                    transitions=[
+                        s3.Transition(storage_class=s3.StorageClass.INFREQUENT_ACCESS,
+                                      transition_after=Duration.days(30)),
+                        s3.Transition(storage_class=s3.StorageClass.GLACIER,
+                                      transition_after=Duration.days(90))],
+                    expiration=Duration.days(HIPAA_RETENTION_DAYS),
+                    noncurrent_version_expiration=s3.NoncurrentVersionExpiration(
+                        noncurrent_days=90))])`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001"
+  }
+}`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+  },
+
+  data: {
+    'stack.py':
+`# infra/stacks/data_stack.py
+from aws_cdk import Stack
+from aws_cdk import aws_dynamodb as dynamodb
+from constructs import Construct
+from ambient_constructs.ambient_table import AmbientTable
+from stacks.kms_stack import KmsStack
+
+class DataStack(Stack):
+    def __init__(self, scope, id, *, kms_stack: KmsStack, **kwargs):
+        super().__init__(scope, id, **kwargs)
+        env = id.split("-")[1]; pfx = f"ambient-{env}"
+
+        # Device registry — queried by url-minter, telemetry Lambda, API
+        self.devices_table = AmbientTable(self, "Devices",
+            table_name=f"{pfx}-devices",
+            partition_key=dynamodb.Attribute(
+                name="deviceId", type=dynamodb.AttributeType.STRING),
+            encryption_key=kms_stack.data_key).table
+        self.devices_table.add_global_secondary_index(
+            index_name="facility-index",
+            partition_key=dynamodb.Attribute(
+                name="facilityId", type=dynamodb.AttributeType.STRING))
+
+        # Alerts — telemetry Lambda writes; API + Ella read
+        self.alerts_table = AmbientTable(self, "Alerts",
+            table_name=f"{pfx}-alerts",
+            partition_key=dynamodb.Attribute(
+                name="subject_date", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(
+                name="detectedAt", type=dynamodb.AttributeType.STRING),
+            encryption_key=kms_stack.data_key).table
+        self.alerts_table.add_global_secondary_index(
+            index_name="facility-time",
+            partition_key=dynamodb.Attribute(
+                name="facilityId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(
+                name="detectedAt", type=dynamodb.AttributeType.STRING))
+        self.alerts_table.add_global_secondary_index(
+            index_name="eventId-index",
+            partition_key=dynamodb.Attribute(
+                name="eventId", type=dynamodb.AttributeType.STRING))
+
+        # Daily updates / Ella narratives — 90-day TTL
+        self.daily_updates_table = AmbientTable(self, "Updates",
+            table_name=f"{pfx}-daily-updates",
+            partition_key=dynamodb.Attribute(
+                name="subjectId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(
+                name="generatedAt", type=dynamodb.AttributeType.STRING),
+            encryption_key=kms_stack.data_key,
+            ttl_attribute="ttl").table
+        self.daily_updates_table.add_global_secondary_index(
+            index_name="facility-time",
+            partition_key=dynamodb.Attribute(
+                name="facilityId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(
+                name="generatedAt", type=dynamodb.AttributeType.STRING))
+
+# ambient_constructs/ambient_table.py  (L3 construct)
+# AmbientTable = PAY_PER_REQUEST + PITR + KMS + RemovalPolicy.RETAIN
+# All three tables use the same CMK (kms_stack.data_key)`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001"
+  }
+}`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
   "account": "PROD_ACCOUNT_ID",
   "region": "us-east-1"
 }`,
