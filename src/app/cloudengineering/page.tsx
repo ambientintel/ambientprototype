@@ -73,17 +73,21 @@ const STEPS: Step[] = [
         },
       },
       {
-        heading: 'Service inventory',
+        heading: 'Service & stack inventory',
         table: {
-          cols: ['Service', 'Directory', 'Runtime', 'Tests'],
+          cols: ['Service / Stack', 'Path', 'CDK Stack', 'Tests'],
           rows: [
-            ['admin-cli',   'services/admin-cli/', 'Python 3.12 (CLI)',   '28 pass'],
-            ['api',         'services/api/',        'FastAPI + Lambda',    '19 pass'],
-            ['athena',      'services/athena/',     'Terraform only',     'n/a'],
-            ['cloudtrail',  'services/cloudtrail/', 'Terraform only',     'n/a'],
-            ['ella',        'services/ella/',       'Python 3.12 Lambda', '11 pass'],
-            ['telemetry',   'services/telemetry/',  'Python 3.12 Lambda', '15 pass'],
-            ['url-minter',  'services/url-minter/', 'Python 3.12 Lambda', 'n/a'],
+            ['admin-cli',    'services/admin-cli/',              '—',                      '28 pass'],
+            ['api',          'services/api/',                    'Ambient-{env}-Api',       '19 pass'],
+            ['athena',       'services/athena/',                 'Ambient-{env}-Athena',    'n/a'],
+            ['cloudtrail',   'services/cloudtrail/',             'Ambient-{env}-CloudTrail','n/a'],
+            ['ella',         'services/ella/',                   'Ambient-{env}-Ella',      '11 pass'],
+            ['reconciler',   'services/reconciler/',             'embedded in Telemetry',   '2 pass'],
+            ['telemetry',    'services/telemetry/',              'Ambient-{env}-Telemetry', '15 pass'],
+            ['url-minter',   'services/url-minter/',             'Ambient-{env}-UrlMinter', 'n/a'],
+            ['KMS (CDK)',     'infra/stacks/kms_stack.py',       'Ambient-{env}-Kms',       'n/a'],
+            ['Storage (CDK)','infra/stacks/storage_stack.py',   'Ambient-{env}-Storage',   'n/a'],
+            ['Data (CDK)',    'infra/stacks/data_stack.py',      'Ambient-{env}-Data',      'n/a'],
           ],
         },
       },
@@ -147,41 +151,62 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'iac-scaffold', phase: '03', title: 'IaC Scaffold', status: 'done', tag: 'Architect', time: '~1 day',
-    summary: 'Terraform 1.14+ per-service infra/ directories. .terraform.lock.hcl committed. terraform fmt enforced. Per-service pyproject.toml for Python packaging.',
+    id: 'iac-scaffold', phase: '03', title: 'IaC Scaffold — AWS CDK v2', status: 'done', tag: 'Architect', time: '~1 day',
+    summary: 'Unified AWS CDK v2 (Python) app in infra/. Single cdk deploy --all deploys all 10 stacks in dependency order via CloudFormation. GitHub Actions OIDC workflow — no stored AWS access keys. Per-service pyproject.toml for Python packaging.',
     sections: [
       {
         heading: 'Repository structure',
         commands: [
-          { label: 'clone and inspect top-level layout', code: 'git clone https://github.com/ambientintel/ambientcloud\ncd ambientcloud\n\n# Service layout: each service has its own infra/, src/, tests/\nls services/\n# → admin-cli/  api/  athena/  cloudtrail/  ella/  telemetry/  url-minter/\n\n# Each service: infra/ for Terraform, src/ for Python, tests/ for pytest\nls services/api/\n# → infra/  src/  tests/  pyproject.toml  requirements.txt  README.md' },
-          { label: 'validate Terraform across all services', code: '# Run from repo root — validates all infra/ directories\nfor svc in services/*/infra; do\n  echo "→ $svc"\n  (cd "$svc" && terraform init -backend=false -no-color > /dev/null && terraform validate)\ndone\n# Expected: all succeed with "Success! The configuration is valid."' },
+          { label: 'clone and inspect layout', code: 'git clone https://github.com/ambientintel/ambientcloud\ncd ambientcloud\n\n# Application code — one directory per service\nls services/\n# → admin-cli/  api/  athena/  cloudtrail/  ella/  reconciler/  telemetry/  url-minter/\n\n# Unified CDK app — single entry point for all stacks\nls infra/\n# → app.py  stacks/  ambient_constructs/  config/  cdk.json  requirements.txt\n\nls infra/stacks/\n# → kms_stack.py  storage_stack.py  data_stack.py  telemetry_stack.py\n# → url_minter_stack.py  athena_stack.py  ella_stack.py  api_stack.py\n# → cloudtrail_stack.py  observability_stack.py' },
+          { label: 'set up CDK environment', code: 'npm install -g aws-cdk\n\ncd infra\npython3 -m venv .venv && source .venv/bin/activate\npip install -r requirements.txt\n\n# List all stacks\ncdk ls --context environment=dev --context tenant_id=PILOT-TENANT-001\n# Expected: Ambient-dev-Kms, Ambient-dev-Storage, Ambient-dev-Data,\n#   Ambient-dev-Telemetry, Ambient-dev-UrlMinter, Ambient-dev-Athena,\n#   Ambient-dev-Ella, Ambient-dev-Api, Ambient-dev-CloudTrail, Ambient-dev-Observability' },
+          { label: 'synth + diff before first deploy', code: 'cd infra\n\n# Synthesize CloudFormation templates (validates all CDK code)\ncdk synth --all \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001 \\\n  --context facility_ids=\'["FAC-PILOT-001"]\'\n\n# Preview changes against deployed stacks\ncdk diff --all --context environment=dev --context tenant_id=PILOT-TENANT-001' },
         ],
       },
       {
-        heading: 'Terraform conventions',
+        heading: 'CDK stack wave order',
+        table: {
+          cols: ['Wave', 'Stack', 'Key resources'],
+          rows: [
+            ['0',   'Ambient-{env}-Kms',          '4 CMKs (data, s3, sns, sqs) · auto-rotation · RemovalPolicy.RETAIN'],
+            ['0',   'Ambient-{env}-Storage',       'S3: parquet, athena-results (30-day expire), cloudtrail (HIPAA 7-yr), iot-errors'],
+            ['1',   'Ambient-{env}-Data',           'DynamoDB: devices, alerts, daily-updates — PAY_PER_REQUEST + PITR + CMK'],
+            ['2',   'Ambient-{env}-Telemetry',      'SNS, alert Lambda, IoT rules, Firehose+Glue, Reconciler Lambda+cron+alarm'],
+            ['2',   'Ambient-{env}-UrlMinter',      'Lambda + Function URL · IoT role alias · device mTLS policy'],
+            ['2',   'Ambient-{env}-Athena',         'Glue database + raw frames table (partition projection) · Athena workgroup'],
+            ['2',   'Ambient-{env}-Ella',           'SQS fanout · Ella Lambda · EventBridge crons (07:00 + 19:00 CT)'],
+            ['3',   'Ambient-{env}-Api',            'Cognito UserPool · HTTP API · FastAPI Lambda · facility-scoped authorizer'],
+            ['3',   'Ambient-{env}-CloudTrail',     'Multi-region trail · DDB + S3 data events · 7-year Glacier retention'],
+            ['opt', 'Ambient-{env}-Observability',  'CloudWatch Metric Stream → central account · scalar only · no PHI'],
+          ],
+        },
+      },
+      {
+        heading: 'CDK conventions',
         checklist: [
-          'Every infra/ directory has a .terraform.lock.hcl committed — no drifted provider versions',
-          'terraform fmt applied to all .tf and .tofu files before every commit',
-          'Variable blocks use type constraints (string, number, bool) — not bare type = string syntax',
-          'S3 lifecycle rules include filter {} block — provider will error without it in future versions',
-          'CloudTrail uses advanced_event_selector blocks only — never mix with legacy event_selector',
-          'All resources tagged with tenant, environment, and path for cost allocation',
-          'No hardcoded account IDs or region strings — use data.aws_caller_identity and var.aws_region',
+          'Single infra/app.py deploys all stacks — CDK manages dependency order via stack references',
+          'AmbientLambda L3 construct: Python 3.12, standardized log retention, X-Ray active tracing, env var injection',
+          'AmbientTable L3 construct: PAY_PER_REQUEST + PITR + KMS encryption + RemovalPolicy.RETAIN on all tables',
+          'KMS keys: enable_key_rotation=True, no pending_window (prevents accidental early deletion)',
+          'Context variables drive all config: environment, tenant_id, facility_ids — no hardcoded account IDs',
+          'All stacks tagged via _tag() helper: Application, TenantId, Environment, ManagedBy=cdk',
+          'CloudFormation manages stack state — no separate state backend or lock table needed',
         ],
       },
       {
-        heading: 'Terraform state',
-        body: 'Terraform state is currently local (no remote backend configured). The target state is S3 + DynamoDB lock per service. This must be set up before any CI/CD automation.',
+        heading: 'CI/CD — GitHub Actions OIDC (no stored keys)',
+        body: 'The deploy workflow uses GitHub OIDC short-lived tokens to assume the deployer IAM role. On push to main: cdk diff → cdk deploy --all. Manual dispatch supports dev/staging/prod with an optional diff-only mode.',
         commands: [
-          { label: 'configure remote state backend (per service)', code: '# Add to services/<svc>/infra/main.tf:\nterraform {\n  backend "s3" {\n    bucket         = var.tf_state_bucket\n    key            = "ambientcloud/<service>/terraform.tfstate"\n    region         = "us-east-1"\n    dynamodb_table = "ambient-tf-lock"\n    encrypt        = true\n  }\n}\n\n# Initialize with remote state:\nterraform init \\\n  -backend-config="bucket=<your-tf-state-bucket>"' },
+          { label: 'deploy all stacks (manual)', code: 'cd infra\ncdk deploy --all \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001 \\\n  --context facility_ids=\'["FAC-PILOT-001"]\'' },
+          { label: 'deploy a single stack', code: 'cd infra\ncdk deploy Ambient-dev-Telemetry \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001' },
         ],
         artifacts: [
-          { file: 'services/api/infra/main.tf', role: 'FastAPI Lambda + API Gateway + Cognito Terraform — reference for all service infra patterns.' },
-          { file: 'services/ella/infra/main.tf', role: 'Ella Lambda + EventBridge + SQS Terraform — EventBridge cron + fanout pattern.' },
+          { file: 'infra/app.py', role: 'CDK app entry point — instantiates all 10 stacks in dependency order with context-driven tenant configuration.' },
+          { file: 'infra/stacks/telemetry_stack.py', role: 'Most complex stack: SNS, fall-alert Lambda, IoT rules, Firehose + Glue (JQ dynamic partitioning + Parquet/ZSTD), Reconciler Lambda.' },
+          { file: '.github/workflows/cdk-deploy.yml', role: 'OIDC-authenticated diff + deploy workflow. No stored AWS access keys.' },
         ],
         warnings: [
-          'Running terraform apply with local state across multiple engineers will cause state conflicts. Set up the S3 remote backend before adding a second engineer to infra work.',
-          'services/cloudtrail/infra/main.tf originally had both event_selector and advanced_event_selector on the same aws_cloudtrail resource — mutually exclusive per provider. Fixed to use three advanced_event_selector blocks only. Verify this if rebasing from old branches.',
+          'CDK bootstrap must run once per account/region before first deploy: cdk bootstrap aws://<account>/<region>. Creates CDKToolkit stack with the S3 staging bucket used by the deployer.',
+          'All per-service Terraform infra/ directories have been removed in the CDK migration. Do not reintroduce Terraform — add new infrastructure as a Stack in infra/stacks/ and wire it into infra/app.py.',
         ],
       },
     ],
@@ -194,8 +219,8 @@ const STEPS: Step[] = [
         heading: 'Apply core infrastructure',
         commands: [
           { label: 'authenticate to AWS', code: 'aws sso login\n# or: export AWS_PROFILE=ambient\n\n# Verify caller identity\naws sts get-caller-identity\n# Expected: {"Account": "<tenant-account-id>", "Arn": "arn:aws:iam::..."}' },
-          { label: 'create tenant KMS CMK', code: '# KMS key for at-rest encryption of all S3 + DynamoDB\naws kms create-key \\\n  --description "ambient-<tenant>-cmk" \\\n  --key-policy file://infra/kms-policy.json \\\n  --region us-east-1\n\n# Tag it for cost allocation\naws kms create-alias \\\n  --alias-name alias/ambient-<tenant>-cmk \\\n  --target-key-id <key-id>\n\naws kms tag-resource \\\n  --key-id <key-id> \\\n  --tags TagKey=tenant,TagValue=<tenant> TagKey=environment,TagValue=prod' },
-          { label: 'apply VPC module (snapsoft/ infra)', code: 'cd snapsoft/infra\ntofu init\ntofu plan -out=plan.tfplan\ntofu apply plan.tfplan\n\n# Verify VPC endpoints created:\naws ec2 describe-vpc-endpoints \\\n  --filters "Name=vpc-id,Values=<vpc-id>" \\\n  --query "VpcEndpoints[].ServiceName"' },
+          { label: 'deploy KMS stack (4 CMKs)', code: 'cd infra\ncdk deploy Ambient-dev-Kms \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify 4 keys created\naws kms list-aliases --query "Aliases[?contains(AliasName,\'ambient\')]"' },
+          { label: 'verify KMS key rotation', code: 'KEY_ID=$(aws kms list-aliases \\\n  --query "Aliases[?AliasName==\'alias/ambient-dev-data-key\'].TargetKeyId" \\\n  --output text)\n\naws kms get-key-rotation-status --key-id $KEY_ID\n# Expected: KeyRotationEnabled: true' },
         ],
       },
       {
@@ -240,32 +265,32 @@ const STEPS: Step[] = [
         table: {
           cols: ['Table', 'PK', 'GSIs', 'Purpose'],
           rows: [
-            ['ambient-<tenant>-devices',       'deviceId (S)',         'facilityId-GSI, subjectId-GSI',          'Device registry — Thing name, subject, facility, cert status'],
-            ['ambient-<tenant>-alerts',        'subject_date (S)',     'facility-time-GSI, eventId-GSI',         'Fall event audit log — enriched alert with facility scoping'],
-            ['ambient-<tenant>-daily-updates', 'subjectId (S)',        'facilityId-GSI',                        'Ella narrative output — 90-day TTL, per-subject latest summary'],
+            ['ambient-{env}-devices',       'deviceId (S)',        'facility-index (facilityId)',             'Device registry — Thing name, subject, facility, cert status'],
+            ['ambient-{env}-alerts',        'subject_date (S) / detectedAt (S)', 'facility-time, eventId-index', 'Fall event audit log — enriched alert with facility scoping'],
+            ['ambient-{env}-daily-updates', 'subjectId (S) / generatedAt (S)',   'facility-time',                'Ella narratives — 90-day TTL (attr: ttl), per-subject summary'],
           ],
         },
       },
       {
         heading: 'Apply data plane Terraform',
         commands: [
-          { label: 'deploy Athena + Glue table', code: 'cd services/athena/infra\nterraform init\nterraform plan -out=plan.tfplan\nterraform apply plan.tfplan\n\n# Verify Glue tables created:\naws glue get-tables \\\n  --database-name ambient_<tenant> \\\n  --query "TableList[].Name"\n# Expected: ["telemetry_device", "telemetry_firehose"]' },
-          { label: 'verify Athena view (dual-write)', code: '# The "telemetry" view UNIONs both tables during migration\naws athena start-query-execution \\\n  --query-string "SELECT COUNT(*) FROM ambient_<tenant>.telemetry LIMIT 1" \\\n  --work-group ambient-dev-analytics \\\n  --result-configuration OutputLocation=s3://ambient-<tenant>-athena-results/\n\n# Poll for result:\naws athena get-query-results \\\n  --query-execution-id <execution-id>' },
-          { label: 'S3 lifecycle policy', code: '# 30-day → Standard-IA → 90-day → Glacier Deep Archive\naws s3api put-bucket-lifecycle-configuration \\\n  --bucket ambient-<tenant>-parquet \\\n  --lifecycle-configuration file://infra/lifecycle.json\n\n# Verify:\naws s3api get-bucket-lifecycle-configuration \\\n  --bucket ambient-<tenant>-parquet' },
+          { label: 'deploy Storage, Data, and Athena stacks', code: 'cd infra\ncdk deploy Ambient-dev-Storage Ambient-dev-Data Ambient-dev-Athena \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify DynamoDB tables\naws dynamodb list-tables --query "TableNames[?contains(@, \'ambient-dev\')]"\n\n# Verify Glue tables created\naws glue get-tables \\\n  --database-name ambient_dev_raw \\\n  --query "TableList[].Name"' },
+          { label: 'verify Athena partition projection', code: '# Partition projection is configured in AthenaStack — no Glue crawler needed\naws athena start-query-execution \\\n  --query-string "SELECT COUNT(*) FROM ambient_dev_raw.frames LIMIT 1" \\\n  --work-group ambient-dev-analytics \\\n  --result-configuration OutputLocation=s3://ambient-<slug>-athena-results-<acct>/queries/\n\naws athena get-query-results \\\n  --query-execution-id <execution-id>' },
+          { label: 'verify S3 lifecycle rules', code: '# StorageStack configures lifecycle rules in CDK — verify they were applied\naws s3api get-bucket-lifecycle-configuration \\\n  --bucket ambient-<slug>-parquet-<acct>\n# Expect: tier-raw (raw/ prefix → IA → Glacier), tier-telemetry (telemetry/ prefix)' },
         ],
       },
       {
         heading: 'CloudTrail data events',
         commands: [
-          { label: 'deploy CloudTrail Terraform', code: 'cd services/cloudtrail/infra\nterraform init\nterraform apply\n\n# Verify data events configured on sensitive tables:\naws cloudtrail get-event-selectors \\\n  --trail-name ambient-<tenant>-trail\n# Must include: DDB tables (devices, alerts, daily-updates) + S3 bucket' },
+          { label: 'deploy CloudTrail stack', code: 'cd infra\ncdk deploy Ambient-dev-CloudTrail \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify data events on sensitive tables\naws cloudtrail get-event-selectors \\\n  --trail-name ambient-dev-trail\n# Must include: DDB tables (devices, alerts, daily-updates) + S3 parquet bucket' },
         ],
         artifacts: [
-          { file: 'services/athena/infra/main.tf', role: 'Glue database + two tables (telemetry_device, telemetry_firehose) + partition projection. No crawler.' },
-          { file: 'services/cloudtrail/infra/main.tf', role: 'CloudTrail with advanced_event_selector on DDB data events and S3 data events. 7-year Glacier retention.' },
+          { file: 'infra/stacks/athena_stack.py', role: 'Glue database + raw frames table (16 columns, 4 partition keys: date/facility/subject/device) + Athena workgroup. Partition projection — no crawler.' },
+          { file: 'infra/stacks/cloudtrail_stack.py', role: 'CloudTrail with three advanced_event_selector blocks: management events, DDB data events, S3 data events. 7-year Glacier retention.' },
         ],
         warnings: [
-          'Athena uses partition projection — there is no Glue crawler and no EventBridge partition registration. The partition keys (date, facility, subject, device) must exactly match what the device writes to the S3 key path. If the device Parquet key format changes, update the Glue table partition projection immediately.',
-          'DynamoDB TTL (90 days) on daily-updates is set at the table level but TTL attribute must be called expires_at on each item. Ella Lambda must write this field on every put — verify in integration tests.',
+          'Athena uses partition projection on key path raw/date=YYYY-MM-DD/facility=.../subject=.../device=... — there is no Glue crawler. If the device changes its S3 key format, update the Glue partition projection in athena_stack.py immediately or all historical queries will return zero rows.',
+          'DynamoDB TTL (90 days) on daily-updates uses TTL attribute name ttl (not expires_at). Ella Lambda writes this field on every put — verify in integration tests.',
         ],
       },
     ],
@@ -316,7 +341,7 @@ const STEPS: Step[] = [
       {
         heading: 'Deploy fall alert Lambda',
         commands: [
-          { label: 'deploy telemetry service (Lambda + SNS)', code: 'cd services/telemetry\n\n# Build the deployment package\nzip -r function.zip src/\n\n# Apply Terraform (SNS topic, IoT Rule, Lambda, IAM)\ncd infra\nterraform init\nterraform apply\n\n# Deploy Lambda code\naws lambda update-function-code \\\n  --function-name ambient-dev-fall-enricher \\\n  --zip-file fileb://../function.zip \\\n  --region us-east-1' },
+          { label: 'deploy TelemetryStack', code: 'cd infra\ncdk deploy Ambient-dev-Telemetry \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify Lambda deployed\naws lambda get-function \\\n  --function-name ambient-dev-alerts-enricher\n# State: Active, Runtime: python3.12' },
           { label: 'verify IoT Rule and Lambda trigger', code: '# Confirm IoT Rule is active\naws iot get-topic-rule \\\n  --rule-name fall-enricher\n# ruleDisabled: false, actions[0].lambda.functionArn: <lambda-arn>\n\n# Confirm Lambda function exists\naws lambda get-function \\\n  --function-name ambient-dev-fall-enricher\n# State: Active, Runtime: python3.12' },
           { label: 'inject a synthetic fall event to test end-to-end', code: '# Publish directly to the Rules Engine via Basic Ingest\naws iot-data publish \\\n  --topic "\\$aws/rules/fall-enricher/ambient/v1/alerts/fall/test-001" \\\n  --payload \'{"deviceId":"DEV-0001","eventId":"test-001","ts_utc":"2026-05-07T12:00:00Z","confidence":0.92}\' \\\n  --qos 1 \\\n  --region us-east-1\n\n# Verify DDB write:\naws dynamodb get-item \\\n  --table-name ambient-<tenant>-alerts \\\n  --key \'{"subject_date":{"S":"PILOT-0042_2026-05-07"}}\'  ' },
         ],
@@ -335,7 +360,7 @@ const STEPS: Step[] = [
       {
         artifacts: [
           { file: 'services/telemetry/src/', role: 'Fall alert enricher Lambda — DDB lookup, alert write, SNS publish with facility filter attribute.' },
-          { file: 'services/telemetry/infra/main.tf', role: 'IoT Rule (Basic Ingest), Lambda, SNS topic, IAM role.' },
+          { file: 'infra/stacks/telemetry_stack.py', role: 'TelemetryStack: SNS, alert Lambda, IoT Rules (fall-enricher + legacy Firehose), Firehose + Glue, Reconciler Lambda + EventBridge cron + CW alarm.' },
         ],
         warnings: [
           'Basic Ingest requires the topic to start with $aws/rules/<ruleName>/. If the device firmware publishes to a different topic, the Rules Engine will not match it and no MQTT messaging fee will be charged — but the alert will also never fire. Verify topic format against the device-cloud contract.',
@@ -351,8 +376,8 @@ const STEPS: Step[] = [
       {
         heading: 'Deploy url-minter Lambda',
         commands: [
-          { label: 'deploy url-minter', code: 'cd services/url-minter\nzip -r function.zip src/\n\ncd infra\nterraform init\nterraform apply\n\naws lambda update-function-code \\\n  --function-name ambient-dev-url-minter \\\n  --zip-file fileb://../function.zip\n\n# Verify:\naws lambda get-function-configuration \\\n  --function-name ambient-dev-url-minter\n# Handler: src/url_minter.handler, Timeout: 10, Memory: 128' },
-          { label: 'test presigned URL issuance', code: '# url-minter validates SigV4 identity + shadow desired state before issuing URL\n# Simulate a device POST:\ncurl -X POST \\\n  https://<api-id>.execute-api.us-east-1.amazonaws.com/prod/upload-url \\\n  -H "Authorization: Bearer <device-sigv4-token>" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"deviceId":"DEV-0001","sha256":"<hex>","s3Key":"raw-device/date=2026-05-07/facility=<uuid>/subject=PILOT-0042/device=DEV-0001/batch-001.parquet","contentType":"application/octet-stream"}\'\n# Expected: {"url": "https://s3.amazonaws.com/ambient-<tenant>-parquet/...", "expiresIn": 300}' },
+          { label: 'deploy UrlMinterStack', code: 'cd infra\ncdk deploy Ambient-dev-UrlMinter \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify Lambda + Function URL deployed\naws lambda get-function-url-config \\\n  --function-name ambient-dev-url-minter\n# Expected: AuthType: AWS_IAM, FunctionUrl: https://<id>.lambda-url.us-east-1.on.aws/' },
+          { label: 'test presigned URL issuance', code: '# url-minter validates IoT ThingName + Shadow desired state before issuing URL\n# S3 key format: raw/date=YYYY-MM-DD/facility=<id>/subject=PILOT-NNNN/device=DEV-XXXX/batch.parquet\ncurl -X POST \\\n  https://<fn-url>.lambda-url.us-east-1.on.aws/ \\\n  --aws-sigv4 "aws:amz:us-east-1:lambda" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"deviceId":"DEV-0001","sha256":"<hex>","s3Key":"raw/date=2026-05-10/facility=<uuid>/subject=PILOT-0042/device=DEV-0001/batch-001.parquet","contentType":"application/octet-stream"}\'\n# Expected: {"url": "https://s3.amazonaws.com/ambient-<slug>-parquet-<acct>/...", "expiresIn": 300}' },
         ],
       },
       {
@@ -361,7 +386,7 @@ const STEPS: Step[] = [
         commands: [
           { label: 'check current telemetry mode for a device', code: 'ambientcloud-admin telemetry mode DEV-0001\n# → dual' },
           { label: 'check reconciler divergence before migrating', code: 'ambientcloud-admin telemetry divergence <facility-uuid>\n# Must show 0.0% divergence over last 24h before proceeding\n# If non-zero: investigate before flipping — check CloudWatch TelemetryDivergence metric' },
-          { label: 'bulk-migrate a facility to parquet_only', code: '# Refuses if reconciler flagged divergence in last 24h\nambientcloud-admin telemetry migrate <facility-uuid>\n\n# After migration: verify in CloudWatch\naws cloudwatch get-metric-statistics \\\n  --namespace Ambient/Telemetry \\\n  --metric-name TelemetryDivergence \\\n  --dimensions Name=facilityId,Value=<facility-uuid> \\\n  --start-time $(date -u -d "1 hour ago" +%Y-%m-%dT%H:%M:%SZ) \\\n  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \\\n  --period 300 --statistics Maximum' },
+          { label: 'bulk-migrate a facility to parquet_only', code: '# Refuses if reconciler flagged divergence in last 24h\nambientcloud-admin telemetry migrate <facility-uuid>\n\n# After migration: verify in CloudWatch (namespace: AmbientIntelligence/Telemetry)\naws cloudwatch get-metric-statistics \\\n  --namespace AmbientIntelligence/Telemetry \\\n  --metric-name TelemetryDivergence \\\n  --dimensions Name=FacilityId,Value=<facility-uuid> \\\n  --start-time $(date -u -d "1 hour ago" +%Y-%m-%dT%H:%M:%SZ) \\\n  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \\\n  --period 300 --statistics Maximum' },
         ],
         artifacts: [
           { file: 'docs/device-parquet-sink.md', role: 'Device-side Parquet cold path spec — WAL design, presigned URL flow, dual-write migration, promotion criteria.' },
@@ -381,7 +406,7 @@ const STEPS: Step[] = [
       {
         heading: 'Deploy Ella narrative service',
         commands: [
-          { label: 'deploy Ella Lambda + EventBridge + SQS', code: 'cd services/ella\nzip -r function.zip src/\n\ncd infra\nterraform init\nterraform apply\n\naws lambda update-function-code \\\n  --function-name ambient-dev-ella \\\n  --zip-file fileb://../function.zip\n\n# Verify EventBridge rule created:\naws events list-rules \\\n  --event-bus-name default \\\n  --name-prefix ambient-ella\n# Should show two rules: ella-0700 and ella-1900' },
+          { label: 'deploy EllaStack', code: 'cd infra\ncdk deploy Ambient-dev-Ella \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001 \\\n  --context facility_ids=\'["FAC-PILOT-001"]\'\n\n# Verify EventBridge rules created (2 crons × facilities)\naws events list-rules \\\n  --event-bus-name default \\\n  --name-prefix Ambient-dev-Ella\n# Should show 2 rules per facility: cron(0 12 * * ? *) and cron(0 0 * * ? *)' },
           { label: 'trigger a test narrative for one subject', code: '# Direct Lambda invoke for a single subject (bypasses SQS fanout)\naws lambda invoke \\\n  --function-name ambient-dev-ella \\\n  --payload \'{"subjectId":"PILOT-0042","facilityId":"<uuid>","window_hours":12}\' \\\n  --cli-binary-format raw-in-base64-out \\\n  /tmp/ella-response.json\n\ncat /tmp/ella-response.json\n# Expected: {"statusCode": 200, "narrative": "...", "subject": "PILOT-0042"}\n# Narrative must NOT contain names, DOBs, MRNs, or demographic detail' },
         ],
       },
@@ -405,8 +430,8 @@ const STEPS: Step[] = [
           { label: 'check DLQ for failed narratives', code: '# SQS DLQ captures Ella failures after 3 retries\naws sqs get-queue-attributes \\\n  --queue-url https://sqs.us-east-1.amazonaws.com/<acct>/ambient-ella-dlq \\\n  --attribute-names ApproximateNumberOfMessages\n\n# Drain the DLQ to inspect failed messages:\naws sqs receive-message \\\n  --queue-url https://sqs.us-east-1.amazonaws.com/<acct>/ambient-ella-dlq \\\n  --max-number-of-messages 10' },
         ],
         artifacts: [
-          { file: 'services/ella/src/', role: 'Ella Lambda — Athena query for 12h aggregates, DDB fall event count, Bedrock invoke, DDB write with 90-day TTL.' },
-          { file: 'services/ella/infra/main.tf', role: 'EventBridge cron × 2, scheduling Lambda, SQS fanout queue, DLQ, Ella Lambda, IAM role.' },
+          { file: 'services/ella/src/', role: 'Ella Lambda — Athena query for 12h aggregates, DDB fall event count, Bedrock invoke, DDB write with 90-day TTL (attr: ttl).' },
+          { file: 'infra/stacks/ella_stack.py', role: 'EllaStack: SQS fanout + DLQ, Ella Lambda, EventBridge crons (cron(0 12 * * ? *) and cron(0 0 * * ? *) UTC = 07:00 + 19:00 CT).' },
         ],
         warnings: [
           'Before upgrading the Bedrock model from Sonnet 4.5 to Sonnet 4.6, run at least 20 test narratives against known Athena data and verify the de-id system prompt produces clean output — no subject names, no facility names, no clinical identifiers. Document the evaluation as a PR comment before merging the model ID change.',
@@ -422,7 +447,7 @@ const STEPS: Step[] = [
       {
         heading: 'Deploy API service',
         commands: [
-          { label: 'deploy API Lambda + API Gateway + Cognito', code: 'cd services/api\n\n# Install Python deps into package dir\npip install -r requirements.txt -t package/\ncp -r src/ambient_api package/\ncd package && zip -r ../function.zip . && cd ..\n\ncd infra\nterraform init\nterraform apply\n\naws lambda update-function-code \\\n  --function-name ambient-dev-api \\\n  --zip-file fileb://../function.zip' },
+          { label: 'deploy ApiStack', code: 'cd infra\ncdk deploy Ambient-dev-Api \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify API endpoint\naws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Api \\\n  --query "Stacks[0].Outputs[?OutputKey==\'ApiEndpoint\'].OutputValue"\n\n# Verify Lambda\naws lambda get-function \\\n  --function-name ambient-dev-api' },
           { label: 'provision the first admin user', code: '# Admin-create only — no self-signup\nambientcloud-admin user create \\\n  --email admin@facility.org \\\n  --role admin \\\n  --facility-id <facility-uuid>\n\n# Verify Cognito attributes:\naws cognito-idp admin-get-user \\\n  --user-pool-id <pool-id> \\\n  --username admin@facility.org\n# custom:role: admin, custom:facilityIds: <facility-uuid>' },
           { label: 'smoke-test key API endpoints', code: '# Get JWT via Cognito\nTOKEN=$(aws cognito-idp initiate-auth \\\n  --auth-flow USER_PASSWORD_AUTH \\\n  --auth-parameters USERNAME=admin@facility.org,PASSWORD=<pass> \\\n  --client-id <client-id> \\\n  --query "AuthenticationResult.IdToken" --output text)\n\n# List subjects (facility-scoped)\ncurl -H "Authorization: Bearer $TOKEN" \\\n  https://<api-id>.execute-api.us-east-1.amazonaws.com/prod/subjects\n\n# List recent alerts\ncurl -H "Authorization: Bearer $TOKEN" \\\n  https://<api-id>.execute-api.us-east-1.amazonaws.com/prod/alerts?limit=10' },
         ],
@@ -459,13 +484,13 @@ const STEPS: Step[] = [
   },
   {
     id: 'integration-tests', phase: '11', title: 'Integration Tests', status: 'pending', tag: 'Validate', time: '~1 hr',
-    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 73 tests passing across 4 services. Requires AMBIENT_* env vars to run.',
+    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 75 unit tests passing across 5 services (admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2). Requires AMBIENT_* env vars for integration run.',
     sections: [
       {
         heading: 'Run integration tests',
         commands: [
           { label: 'set required environment variables', code: '# Integration tests require real AWS credentials and tenant account vars\nexport AMBIENT_ACCOUNT_ID=<tenant-account-id>\nexport AMBIENT_REGION=us-east-1\nexport AMBIENT_IOT_ENDPOINT=$(aws iot describe-endpoint \\\n  --endpoint-type iot:Data-ATS --query endpointAddress --output text)\nexport AMBIENT_API_URL=https://<api-id>.execute-api.us-east-1.amazonaws.com/prod\nexport AMBIENT_USER_POOL_ID=<pool-id>\nexport AMBIENT_S3_BUCKET=ambient-<tenant>-parquet' },
-          { label: 'run full integration test suite', code: 'cd /path/to/ambientcloud\npip install -e ".[test]"\n\n# Full suite (skips integration tests without AMBIENT_* vars)\npytest -v\n\n# Integration only:\npytest -v -m integration tests/integration/\n\n# Expected output:\n# tests/integration/test_end_to_end.py ... 73 passed\n# All services: admin-cli 28 pass, api 19 pass, ella 11 pass, telemetry 15 pass' },
+          { label: 'run full test suite', code: 'cd /path/to/ambientcloud\npip install -e ".[test]"\n\n# Unit tests (no AMBIENT_* vars needed)\npytest -v\n# Expected: 75 passed\n# admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2\n\n# Integration suite (requires AMBIENT_* env vars)\npytest -v -m integration tests/integration/' },
           { label: 'run end-to-end with FakeDevice', code: '# FakeDevice simulates a full device lifecycle:\n# provision → connect → publish fall alert → upload Parquet → verify narrative\npytest -v tests/integration/test_end_to_end.py -k "test_full_device_lifecycle"\n\n# Confirm all five data paths exercised:\n# ✓ fall alert → DDB + SNS\n# ✓ Parquet upload via url-minter\n# ✓ Athena query (via API /subjects/{id})\n# ✓ Ella narrative triggered\n# ✓ API returns subject detail with narrative' },
         ],
       },
@@ -474,17 +499,18 @@ const STEPS: Step[] = [
         table: {
           cols: ['Service', 'Tests', 'Key scenarios covered'],
           rows: [
-            ['admin-cli',  '28 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard'],
-            ['api',        '19 pass', 'Facility scoping, cross-facility auth denial, alert pagination, subject detail, on-demand narrative'],
-            ['ella',       '11 pass', 'Athena query construction, Bedrock invoke, de-id system prompt adherence, DLQ retry'],
-            ['telemetry',  '15 pass', 'Fall event enrichment, DDB write, SNS publish with facility filter, synthetic event injection'],
+            ['admin-cli',   '28 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard'],
+            ['api',         '19 pass', 'Facility scoping, cross-facility auth denial, alert pagination, subject detail, on-demand narrative'],
+            ['ella',        '11 pass', 'Athena query construction, Bedrock invoke, de-id system prompt adherence, DLQ retry'],
+            ['telemetry',   '15 pass', 'Fall event enrichment, DDB write, SNS publish with facility filter, synthetic event injection'],
+            ['reconciler',  '2 pass',  'Athena row-count delta per facility, TelemetryDivergence metric emission, alarm threshold 0.1%'],
           ],
         },
       },
       {
         heading: 'CI/CD target (not yet wired)',
         commands: [
-          { label: 'target GitHub Actions workflow structure', code: '# .github/workflows/ci.yml (target state — not yet created)\n# on: push: branches: [main]\n# jobs:\n#   test:\n#     - run: pytest -v (unit tests, no AMBIENT_* vars)\n#   validate-infra:\n#     - run: terraform fmt -check + terraform validate per service\n#   integration: (requires OIDC secrets)\n#     - if: branch == main\n#     - run: pytest -v -m integration tests/integration/' },
+          { label: 'target GitHub Actions workflow structure', code: '# .github/workflows/ci.yml (integration CI — in progress)\n# on: push: branches: [main]\n# jobs:\n#   test:\n#     - run: pytest -v  # 75 unit tests, no AMBIENT_* vars\n#   validate-infra:\n#     - run: cd infra && cdk synth --all  # validates all CDK stacks\n#   integration: (requires OIDC creds — see cdk-deploy.yml for role setup)\n#     - if: branch == main\n#     - run: pytest -v -m integration tests/integration/' },
         ],
         warnings: [
           'Integration tests hit real AWS — they create and delete real resources in the tenant account. Run only against a non-production tenant account or a dedicated test tenant. Never run against the production tenant.',
@@ -500,8 +526,8 @@ const STEPS: Step[] = [
       {
         heading: 'Production readiness checklist',
         checklist: [
-          'All 7 services deployed and Lambda functions in Active state',
-          '73/73 integration tests passing against the production tenant',
+          'All CDK stacks deployed: Kms, Storage, Data, Telemetry, UrlMinter, Athena, Ella, Api, CloudTrail',
+          '75/75 unit tests passing; integration test suite green against production tenant',
           'CloudTrail data events enabled on devices, alerts, and daily-updates DDB tables',
           'CloudTrail data events enabled on ambient-<tenant>-parquet S3 bucket',
           'CloudTrail retention: 7-year Glacier Deep Archive per HIPAA §164.316(b)(2)(i)',
@@ -523,7 +549,7 @@ const STEPS: Step[] = [
       {
         heading: 'Commit production sign-off',
         commands: [
-          { label: 'tag the production release', code: '# Tag the exact commit deployed to production\ngit tag -a v1.0.0-prod \\\n  -m "Production release — IRB pilot cohort. All 7 services deployed, 73 tests passing."\ngit push origin v1.0.0-prod\n\n# Record in deployment-status.md\ncat >> docs/deployment-status.md << EOF\n\n## Production Release\n- Date: $(date -u +%Y-%m-%d)\n- Tag: v1.0.0-prod\n- Tenant: <tenant-id>\n- Services: all 7 deployed\n- Tests: 73/73 passing\n- IRB protocol: active\nEOF\ngit commit -am "docs: record production release v1.0.0-prod"\ngit push' },
+          { label: 'tag the production release', code: '# Tag the exact commit deployed to production\ngit tag -a v1.0.0-prod \\\n  -m "Production release — IRB pilot cohort. All CDK stacks deployed, 75 tests passing."\ngit push origin v1.0.0-prod\n\n# Record in deployment-status.md\ncat >> docs/deployment-status.md << EOF\n\n## Production Release\n- Date: $(date -u +%Y-%m-%d)\n- Tag: v1.0.0-prod\n- Tenant: <tenant-id>\n- CDK stacks: all 10 deployed\n- Tests: 75/75 passing\n- IRB protocol: active\nEOF\ngit commit -am "docs: record production release v1.0.0-prod"\ngit push' },
         ],
         artifacts: [
           { file: 'docs/deployment-status.md', role: 'Service inventory, merge history, and production release record.' },
@@ -541,11 +567,11 @@ const STEPS: Step[] = [
 // ── Static data ────────────────────────────────────────────────────────────────
 
 const STACK_SPECS = [
-  { label: 'Region',    value: 'us-east-1',       sub: 'AWS · single-region pilot' },
-  { label: 'Runtime',   value: 'Python 3.12',      sub: 'Lambda + FastAPI + boto3' },
-  { label: 'IaC',       value: 'Terraform 1.14+',  sub: 'OpenTofu for snapsoft modules' },
-  { label: 'AI Model',  value: 'Sonnet 4.5',        sub: 'Bedrock · HIPAA-eligible' },
-  { label: 'Standard',  value: 'HIPAA §164.514(c)', sub: 'Coded data · IRB protocol' },
+  { label: 'Region',    value: 'us-east-1',        sub: 'AWS · single-region pilot' },
+  { label: 'Runtime',   value: 'Python 3.12',       sub: 'Lambda + FastAPI + boto3' },
+  { label: 'IaC',       value: 'AWS CDK v2',         sub: 'Python · unified infra/app.py' },
+  { label: 'AI Model',  value: 'Sonnet 4.5',         sub: 'Bedrock · HIPAA-eligible' },
+  { label: 'Standard',  value: 'HIPAA §164.514(c)',  sub: 'Coded data · IRB protocol' },
 ];
 
 const CHECKLIST_ITEMS = [
@@ -569,7 +595,7 @@ const CHECKLIST_ITEMS = [
   'Ella Lambda deployed — narrative de-id verified (20+ subjects)',
   'FastAPI Lambda deployed — 12 endpoints smoke-tested',
   'Cognito MFA enabled for all users',
-  'Integration tests: 73/73 passing',
+  'Unit tests: 75/75 passing (admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2)',
   'Production runbooks dry-run complete',
 ];
 
