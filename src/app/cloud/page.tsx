@@ -6,12 +6,12 @@ import dynamic from 'next/dynamic';
 const ServiceEditor = dynamic(() => import('./ServiceEditor'), { ssr: false });
 
 type Tab = 'services' | 'paths' | 'architecture' | 'accounts' | 'runbooks' | 'editor' | 'pipeline' | 'deps' | 'health' | 'costs';
-type TfFile = 'main.tf' | 'backend.tf' | 'dev.tfvars' | 'prod.tfvars';
+type CdkFile = 'stack.py' | 'cdk.json' | 'dev.context.json' | 'prod.context.json';
 type ActionStatus = 'idle' | 'running' | 'ok' | 'error';
 type RunStatus = 'success' | 'failure' | 'running' | 'queued' | 'skipped';
 type HealthStatus = 'healthy' | 'degraded' | 'down';
 
-const TF_FILES: TfFile[] = ['main.tf', 'backend.tf', 'dev.tfvars', 'prod.tfvars'];
+const CDK_FILES: CdkFile[] = ['stack.py', 'cdk.json', 'dev.context.json', 'prod.context.json'];
 
 const SERVICES = [
   { id: 'ella',       tag: 'AI · Bedrock', label: 'Ella',            path: 'services/ella/',        tests: 11,   desc: 'Twice-daily Claude Sonnet narrative per subject via Bedrock — de-identified summaries stored in DynamoDB for clinical staff.', tf: true,  lambdaFn: 'ambient-dev-ella' },
@@ -24,6 +24,7 @@ const SERVICES = [
   { id: 'iot-core',     tag: 'IoT',        label: 'IoT Core',        path: 'services/iot-core/',      tests: null, desc: 'Role alias (temp AWS creds for devices via mTLS), Device Shadow, and IoT Rules for fall-enricher and legacy Firehose paths.', tf: true,  lambdaFn: null },
   { id: 'kms',          tag: 'Security',   label: 'KMS',             path: 'services/kms/',           tests: null, desc: 'Tenant CMK with 30-day deletion window, automatic annual rotation, and scoped key policy for DynamoDB, S3, SNS, and SQS.', tf: true,  lambdaFn: null },
   { id: 'observability',tag: 'Monitoring', label: 'Observability',   path: 'services/observability/', tests: null, desc: 'CloudWatch Metric Streams to central account — scalar metrics only (Lambda, DynamoDB, Ambient/* namespace). No PHI crosses the boundary.', tf: true,  lambdaFn: null },
+  { id: 'reconciler',  tag: 'Ops',        label: 'Reconciler',      path: 'services/reconciler/',   tests: 2,    desc: 'EventBridge 15-min cron compares device-path vs Firehose Athena row counts per facility — emits TelemetryDivergence metric, alarms at >0.1%.', tf: true, lambdaFn: 'ambient-dev-reconciler' },
 ];
 
 const PATHS = [
@@ -46,32 +47,34 @@ const RUNBOOKS = [
   'IRB data request', 'Narrative broken', 'Telemetry gap',
 ];
 
-const TF_STATE: Record<string, { resources: number; lastApplied: string }> = {
-  ella:          { resources: 14, lastApplied: '2h ago' },
-  api:           { resources: 22, lastApplied: '2h ago' },
-  telemetry:     { resources: 18, lastApplied: '3h ago' },
-  'url-minter':  { resources: 8,  lastApplied: '5h ago' },
-  athena:        { resources: 12, lastApplied: '5h ago' },
-  cloudtrail:    { resources: 6,  lastApplied: '5h ago' },
-  'iot-core':    { resources: 9,  lastApplied: '4h ago' },
-  kms:           { resources: 4,  lastApplied: '6h ago' },
-  observability: { resources: 7,  lastApplied: '1d ago' },
+const CDK_STATE: Record<string, { cfnResources: number; lastDeploy: string }> = {
+  ella:          { cfnResources: 14, lastDeploy: '2h ago' },
+  api:           { cfnResources: 22, lastDeploy: '2h ago' },
+  telemetry:     { cfnResources: 18, lastDeploy: '3h ago' },
+  'url-minter':  { cfnResources: 8,  lastDeploy: '5h ago' },
+  athena:        { cfnResources: 12, lastDeploy: '5h ago' },
+  cloudtrail:    { cfnResources: 6,  lastDeploy: '5h ago' },
+  'iot-core':    { cfnResources: 9,  lastDeploy: '4h ago' },
+  kms:           { cfnResources: 4,  lastDeploy: '6h ago' },
+  observability: { cfnResources: 7,  lastDeploy: '1d ago' },
+  reconciler:    { cfnResources: 5,  lastDeploy: '2h ago' },
 };
 
 const PIPELINE: Record<string, {
-  plan:  { status: RunStatus; age: string; duration: string; sha: string };
-  apply: { status: RunStatus; age: string; duration: string; sha: string };
+  synth:  { status: RunStatus; age: string; duration: string; sha: string };
+  deploy: { status: RunStatus; age: string; duration: string; sha: string };
   env: 'dev' | 'prod';
 }> = {
-  ella:          { plan: { status: 'success', age: '2h ago', duration: '1m 12s', sha: '3a7f2c1' }, apply: { status: 'success', age: '2h ago', duration: '2m 04s', sha: '3a7f2c1' }, env: 'prod' },
-  api:           { plan: { status: 'success', age: '2h ago', duration: '0m 58s', sha: '3a7f2c1' }, apply: { status: 'success', age: '2h ago', duration: '1m 47s', sha: '3a7f2c1' }, env: 'prod' },
-  telemetry:     { plan: { status: 'success', age: '3h ago', duration: '1m 22s', sha: 'c91e340' }, apply: { status: 'success', age: '3h ago', duration: '2m 11s', sha: 'c91e340' }, env: 'prod' },
-  'url-minter':  { plan: { status: 'success', age: '5h ago', duration: '0m 41s', sha: 'b7d1055' }, apply: { status: 'success', age: '5h ago', duration: '0m 55s', sha: 'b7d1055' }, env: 'prod' },
-  athena:        { plan: { status: 'success', age: '5h ago', duration: '1m 08s', sha: 'b7d1055' }, apply: { status: 'success', age: '5h ago', duration: '1m 44s', sha: 'b7d1055' }, env: 'prod' },
-  cloudtrail:    { plan: { status: 'success', age: '5h ago', duration: '0m 52s', sha: 'b7d1055' }, apply: { status: 'success', age: '5h ago', duration: '1m 01s', sha: 'b7d1055' }, env: 'prod' },
-  'iot-core':    { plan: { status: 'failure', age: '4h ago', duration: '1m 02s', sha: 'a4c891f' }, apply: { status: 'skipped', age: '4h ago', duration: '—',      sha: 'a4c891f' }, env: 'dev' },
-  kms:           { plan: { status: 'success', age: '6h ago', duration: '0m 33s', sha: '9f02abc' }, apply: { status: 'success', age: '6h ago', duration: '0m 47s', sha: '9f02abc' }, env: 'prod' },
-  observability: { plan: { status: 'running', age: 'now',    duration: '—',      sha: 'f91c234' }, apply: { status: 'queued',  age: '—',       duration: '—',      sha: 'f91c234' }, env: 'dev' },
+  ella:          { synth: { status: 'success', age: '2h ago', duration: '0m 29s', sha: '3a7f2c1' }, deploy: { status: 'success', age: '2h ago', duration: '2m 04s', sha: '3a7f2c1' }, env: 'prod' },
+  api:           { synth: { status: 'success', age: '2h ago', duration: '0m 24s', sha: '3a7f2c1' }, deploy: { status: 'success', age: '2h ago', duration: '1m 47s', sha: '3a7f2c1' }, env: 'prod' },
+  telemetry:     { synth: { status: 'success', age: '3h ago', duration: '0m 31s', sha: 'c91e340' }, deploy: { status: 'success', age: '3h ago', duration: '2m 11s', sha: 'c91e340' }, env: 'prod' },
+  'url-minter':  { synth: { status: 'success', age: '5h ago', duration: '0m 18s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '0m 55s', sha: 'b7d1055' }, env: 'prod' },
+  athena:        { synth: { status: 'success', age: '5h ago', duration: '0m 22s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '1m 44s', sha: 'b7d1055' }, env: 'prod' },
+  cloudtrail:    { synth: { status: 'success', age: '5h ago', duration: '0m 19s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '1m 01s', sha: 'b7d1055' }, env: 'prod' },
+  'iot-core':    { synth: { status: 'failure', age: '4h ago', duration: '0m 27s', sha: 'a4c891f' }, deploy: { status: 'skipped', age: '4h ago', duration: '—',      sha: 'a4c891f' }, env: 'dev' },
+  kms:           { synth: { status: 'success', age: '6h ago', duration: '0m 14s', sha: '9f02abc' }, deploy: { status: 'success', age: '6h ago', duration: '0m 47s', sha: '9f02abc' }, env: 'prod' },
+  observability: { synth: { status: 'running', age: 'now',    duration: '—',      sha: 'f91c234' }, deploy: { status: 'queued',  age: '—',       duration: '—',      sha: 'f91c234' }, env: 'dev' },
+  reconciler:    { synth: { status: 'success', age: '2h ago', duration: '0m 17s', sha: '3a7f2c1' }, deploy: { status: 'success', age: '2h ago', duration: '0m 44s', sha: '3a7f2c1' }, env: 'prod' },
 };
 
 const HEALTH: Record<string, {
@@ -89,7 +92,8 @@ const HEALTH: Record<string, {
   cloudtrail:    { status: 'healthy',  lastSeen: 'always-on' },
   'iot-core':    { status: 'degraded', issue: 'IoT rule missing — fall-enricher not routing (apply failed)', lastSeen: 'n/a' },
   kms:           { status: 'healthy',  lastSeen: 'passive' },
-  observability: { status: 'degraded', issue: 'Metric stream pending apply', lastSeen: 'pending' },
+  observability: { status: 'degraded', issue: 'Metric stream pending deploy', lastSeen: 'pending' },
+  reconciler:    { status: 'healthy',  lambda: { invocations: 96, errors: 0, p50: '3.1s', p99: '8.4s', throttles: 0 }, lastSeen: '2m ago' },
 };
 
 const COSTS = [
@@ -102,6 +106,7 @@ const COSTS = [
   { id: 'iot-core',      label: 'IoT Core',      monthly: 156,  budget: 300,  trend: [120,  130,  140,  148,  156],  driver: 'IoT messaging' },
   { id: 'kms',           label: 'KMS',           monthly: 12,   budget: 50,   trend: [8,    9,    10,   11,   12],   driver: 'API calls' },
   { id: 'observability', label: 'Observability', monthly: 67,   budget: 150,  trend: [50,   55,   59,   63,   67],   driver: 'Firehose egress' },
+  { id: 'reconciler',    label: 'Reconciler',    monthly: 8,    budget: 50,   trend: [0,    0,    0,    4,    8],    driver: 'Athena queries' },
 ];
 
 const DEP_NODES: Array<{ id: string; label: string; wave: number; deps: string[]; outputs: string[] }> = [
@@ -114,833 +119,855 @@ const DEP_NODES: Array<{ id: string; label: string; wave: number; deps: string[]
   { id: 'ella',          label: 'Ella',         wave: 2, deps: ['url-minter', 'athena', 'telemetry'],          outputs: ['lambda_name', 'updates_table'] },
   { id: 'api',           label: 'API',          wave: 3, deps: ['url-minter', 'athena', 'telemetry', 'ella'],  outputs: ['api_endpoint', 'cognito_pool_id'] },
   { id: 'cloudtrail',    label: 'CloudTrail',   wave: 3, deps: ['telemetry', 'ella'],                          outputs: ['trail_arn', 'trail_s3'] },
+  { id: 'reconciler',   label: 'Reconciler',   wave: 2, deps: ['athena', 'telemetry'],                         outputs: ['divergence_pct', 'facilities_checked'] },
 ];
 
-// ── Terraform content per service ─────────────────────────────────────────────
+// ── CDK stack content per service ────────────────────────────────────────────
 
-const TF_CONTENT: Record<string, Record<TfFile, string>> = {
+const CDK_CONTENT: Record<string, Record<CdkFile, string>> = {
+
   ella: {
-    'main.tf':
-`locals {
-  name = "ambient-\${var.environment}-ella"
-}
+    'stack.py':
+`from aws_cdk import Stack, Duration, RemovalPolicy
+from constructs import Construct
+from ambient_constructs.ambient_lambda import AmbientLambda
+from aws_cdk import aws_events as events, aws_events_targets as targets
+from aws_cdk import aws_sqs as sqs, aws_lambda_event_sources as sources
+from aws_cdk import aws_iam as iam
 
-variable "environment"           { type = string }
-variable "device_table"          { type = string }
-variable "alert_table"           { type = string }
-variable "telemetry_database"    { type = string }
-variable "athena_workgroup"      { type = string }
-variable "athena_output"         { type = string }
-variable "athena_results_bucket" { type = string }
-variable "kms_key_arn"           { type = string; default = "" }
+ELLA_CRONS = ["cron(0 11 * * ? *)", "cron(0 23 * * ? *)"]
 
-resource "aws_sqs_queue" "dlq" {
-  name                      = "\${local.name}-dlq"
-  message_retention_seconds = 1209600
-  kms_master_key_id         = "alias/aws/sqs"
-}
+class EllaStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 sqs_key, alerts_table, updates_table,
+                 env: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
 
-resource "aws_sqs_queue" "fanout" {
-  name                       = "\${local.name}-fanout"
-  visibility_timeout_seconds = 300
-  message_retention_seconds  = 86400
-  redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.dlq.arn
-    maxReceiveCount     = 3
-  })
-}
+        dlq = sqs.Queue(self, "EllaDlq",
+            queue_name=f"ambient-{env}-ella-dlq",
+            encryption=sqs.QueueEncryption.KMS,
+            encryption_master_key=sqs_key)
+        queue = sqs.Queue(self, "EllaQueue",
+            queue_name=f"ambient-{env}-ella",
+            dead_letter_queue=sqs.DeadLetterQueue(
+                queue=dlq, max_receive_count=3),
+            encryption=sqs.QueueEncryption.KMS,
+            encryption_master_key=sqs_key)
 
-resource "aws_dynamodb_table" "updates" {
-  name         = "\${local.name}-updates"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "subject_id"
-  range_key    = "date"
+        fn = AmbientLambda(self, "EllaFn",
+            function_name=f"ambient-{env}-ella",
+            handler="handler.lambda_handler",
+            source_path="../services/ella/src",
+            timeout=Duration.seconds(900),
+            memory_size=1024,
+            environment={
+                "BEDROCK_MODEL_ID":
+                    "anthropic.claude-sonnet-4-5-20250929-v1:0",
+                "UPDATES_TABLE": updates_table.table_name,
+                "ALERTS_TABLE":  alerts_table.table_name,
+            })
 
-  attribute { name = "subject_id" type = "S" }
-  attribute { name = "date"       type = "S" }
+        fn.function.add_event_source(
+            sources.SqsEventSource(queue, batch_size=1))
+        fn.function.add_to_role_policy(iam.PolicyStatement(
+            actions=["bedrock:InvokeModel"],
+            resources=[f"arn:aws:bedrock:{self.region}::foundation-model/"
+                       "anthropic.claude-sonnet-4-5-20250929-v1:0"]))
+        updates_table.grant_write_data(fn.function)
+        alerts_table.grant_read_data(fn.function)
 
-  ttl { attribute_name = "expires_at" enabled = true }
-
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = var.kms_key_arn != "" ? var.kms_key_arn : null
-  }
-}
-
-resource "aws_lambda_function" "ella" {
-  function_name = local.name
-  role          = aws_iam_role.ella.arn
-  runtime       = "python3.12"
-  handler       = "handler.lambda_handler"
-  timeout       = 270
-  memory_size   = 512
-
-  filename         = data.archive_file.ella.output_path
-  source_code_hash = data.archive_file.ella.output_base64sha256
-
-  environment {
-    variables = {
-      DEVICE_TABLE     = var.device_table
-      ALERT_TABLE      = var.alert_table
-      UPDATES_TABLE    = aws_dynamodb_table.updates.name
-      ATHENA_DATABASE  = var.telemetry_database
-      ATHENA_WORKGROUP = var.athena_workgroup
-      ATHENA_OUTPUT    = var.athena_output
-      BEDROCK_MODEL    = "us.anthropic.claude-sonnet-4-5-20251001-v1:0"
-    }
-  }
-}
-
-resource "aws_cloudwatch_event_rule" "ella_trigger" {
-  name                = "\${local.name}-trigger"
-  description         = "Trigger Ella narrative generation twice daily"
-  schedule_expression = "cron(0 7,19 * * ? *)"
-}
-
-resource "aws_cloudwatch_event_target" "ella_lambda" {
-  rule      = aws_cloudwatch_event_rule.ella_trigger.name
-  target_id = "EllaLambda"
-  arn       = aws_lambda_function.ella.arn
-}
-
-resource "aws_lambda_permission" "eventbridge" {
-  statement_id  = "AllowEventBridgeInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.ella.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.ella_trigger.arn
-}
-
-output "lambda_name"   { value = aws_lambda_function.ella.function_name }
-output "updates_table" { value = aws_dynamodb_table.updates.name }`,
-    'backend.tf':
-`terraform {
-  backend "s3" {
-    key     = "services/ella/terraform.tfstate"
-    encrypt = true
+        facility_ids = self.node.try_get_context("facility_ids").split(",")
+        for fac in facility_ids:
+            for i, expr in enumerate(ELLA_CRONS):
+                events.Rule(self, f"EllaCron{fac}{i}",
+                    schedule=events.Schedule.expression(expr),
+                    targets=[targets.SqsQueue(queue,
+                        message=events.RuleTargetInput.from_object(
+                            {"facility_id": fac}))])`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "watch": {
+    "include": ["**"],
+    "exclude": ["README.md", "cdk*.json", "**/__pycache__/**", ".venv/**"]
+  },
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/core:stackRelativeExports": true,
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001",
+    "facility_ids": "FAC-PILOT-001",
+    "enable_observability": "false"
   }
 }`,
-    'dev.tfvars':
-`environment           = "dev"
-device_table          = "ambient-dev-devices"
-alert_table           = "ambient-dev-telemetry-alerts"
-telemetry_database    = "ambient_dev_telemetry"
-athena_workgroup      = "ambient-dev-athena"
-athena_output         = "s3://ambient-dev-athena-results/queries/"
-athena_results_bucket = "ambient-dev-athena-results"`,
-    'prod.tfvars':
-`environment           = "prod"
-device_table          = "ambient-prod-devices"
-alert_table           = "ambient-prod-telemetry-alerts"
-telemetry_database    = "ambient_prod_telemetry"
-athena_workgroup      = "ambient-prod-athena"
-athena_output         = "s3://ambient-prod-athena-results/queries/"
-athena_results_bucket = "ambient-prod-athena-results"
-kms_key_arn           = "arn:aws:kms:us-east-1:ACCOUNT_ID:key/KEY_ID"`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "facility_ids": "FAC-PILOT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1",
+  "enable_observability": "false"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "facility_ids": "FAC-PILOT-001,FAC-PILOT-002",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1",
+  "enable_observability": "true"
+}`,
   },
 
   api: {
-    'main.tf':
-`locals {
-  name = "ambient-\${var.environment}-api"
-}
+    'stack.py':
+`from aws_cdk import Stack, Duration, RemovalPolicy
+from constructs import Construct
+from ambient_constructs.ambient_lambda import AmbientLambda
+from aws_cdk import aws_cognito as cognito
+from aws_cdk import aws_apigatewayv2 as apigw
+from aws_cdk import aws_apigatewayv2_integrations as integrations
+from aws_cdk import aws_apigatewayv2_authorizers as authorizers
 
-variable "environment"           { type = string }
-variable "device_table"          { type = string }
-variable "alert_table"           { type = string }
-variable "update_table"          { type = string }
-variable "ella_lambda_name"      { type = string }
-variable "telemetry_database"    { type = string }
-variable "athena_workgroup"      { type = string }
-variable "athena_output"         { type = string }
-variable "athena_results_bucket" { type = string }
-variable "cors_origins"          { type = string; default = "https://app.ellamemory.com" }
+class ApiStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 data_key, alerts_table, updates_table,
+                 devices_table, env: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
 
-resource "aws_cognito_user_pool" "pool" {
-  name                     = "\${local.name}-users"
-  auto_verified_attributes = ["email"]
+        pool = cognito.UserPool(self, "Pool",
+            user_pool_name=f"ambient-{env}-users",
+            sign_in_aliases=cognito.SignInAliases(email=True),
+            mfa=cognito.Mfa.REQUIRED,
+            mfa_second_factor=cognito.MfaSecondFactor(otp=True, sms=False),
+            password_policy=cognito.PasswordPolicy(
+                min_length=12, require_uppercase=True,
+                require_symbols=True, require_digits=True),
+            self_sign_up_enabled=False,
+            account_recovery=cognito.AccountRecovery.NONE,
+            removal_policy=RemovalPolicy.RETAIN)
 
-  admin_create_user_config { allow_admin_create_user_only = true }
+        pool.add_custom_attribute("role",
+            cognito.StringAttribute(mutable=True))
+        pool.add_custom_attribute("facilityIds",
+            cognito.StringAttribute(mutable=True))
 
-  password_policy {
-    minimum_length    = 12
-    require_uppercase = true
-    require_numbers   = true
-    require_symbols   = true
-  }
-}
+        client = pool.add_client("WebClient",
+            auth_flows=cognito.AuthFlow(user_srp=True),
+            o_auth=cognito.OAuthSettings(
+                flows=cognito.OAuthFlows(implicit_code_grant=True)))
 
-resource "aws_cognito_user_pool_client" "web" {
-  name         = "\${local.name}-web"
-  user_pool_id = aws_cognito_user_pool.pool.id
-  explicit_auth_flows = [
-    "ALLOW_USER_SRP_AUTH",
-    "ALLOW_REFRESH_TOKEN_AUTH",
-  ]
-}
+        fn = AmbientLambda(self, "ApiFn",
+            function_name=f"ambient-{env}-api",
+            handler="main.handler",
+            source_path="../services/api/src",
+            timeout=Duration.seconds(30),
+            memory_size=512,
+            environment={
+                "COGNITO_USER_POOL_ID": pool.user_pool_id,
+                "ALERTS_TABLE":         alerts_table.table_name,
+                "UPDATES_TABLE":        updates_table.table_name,
+                "DEVICES_TABLE":        devices_table.table_name,
+            })
 
-resource "aws_apigatewayv2_api" "api" {
-  name          = local.name
-  protocol_type = "HTTP"
-  cors_configuration {
-    allow_origins = [var.cors_origins]
-    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    allow_headers = ["Authorization", "Content-Type"]
-  }
-}
+        for t in [alerts_table, updates_table, devices_table]:
+            t.grant_read_write_data(fn.function)
 
-resource "aws_lambda_function" "api" {
-  function_name = local.name
-  role          = aws_iam_role.api.arn
-  runtime       = "python3.12"
-  handler       = "main.handler"
-  timeout       = 29
-  memory_size   = 256
+        http_api = apigw.HttpApi(self, "HttpApi",
+            api_name=f"ambient-{env}-api",
+            cors_preflight=apigw.CorsPreflightOptions(
+                allow_origins=["https://ellamemory.com"],
+                allow_methods=[apigw.CorsHttpMethod.ANY],
+                allow_headers=["Authorization", "Content-Type"]))
 
-  filename         = data.archive_file.api.output_path
-  source_code_hash = data.archive_file.api.output_base64sha256
+        jwt_auth = authorizers.HttpJwtAuthorizer(
+            "CognitoAuth",
+            f"https://cognito-idp.{self.region}.amazonaws.com/{pool.user_pool_id}",
+            jwt_audience=[client.user_pool_client_id])
 
-  environment {
-    variables = {
-      ENVIRONMENT       = var.environment
-      DEVICE_TABLE      = var.device_table
-      ALERT_TABLE       = var.alert_table
-      UPDATE_TABLE      = var.update_table
-      ELLA_LAMBDA       = var.ella_lambda_name
-      COGNITO_USER_POOL = aws_cognito_user_pool.pool.id
-      ATHENA_DATABASE   = var.telemetry_database
-      ATHENA_WORKGROUP  = var.athena_workgroup
-      ATHENA_OUTPUT     = var.athena_output
-    }
-  }
-}
-
-output "api_endpoint"    { value = aws_apigatewayv2_api.api.api_endpoint }
-output "cognito_pool_id" { value = aws_cognito_user_pool.pool.id }`,
-    'backend.tf':
-`terraform {
-  backend "s3" {
-    key     = "services/api/terraform.tfstate"
-    encrypt = true
+        integration = integrations.HttpLambdaIntegration(
+            "ApiIntegration", fn.function)
+        http_api.add_routes(path="/{proxy+}", methods=[apigw.HttpMethod.ANY],
+            integration=integration, authorizer=jwt_auth)
+        http_api.add_routes(path="/health", methods=[apigw.HttpMethod.GET],
+            integration=integration)`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001",
+    "facility_ids": "FAC-PILOT-001"
   }
 }`,
-    'dev.tfvars':
-`environment           = "dev"
-device_table          = "ambient-dev-devices"
-alert_table           = "ambient-dev-telemetry-alerts"
-update_table          = "ambient-dev-ella-updates"
-ella_lambda_name      = "ambient-dev-ella"
-telemetry_database    = "ambient_dev_telemetry"
-athena_workgroup      = "ambient-dev-athena"
-athena_output         = "s3://ambient-dev-athena-results/queries/"
-athena_results_bucket = "ambient-dev-athena-results"
-cors_origins          = "http://localhost:3000"`,
-    'prod.tfvars':
-`environment           = "prod"
-device_table          = "ambient-prod-devices"
-alert_table           = "ambient-prod-telemetry-alerts"
-update_table          = "ambient-prod-ella-updates"
-ella_lambda_name      = "ambient-prod-ella"
-telemetry_database    = "ambient_prod_telemetry"
-athena_workgroup      = "ambient-prod-athena"
-athena_output         = "s3://ambient-prod-athena-results/queries/"
-athena_results_bucket = "ambient-prod-athena-results"
-cors_origins          = "https://app.ellamemory.com"`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "facility_ids": "FAC-PILOT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "facility_ids": "FAC-PILOT-001,FAC-PILOT-002",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
   },
 
   telemetry: {
-    'main.tf':
-`locals {
-  name = "ambient-\${var.environment}-telemetry"
-}
+    'stack.py':
+`from aws_cdk import Stack, Duration, RemovalPolicy
+from constructs import Construct
+from ambient_constructs.ambient_lambda import AmbientLambda
+from aws_cdk import aws_sns as sns, aws_iam as iam
+from aws_cdk import aws_glue as glue
+from aws_cdk import aws_iot as iot, aws_cloudwatch as cw
+from aws_cdk import aws_kinesisfirehose as firehose
 
-variable "environment"   { type = string }
-variable "device_table"  { type = string }
-variable "parquet_bucket"{ type = string }
+class TelemetryStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 data_key, s3_key, sns_key, parquet_bucket,
+                 alerts_table, devices_table, env: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
 
-resource "aws_dynamodb_table" "alerts" {
-  name         = "\${local.name}-alerts"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "subject_id"
-  range_key    = "event_ts"
+        topic = sns.Topic(self, "FallAlerts",
+            topic_name=f"ambient-{env}-fall-alerts",
+            master_key=sns_key)
 
-  attribute { name = "subject_id" type = "S" }
-  attribute { name = "event_ts"   type = "S" }
+        fn = AmbientLambda(self, "AlertsFn",
+            function_name=f"ambient-{env}-alerts-enricher",
+            handler="handler.lambda_handler",
+            source_path="../services/telemetry/src",
+            timeout=Duration.seconds(30),
+            memory_size=512,
+            environment={
+                "ALERTS_TABLE":     alerts_table.table_name,
+                "FALL_ALERTS_TOPIC": topic.topic_arn,
+            })
+        alerts_table.grant_read_write_data(fn.function)
+        topic.grant_publish(fn.function)
 
-  ttl { attribute_name = "expires_at" enabled = true }
-}
+        iot_error_role = iam.Role(self, "IotErrorRole",
+            assumed_by=iam.ServicePrincipal("iot.amazonaws.com"))
+        parquet_bucket.grant_put(iot_error_role)
 
-resource "aws_sns_topic" "fall_alerts" {
-  name              = "\${local.name}-fall-alerts"
-  kms_master_key_id = "alias/aws/sns"
-}
+        iot.CfnTopicRule(self, "FallEnricherRule",
+            rule_name=f"ambient_{env}_fall_enricher",
+            topic_rule_payload=iot.CfnTopicRule.TopicRulePayloadProperty(
+                sql="SELECT * FROM '$aws/rules/fall_enricher'",
+                actions=[iot.CfnTopicRule.ActionProperty(
+                    lambda_=iot.CfnTopicRule.LambdaActionProperty(
+                        function_arn=fn.function.function_arn))]))
 
-resource "aws_kinesis_firehose_delivery_stream" "telemetry" {
-  name        = "\${local.name}-stream"
-  destination = "extended_s3"
+        db = glue.CfnDatabase(self, "TelemetryDb",
+            catalog_id=self.account,
+            database_input=glue.CfnDatabase.DatabaseInputProperty(
+                name=f"ambient_{env}_telemetry"))
 
-  extended_s3_configuration {
-    role_arn            = aws_iam_role.firehose.arn
-    bucket_arn          = "arn:aws:s3:::\${var.parquet_bucket}"
-    prefix              = "raw/date=!{timestamp:yyyy-MM-dd}/"
-    error_output_prefix = "errors/!{firehose:error-output-type}/"
-    buffering_interval  = 300
-    buffering_size      = 128
+        glue.CfnTable(self, "AggTable",
+            catalog_id=self.account,
+            database_name=db.ref,
+            table_input=glue.CfnTable.TableInputProperty(
+                name="telemetry_aggregates",
+                partition_keys=[
+                    {"Name": "facility", "Type": "string"},
+                    {"Name": "window_hour", "Type": "string"}],
+                storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                    location=f"s3://{parquet_bucket.bucket_name}/telemetry/",
+                    input_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+                    output_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+                    serde_info=glue.CfnTable.SerdeInfoProperty(
+                        serialization_library="org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"))))
 
-    data_format_conversion_configuration {
-      input_format_configuration {
-        deserializer { hive_json_ser_de {} }
-      }
-      output_format_configuration {
-        serializer { parquet_ser_de { compression = "SNAPPY" } }
-      }
-      schema_configuration {
-        database_name = "ambient_\${var.environment}_telemetry"
-        table_name    = "radar_frames"
-        role_arn      = aws_iam_role.firehose.arn
-      }
-    }
-  }
-}
-
-resource "aws_lambda_function" "fall_enricher" {
-  function_name = "\${local.name}-fall-enricher"
-  role          = aws_iam_role.lambda.arn
-  runtime       = "python3.12"
-  handler       = "handler.lambda_handler"
-  timeout       = 15
-  memory_size   = 128
-
-  environment {
-    variables = {
-      ALERTS_TABLE  = aws_dynamodb_table.alerts.name
-      SNS_TOPIC_ARN = aws_sns_topic.fall_alerts.arn
-      DEVICE_TABLE  = var.device_table
-    }
-  }
-}
-
-output "alerts_table"      { value = aws_dynamodb_table.alerts.name }
-output "fall_alerts_topic" { value = aws_sns_topic.fall_alerts.arn }`,
-    'backend.tf':
-`terraform {
-  backend "s3" {
-    key     = "services/telemetry/terraform.tfstate"
-    encrypt = true
+        cw.Alarm(self, "DivergenceAlarm",
+            metric=cw.Metric(
+                namespace="AmbientIntelligence/Telemetry",
+                metric_name="TelemetryDivergence",
+                statistic="Average", period=Duration.minutes(15)),
+            threshold=0.001, evaluation_periods=3,
+            alarm_description="Telemetry path divergence > 0.1%")`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001",
+    "facility_ids": "FAC-PILOT-001"
   }
 }`,
-    'dev.tfvars':
-`environment    = "dev"
-device_table   = "ambient-dev-devices"
-parquet_bucket = "ambient-dev-parquet-data"`,
-    'prod.tfvars':
-`environment    = "prod"
-device_table   = "ambient-prod-devices"
-parquet_bucket = "ambient-prod-parquet-data"`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "facility_ids": "FAC-PILOT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "facility_ids": "FAC-PILOT-001,FAC-PILOT-002",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
   },
 
   'url-minter': {
-    'main.tf':
-`locals {
-  name = "ambient-\${var.environment}-url-minter"
-}
+    'stack.py':
+`from aws_cdk import Stack, Duration
+from constructs import Construct
+from ambient_constructs.ambient_lambda import AmbientLambda
+from aws_cdk import aws_iam as iam, aws_iot as iot
+from aws_cdk import aws_lambda as lambda_
 
-variable "environment"          { type = string }
-variable "telemetry_bucket_name"{ type = string }
+class UrlMinterStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 data_key, devices_table, parquet_bucket,
+                 env: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
 
-resource "aws_dynamodb_table" "devices" {
-  name         = "ambient-\${var.environment}-devices"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "device_id"
+        fn = AmbientLambda(self, "UrlMinterFn",
+            function_name=f"ambient-{env}-url-minter",
+            handler="handler.lambda_handler",
+            source_path="../services/url-minter/src",
+            timeout=Duration.seconds(10),
+            memory_size=256,
+            environment={
+                "DEVICES_TABLE":  devices_table.table_name,
+                "PARQUET_BUCKET": parquet_bucket.bucket_name,
+            })
 
-  attribute { name = "device_id" type = "S" }
-}
+        fn.function.add_function_url(
+            auth_type=lambda_.FunctionUrlAuthType.AWS_IAM,
+            cors=lambda_.FunctionUrlCorsOptions(
+                allowed_origins=["*"],
+                allowed_methods=[lambda_.HttpMethod.POST]))
 
-resource "aws_s3_bucket" "parquet" {
-  bucket = var.telemetry_bucket_name
-  lifecycle { prevent_destroy = true }
-}
+        devices_table.grant_read_data(fn.function)
+        parquet_bucket.grant_put(fn.function)
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "parquet" {
-  bucket = aws_s3_bucket.parquet.id
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
+        device_upload_role = iam.Role(self, "DeviceUploadRole",
+            role_name=f"ambient-{env}-device-upload",
+            assumed_by=iam.ServicePrincipal("credentials.iot.amazonaws.com"))
 
-resource "aws_s3_bucket_lifecycle_configuration" "parquet" {
-  bucket = aws_s3_bucket.parquet.id
-  rule {
-    id     = "glacier-after-90"
-    status = "Enabled"
-    transition { days = 90; storage_class = "GLACIER" }
-  }
-}
+        role_alias = iot.CfnRoleAlias(self, "DeviceRoleAlias",
+            role_alias=f"ambient-{env}-device-alias",
+            role_arn=device_upload_role.role_arn,
+            credential_duration_seconds=3600)
 
-resource "aws_lambda_function" "url_minter" {
-  function_name = local.name
-  role          = aws_iam_role.url_minter.arn
-  runtime       = "python3.12"
-  handler       = "handler.lambda_handler"
-  timeout       = 10
-  memory_size   = 128
-
-  environment {
-    variables = {
-      DEVICE_TABLE = aws_dynamodb_table.devices.name
-      BUCKET_NAME  = aws_s3_bucket.parquet.bucket
-    }
-  }
-}
-
-output "device_table_name" { value = aws_dynamodb_table.devices.name }
-output "parquet_bucket"    { value = aws_s3_bucket.parquet.bucket }`,
-    'backend.tf':
-`terraform {
-  backend "s3" {
-    key     = "services/url-minter/terraform.tfstate"
-    encrypt = true
+        iot.CfnPolicy(self, "DeviceIotPolicy",
+            policy_name=f"ambient-{env}-device-policy",
+            policy_document={
+                "Version": "2012-10-17",
+                "Statement": [
+                    {"Effect": "Allow",
+                     "Action": "iot:AssumeRoleWithCertificate",
+                     "Resource": role_alias.attr_role_alias_arn},
+                    {"Effect": "Allow",
+                     "Action": "iot:Connect",
+                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:"
+                                 "client/\${iot:ClientId}"},
+                    {"Effect": "Allow",
+                     "Action": "iot:Publish",
+                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:"
+                                 "topic/$aws/rules/*"},
+                ]})`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001"
   }
 }`,
-    'dev.tfvars':
-`environment           = "dev"
-telemetry_bucket_name = "ambient-dev-parquet-data"`,
-    'prod.tfvars':
-`environment           = "prod"
-telemetry_bucket_name = "ambient-prod-parquet-data"`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
   },
 
   athena: {
-    'main.tf':
-`locals {
-  name = "ambient-\${var.environment}-athena"
-}
+    'stack.py':
+`from aws_cdk import Stack, RemovalPolicy
+from constructs import Construct
+from aws_cdk import aws_glue as glue, aws_athena as athena, aws_s3 as s3
 
-variable "environment"   { type = string }
-variable "parquet_bucket"{ type = string }
+class AthenaStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 s3_key, parquet_bucket, env: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
 
-data "aws_caller_identity" "current" {}
+        athena_results = s3.Bucket(self, "AthenaResults",
+            bucket_name=f"ambient-{env}-athena-results",
+            encryption=s3.BucketEncryption.KMS,
+            encryption_key=s3_key,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True)
 
-resource "aws_s3_bucket" "results" {
-  bucket = "\${local.name}-results-\${data.aws_caller_identity.current.account_id}"
-}
+        db = glue.CfnDatabase(self, "FramesDb",
+            catalog_id=self.account,
+            database_input=glue.CfnDatabase.DatabaseInputProperty(
+                name=f"ambient_{env}_raw"))
 
-resource "aws_athena_workgroup" "main" {
-  name = local.name
+        glue.CfnTable(self, "FramesTable",
+            catalog_id=self.account,
+            database_name=db.ref,
+            table_input=glue.CfnTable.TableInputProperty(
+                name="frames",
+                partition_keys=[
+                    {"Name": "date",     "Type": "string"},
+                    {"Name": "facility", "Type": "string"},
+                    {"Name": "subject",  "Type": "string"}],
+                storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                    location=f"s3://{parquet_bucket.bucket_name}/raw-device/",
+                    input_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+                    output_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+                    serde_info=glue.CfnTable.SerdeInfoProperty(
+                        serialization_library="org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"),
+                    columns=[
+                        {"Name": "frame_number",    "Type": "bigint"},
+                        {"Name": "captured_at",     "Type": "timestamp"},
+                        {"Name": "height_data",     "Type": "float"},
+                        {"Name": "points_detected", "Type": "int"},
+                        {"Name": "radar_temp_c",    "Type": "float"}]),
+                parameters={
+                    "projection.enabled":         "true",
+                    "projection.date.type":        "date",
+                    "projection.date.format":      "yyyy-MM-dd",
+                    "projection.date.range":       "2025-01-01,NOW",
+                    "projection.facility.type":    "injected",
+                    "projection.subject.type":     "injected",
+                    "storage.location.template":
+                        f"s3://{parquet_bucket.bucket_name}/raw-device/"
+                        "date=\${date}/facility=\${facility}/subject=\${subject}/"}))
 
-  configuration {
-    enforce_workgroup_configuration    = true
-    publish_cloudwatch_metrics_enabled = true
-    result_configuration {
-      output_location = "s3://\${aws_s3_bucket.results.bucket}/queries/"
-      encryption_configuration {
-        encryption_option = "SSE_S3"
-      }
-    }
-    bytes_scanned_cutoff_per_query = 10737418240
-  }
-}
-
-resource "aws_glue_catalog_database" "telemetry" {
-  name = "ambient_\${var.environment}_telemetry"
-}
-
-resource "aws_glue_catalog_table" "radar_frames" {
-  name          = "radar_frames"
-  database_name = aws_glue_catalog_database.telemetry.name
-  table_type    = "EXTERNAL_TABLE"
-
-  partition_keys {
-    name = "date"
-    type = "string"
-  }
-
-  storage_descriptor {
-    location      = "s3://\${var.parquet_bucket}/raw/"
-    input_format  = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"
-    output_format = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"
-    ser_de_info {
-      serialization_library = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
-    }
-    columns { name = "device_id"   type = "string" }
-    columns { name = "subject_id"  type = "string" }
-    columns { name = "facility_id" type = "string" }
-    columns { name = "ts"          type = "bigint" }
-    columns { name = "radar_raw"   type = "binary" }
-  }
-}
-
-resource "aws_lambda_function" "reconciler" {
-  function_name = "\${local.name}-reconciler"
-  role          = aws_iam_role.reconciler.arn
-  runtime       = "python3.12"
-  handler       = "handler.lambda_handler"
-  timeout       = 300
-  memory_size   = 256
-
-  environment {
-    variables = {
-      ATHENA_DATABASE  = aws_glue_catalog_database.telemetry.name
-      ATHENA_WORKGROUP = aws_athena_workgroup.main.name
-      ATHENA_OUTPUT    = "s3://\${aws_s3_bucket.results.bucket}/reconciler/"
-      METRIC_NAMESPACE = "Ambient/Telemetry"
-    }
-  }
-}
-
-resource "aws_cloudwatch_event_rule" "reconciler" {
-  name                = "\${local.name}-reconciler"
-  schedule_expression = "rate(15 minutes)"
-}
-
-resource "aws_cloudwatch_event_target" "reconciler" {
-  rule      = aws_cloudwatch_event_rule.reconciler.name
-  target_id = "ReconcilerLambda"
-  arn       = aws_lambda_function.reconciler.arn
-}
-
-resource "aws_lambda_permission" "reconciler_eventbridge" {
-  statement_id  = "AllowEventBridgeInvokeReconciler"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.reconciler.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.reconciler.arn
-}
-
-output "glue_database"        { value = aws_glue_catalog_database.telemetry.name }
-output "athena_workgroup"     { value = aws_athena_workgroup.main.name }
-output "athena_results_bucket"{ value = aws_s3_bucket.results.bucket }
-output "reconciler_function"  { value = aws_lambda_function.reconciler.function_name }`,
-    'backend.tf':
-`terraform {
-  backend "s3" {
-    key     = "services/athena/terraform.tfstate"
-    encrypt = true
+        athena.CfnWorkGroup(self, "Workgroup",
+            name=f"ambient-{env}-analytics",
+            work_group_configuration=athena.CfnWorkGroup.WorkGroupConfigurationProperty(
+                result_configuration=athena.CfnWorkGroup.ResultConfigurationProperty(
+                    output_location=f"s3://{athena_results.bucket_name}/queries/",
+                    encryption_configuration=athena.CfnWorkGroup.EncryptionConfigurationProperty(
+                        encryption_option="SSE_KMS",
+                        kms_key=s3_key.key_arn)),
+                bytes_scanned_cutoff_per_query=10_737_418_240,
+                enforce_work_group_configuration=True))`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001"
   }
 }`,
-    'dev.tfvars':
-`environment    = "dev"
-parquet_bucket = "ambient-dev-parquet-data"`,
-    'prod.tfvars':
-`environment    = "prod"
-parquet_bucket = "ambient-prod-parquet-data"`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
   },
 
   cloudtrail: {
-    'main.tf':
-`locals {
-  name = "ambient-\${var.environment}-cloudtrail"
-}
+    'stack.py':
+`from aws_cdk import Stack, RemovalPolicy
+from constructs import Construct
+from aws_cdk import aws_cloudtrail as cloudtrail
+from aws_cdk import aws_iam as iam
 
-variable "environment"      { type = string }
-variable "alert_table_arn"  { type = string }
-variable "update_table_arn" { type = string }
+class CloudTrailStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 s3_key, cloudtrail_bucket,
+                 alerts_table, updates_table, parquet_bucket,
+                 env: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
 
-data "aws_caller_identity" "current" {}
+        trail_name = f"ambient-{env}-audit"
 
-resource "aws_s3_bucket" "trail" {
-  bucket        = "\${local.name}-logs-\${data.aws_caller_identity.current.account_id}"
-  force_destroy = false
-  lifecycle { prevent_destroy = true }
-}
+        for stmt in [
+            iam.PolicyStatement(
+                principals=[iam.ServicePrincipal("cloudtrail.amazonaws.com")],
+                actions=["s3:GetBucketAcl"],
+                resources=[cloudtrail_bucket.bucket_arn]),
+            iam.PolicyStatement(
+                principals=[iam.ServicePrincipal("cloudtrail.amazonaws.com")],
+                actions=["s3:PutObject"],
+                resources=[f"{cloudtrail_bucket.bucket_arn}/AWSLogs/{self.account}/*"],
+                conditions={"StringEquals": {
+                    "s3:x-amz-acl": "bucket-owner-full-control",
+                    "aws:SourceArn": f"arn:aws:cloudtrail:{self.region}:{self.account}:trail/{trail_name}"}}),
+        ]:
+            cloudtrail_bucket.add_to_resource_policy(stmt)
 
-resource "aws_s3_bucket_lifecycle_configuration" "trail" {
-  bucket = aws_s3_bucket.trail.id
-  rule {
-    id     = "glacier-after-365"
-    status = "Enabled"
-    transition { days = 365; storage_class = "GLACIER" }
-    expiration { days = 2557 }
-  }
-}
+        trail = cloudtrail.Trail(self, "AuditTrail",
+            trail_name=trail_name,
+            bucket=cloudtrail_bucket,
+            encryption_key=s3_key,
+            include_global_service_events=True,
+            is_multi_region_trail=True,
+            enable_file_validation=True,
+            send_to_cloud_watch_logs=False)
 
-resource "aws_cloudtrail" "main" {
-  name                          = local.name
-  s3_bucket_name                = aws_s3_bucket.trail.id
-  is_multi_region_trail         = true
-  enable_log_file_validation    = true
-  include_global_service_events = true
+        for table in [alerts_table, updates_table]:
+            trail.add_dynamo_db_event_selector(
+                [table],
+                include_management_events=False,
+                data_value=cloudtrail.DataResourceType.DYNAMODB_TABLE)
 
-  event_selector {
-    read_write_type           = "All"
-    include_management_events = true
-
-    data_resource {
-      type   = "AWS::DynamoDB::Table"
-      values = [var.alert_table_arn, var.update_table_arn]
-    }
-  }
-}
-
-output "trail_arn" { value = aws_cloudtrail.main.arn }
-output "trail_s3"  { value = aws_s3_bucket.trail.bucket }`,
-    'backend.tf':
-`terraform {
-  backend "s3" {
-    key     = "services/cloudtrail/terraform.tfstate"
-    encrypt = true
+        trail.add_s3_event_selector(
+            [cloudtrail.S3EventSelector(
+                bucket=parquet_bucket, object_prefix="raw/")],
+            include_management_events=False,
+            read_write_type=cloudtrail.ReadWriteType.READ_ONLY)`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001"
   }
 }`,
-    'dev.tfvars':
-`environment      = "dev"
-alert_table_arn  = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-dev-telemetry-alerts"
-update_table_arn = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-dev-ella-updates"`,
-    'prod.tfvars':
-`environment      = "prod"
-alert_table_arn  = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-prod-telemetry-alerts"
-update_table_arn = "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/ambient-prod-ella-updates"`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
   },
 
   'iot-core': {
-    'main.tf':
-`locals {
-  name_prefix = "ambient-\${var.environment}"
-}
+    'stack.py':
+`from aws_cdk import Stack
+from constructs import Construct
+from aws_cdk import aws_iot as iot, aws_iam as iam
 
-variable "environment"              { type = string }
-variable "fall_enricher_lambda_arn" { type = string }
-variable "firehose_stream_name"     { type = string }
+class IotCoreStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 alerts_fn, env: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
 
-data "aws_iam_policy_document" "device_trust" {
-  statement {
-    principals { type = "Service"; identifiers = ["credentials.iot.amazonaws.com"] }
-    actions    = ["sts:AssumeRole"]
-  }
-}
+        credentials_role = iam.Role(self, "CredentialsRole",
+            role_name=f"ambient-{env}-iot-credentials",
+            assumed_by=iam.ServicePrincipal("credentials.iot.amazonaws.com"))
 
-resource "aws_iam_role" "device" {
-  name               = "\${local.name_prefix}-iot-device-role"
-  assume_role_policy = data.aws_iam_policy_document.device_trust.json
-}
+        role_alias = iot.CfnRoleAlias(self, "DeviceRoleAlias",
+            role_alias=f"ambient-{env}-device-alias",
+            role_arn=credentials_role.role_arn,
+            credential_duration_seconds=3600)
 
-resource "aws_iot_role_alias" "device" {
-  alias             = "\${local.name_prefix}-device-alias"
-  role_arn          = aws_iam_role.device.arn
-  credential_duration_seconds = 3600
-}
+        iot.CfnPolicy(self, "DevicePolicy",
+            policy_name=f"ambient-{env}-device-policy",
+            policy_document={
+                "Version": "2012-10-17",
+                "Statement": [
+                    {"Effect": "Allow",
+                     "Action": "iot:AssumeRoleWithCertificate",
+                     "Resource": role_alias.attr_role_alias_arn},
+                    {"Effect": "Allow",
+                     "Action": "iot:Connect",
+                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:"
+                                 "client/\${iot:ClientId}"},
+                    {"Effect": "Allow",
+                     "Action": "iot:Publish",
+                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:"
+                                 "topic/$aws/rules/*"},
+                ]})
 
-resource "aws_iot_thing_type" "ambient_device" {
-  name = "\${local.name_prefix}-ambient-device"
-}
+        alerts_fn.add_permission("IotInvoke",
+            principal=iam.ServicePrincipal("iot.amazonaws.com"),
+            source_arn=f"arn:aws:iot:{self.region}:{self.account}:rule/*")
 
-resource "aws_iot_topic_rule" "fall_enricher" {
-  name        = "\${replace(local.name_prefix, "-", "_")}_fall_enricher"
-  enabled     = true
-  sql         = "SELECT *, topic(3) AS device_id FROM 'ambient/+/fall'"
-  sql_version = "2016-03-23"
-
-  lambda {
-    function_arn = var.fall_enricher_lambda_arn
-  }
-
-  error_action {
-    cloudwatch_logs {
-      log_group_name = "/aws/iot/\${local.name_prefix}-fall-enricher-errors"
-      role_arn       = aws_iam_role.iot_logging.arn
-    }
-  }
-}
-
-resource "aws_iot_topic_rule" "telemetry_legacy" {
-  name        = "\${replace(local.name_prefix, "-", "_")}_telemetry_legacy"
-  enabled     = true
-  sql         = "SELECT * FROM 'ambient/+/telemetry'"
-  sql_version = "2016-03-23"
-
-  firehose {
-    delivery_stream_name = var.firehose_stream_name
-    role_arn             = aws_iam_role.iot_firehose.arn
-    batch_mode           = true
-  }
-}
-
-output "role_alias_name" { value = aws_iot_role_alias.device.alias }
-output "role_alias_arn"  { value = aws_iot_role_alias.device.arn }`,
-    'backend.tf':
-`terraform {
-  backend "s3" {
-    key     = "services/iot-core/terraform.tfstate"
-    encrypt = true
+        iot.CfnTopicRule(self, "FallEnricherRule",
+            rule_name=f"ambient_{env}_fall_enricher",
+            topic_rule_payload=iot.CfnTopicRule.TopicRulePayloadProperty(
+                sql="SELECT *, topic() as mqtt_topic FROM '$aws/rules/fall_enricher'",
+                actions=[iot.CfnTopicRule.ActionProperty(
+                    lambda_=iot.CfnTopicRule.LambdaActionProperty(
+                        function_arn=alerts_fn.function_arn))],
+                rule_disabled=False))`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001"
   }
 }`,
-    'dev.tfvars':
-`environment              = "dev"
-fall_enricher_lambda_arn = "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:ambient-dev-telemetry-fall-enricher"
-firehose_stream_name     = "ambient-dev-telemetry-stream"`,
-    'prod.tfvars':
-`environment              = "prod"
-fall_enricher_lambda_arn = "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:ambient-prod-telemetry-fall-enricher"
-firehose_stream_name     = "ambient-prod-telemetry-stream"`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
   },
 
   kms: {
-    'main.tf':
-`locals {
-  name = "ambient-\${var.environment}"
-}
+    'stack.py':
+`from aws_cdk import Stack, RemovalPolicy, Duration
+from constructs import Construct
+from aws_cdk import aws_kms as kms
 
-variable "environment"    { type = string }
-variable "admin_role_arn" { type = string }
+class KmsStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 env: str, tenant_id: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
 
-data "aws_caller_identity" "current" {}
+        common_props = dict(
+            enable_key_rotation=True,
+            removal_policy=RemovalPolicy.RETAIN,
+            pending_window=Duration.days(30))
 
-resource "aws_kms_key" "tenant_cmk" {
-  description             = "Ambient \${var.environment} tenant CMK — SSE for DynamoDB, S3, SNS, SQS"
-  deletion_window_in_days = 30
-  enable_key_rotation     = true
-  multi_region            = false
+        self.data_key = kms.Key(self, "DataKey",
+            description=f"Ambient {env} DynamoDB CMK — tenant {tenant_id}",
+            alias=f"alias/ambient/{tenant_id}/data",
+            **common_props)
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "RootFullAccess"
-        Effect    = "Allow"
-        Principal = { AWS = "arn:aws:iam::\${data.aws_caller_identity.current.account_id}:root" }
-        Action    = "kms:*"
-        Resource  = "*"
-      },
-      {
-        Sid    = "AllowServicePrincipals"
-        Effect = "Allow"
-        Principal = {
-          Service = [
-            "dynamodb.amazonaws.com",
-            "s3.amazonaws.com",
-            "sns.amazonaws.com",
-            "sqs.amazonaws.com",
-          ]
-        }
-        Action   = ["kms:GenerateDataKey*", "kms:Decrypt", "kms:DescribeKey"]
-        Resource = "*"
-      },
-      {
-        Sid       = "AllowKeyAdmin"
-        Effect    = "Allow"
-        Principal = { AWS = var.admin_role_arn }
-        Action    = [
-          "kms:Create*", "kms:Describe*", "kms:Enable*", "kms:List*",
-          "kms:Put*", "kms:Update*", "kms:Revoke*", "kms:Disable*",
-          "kms:Get*", "kms:Delete*", "kms:ScheduleKeyDeletion", "kms:CancelKeyDeletion",
-        ]
-        Resource = "*"
-      }
-    ]
-  })
+        self.s3_key = kms.Key(self, "S3Key",
+            description=f"Ambient {env} S3 CMK — tenant {tenant_id}",
+            alias=f"alias/ambient/{tenant_id}/s3",
+            **common_props)
 
-  tags = { Environment = var.environment, HIPAA = "true", ManagedBy = "terraform" }
-}
+        self.sns_key = kms.Key(self, "SnsKey",
+            description=f"Ambient {env} SNS CMK — tenant {tenant_id}",
+            alias=f"alias/ambient/{tenant_id}/sns",
+            **common_props)
 
-resource "aws_kms_alias" "tenant_cmk" {
-  name          = "alias/\${local.name}-tenant-cmk"
-  target_key_id = aws_kms_key.tenant_cmk.key_id
-}
-
-output "kms_key_arn"   { value = aws_kms_key.tenant_cmk.arn }
-output "kms_key_alias" { value = aws_kms_alias.tenant_cmk.name }
-output "kms_key_id"    { value = aws_kms_key.tenant_cmk.key_id }`,
-    'backend.tf':
-`terraform {
-  backend "s3" {
-    key     = "services/kms/terraform.tfstate"
-    encrypt = true
+        self.sqs_key = kms.Key(self, "SqsKey",
+            description=f"Ambient {env} SQS CMK — tenant {tenant_id}",
+            alias=f"alias/ambient/{tenant_id}/sqs",
+            **common_props)`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001"
   }
 }`,
-    'dev.tfvars':
-`environment    = "dev"
-admin_role_arn = "arn:aws:iam::ACCOUNT_ID:role/ambient-dev-admin"`,
-    'prod.tfvars':
-`environment    = "prod"
-admin_role_arn = "arn:aws:iam::ACCOUNT_ID:role/ambient-prod-admin"`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
   },
 
   observability: {
-    'main.tf':
-`locals {
-  name = "ambient-\${var.environment}-observability"
-}
+    'stack.py':
+`from aws_cdk import Stack, CfnOutput
+from constructs import Construct
+from aws_cdk import aws_cloudwatch as cw, aws_iam as iam
+from aws_cdk import aws_kinesisfirehose as firehose
 
-variable "environment"        { type = string }
-variable "central_account_id" { type = string }
+METRIC_NAMESPACES = [
+    "AWS/Lambda", "AWS/DynamoDB", "AWS/IoT",
+    "AmbientIntelligence/Telemetry", "AmbientIntelligence/API",
+]
 
-resource "aws_iam_role" "metric_stream" {
-  name = "\${local.name}-metric-stream-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "streams.metrics.cloudwatch.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
+class ObservabilityStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 env: str, observability_account: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
 
-resource "aws_iam_role_policy" "metric_stream" {
-  role = aws_iam_role.metric_stream.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["firehose:PutRecord", "firehose:PutRecordBatch"]
-      Resource = aws_kinesis_firehose_delivery_stream.metrics.arn
-    }]
-  })
-}
+        stream_role = iam.Role(self, "MetricStreamRole",
+            assumed_by=iam.ServicePrincipal(
+                "streams.metrics.cloudwatch.amazonaws.com"))
 
-resource "aws_kinesis_firehose_delivery_stream" "metrics" {
-  name        = "\${local.name}-metrics"
-  destination = "extended_s3"
+        stream_name   = f"ambient-{env}-metrics"
+        stream_arn    = (f"arn:aws:firehose:{self.region}:{self.account}:"
+                         f"deliverystream/{stream_name}")
 
-  extended_s3_configuration {
-    role_arn            = aws_iam_role.metric_stream.arn
-    bucket_arn          = "arn:aws:s3:::ambient-central-metrics-\${var.central_account_id}"
-    prefix              = "\${var.environment}/metrics/date=!{timestamp:yyyy-MM-dd}/"
-    buffering_interval  = 60
-    buffering_size      = 1
-    compression_format  = "GZIP"
-  }
-}
+        stream_role.add_to_policy(iam.PolicyStatement(
+            actions=["firehose:PutRecord", "firehose:PutRecordBatch"],
+            resources=[stream_arn]))
 
-resource "aws_cloudwatch_metric_stream" "main" {
-  name          = "\${local.name}-stream"
-  role_arn      = aws_iam_role.metric_stream.arn
-  firehose_arn  = aws_kinesis_firehose_delivery_stream.metrics.arn
-  output_format = "json"
+        firehose.CfnDeliveryStream(self, "MetricsFirehose",
+            delivery_stream_name=stream_name,
+            delivery_stream_type="DirectPut",
+            s3_destination_configuration={
+                "bucketArn":  f"arn:aws:s3:::ambient-central-metrics-{observability_account}",
+                "roleArn":    stream_role.role_arn,
+                "prefix":     f"{env}/metrics/date=!{{timestamp:yyyy-MM-dd}}/",
+                "bufferingHints": {"intervalInSeconds": 60, "sizeInMBs": 1},
+                "compressionFormat": "GZIP",
+            })
 
-  include_filter {
-    namespace    = "AWS/Lambda"
-    metric_names = ["Duration", "Errors", "Invocations", "Throttles"]
-  }
-  include_filter {
-    namespace    = "AWS/DynamoDB"
-    metric_names = ["ConsumedReadCapacityUnits", "ConsumedWriteCapacityUnits", "SystemErrors"]
-  }
-  include_filter {
-    namespace    = "Ambient/Telemetry"
-    metric_names = ["TelemetryDivergence", "FallAlertsEmitted", "UrlsIssued"]
-  }
-}
+        metric_stream = cw.CfnMetricStream(self, "MetricStream",
+            name=f"ambient-{env}-stream",
+            role_arn=stream_role.role_arn,
+            firehose_arn=stream_arn,
+            output_format="json",
+            include_filters=[
+                cw.CfnMetricStream.MetricStreamFilterProperty(namespace=ns)
+                for ns in METRIC_NAMESPACES])
 
-output "metric_stream_arn"  { value = aws_cloudwatch_metric_stream.main.arn }
-output "firehose_stream_arn"{ value = aws_kinesis_firehose_delivery_stream.metrics.arn }`,
-    'backend.tf':
-`terraform {
-  backend "s3" {
-    key     = "services/observability/terraform.tfstate"
-    encrypt = true
+        CfnOutput(self, "MetricStreamArn",
+            value=metric_stream.attr_arn,
+            export_name=f"ambient-{env}-metric-stream-arn")
+
+        CfnOutput(self, "TrustPolicyNote",
+            value=f"Grant {self.account} put access on central metrics bucket",
+            description="Manual step: add bucket policy in observability account")`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001",
+    "enable_observability": "false",
+    "observability_account": "CENTRAL_ACCOUNT_ID"
   }
 }`,
-    'dev.tfvars':
-`environment        = "dev"
-central_account_id = "CENTRAL_ACCOUNT_ID"`,
-    'prod.tfvars':
-`environment        = "prod"
-central_account_id = "CENTRAL_ACCOUNT_ID"`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "enable_observability": "false",
+  "observability_account": "CENTRAL_ACCOUNT_ID",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "enable_observability": "true",
+  "observability_account": "CENTRAL_ACCOUNT_ID",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+  },
+
+  reconciler: {
+    'stack.py':
+`from aws_cdk import Stack, Duration
+from constructs import Construct
+from ambient_constructs.ambient_lambda import AmbientLambda
+from aws_cdk import aws_events as events, aws_events_targets as targets
+from aws_cdk import aws_cloudwatch as cw, aws_iam as iam
+
+class ReconcilerStack(Stack):
+    def __init__(self, scope: Construct, id: str, *,
+                 parquet_bucket, env: str, **kwargs):
+        super().__init__(scope, id, **kwargs)
+
+        fn = AmbientLambda(self, "ReconcilerFn",
+            function_name=f"ambient-{env}-reconciler",
+            handler="handler.lambda_handler",
+            source_path="../services/reconciler/src",
+            timeout=Duration.seconds(300),
+            memory_size=256,
+            environment={
+                "TELEMETRY_DATABASE": f"ambient_{env}_telemetry",
+                "RAW_DATABASE":       f"ambient_{env}_raw",
+                "ATHENA_WORKGROUP":   f"ambient-{env}-analytics",
+                "ATHENA_OUTPUT":
+                    f"s3://{parquet_bucket.bucket_name}/reconciler-results/",
+                "METRIC_NAMESPACE":   "AmbientIntelligence/Telemetry",
+            })
+
+        for actions, resources in [
+            (["athena:StartQueryExecution",
+              "athena:GetQueryExecution",
+              "athena:GetQueryResults"], ["*"]),
+            (["glue:GetTable", "glue:GetPartitions"], ["*"]),
+            (["cloudwatch:PutMetricData"], ["*"]),
+        ]:
+            fn.function.add_to_role_policy(
+                iam.PolicyStatement(actions=actions, resources=resources))
+        parquet_bucket.grant_read_write(fn.function)
+
+        events.Rule(self, "ReconcilerCron",
+            schedule=events.Schedule.rate(Duration.minutes(15)),
+            targets=[targets.LambdaFunction(fn.function)])
+
+        cw.Alarm(self, "DivergenceAlarm",
+            metric=cw.Metric(
+                namespace="AmbientIntelligence/Telemetry",
+                metric_name="TelemetryDivergence",
+                statistic="Average",
+                period=Duration.minutes(15)),
+            threshold=0.001,
+            evaluation_periods=3,
+            alarm_name=f"ambient-{env}-telemetry-divergence",
+            alarm_description="Telemetry path divergence > 0.1%")`,
+    'cdk.json':
+`{
+  "app": "python3 app.py",
+  "context": {
+    "environment": "dev",
+    "tenant_id": "PILOT-TENANT-001",
+    "facility_ids": "FAC-PILOT-001"
+  }
+}`,
+    'dev.context.json':
+`{
+  "environment": "dev",
+  "tenant_id": "PILOT-TENANT-001",
+  "facility_ids": "FAC-PILOT-001",
+  "account": "DEV_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
+    'prod.context.json':
+`{
+  "environment": "prod",
+  "tenant_id": "PILOT-TENANT-001",
+  "facility_ids": "FAC-PILOT-001,FAC-PILOT-002",
+  "account": "PROD_ACCOUNT_ID",
+  "region": "us-east-1"
+}`,
   },
 };
-
 // ── Shared UI primitives ──────────────────────────────────────────────────────
 
 function Sparkline({ data, color = 'var(--accent)', width = 72, height = 28 }: { data: number[]; color?: string; width?: number; height?: number }) {
@@ -995,7 +1022,7 @@ function diffTfvars(devText: string, prodText: string): Array<{ key: string; dev
   const parse = (text: string) => {
     const map: Record<string, string> = {};
     text.split('\n').forEach(line => {
-      const m = line.match(/^\s*(\w+)\s*=\s*"?([^"#\n]*)"?\s*(?:#.*)?$/);
+      const m = line.match(/^\s*"(\w+)"\s*:\s*"?([^"#\n,]*)"?,?\s*$/);
       if (m) map[m[1].trim()] = m[2].trim();
     });
     return map;
@@ -1059,7 +1086,7 @@ function Group({ label, type, children, note, iac, docs }: { label: string; type
         {note && <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)', letterSpacing: '0.06em' }}>{note}</span>}
         {iac && (
           <span style={{ marginLeft: docs ? undefined : 'auto', fontFamily: 'var(--mono)', fontSize: 8.5, color: '#3fb950', background: 'rgba(35,134,54,0.12)', border: '1px solid rgba(35,134,54,0.25)', borderRadius: 3, padding: '1px 6px', letterSpacing: '0.06em', flexShrink: 0 }}>
-            tf · {iac}
+            cdk · {iac}
           </span>
         )}
         {docs && (
@@ -1271,8 +1298,8 @@ export default function CloudPage() {
 
   // Editor state
   const [editorSvc, setEditorSvcRaw] = useState('ella');
-  const [editorFile, setEditorFile] = useState<TfFile>('main.tf');
-  const [editorContent, setEditorContent] = useState<Record<string, Record<TfFile, string>>>(TF_CONTENT);
+  const [editorFile, setEditorFile] = useState<CdkFile>('stack.py');
+  const [editorContent, setEditorContent] = useState<Record<string, Record<CdkFile, string>>>(CDK_CONTENT);
   const [testStatus,  setTestStatus]  = useState<ActionStatus>('idle');
   const [gitStatus,   setGitStatus]   = useState<ActionStatus>('idle');
   const [applyStatus, setApplyStatus] = useState<ActionStatus>('idle');
@@ -1281,7 +1308,7 @@ export default function CloudPage() {
 
   const setEditorSvc = (id: string) => {
     setEditorSvcRaw(id);
-    setEditorFile('main.tf');
+    setEditorFile('stack.py');
     setTestStatus('idle');
     setGitStatus('idle');
     setApplyStatus('idle');
@@ -1309,12 +1336,12 @@ export default function CloudPage() {
 
   const handleGit = async () => {
     setGitStatus('running');
-    setActionLog([`$ git add services/${editorSvc}/infra/${editorFile}`]);
+    setActionLog([`$ git add infra/stacks/${editorSvc}_stack.py`]);
     await sleep(500);
-    setActionLog(p => [...p, `$ git commit -m "infra(${editorSvc}): update ${editorFile}"`]);
+    setActionLog(p => [...p, `$ git commit -m "cdk(${editorSvc}): update stack"`]);
     await sleep(800);
     setActionLog(p => [...p,
-      `[main 3a7f2c1] infra(${editorSvc}): update ${editorFile}`,
+      `[main 3a7f2c1] cdk(${editorSvc}): update stack`,
       ` 1 file changed, 2 insertions(+), 1 deletion(-)`,
     ]);
     await sleep(400);
@@ -1329,21 +1356,22 @@ export default function CloudPage() {
 
   const handleApply = async () => {
     setApplyStatus('running');
-    setActionLog([`$ terraform -chdir=services/${editorSvc}/infra init -reconfigure ...`]);
+    setActionLog([`$ cd infra && cdk synth Ambient-dev-${editorSvc} ...`]);
     await sleep(1000);
     setActionLog(p => [...p,
-      `Initializing the backend...`,
-      `Terraform has been successfully initialized!`,
+      `Synthesizing CDK app...`,
+      `Supply a stack id (--app) to select specific stacks`,
+      `Successfully synthesized to infra/cdk.out/`,
     ]);
     await sleep(500);
-    setActionLog(p => [...p, `$ terraform -chdir=services/${editorSvc}/infra apply -auto-approve ...`]);
+    setActionLog(p => [...p, `$ cdk deploy Ambient-dev-${editorSvc} --require-approval never ...`]);
     await sleep(1300);
     setActionLog(p => [...p,
-      `aws_lambda_function.${editorSvc}: Modifying...`,
-      `aws_lambda_function.${editorSvc}: Modifications complete after 3s`,
+      `Ambient-dev-${editorSvc}: deploying...`,
+      `Ambient-dev-${editorSvc}: creating CloudFormation changeset...`,
       ``,
-      `Apply complete! Resources: 0 added, 1 changed, 0 destroyed.`,
-      `✓  IaC applied · services/${editorSvc}/ (dev)`,
+      `Ambient-dev-${editorSvc}: Stack ARN: arn:aws:cloudformation:us-east-1:123456789012:stack/Ambient-dev-${editorSvc}/...`,
+      `✓  CDK deployed · Ambient-dev-${editorSvc} (dev)`,
     ]);
     setApplyStatus('ok');
   };
@@ -1439,14 +1467,14 @@ export default function CloudPage() {
           </div>
           <div>
             <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Architecture</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--text-2)' }}>v4 · 2026-04-21</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--text-2)' }}>v4 · 2026-05-10</div>
           </div>
           <div>
             <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Data handling</div>
             <div style={{ fontSize: 13, color: 'var(--text-3)' }}>IRB-approved · HIPAA §164.514(c) coded data · No names, DOBs, or MRNs</div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            {['Terraform 1.14+', 'Python 3.12', 'FastAPI', 'AWS Bedrock'].map(tag => (
+            {['AWS CDK v2', 'Python 3.12', 'FastAPI', 'AWS Bedrock'].map(tag => (
               <span key={tag} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 4, padding: '2px 7px' }}>{tag}</span>
             ))}
             <a href="https://github.com/ambientintel/ambientcloud" target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', textDecoration: 'none', borderBottom: '1px solid var(--accent)', paddingBottom: 1 }}>github ↗</a>
@@ -1464,7 +1492,7 @@ export default function CloudPage() {
               {[
                 { label: 'Services',       value: SERVICES.length },
                 { label: 'Tests',          value: totalTests },
-                { label: 'With Terraform', value: SERVICES.filter(s => s.tf).length },
+                { label: 'With CDK infra', value: SERVICES.filter(s => s.tf).length },
               ].map(({ label, value }) => (
                 <div key={label} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 500, color: 'var(--text)' }}>{value}</span>
@@ -1494,10 +1522,10 @@ export default function CloudPage() {
                       <td style={{ padding: '11px 14px', fontFamily: 'var(--mono)', fontSize: 12, color: svc.tests ? 'var(--text)' : 'var(--text-4)', textAlign: 'center' }}>{svc.tests ?? '—'}</td>
                       <td style={{ padding: '11px 14px', textAlign: 'center', fontSize: 13, color: svc.tf ? 'var(--accent)' : 'var(--text-4)' }}>{svc.tf ? '✓' : '—'}</td>
                       <td style={{ padding: '11px 14px' }}>
-                        {svc.tf && TF_STATE[svc.id] ? (
+                        {svc.tf && CDK_STATE[svc.id] ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-2)' }}>{TF_STATE[svc.id].resources} res</span>
-                            <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-4)' }}>{TF_STATE[svc.id].lastApplied}</span>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-2)' }}>{CDK_STATE[svc.id].cfnResources} res</span>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-4)' }}>{CDK_STATE[svc.id].lastDeploy}</span>
                           </div>
                         ) : <span style={{ color: 'var(--text-4)', fontSize: 12 }}>—</span>}
                       </td>
@@ -1651,9 +1679,9 @@ export default function CloudPage() {
             </div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
               {[
-                { label: 'Passing',  value: Object.values(PIPELINE).filter(p => p.apply.status === 'success').length, color: '#3fb950' },
-                { label: 'Failed',   value: Object.values(PIPELINE).filter(p => p.plan.status === 'failure' || p.apply.status === 'failure').length, color: '#f85149' },
-                { label: 'Running',  value: Object.values(PIPELINE).filter(p => p.plan.status === 'running' || p.apply.status === 'running').length, color: '#d29922' },
+                { label: 'Passing',  value: Object.values(PIPELINE).filter(p => p.deploy.status === 'success').length, color: '#3fb950' },
+                { label: 'Failed',   value: Object.values(PIPELINE).filter(p => p.synth.status === 'failure' || p.deploy.status === 'failure').length, color: '#f85149' },
+                { label: 'Running',  value: Object.values(PIPELINE).filter(p => p.synth.status === 'running' || p.deploy.status === 'running').length, color: '#d29922' },
                 { label: 'Services', value: Object.keys(PIPELINE).length, color: 'var(--text)' },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1666,7 +1694,7 @@ export default function CloudPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--line)' }}>
-                    {['Service', 'Env', 'Plan', 'Apply', 'SHA'].map(h => (
+                    {['Service', 'Env', 'Synth', 'Deploy', 'SHA'].map(h => (
                       <th key={h} style={{ padding: '9px 14px', textAlign: 'left', fontSize: 11, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-3)', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
@@ -1684,9 +1712,9 @@ export default function CloudPage() {
                         <td style={{ padding: '12px 14px' }}>
                           <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: p.env === 'prod' ? '#d29922' : 'var(--text-3)', background: p.env === 'prod' ? 'rgba(210,153,34,0.1)' : 'var(--surface-2)', border: `1px solid ${p.env === 'prod' ? 'rgba(210,153,34,0.3)' : 'var(--line)'}`, borderRadius: 4, padding: '2px 7px' }}>{p.env}</span>
                         </td>
-                        <td style={{ padding: '12px 14px' }}><RunPill status={p.plan.status} age={p.plan.age} duration={p.plan.duration} /></td>
-                        <td style={{ padding: '12px 14px' }}><RunPill status={p.apply.status} age={p.apply.age} duration={p.apply.duration} /></td>
-                        <td style={{ padding: '12px 14px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{p.plan.sha}</td>
+                        <td style={{ padding: '12px 14px' }}><RunPill status={p.synth.status} age={p.synth.age} duration={p.synth.duration} /></td>
+                        <td style={{ padding: '12px 14px' }}><RunPill status={p.deploy.status} age={p.deploy.age} duration={p.deploy.duration} /></td>
+                        <td style={{ padding: '12px 14px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{p.synth.sha}</td>
                       </tr>
                     );
                   })}
@@ -1700,7 +1728,7 @@ export default function CloudPage() {
         {tab === 'deps' && (
           <>
             <div style={{ marginBottom: 24 }}>
-              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · infra/deploy.sh</p>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · infra/app.py</p>
               <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>Dependency Graph</h1>
             </div>
             {/* Wave visualization */}
@@ -1715,7 +1743,7 @@ export default function CloudPage() {
                         <div key={w} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           <div style={{ fontFamily: 'var(--mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', marginBottom: 4 }}>Wave {w} {w === 0 ? '· parallel' : ''}</div>
                           {nodes.map(node => {
-                            const st = TF_STATE[node.id];
+                            const st = CDK_STATE[node.id];
                             const health = HEALTH[node.id];
                             const healthColor = health?.status === 'healthy' ? '#3fb950' : health?.status === 'degraded' ? '#d29922' : '#f85149';
                             return (
@@ -1726,7 +1754,7 @@ export default function CloudPage() {
                                     ← {node.deps.join(', ')}
                                   </div>
                                 )}
-                                {st && <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>{st.resources} res · {st.lastApplied}</div>}
+                                {st && <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>{st.cfnResources} res · {st.lastDeploy}</div>}
                               </div>
                             );
                           })}
@@ -1931,7 +1959,7 @@ export default function CloudPage() {
                   fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 9,
                   textTransform: 'uppercase', letterSpacing: '0.14em', color: '#6e7681',
                 }}>
-                  Terraform services
+                  CDK stacks
                 </div>
                 {tfServices.map(svc => (
                   <button
@@ -1956,7 +1984,7 @@ export default function CloudPage() {
 
                 {/* File tabs */}
                 <div style={{ display: 'flex', background: '#161b22', borderBottom: '1px solid #30363d', flexShrink: 0 }}>
-                  {TF_FILES.map(f => (
+                  {CDK_FILES.map(f => (
                     <button
                       key={f}
                       onClick={() => setEditorFile(f)}
@@ -1974,7 +2002,7 @@ export default function CloudPage() {
                       {f}
                     </button>
                   ))}
-                  {(editorFile === 'dev.tfvars' || editorFile === 'prod.tfvars') && (
+                  {(editorFile === 'dev.context.json' || editorFile === 'prod.context.json') && (
                     <button
                       onClick={() => setDiffMode(d => !d)}
                       style={{
@@ -1989,12 +2017,12 @@ export default function CloudPage() {
                     </button>
                   )}
                   <div style={{ marginLeft: 'auto', padding: '8px 14px', fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 10, color: '#6e7681', alignSelf: 'center' }}>
-                    services/{editorSvc}/infra/{editorFile}
+                    infra/stacks/{editorSvc}_stack.py
                   </div>
                 </div>
 
                 {/* Textarea or Diff view */}
-                {diffMode && (editorFile === 'dev.tfvars' || editorFile === 'prod.tfvars') ? (
+                {diffMode && (editorFile === 'dev.context.json' || editorFile === 'prod.context.json') ? (
                   <div style={{ flex: 1, overflowY: 'auto', background: '#0d1117' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 11.5 }}>
                       <thead>
@@ -2006,8 +2034,8 @@ export default function CloudPage() {
                       </thead>
                       <tbody>
                         {diffTfvars(
-                          editorContent[editorSvc]?.['dev.tfvars'] ?? '',
-                          editorContent[editorSvc]?.['prod.tfvars'] ?? '',
+                          editorContent[editorSvc]?.['dev.context.json'] ?? '',
+                          editorContent[editorSvc]?.['prod.context.json'] ?? '',
                         ).map(row => (
                           <tr key={row.key} style={{ borderBottom: '1px solid #21262d', background: row.changed ? 'rgba(210,153,34,0.06)' : 'transparent' }}>
                             <td style={{ padding: '7px 16px', color: '#e6edf3' }}>{row.key}</td>
@@ -2065,7 +2093,7 @@ export default function CloudPage() {
                     {lineCount} lines
                   </span>
                   <span style={{ fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 10, color: '#6e7681' }}>
-                    HCL
+                    Python
                   </span>
                   <span style={{ marginLeft: 'auto', fontFamily: '"JetBrains Mono", Consolas, monospace', fontSize: 10, color: '#6e7681' }}>
                     Simulated · connect real AWS/GitHub credentials to execute
@@ -2080,7 +2108,7 @@ export default function CloudPage() {
                 }}>
                   <ActionButton label="Test Connection" icon="⚡" status={testStatus}  onClick={handleTest}  />
                   <ActionButton label="Push to Git"     icon="↑"  status={gitStatus}   onClick={handleGit}   />
-                  <ActionButton label="Apply IaC"       icon="▶"  status={applyStatus} onClick={handleApply} />
+                  <ActionButton label="CDK Deploy"       icon="▶"  status={applyStatus} onClick={handleApply} />
                   {(testStatus === 'ok' || gitStatus === 'ok' || applyStatus === 'ok') && (
                     <button
                       onClick={() => { setTestStatus('idle'); setGitStatus('idle'); setApplyStatus('idle'); setActionLog([]); }}
