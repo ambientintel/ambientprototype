@@ -128,60 +128,83 @@ const CDK_CONTENT: Record<string, Record<CdkFile, string>> = {
 
   ella: {
     'stack.py':
-`from aws_cdk import Stack, Duration, RemovalPolicy
-from constructs import Construct
-from ambient_constructs.ambient_lambda import AmbientLambda
+`# infra/stacks/ella_stack.py
+from aws_cdk import Stack, Duration, RemovalPolicy
+from aws_cdk import aws_iam as iam, aws_lambda as lambda_
+from aws_cdk import aws_lambda_event_sources as event_sources
+from aws_cdk import aws_sqs as sqs
 from aws_cdk import aws_events as events, aws_events_targets as targets
-from aws_cdk import aws_sqs as sqs, aws_lambda_event_sources as sources
-from aws_cdk import aws_iam as iam
-
-ELLA_CRONS = ["cron(0 11 * * ? *)", "cron(0 23 * * ? *)"]
+from aws_cdk import aws_logs as logs
+from constructs import Construct
+from config.constants import (
+    PYTHON_RUNTIME, TIMEOUT_ELLA, MEMORY_ELLA,
+    BEDROCK_MODEL_CURRENT, ELLA_CRON_EXPRESSIONS,
+    ELLA_VISIBILITY_TIMEOUT_SECONDS, ELLA_DLQ_RETENTION_DAYS,
+)
 
 class EllaStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 sqs_key, alerts_table, updates_table,
-                 env: str, **kwargs):
+    def __init__(self, scope, id, *, kms_stack, data_stack,
+                 athena_stack, storage_stack,
+                 facility_ids=None, **kwargs):
         super().__init__(scope, id, **kwargs)
+        env = id.split("-")[1]; pfx = f"ambient-{env}"
+        facility_ids = facility_ids or ["FAC-PILOT-001"]
 
-        dlq = sqs.Queue(self, "EllaDlq",
-            queue_name=f"ambient-{env}-ella-dlq",
+        self.fanout_dlq = sqs.Queue(self, "FanoutDlq",
+            queue_name=f"{pfx}-ella-dlq",
+            retention_period=Duration.days(ELLA_DLQ_RETENTION_DAYS))
+
+        self.fanout_queue = sqs.Queue(self, "FanoutQueue",
+            queue_name=f"{pfx}-ella-fanout",
+            visibility_timeout=Duration.seconds(ELLA_VISIBILITY_TIMEOUT_SECONDS),
             encryption=sqs.QueueEncryption.KMS,
-            encryption_master_key=sqs_key)
-        queue = sqs.Queue(self, "EllaQueue",
-            queue_name=f"ambient-{env}-ella",
+            encryption_master_key=kms_stack.sqs_key,
             dead_letter_queue=sqs.DeadLetterQueue(
-                queue=dlq, max_receive_count=3),
-            encryption=sqs.QueueEncryption.KMS,
-            encryption_master_key=sqs_key)
+                queue=self.fanout_dlq, max_receive_count=3))
 
-        fn = AmbientLambda(self, "EllaFn",
-            function_name=f"ambient-{env}-ella",
-            handler="handler.lambda_handler",
-            source_path="../services/ella/src",
-            timeout=Duration.seconds(900),
-            memory_size=1024,
-            environment={
-                "BEDROCK_MODEL_ID":
-                    "anthropic.claude-sonnet-4-5-20250929-v1:0",
-                "UPDATES_TABLE": updates_table.table_name,
-                "ALERTS_TABLE":  alerts_table.table_name,
-            })
-
-        fn.function.add_event_source(
-            sources.SqsEventSource(queue, batch_size=1))
-        fn.function.add_to_role_policy(iam.PolicyStatement(
+        ella_role = iam.Role(self, "EllaRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name(
+                "service-role/AWSLambdaBasicExecutionRole")])
+        data_stack.daily_updates_table.grant_write_data(ella_role)
+        data_stack.alerts_table.grant_read_data(ella_role)
+        kms_stack.data_key.grant_decrypt(ella_role)
+        kms_stack.sqs_key.grant_decrypt(ella_role)
+        ella_role.add_to_policy(iam.PolicyStatement(
             actions=["bedrock:InvokeModel"],
             resources=[f"arn:aws:bedrock:{self.region}::foundation-model/"
-                       "anthropic.claude-sonnet-4-5-20250929-v1:0"]))
-        updates_table.grant_write_data(fn.function)
-        alerts_table.grant_read_data(fn.function)
+                       + BEDROCK_MODEL_CURRENT]))
+        ella_role.add_to_policy(iam.PolicyStatement(
+            actions=["athena:StartQueryExecution",
+                     "athena:GetQueryExecution",
+                     "athena:GetQueryResults"],
+            resources=["*"]))
+        storage_stack.athena_results_bucket.grant_read_write(ella_role)
 
-        facility_ids = self.node.try_get_context("facility_ids").split(",")
+        self.ella_lambda = lambda_.Function(self, "EllaFn",
+            function_name=f"{pfx}-ella",
+            runtime=PYTHON_RUNTIME, handler="handler.lambda_handler",
+            code=lambda_.Code.from_asset("../services/ella/src"),
+            timeout=TIMEOUT_ELLA, memory_size=MEMORY_ELLA, role=ella_role,
+            environment={
+                "BEDROCK_MODEL_ID":   BEDROCK_MODEL_CURRENT,
+                "UPDATES_TABLE":      data_stack.daily_updates_table.table_name,
+                "ALERTS_TABLE":       data_stack.alerts_table.table_name,
+                "ATHENA_WORKGROUP":   athena_stack.workgroup_name,
+                "ATHENA_OUTPUT":      storage_stack.athena_results_bucket.bucket_name,
+                "TELEMETRY_DATABASE": f"ambient_{env}_telemetry",
+                "RAW_DATABASE":       f"ambient_{env}_raw",
+            })
+        self.ella_lambda.add_event_source(
+            event_sources.SqsEventSource(self.fanout_queue, batch_size=1))
+
+        # ELLA_CRON_EXPRESSIONS = ["cron(0 12 * * ? *)", "cron(0 0 * * ? *)"]
+        # 12:00 UTC = 07:00 CT  |  00:00 UTC = 19:00 CT
         for fac in facility_ids:
-            for i, expr in enumerate(ELLA_CRONS):
-                events.Rule(self, f"EllaCron{fac}{i}",
+            for i, expr in enumerate(ELLA_CRON_EXPRESSIONS):
+                events.Rule(self, f"EllaCron{fac.replace('-','')}{i}",
                     schedule=events.Schedule.expression(expr),
-                    targets=[targets.SqsQueue(queue,
+                    targets=[targets.SqsQueue(self.fanout_queue,
                         message=events.RuleTargetInput.from_object(
                             {"facility_id": fac}))])`,
     'cdk.json':
@@ -222,22 +245,23 @@ class EllaStack(Stack):
 
   api: {
     'stack.py':
-`from aws_cdk import Stack, Duration, RemovalPolicy
-from constructs import Construct
-from ambient_constructs.ambient_lambda import AmbientLambda
+`# infra/stacks/api_stack.py
+from aws_cdk import Stack, Duration, RemovalPolicy
 from aws_cdk import aws_cognito as cognito
 from aws_cdk import aws_apigatewayv2 as apigw
 from aws_cdk import aws_apigatewayv2_integrations as integrations
 from aws_cdk import aws_apigatewayv2_authorizers as authorizers
+from aws_cdk import aws_iam as iam, aws_lambda as lambda_, aws_logs as logs
+from constructs import Construct
+from config.constants import PYTHON_RUNTIME, TIMEOUT_API, MEMORY_API
 
 class ApiStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 data_key, alerts_table, updates_table,
-                 devices_table, env: str, **kwargs):
+    def __init__(self, scope, id, *, kms_stack, data_stack, **kwargs):
         super().__init__(scope, id, **kwargs)
+        env = id.split("-")[1]; pfx = f"ambient-{env}"
 
-        pool = cognito.UserPool(self, "Pool",
-            user_pool_name=f"ambient-{env}-users",
+        self.user_pool = cognito.UserPool(self, "Pool",
+            user_pool_name=f"{pfx}-users",
             sign_in_aliases=cognito.SignInAliases(email=True),
             mfa=cognito.Mfa.REQUIRED,
             mfa_second_factor=cognito.MfaSecondFactor(otp=True, sms=False),
@@ -248,34 +272,39 @@ class ApiStack(Stack):
             account_recovery=cognito.AccountRecovery.NONE,
             removal_policy=RemovalPolicy.RETAIN)
 
-        pool.add_custom_attribute("role",
+        # custom:role and custom:facilityIds carried in JWT claims
+        self.user_pool.add_custom_attribute("role",
             cognito.StringAttribute(mutable=True))
-        pool.add_custom_attribute("facilityIds",
+        self.user_pool.add_custom_attribute("facilityIds",
             cognito.StringAttribute(mutable=True))
 
-        client = pool.add_client("WebClient",
-            auth_flows=cognito.AuthFlow(user_srp=True),
-            o_auth=cognito.OAuthSettings(
-                flows=cognito.OAuthFlows(implicit_code_grant=True)))
+        client = self.user_pool.add_client("WebClient",
+            auth_flows=cognito.AuthFlow(user_srp=True))
 
-        fn = AmbientLambda(self, "ApiFn",
-            function_name=f"ambient-{env}-api",
-            handler="main.handler",
-            source_path="../services/api/src",
-            timeout=Duration.seconds(30),
-            memory_size=512,
+        api_role = iam.Role(self, "ApiRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name(
+                "service-role/AWSLambdaBasicExecutionRole")])
+        for t in [data_stack.alerts_table,
+                  data_stack.daily_updates_table,
+                  data_stack.devices_table]:
+            t.grant_read_write_data(api_role)
+        kms_stack.data_key.grant_decrypt(api_role)
+
+        self.api_lambda = lambda_.Function(self, "ApiFn",
+            function_name=f"{pfx}-api",
+            runtime=PYTHON_RUNTIME, handler="main.handler",
+            code=lambda_.Code.from_asset("../services/api/src"),
+            timeout=TIMEOUT_API, memory_size=MEMORY_API, role=api_role,
             environment={
-                "COGNITO_USER_POOL_ID": pool.user_pool_id,
-                "ALERTS_TABLE":         alerts_table.table_name,
-                "UPDATES_TABLE":        updates_table.table_name,
-                "DEVICES_TABLE":        devices_table.table_name,
+                "COGNITO_USER_POOL_ID": self.user_pool.user_pool_id,
+                "ALERTS_TABLE":  data_stack.alerts_table.table_name,
+                "UPDATES_TABLE": data_stack.daily_updates_table.table_name,
+                "DEVICES_TABLE": data_stack.devices_table.table_name,
             })
 
-        for t in [alerts_table, updates_table, devices_table]:
-            t.grant_read_write_data(fn.function)
-
-        http_api = apigw.HttpApi(self, "HttpApi",
-            api_name=f"ambient-{env}-api",
+        self.http_api = apigw.HttpApi(self, "HttpApi",
+            api_name=f"{pfx}-api",
             cors_preflight=apigw.CorsPreflightOptions(
                 allow_origins=["https://ellamemory.com"],
                 allow_methods=[apigw.CorsHttpMethod.ANY],
@@ -283,15 +312,16 @@ class ApiStack(Stack):
 
         jwt_auth = authorizers.HttpJwtAuthorizer(
             "CognitoAuth",
-            f"https://cognito-idp.{self.region}.amazonaws.com/{pool.user_pool_id}",
+            f"https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool.user_pool_id}",
             jwt_audience=[client.user_pool_client_id])
 
         integration = integrations.HttpLambdaIntegration(
-            "ApiIntegration", fn.function)
-        http_api.add_routes(path="/{proxy+}", methods=[apigw.HttpMethod.ANY],
+            "ApiIntegration", self.api_lambda)
+        self.http_api.add_routes(path="/{proxy+}",
+            methods=[apigw.HttpMethod.ANY],
             integration=integration, authorizer=jwt_auth)
-        http_api.add_routes(path="/health", methods=[apigw.HttpMethod.GET],
-            integration=integration)`,
+        self.http_api.add_routes(path="/health",
+            methods=[apigw.HttpMethod.GET], integration=integration)`,
     'cdk.json':
 `{
   "app": "python3 app.py",
@@ -322,76 +352,245 @@ class ApiStack(Stack):
 
   telemetry: {
     'stack.py':
-`from aws_cdk import Stack, Duration, RemovalPolicy
+`# infra/stacks/telemetry_stack.py  (hot path + Firehose legacy + reconciler)
+from aws_cdk import Stack, Duration, RemovalPolicy
+from aws_cdk import aws_sns as sns, aws_iam as iam, aws_lambda as lambda_
+from aws_cdk import aws_iot as iot, aws_kinesisfirehose as firehose
+from aws_cdk import aws_glue as glue, aws_logs as logs
+from aws_cdk import aws_events as events, aws_events_targets as targets
+from aws_cdk import aws_cloudwatch as cloudwatch
 from constructs import Construct
-from ambient_constructs.ambient_lambda import AmbientLambda
-from aws_cdk import aws_sns as sns, aws_iam as iam
-from aws_cdk import aws_glue as glue
-from aws_cdk import aws_iot as iot, aws_cloudwatch as cw
-from aws_cdk import aws_kinesisfirehose as firehose
+from config.constants import (PYTHON_RUNTIME, TIMEOUT_ALERT, MEMORY_ALERT,
+    TIMEOUT_RECONCILER, MEMORY_RECONCILER, FALL_ALERT_SQL, TELEMETRY_SQL)
 
 class TelemetryStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 data_key, s3_key, sns_key, parquet_bucket,
-                 alerts_table, devices_table, env: str, **kwargs):
+    def __init__(self, scope, id, *,
+                 kms_stack, storage_stack, data_stack, **kwargs):
         super().__init__(scope, id, **kwargs)
+        env = id.split("-")[1]; pfx = f"ambient-{env}"
 
-        topic = sns.Topic(self, "FallAlerts",
-            topic_name=f"ambient-{env}-fall-alerts",
-            master_key=sns_key)
+        # ── Hot path: SNS fall-alerts topic ───────────────────────────────────
+        self.fall_alerts_topic = sns.Topic(self, "FallAlerts",
+            topic_name=f"{pfx}-fall-alerts",
+            master_key=kms_stack.sns_key)
 
-        fn = AmbientLambda(self, "AlertsFn",
-            function_name=f"ambient-{env}-alerts-enricher",
-            handler="handler.lambda_handler",
-            source_path="../services/telemetry/src",
-            timeout=Duration.seconds(30),
-            memory_size=512,
+        # ── Alert enrichment Lambda ────────────────────────────────────────────
+        alerts_role = iam.Role(self, "AlertsRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name(
+                "service-role/AWSLambdaBasicExecutionRole")])
+        data_stack.alerts_table.grant_write_data(alerts_role)
+        self.fall_alerts_topic.grant_publish(alerts_role)
+        kms_stack.sns_key.grant_encrypt_decrypt(alerts_role)
+
+        self.alerts_lambda = lambda_.Function(self, "AlertsLambda",
+            function_name=f"{pfx}-alerts-enricher",
+            runtime=PYTHON_RUNTIME, handler="handler.lambda_handler",
+            code=lambda_.Code.from_asset("../services/telemetry/alerts-lambda/src"),
+            timeout=TIMEOUT_ALERT, memory_size=MEMORY_ALERT, role=alerts_role,
             environment={
-                "ALERTS_TABLE":     alerts_table.table_name,
-                "FALL_ALERTS_TOPIC": topic.topic_arn,
+                "DEVICE_TABLE": data_stack.devices_table.table_name,
+                "ALERT_TABLE":  data_stack.alerts_table.table_name,
+                "SNS_TOPIC_ARN": self.fall_alerts_topic.topic_arn,
             })
-        alerts_table.grant_read_write_data(fn.function)
-        topic.grant_publish(fn.function)
+        self.alerts_lambda.add_permission("AllowIoT",
+            action="lambda:InvokeFunction",
+            principal=iam.ServicePrincipal("iot.amazonaws.com"))
 
+        # IoT error sink
         iot_error_role = iam.Role(self, "IotErrorRole",
             assumed_by=iam.ServicePrincipal("iot.amazonaws.com"))
-        parquet_bucket.grant_put(iot_error_role)
+        storage_stack.iot_errors_bucket.grant_put(iot_error_role)
 
-        iot.CfnTopicRule(self, "FallEnricherRule",
-            rule_name=f"ambient_{env}_fall_enricher",
+        # IoT Rule: Basic Ingest fall alerts → Lambda (no MQTT fee)
+        # FALL_ALERT_SQL = "SELECT *, topic(4) AS deviceId
+        #   FROM '$aws/rules/fall-enricher/ambient/v1/alerts/fall/+'"
+        self.fall_alert_rule = iot.CfnTopicRule(self, "FallAlertRule",
+            rule_name=f"{pfx.replace('-','_')}_fall_alerts",
             topic_rule_payload=iot.CfnTopicRule.TopicRulePayloadProperty(
-                sql="SELECT * FROM '$aws/rules/fall_enricher'",
+                sql=FALL_ALERT_SQL, aws_iot_sql_version="2016-03-23",
                 actions=[iot.CfnTopicRule.ActionProperty(
                     lambda_=iot.CfnTopicRule.LambdaActionProperty(
-                        function_arn=fn.function.function_arn))]))
+                        function_arn=self.alerts_lambda.function_arn))],
+                error_action=iot.CfnTopicRule.ActionProperty(
+                    s3=iot.CfnTopicRule.S3ActionProperty(
+                        bucket_name=storage_stack.iot_errors_bucket.bucket_name,
+                        key="fall-alerts/\${timestamp()}-\${newuuid()}",
+                        role_arn=iot_error_role.role_arn))))
 
-        db = glue.CfnDatabase(self, "TelemetryDb",
+        # ── Glue table for Firehose telemetry aggregates ───────────────────────
+        db_name = f"ambient_{env}_telemetry"
+        self.telemetry_glue_db = glue.CfnDatabase(self, "TelemetryDb",
             catalog_id=self.account,
-            database_input=glue.CfnDatabase.DatabaseInputProperty(
-                name=f"ambient_{env}_telemetry"))
+            database_input=glue.CfnDatabase.DatabaseInputProperty(name=db_name))
 
-        glue.CfnTable(self, "AggTable",
-            catalog_id=self.account,
-            database_name=db.ref,
+        _cols = [("deviceId","string"),("zone","string"),
+                 ("windowStart","timestamp"),("windowEnd","timestamp"),
+                 ("frameCount","int"),("points_sum","bigint"),
+                 ("points_mean","double"),("points_max","int"),
+                 ("height_max","double"),("height_mean","double"),
+                 ("height_min","double"),("standing_sec","int"),
+                 ("sitting_sec","int"),("lying_sec","int"),
+                 ("floor_sec","int"),("unknown_sec","int")]
+
+        self.telemetry_glue_table = glue.CfnTable(self, "TelemetryAggregates",
+            catalog_id=self.account, database_name=db_name,
             table_input=glue.CfnTable.TableInputProperty(
-                name="telemetry_aggregates",
+                name="aggregates", table_type="EXTERNAL_TABLE",
+                parameters={
+                    "classification": "parquet", "parquet.compression": "ZSTD",
+                    "projection.enabled": "true",
+                    "projection.date.type": "date",
+                    "projection.date.format": "yyyy-MM-dd",
+                    "projection.date.range": "2026-01-01,NOW",
+                    "projection.facility.type": "injected",
+                    "projection.subject.type": "injected",
+                    "projection.device.type": "injected",
+                    "storage.location.template":
+                        f"s3://{storage_stack.parquet_bucket.bucket_name}/telemetry/"
+                        "date=\${date}/facility=\${facility}/subject=\${subject}/device=\${device}/"},
                 partition_keys=[
-                    {"Name": "facility", "Type": "string"},
-                    {"Name": "window_hour", "Type": "string"}],
+                    glue.CfnTable.ColumnProperty(name="date",     type="string"),
+                    glue.CfnTable.ColumnProperty(name="facility", type="string"),
+                    glue.CfnTable.ColumnProperty(name="subject",  type="string"),
+                    glue.CfnTable.ColumnProperty(name="device",   type="string")],
                 storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
-                    location=f"s3://{parquet_bucket.bucket_name}/telemetry/",
+                    location=f"s3://{storage_stack.parquet_bucket.bucket_name}/telemetry/",
                     input_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
                     output_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
                     serde_info=glue.CfnTable.SerdeInfoProperty(
-                        serialization_library="org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"))))
+                        serialization_library="org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"),
+                    columns=[glue.CfnTable.ColumnProperty(name=n, type=t) for n, t in _cols])))
+        self.telemetry_glue_table.add_dependency(self.telemetry_glue_db)
 
-        cw.Alarm(self, "DivergenceAlarm",
-            metric=cw.Metric(
+        # ── Firehose: legacy cold path (JQ dynamic partitioning, Parquet/ZSTD) ─
+        firehose_role = iam.Role(self, "FirehoseRole",
+            assumed_by=iam.ServicePrincipal("firehose.amazonaws.com"))
+        storage_stack.parquet_bucket.grant_read_write(firehose_role)
+        kms_stack.s3_key.grant_encrypt_decrypt(firehose_role)
+        firehose_role.add_to_policy(iam.PolicyStatement(
+            actions=["glue:GetTable","glue:GetTableVersion","glue:GetTableVersions"],
+            resources=["*"]))
+
+        firehose_name = f"{pfx}-telemetry"
+        self.telemetry_firehose = firehose.CfnDeliveryStream(
+            self, "TelemetryFirehose",
+            delivery_stream_name=firehose_name,
+            delivery_stream_type="DirectPut",
+            extended_s3_destination_configuration=firehose.CfnDeliveryStream
+                .ExtendedS3DestinationConfigurationProperty(
+                role_arn=firehose_role.role_arn,
+                bucket_arn=storage_stack.parquet_bucket.bucket_arn,
+                prefix=(
+                    "telemetry/"
+                    "date=!{partitionKeyFromQuery:date}/"
+                    "facility=!{partitionKeyFromQuery:facility}/"
+                    "subject=!{partitionKeyFromQuery:subject}/"
+                    "device=!{partitionKeyFromQuery:device}/"),
+                buffering_hints=firehose.CfnDeliveryStream.BufferingHintsProperty(
+                    size_in_m_bs=64, interval_in_seconds=300),
+                dynamic_partitioning_configuration=firehose.CfnDeliveryStream
+                    .DynamicPartitioningConfigurationProperty(enabled=True),
+                processing_configuration=firehose.CfnDeliveryStream
+                    .ProcessingConfigurationProperty(enabled=True, processors=[
+                        firehose.CfnDeliveryStream.ProcessorProperty(
+                            type="MetadataExtraction", parameters=[
+                                firehose.CfnDeliveryStream.ProcessorParameterProperty(
+                                    parameter_name="MetadataExtractionQuery",
+                                    parameter_value="{date:.windowStart|.[0:10],"
+                                        "facility:.facilityId,subject:.subjectId,device:.deviceId}"),
+                                firehose.CfnDeliveryStream.ProcessorParameterProperty(
+                                    parameter_name="JsonParsingEngine",
+                                    parameter_value="JQ-1.6")])]),
+                data_format_conversion_configuration=firehose.CfnDeliveryStream
+                    .DataFormatConversionConfigurationProperty(
+                    enabled=True,
+                    input_format_configuration=firehose.CfnDeliveryStream
+                        .InputFormatConfigurationProperty(
+                        deserializer=firehose.CfnDeliveryStream.DeserializerProperty(
+                            open_x_json_ser_de=firehose.CfnDeliveryStream.OpenXJsonSerDeProperty())),
+                    output_format_configuration=firehose.CfnDeliveryStream
+                        .OutputFormatConfigurationProperty(
+                        serializer=firehose.CfnDeliveryStream.SerializerProperty(
+                            parquet_ser_de=firehose.CfnDeliveryStream.ParquetSerDeProperty(
+                                compression="ZSTD"))),
+                    schema_configuration=firehose.CfnDeliveryStream
+                        .SchemaConfigurationProperty(
+                        role_arn=firehose_role.role_arn, catalog_id=self.account,
+                        database_name=db_name, table_name="aggregates",
+                        region=self.region, version_id="LATEST"))))
+
+        # IoT Rule: legacy cold path MQTT → Firehose (retiring)
+        iot_firehose_role = iam.Role(self, "IotFirehoseRole",
+            assumed_by=iam.ServicePrincipal("iot.amazonaws.com"))
+        iot_firehose_role.add_to_policy(iam.PolicyStatement(
+            actions=["firehose:PutRecord","firehose:PutRecordBatch"],
+            resources=[f"arn:aws:firehose:{self.region}:{self.account}:deliverystream/{firehose_name}"]))
+
+        self.telemetry_rule = iot.CfnTopicRule(self, "TelemetryRule",
+            rule_name=f"{pfx.replace('-','_')}_telemetry",
+            topic_rule_payload=iot.CfnTopicRule.TopicRulePayloadProperty(
+                sql=TELEMETRY_SQL, aws_iot_sql_version="2016-03-23",
+                actions=[iot.CfnTopicRule.ActionProperty(
+                    firehose=iot.CfnTopicRule.FirehoseActionProperty(
+                        delivery_stream_name=firehose_name,
+                        role_arn=iot_firehose_role.role_arn,
+                        separator="\n"))],
+                error_action=iot.CfnTopicRule.ActionProperty(
+                    s3=iot.CfnTopicRule.S3ActionProperty(
+                        bucket_name=storage_stack.iot_errors_bucket.bucket_name,
+                        key="telemetry/\${timestamp()}-\${newuuid()}",
+                        role_arn=iot_error_role.role_arn))))
+
+        # ── Reconciler Lambda (embedded in this stack) ─────────────────────────
+        # See services/reconciler/src/handler.py
+        reconciler_role = iam.Role(self, "ReconcilerRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name(
+                "service-role/AWSLambdaBasicExecutionRole")])
+        reconciler_role.add_to_policy(iam.PolicyStatement(
+            actions=["athena:StartQueryExecution","athena:GetQueryExecution",
+                     "athena:GetQueryResults","athena:StopQueryExecution"], resources=["*"]))
+        reconciler_role.add_to_policy(iam.PolicyStatement(
+            actions=["glue:GetTable","glue:GetDatabase","glue:GetPartitions"],
+            resources=["*"]))
+        storage_stack.athena_results_bucket.grant_read_write(reconciler_role)
+        kms_stack.s3_key.grant_decrypt(reconciler_role)
+        reconciler_role.add_to_policy(iam.PolicyStatement(
+            actions=["cloudwatch:PutMetricData"], resources=["*"]))
+
+        self.reconciler_lambda = lambda_.Function(self, "Reconciler",
+            function_name=f"{pfx}-reconciler",
+            runtime=PYTHON_RUNTIME, handler="handler.lambda_handler",
+            code=lambda_.Code.from_asset("../services/reconciler/src"),
+            timeout=TIMEOUT_RECONCILER, memory_size=MEMORY_RECONCILER,
+            role=reconciler_role,
+            environment={
+                "TELEMETRY_DATABASE": db_name,
+                "RAW_DATABASE":       f"ambient_{env}_raw",
+                "ATHENA_WORKGROUP":   f"{pfx}-analytics",
+                "ATHENA_OUTPUT":      f"s3://{storage_stack.athena_results_bucket.bucket_name}/queries/",
+                "METRIC_NAMESPACE":   "AmbientIntelligence/Telemetry",
+            })
+
+        reconciler_schedule = events.Rule(self, "ReconcilerSchedule",
+            rule_name=f"{pfx}-reconciler-15min",
+            schedule=events.Schedule.rate(Duration.minutes(15)))
+        reconciler_schedule.add_target(targets.LambdaFunction(self.reconciler_lambda))
+
+        # Alarm: divergence > 0.1% (metric is 0-100 scale, threshold=0.1 = 0.1%)
+        self.divergence_alarm = cloudwatch.Alarm(self, "DivergenceAlarm",
+            alarm_name=f"{pfx}-telemetry-divergence",
+            alarm_description="TelemetryDivergence > 0.1% — check dual-write migration",
+            metric=cloudwatch.Metric(
                 namespace="AmbientIntelligence/Telemetry",
                 metric_name="TelemetryDivergence",
-                statistic="Average", period=Duration.minutes(15)),
-            threshold=0.001, evaluation_periods=3,
-            alarm_description="Telemetry path divergence > 0.1%")`,
+                statistic="Maximum",              # catch any bad window
+                period=Duration.minutes(15)),
+            threshold=0.1,                        # 0.1 = 0.1% (metric is pct-scale)
+            evaluation_periods=1,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING)`,
     'cdk.json':
 `{
   "app": "python3 app.py",
@@ -422,63 +621,91 @@ class TelemetryStack(Stack):
 
   'url-minter': {
     'stack.py':
-`from aws_cdk import Stack, Duration
+`# infra/stacks/url_minter_stack.py
+from aws_cdk import Stack, Duration, RemovalPolicy
+from aws_cdk import aws_iam as iam, aws_lambda as lambda_
+from aws_cdk import aws_iot as iot, aws_logs as logs
 from constructs import Construct
-from ambient_constructs.ambient_lambda import AmbientLambda
-from aws_cdk import aws_iam as iam, aws_iot as iot
-from aws_cdk import aws_lambda as lambda_
+from config.constants import (PYTHON_RUNTIME, TIMEOUT_URL_MINTER, MEMORY_URL_MINTER,
+    URL_TTL_SECONDS, MAX_FILE_BYTES, MIN_FILE_BYTES, TELEMETRY_MAX_BYTES, TELEMETRY_URL_LIMIT)
 
 class UrlMinterStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 data_key, devices_table, parquet_bucket,
-                 env: str, **kwargs):
+    def __init__(self, scope, id, *, kms_stack, storage_stack,
+                 data_stack, tenant_id, **kwargs):
         super().__init__(scope, id, **kwargs)
+        env = id.split("-")[1]; pfx = f"ambient-{env}"
 
-        fn = AmbientLambda(self, "UrlMinterFn",
-            function_name=f"ambient-{env}-url-minter",
-            handler="handler.lambda_handler",
-            source_path="../services/url-minter/src",
-            timeout=Duration.seconds(10),
-            memory_size=256,
+        lambda_role = iam.Role(self, "UrlMinterRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name(
+                "service-role/AWSLambdaBasicExecutionRole")])
+        data_stack.devices_table.grant_read_data(lambda_role)
+        kms_stack.data_key.grant_decrypt(lambda_role)
+        storage_stack.parquet_bucket.grant_put(lambda_role)
+        kms_stack.s3_key.grant_encrypt(lambda_role)
+        # Validate Thing identity via Device Shadow desired state (§6.2)
+        lambda_role.add_to_policy(iam.PolicyStatement(
+            actions=["iot:GetThingShadow"],
+            resources=[f"arn:aws:iot:{self.region}:{self.account}:thing/*"]))
+        # Per-device issuance rate metrics
+        lambda_role.add_to_policy(iam.PolicyStatement(
+            actions=["cloudwatch:PutMetricData"], resources=["*"]))
+
+        self.url_minter_lambda = lambda_.Function(self, "UrlMinterFn",
+            function_name=f"{pfx}-url-minter",
+            runtime=PYTHON_RUNTIME, handler="handler.lambda_handler",
+            code=lambda_.Code.from_asset("../services/url-minter/src"),
+            timeout=TIMEOUT_URL_MINTER, memory_size=MEMORY_URL_MINTER,
+            role=lambda_role,
             environment={
-                "DEVICES_TABLE":  devices_table.table_name,
-                "PARQUET_BUCKET": parquet_bucket.bucket_name,
+                "PARQUET_BUCKET":      storage_stack.parquet_bucket.bucket_name,
+                "DEVICE_TABLE":        data_stack.devices_table.table_name,
+                "URL_TTL_SECONDS":     URL_TTL_SECONDS,
+                "MAX_FILE_BYTES":      MAX_FILE_BYTES,
+                "MIN_FILE_BYTES":      MIN_FILE_BYTES,
+                "TELEMETRY_KMS_KEY_ID": kms_stack.s3_key.key_arn,
+                "TELEMETRY_URL_LIMIT":  TELEMETRY_URL_LIMIT,
+                "TELEMETRY_MAX_BYTES":  TELEMETRY_MAX_BYTES,
             })
 
-        fn.function.add_function_url(
+        # Function URL — AWS_IAM; devices authenticate via SigV4 from IoT cred provider
+        self.function_url = self.url_minter_lambda.add_function_url(
             auth_type=lambda_.FunctionUrlAuthType.AWS_IAM,
             cors=lambda_.FunctionUrlCorsOptions(
                 allowed_origins=["*"],
                 allowed_methods=[lambda_.HttpMethod.POST]))
 
-        devices_table.grant_read_data(fn.function)
-        parquet_bucket.grant_put(fn.function)
+        # Device IAM role (assumed via IoT Credentials Provider + role alias)
+        self.device_upload_role = iam.Role(self, "DeviceUploadRole",
+            role_name=f"{pfx}-device-upload",
+            assumed_by=iam.ServicePrincipal("credentials.iot.amazonaws.com"),
+            max_session_duration=Duration.hours(1))
+        self.device_upload_role.add_to_policy(iam.PolicyStatement(
+            actions=["lambda:InvokeFunctionUrl"],
+            resources=[self.url_minter_lambda.function_arn]))
 
-        device_upload_role = iam.Role(self, "DeviceUploadRole",
-            role_name=f"ambient-{env}-device-upload",
-            assumed_by=iam.ServicePrincipal("credentials.iot.amazonaws.com"))
-
-        role_alias = iot.CfnRoleAlias(self, "DeviceRoleAlias",
-            role_alias=f"ambient-{env}-device-alias",
-            role_arn=device_upload_role.role_arn,
+        self.iot_role_alias = iot.CfnRoleAlias(self, "DeviceUploadAlias",
+            role_alias=f"{pfx}-device-upload",
+            role_arn=self.device_upload_role.role_arn,
             credential_duration_seconds=3600)
 
-        iot.CfnPolicy(self, "DeviceIotPolicy",
-            policy_name=f"ambient-{env}-device-policy",
+        self.device_iot_policy = iot.CfnPolicy(self, "DevicePolicy",
+            policy_name=f"{pfx}-device-policy",
             policy_document={
                 "Version": "2012-10-17",
                 "Statement": [
                     {"Effect": "Allow",
                      "Action": "iot:AssumeRoleWithCertificate",
-                     "Resource": role_alias.attr_role_alias_arn},
+                     "Resource": self.iot_role_alias.attr_role_alias_arn},
                     {"Effect": "Allow",
                      "Action": "iot:Connect",
-                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:"
-                                 "client/\${iot:ClientId}"},
+                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:client"
+                                 "/\${iot:Connection.Thing.ThingName}"},
+                    # Fall alerts on Basic Ingest topic (no MQTT messaging fee)
                     {"Effect": "Allow",
                      "Action": "iot:Publish",
-                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:"
-                                 "topic/$aws/rules/*"},
+                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:topic"
+                                 "/ambient/v1/alerts/fall/\${iot:Connection.Thing.ThingName}"},
                 ]})`,
     'cdk.json':
 `{
@@ -507,69 +734,83 @@ class UrlMinterStack(Stack):
 
   athena: {
     'stack.py':
-`from aws_cdk import Stack, RemovalPolicy
+`# infra/stacks/athena_stack.py
+from aws_cdk import Stack
+from aws_cdk import aws_glue as glue, aws_athena as athena
 from constructs import Construct
-from aws_cdk import aws_glue as glue, aws_athena as athena, aws_s3 as s3
+from config.constants import ATHENA_SCAN_LIMIT_BYTES
 
 class AthenaStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 s3_key, parquet_bucket, env: str, **kwargs):
+    def __init__(self, scope, id, *, kms_stack, storage_stack, **kwargs):
         super().__init__(scope, id, **kwargs)
+        env = id.split("-")[1]; pfx = f"ambient-{env}"
+        parquet_bkt = storage_stack.parquet_bucket.bucket_name
+        results_bkt = storage_stack.athena_results_bucket.bucket_name
 
-        athena_results = s3.Bucket(self, "AthenaResults",
-            bucket_name=f"ambient-{env}-athena-results",
-            encryption=s3.BucketEncryption.KMS,
-            encryption_key=s3_key,
-            removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True)
+        self.raw_db_name   = f"ambient_{env}_raw"
+        self.workgroup_name = f"{pfx}-analytics"
 
-        db = glue.CfnDatabase(self, "FramesDb",
+        self.raw_db = glue.CfnDatabase(self, "RawDb",
             catalog_id=self.account,
             database_input=glue.CfnDatabase.DatabaseInputProperty(
-                name=f"ambient_{env}_raw"))
+                name=self.raw_db_name))
 
-        glue.CfnTable(self, "FramesTable",
+        # Partition scheme: raw/date=/facility=/subject=/device=
+        # "injected" partitions enforce WHERE facility=X in every query
+        self.frames_table = glue.CfnTable(self, "FramesTable",
             catalog_id=self.account,
-            database_name=db.ref,
+            database_name=self.raw_db_name,
             table_input=glue.CfnTable.TableInputProperty(
-                name="frames",
+                name="frames", table_type="EXTERNAL_TABLE",
+                parameters={
+                    "parquet.compression": "ZSTD", "classification": "parquet",
+                    "projection.enabled": "true",
+                    "projection.date.type": "date",
+                    "projection.date.format": "yyyy-MM-dd",
+                    "projection.date.range": "2026-01-01,NOW",
+                    "projection.facility.type": "injected",
+                    "projection.subject.type":  "injected",
+                    "projection.device.type":   "injected",
+                    "storage.location.template":
+                        f"s3://{parquet_bkt}/raw/"
+                        "date=\${date}/facility=\${facility}/subject=\${subject}/device=\${device}/"},
                 partition_keys=[
-                    {"Name": "date",     "Type": "string"},
-                    {"Name": "facility", "Type": "string"},
-                    {"Name": "subject",  "Type": "string"}],
+                    glue.CfnTable.ColumnProperty(name="date",     type="string"),
+                    glue.CfnTable.ColumnProperty(name="facility", type="string"),
+                    glue.CfnTable.ColumnProperty(name="subject",  type="string"),
+                    glue.CfnTable.ColumnProperty(name="device",   type="string")],
                 storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
-                    location=f"s3://{parquet_bucket.bucket_name}/raw-device/",
+                    location=f"s3://{parquet_bkt}/raw/",
                     input_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
                     output_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
                     serde_info=glue.CfnTable.SerdeInfoProperty(
                         serialization_library="org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"),
+                    # Columns from device-cloud-contract.md §7
                     columns=[
-                        {"Name": "frame_number",    "Type": "bigint"},
-                        {"Name": "captured_at",     "Type": "timestamp"},
-                        {"Name": "height_data",     "Type": "float"},
-                        {"Name": "points_detected", "Type": "int"},
-                        {"Name": "radar_temp_c",    "Type": "float"}]),
-                parameters={
-                    "projection.enabled":         "true",
-                    "projection.date.type":        "date",
-                    "projection.date.format":      "yyyy-MM-dd",
-                    "projection.date.range":       "2025-01-01,NOW",
-                    "projection.facility.type":    "injected",
-                    "projection.subject.type":     "injected",
-                    "storage.location.template":
-                        f"s3://{parquet_bucket.bucket_name}/raw-device/"
-                        "date=\${date}/facility=\${facility}/subject=\${subject}/"}))
+                        glue.CfnTable.ColumnProperty(name="frame_number",    type="bigint"),
+                        glue.CfnTable.ColumnProperty(name="captured_at",     type="timestamp"),
+                        glue.CfnTable.ColumnProperty(name="height_data",     type="array<array<double>>",
+                            comment="list of [x,y,z] meters"),
+                        glue.CfnTable.ColumnProperty(name="points_detected", type="int"),
+                        glue.CfnTable.ColumnProperty(name="radar_temp_c",    type="float",
+                            comment="nullable"),
+                    ])))
+        self.frames_table.add_dependency(self.raw_db)
 
-        athena.CfnWorkGroup(self, "Workgroup",
-            name=f"ambient-{env}-analytics",
+        # 10 GB per-query scan cap, KMS-encrypted results, CloudWatch metrics enabled
+        self.workgroup = athena.CfnWorkGroup(self, "Workgroup",
+            name=self.workgroup_name, state="ENABLED",
             work_group_configuration=athena.CfnWorkGroup.WorkGroupConfigurationProperty(
+                enforce_work_group_configuration=True,
+                publish_cloud_watch_metrics_enabled=True,
+                bytes_scanned_cutoff_per_query=ATHENA_SCAN_LIMIT_BYTES,
                 result_configuration=athena.CfnWorkGroup.ResultConfigurationProperty(
-                    output_location=f"s3://{athena_results.bucket_name}/queries/",
+                    output_location=f"s3://{results_bkt}/queries/",
                     encryption_configuration=athena.CfnWorkGroup.EncryptionConfigurationProperty(
                         encryption_option="SSE_KMS",
-                        kms_key=s3_key.key_arn)),
-                bytes_scanned_cutoff_per_query=10_737_418_240,
-                enforce_work_group_configuration=True))`,
+                        kms_key=kms_stack.s3_key.key_arn))))
+
+        self.athena_output_location = f"s3://{results_bkt}/queries/"`,
     'cdk.json':
 `{
   "app": "python3 app.py",
@@ -596,53 +837,55 @@ class AthenaStack(Stack):
 
   cloudtrail: {
     'stack.py':
-`from aws_cdk import Stack, RemovalPolicy
+`# infra/stacks/cloudtrail_stack.py
+from aws_cdk import Stack, RemovalPolicy
+from aws_cdk import aws_cloudtrail as cloudtrail, aws_iam as iam
 from constructs import Construct
-from aws_cdk import aws_cloudtrail as cloudtrail
-from aws_cdk import aws_iam as iam
 
 class CloudTrailStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 s3_key, cloudtrail_bucket,
-                 alerts_table, updates_table, parquet_bucket,
-                 env: str, **kwargs):
+    def __init__(self, scope, id, *, kms_stack, storage_stack,
+                 data_stack, **kwargs):
         super().__init__(scope, id, **kwargs)
+        env = id.split("-")[1]; pfx = f"ambient-{env}"
+        trail_name = f"{pfx}-audit"
 
-        trail_name = f"ambient-{env}-audit"
-
+        # CloudTrail L2 doesn't auto-add the bucket policy for a pre-existing bucket
         for stmt in [
             iam.PolicyStatement(
                 principals=[iam.ServicePrincipal("cloudtrail.amazonaws.com")],
                 actions=["s3:GetBucketAcl"],
-                resources=[cloudtrail_bucket.bucket_arn]),
+                resources=[storage_stack.cloudtrail_bucket.bucket_arn]),
             iam.PolicyStatement(
                 principals=[iam.ServicePrincipal("cloudtrail.amazonaws.com")],
                 actions=["s3:PutObject"],
-                resources=[f"{cloudtrail_bucket.bucket_arn}/AWSLogs/{self.account}/*"],
+                resources=[f"{storage_stack.cloudtrail_bucket.bucket_arn}/AWSLogs/{self.account}/*"],
                 conditions={"StringEquals": {
                     "s3:x-amz-acl": "bucket-owner-full-control",
                     "aws:SourceArn": f"arn:aws:cloudtrail:{self.region}:{self.account}:trail/{trail_name}"}}),
         ]:
-            cloudtrail_bucket.add_to_resource_policy(stmt)
+            storage_stack.cloudtrail_bucket.add_to_resource_policy(stmt)
 
         trail = cloudtrail.Trail(self, "AuditTrail",
             trail_name=trail_name,
-            bucket=cloudtrail_bucket,
-            encryption_key=s3_key,
+            bucket=storage_stack.cloudtrail_bucket,
+            encryption_key=kms_stack.s3_key,
             include_global_service_events=True,
             is_multi_region_trail=True,
             enable_file_validation=True,
             send_to_cloud_watch_logs=False)
 
-        for table in [alerts_table, updates_table]:
+        # DDB data events on all sensitive tables
+        for table in [data_stack.alerts_table, data_stack.daily_updates_table,
+                      data_stack.devices_table]:
             trail.add_dynamo_db_event_selector(
                 [table],
                 include_management_events=False,
                 data_value=cloudtrail.DataResourceType.DYNAMODB_TABLE)
 
+        # S3 READ_ONLY data events on the parquet bucket (raw/ prefix only)
         trail.add_s3_event_selector(
             [cloudtrail.S3EventSelector(
-                bucket=parquet_bucket, object_prefix="raw/")],
+                bucket=storage_stack.parquet_bucket, object_prefix="raw/")],
             include_management_events=False,
             read_write_type=cloudtrail.ReadWriteType.READ_ONLY)`,
     'cdk.json':
@@ -671,54 +914,51 @@ class CloudTrailStack(Stack):
 
   'iot-core': {
     'stack.py':
-`from aws_cdk import Stack
-from constructs import Construct
-from aws_cdk import aws_iot as iot, aws_iam as iam
+`# IoT Core components are split across two CDK stacks:
+#   infra/stacks/telemetry_stack.py  — IoT Rules (fall-enricher + legacy telemetry)
+#   infra/stacks/url_minter_stack.py — Role alias + device IoT policy
 
-class IotCoreStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 alerts_fn, env: str, **kwargs):
-        super().__init__(scope, id, **kwargs)
+# ── IoT Rules (from TelemetryStack) ──────────────────────────────────────────
+# FALL_ALERT_SQL:
+#   "SELECT *, topic(4) AS deviceId
+#    FROM '$aws/rules/fall-enricher/ambient/v1/alerts/fall/+'"
+#
+# Basic Ingest prefix ($aws/rules/) means IoT Core does NOT charge per-message.
+# The fall alert topic is:  ambient/v1/alerts/fall/<ThingName>
+# This rule republishes to Lambda with no messaging fee.
 
-        credentials_role = iam.Role(self, "CredentialsRole",
-            role_name=f"ambient-{env}-iot-credentials",
-            assumed_by=iam.ServicePrincipal("credentials.iot.amazonaws.com"))
+self.fall_alert_rule = iot.CfnTopicRule(self, "FallAlertRule",
+    rule_name=f"{pfx.replace('-','_')}_fall_alerts",
+    topic_rule_payload=iot.CfnTopicRule.TopicRulePayloadProperty(
+        sql=FALL_ALERT_SQL, aws_iot_sql_version="2016-03-23",
+        actions=[iot.CfnTopicRule.ActionProperty(
+            lambda_=iot.CfnTopicRule.LambdaActionProperty(
+                function_arn=self.alerts_lambda.function_arn))],
+        error_action=iot.CfnTopicRule.ActionProperty(
+            s3=iot.CfnTopicRule.S3ActionProperty(
+                bucket_name=storage_stack.iot_errors_bucket.bucket_name,
+                key="fall-alerts/\${timestamp()}-\${newuuid()}",
+                role_arn=iot_error_role.role_arn))))
 
-        role_alias = iot.CfnRoleAlias(self, "DeviceRoleAlias",
-            role_alias=f"ambient-{env}-device-alias",
-            role_arn=credentials_role.role_arn,
-            credential_duration_seconds=3600)
+# TELEMETRY_SQL (legacy cold path, retiring):
+#   "SELECT *, clientid() AS deviceId,
+#    aws_iot::things(clientid(), 'facilityId') AS facilityId, ...
+#    FROM 'ambient/v1/telemetry/+'"
 
-        iot.CfnPolicy(self, "DevicePolicy",
-            policy_name=f"ambient-{env}-device-policy",
-            policy_document={
-                "Version": "2012-10-17",
-                "Statement": [
-                    {"Effect": "Allow",
-                     "Action": "iot:AssumeRoleWithCertificate",
-                     "Resource": role_alias.attr_role_alias_arn},
-                    {"Effect": "Allow",
-                     "Action": "iot:Connect",
-                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:"
-                                 "client/\${iot:ClientId}"},
-                    {"Effect": "Allow",
-                     "Action": "iot:Publish",
-                     "Resource": f"arn:aws:iot:{self.region}:{self.account}:"
-                                 "topic/$aws/rules/*"},
-                ]})
+self.telemetry_rule = iot.CfnTopicRule(self, "TelemetryRule", ...)
 
-        alerts_fn.add_permission("IotInvoke",
-            principal=iam.ServicePrincipal("iot.amazonaws.com"),
-            source_arn=f"arn:aws:iot:{self.region}:{self.account}:rule/*")
+# ── Device policy + role alias (from UrlMinterStack) ─────────────────────────
+# Devices authenticate via SigV4: IoT Credentials Provider → role alias
+# → DeviceUploadRole → lambda:InvokeFunctionUrl on url-minter
 
-        iot.CfnTopicRule(self, "FallEnricherRule",
-            rule_name=f"ambient_{env}_fall_enricher",
-            topic_rule_payload=iot.CfnTopicRule.TopicRulePayloadProperty(
-                sql="SELECT *, topic() as mqtt_topic FROM '$aws/rules/fall_enricher'",
-                actions=[iot.CfnTopicRule.ActionProperty(
-                    lambda_=iot.CfnTopicRule.LambdaActionProperty(
-                        function_arn=alerts_fn.function_arn))],
-                rule_disabled=False))`,
+# Connect: scoped to the device's own ThingName (not just any clientId)
+{"Effect": "Allow", "Action": "iot:Connect",
+ "Resource": "arn:aws:iot:REGION:ACCOUNT:client/\${iot:Connection.Thing.ThingName}"}
+
+# Publish: only to the device's own fall-alert topic (Basic Ingest)
+{"Effect": "Allow", "Action": "iot:Publish",
+ "Resource": "arn:aws:iot:REGION:ACCOUNT:topic"
+             "/ambient/v1/alerts/fall/\${iot:Connection.Thing.ThingName}"}`,
     'cdk.json':
 `{
   "app": "python3 app.py",
@@ -745,39 +985,39 @@ class IotCoreStack(Stack):
 
   kms: {
     'stack.py':
-`from aws_cdk import Stack, RemovalPolicy, Duration
-from constructs import Construct
+`# infra/stacks/kms_stack.py
+# One key per data domain — revoking/rotating one key doesn't affect others.
+# All keys: RETAIN on deletion (audit records are research data).
+from aws_cdk import Stack, RemovalPolicy
 from aws_cdk import aws_kms as kms
+from constructs import Construct
 
 class KmsStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 env: str, tenant_id: str, **kwargs):
+    def __init__(self, scope, id, *, tenant_id, **kwargs):
         super().__init__(scope, id, **kwargs)
 
-        common_props = dict(
-            enable_key_rotation=True,
-            removal_policy=RemovalPolicy.RETAIN,
-            pending_window=Duration.days(30))
+        def _key(logical_id, desc, domain):
+            return kms.Key(self, logical_id,
+                description=desc,
+                enable_key_rotation=True,        # annual auto-rotation
+                removal_policy=RemovalPolicy.RETAIN,
+                alias=f"alias/ambient/{tenant_id}/{domain}")
 
-        self.data_key = kms.Key(self, "DataKey",
-            description=f"Ambient {env} DynamoDB CMK — tenant {tenant_id}",
-            alias=f"alias/ambient/{tenant_id}/data",
-            **common_props)
+        # DynamoDB: devices, alerts, daily-updates
+        self.data_key = _key("DataKey",
+            f"DynamoDB CMK for tenant {tenant_id}", "data")
 
-        self.s3_key = kms.Key(self, "S3Key",
-            description=f"Ambient {env} S3 CMK — tenant {tenant_id}",
-            alias=f"alias/ambient/{tenant_id}/s3",
-            **common_props)
+        # S3: parquet, athena-results, cloudtrail
+        self.s3_key  = _key("S3Key",
+            f"S3 CMK for tenant {tenant_id}", "s3")
 
-        self.sns_key = kms.Key(self, "SnsKey",
-            description=f"Ambient {env} SNS CMK — tenant {tenant_id}",
-            alias=f"alias/ambient/{tenant_id}/sns",
-            **common_props)
+        # SNS: fall-alerts topic
+        self.sns_key = _key("SnsKey",
+            f"SNS CMK for tenant {tenant_id}", "sns")
 
-        self.sqs_key = kms.Key(self, "SqsKey",
-            description=f"Ambient {env} SQS CMK — tenant {tenant_id}",
-            alias=f"alias/ambient/{tenant_id}/sqs",
-            **common_props)`,
+        # SQS: ella-fanout + ella-dlq
+        self.sqs_key = _key("SqsKey",
+            f"SQS CMK for tenant {tenant_id}", "sqs")`,
     'cdk.json':
 `{
   "app": "python3 app.py",
@@ -804,60 +1044,58 @@ class KmsStack(Stack):
 
   observability: {
     'stack.py':
-`from aws_cdk import Stack, CfnOutput
+`# infra/stacks/observability_stack.py
+# Scalar metrics ONLY — no logs, no traces, no string dimensions that could
+# carry a subject identifier.  Compliance line: SREs see fleet health without
+# reading any subject's data.
+from aws_cdk import Stack, CfnOutput
+from aws_cdk import aws_cloudwatch as cloudwatch, aws_iam as iam
 from constructs import Construct
-from aws_cdk import aws_cloudwatch as cw, aws_iam as iam
-from aws_cdk import aws_kinesisfirehose as firehose
-
-METRIC_NAMESPACES = [
-    "AWS/Lambda", "AWS/DynamoDB", "AWS/IoT",
-    "AmbientIntelligence/Telemetry", "AmbientIntelligence/API",
-]
 
 class ObservabilityStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 env: str, observability_account: str, **kwargs):
+    def __init__(self, scope, id, *,
+                 observability_account,
+                 observability_firehose_arn="",   # from CDK context
+                 **kwargs):
         super().__init__(scope, id, **kwargs)
+        env = id.split("-")[1]; pfx = f"ambient-{env}"
 
         stream_role = iam.Role(self, "MetricStreamRole",
+            role_name=f"{pfx}-metric-stream",
             assumed_by=iam.ServicePrincipal(
                 "streams.metrics.cloudwatch.amazonaws.com"))
 
-        stream_name   = f"ambient-{env}-metrics"
-        stream_arn    = (f"arn:aws:firehose:{self.region}:{self.account}:"
-                         f"deliverystream/{stream_name}")
+        destination_arn = (
+            observability_firehose_arn or
+            f"arn:aws:firehose:{self.region}:{observability_account}"
+            ":deliverystream/ambient-tenant-ingest")
 
         stream_role.add_to_policy(iam.PolicyStatement(
-            actions=["firehose:PutRecord", "firehose:PutRecordBatch"],
-            resources=[stream_arn]))
+            actions=["firehose:PutRecord","firehose:PutRecordBatch"],
+            resources=[destination_arn]))
 
-        firehose.CfnDeliveryStream(self, "MetricsFirehose",
-            delivery_stream_name=stream_name,
-            delivery_stream_type="DirectPut",
-            s3_destination_configuration={
-                "bucketArn":  f"arn:aws:s3:::ambient-central-metrics-{observability_account}",
-                "roleArn":    stream_role.role_arn,
-                "prefix":     f"{env}/metrics/date=!{{timestamp:yyyy-MM-dd}}/",
-                "bufferingHints": {"intervalInSeconds": 60, "sizeInMBs": 1},
-                "compressionFormat": "GZIP",
-            })
-
-        metric_stream = cw.CfnMetricStream(self, "MetricStream",
-            name=f"ambient-{env}-stream",
+        # Named namespaces only — no wildcard (avoids accidentally forwarding new metrics)
+        self.metric_stream = cloudwatch.CfnMetricStream(self, "MetricStream",
+            name=f"{pfx}-metric-stream",
             role_arn=stream_role.role_arn,
-            firehose_arn=stream_arn,
+            firehose_arn=destination_arn,
             output_format="json",
             include_filters=[
-                cw.CfnMetricStream.MetricStreamFilterProperty(namespace=ns)
-                for ns in METRIC_NAMESPACES])
+                cloudwatch.CfnMetricStream.MetricStreamFilterProperty(
+                    namespace=ns)
+                for ns in [
+                    "AmbientIntelligence/Telemetry",  # TelemetryDivergence, path counts
+                    "AWS/Lambda",                      # error rates for ambient-* functions
+                    "AWS/ApiGateway",                  # 4xx/5xx for the nurse API
+                    "AWS/DynamoDB",                    # throttling events
+                    "AWS/Athena",                      # scan bytes, query latency
+                ]])
 
-        CfnOutput(self, "MetricStreamArn",
-            value=metric_stream.attr_arn,
-            export_name=f"ambient-{env}-metric-stream-arn")
-
-        CfnOutput(self, "TrustPolicyNote",
-            value=f"Grant {self.account} put access on central metrics bucket",
-            description="Manual step: add bucket policy in observability account")`,
+        # Document the manual cross-account trust step as a CfnOutput
+        CfnOutput(self, "CrossAccountTrustNote",
+            value=(f"Grant account {observability_account} Firehose resource policy "
+                   f"allowing firehose:PutRecord from account {self.account}"),
+            description="Manual step: add cross-account trust to observability Firehose")`,
     'cdk.json':
 `{
   "app": "python3 app.py",
@@ -890,57 +1128,90 @@ class ObservabilityStack(Stack):
 
   reconciler: {
     'stack.py':
-`from aws_cdk import Stack, Duration
-from constructs import Construct
-from ambient_constructs.ambient_lambda import AmbientLambda
-from aws_cdk import aws_events as events, aws_events_targets as targets
-from aws_cdk import aws_cloudwatch as cw, aws_iam as iam
+`# services/reconciler/src/handler.py  (Lambda embedded in TelemetryStack)
+# infra/stacks/telemetry_stack.py — ReconcilerLambda section
+#
+# Queries both Athena cold paths for the trailing 1h, computes per-facility
+# divergence percentage, emits 3 CW metrics per facility per invocation.
+import boto3, os, time
+from datetime import datetime, timezone, timedelta
 
-class ReconcilerStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 parquet_bucket, env: str, **kwargs):
-        super().__init__(scope, id, **kwargs)
+athena     = boto3.client("athena")
+cloudwatch = boto3.client("cloudwatch")
 
-        fn = AmbientLambda(self, "ReconcilerFn",
-            function_name=f"ambient-{env}-reconciler",
-            handler="handler.lambda_handler",
-            source_path="../services/reconciler/src",
-            timeout=Duration.seconds(300),
-            memory_size=256,
-            environment={
-                "TELEMETRY_DATABASE": f"ambient_{env}_telemetry",
-                "RAW_DATABASE":       f"ambient_{env}_raw",
-                "ATHENA_WORKGROUP":   f"ambient-{env}-analytics",
-                "ATHENA_OUTPUT":
-                    f"s3://{parquet_bucket.bucket_name}/reconciler-results/",
-                "METRIC_NAMESPACE":   "AmbientIntelligence/Telemetry",
-            })
+WORKGROUP  = os.environ["ATHENA_WORKGROUP"]
+OUTPUT     = os.environ["ATHENA_OUTPUT"]
+NAMESPACE  = os.environ["METRIC_NAMESPACE"]
+TEL_DB     = os.environ["TELEMETRY_DATABASE"]
+RAW_DB     = os.environ["RAW_DATABASE"]
 
-        for actions, resources in [
-            (["athena:StartQueryExecution",
-              "athena:GetQueryExecution",
-              "athena:GetQueryResults"], ["*"]),
-            (["glue:GetTable", "glue:GetPartitions"], ["*"]),
-            (["cloudwatch:PutMetricData"], ["*"]),
-        ]:
-            fn.function.add_to_role_policy(
-                iam.PolicyStatement(actions=actions, resources=resources))
-        parquet_bucket.grant_read_write(fn.function)
+DEVICE_SQL = """
+    SELECT facility, subject, date_trunc('hour', window_start) AS window_hour,
+           SUM(frame_count) AS record_count
+    FROM {db}.aggregates
+    WHERE date >= '{since_date}'
+    GROUP BY 1,2,3
+"""
 
-        events.Rule(self, "ReconcilerCron",
-            schedule=events.Schedule.rate(Duration.minutes(15)),
-            targets=[targets.LambdaFunction(fn.function)])
+FIREHOSE_SQL = """
+    SELECT facility, subject, date_trunc('hour', from_iso8601_timestamp(window_start)) AS window_hour,
+           COUNT(*) AS record_count
+    FROM {db}.aggregates
+    WHERE date = '{since_date}'
+    GROUP BY 1,2,3
+"""
 
-        cw.Alarm(self, "DivergenceAlarm",
-            metric=cw.Metric(
-                namespace="AmbientIntelligence/Telemetry",
-                metric_name="TelemetryDivergence",
-                statistic="Average",
-                period=Duration.minutes(15)),
-            threshold=0.001,
-            evaluation_periods=3,
-            alarm_name=f"ambient-{env}-telemetry-divergence",
-            alarm_description="Telemetry path divergence > 0.1%")`,
+def _run(sql):
+    qid = athena.start_query_execution(
+        QueryString=sql,
+        WorkGroup=WORKGROUP,
+        ResultConfiguration={"OutputLocation": OUTPUT})["QueryExecutionId"]
+    while True:
+        state = athena.get_query_execution(QueryExecutionId=qid)[
+            "QueryExecution"]["Status"]["State"]
+        if state == "SUCCEEDED": break
+        if state in ("FAILED","CANCELLED"):
+            raise RuntimeError(f"Query {qid} {state}")
+        time.sleep(2)
+    rows, paginator = [], athena.get_paginator("get_query_results")
+    for page in paginator.paginate(QueryExecutionId=qid):
+        rows.extend(page["ResultSet"]["Rows"])
+    headers = [c["VarCharValue"] for c in rows[0]["Data"]]
+    return [dict(zip(headers, [c.get("VarCharValue","") for c in r["Data"]]))
+            for r in rows[1:]]
+
+def lambda_handler(event, context):
+    since = (datetime.now(timezone.utc) - timedelta(hours=1)).date().isoformat()
+    device_rows   = {(r["facility"],r["subject"],r["window_hour"]):
+                     int(r["record_count"]) for r in _run(DEVICE_SQL.format(db=TEL_DB, since_date=since))}
+    firehose_rows = {(r["facility"],r["subject"],r["window_hour"]):
+                     int(r["record_count"]) for r in _run(FIREHOSE_SQL.format(db=RAW_DB, since_date=since))}
+
+    all_keys     = set(device_rows) | set(firehose_rows)
+    by_facility  = {}
+    for fac, subj, hour in all_keys:
+        d = device_rows.get((fac,subj,hour), 0)
+        f = firehose_rows.get((fac,subj,hour), 0)
+        e = by_facility.setdefault(fac, {"device":0,"firehose":0})
+        e["device"]   += d;  e["firehose"] += f
+
+    metrics, fac_divergence = [], {}
+    for fac, counts in by_facility.items():
+        total = counts["device"] + counts["firehose"]
+        pct   = abs(counts["device"] - counts["firehose"]) / total * 100 if total else 0
+        fac_divergence[fac] = {**counts, "divergence_pct": round(pct, 4)}
+        metrics += [
+            {"MetricName":"TelemetryDivergence","Value":pct,"Unit":"Percent",
+             "Dimensions":[{"Name":"FacilityId","Value":fac}]},
+            {"MetricName":"DevicePathRecords","Value":counts["device"],"Unit":"Count",
+             "Dimensions":[{"Name":"FacilityId","Value":fac}]},
+            {"MetricName":"FirehosePathRecords","Value":counts["firehose"],"Unit":"Count",
+             "Dimensions":[{"Name":"FacilityId","Value":fac}]},
+        ]
+    for i in range(0, len(metrics), 20):
+        cloudwatch.put_metric_data(Namespace=NAMESPACE, MetricData=metrics[i:i+20])
+
+    return {"facilities_checked": len(by_facility), "facility_divergence": fac_divergence}`,
     'cdk.json':
 `{
   "app": "python3 app.py",
