@@ -192,7 +192,8 @@
   "history": [],
   "weekStatus": {
     "Brian": {
-      "Mon": "yes"
+      "Mon": "yes",
+      "SU": "yes"
     }
   },
   "team": [
