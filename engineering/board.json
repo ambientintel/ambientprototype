@@ -190,36 +190,7 @@
     "Brian": []
   },
   "history": [],
-  "weekStatus": {
-    "Brian": {
-      "Thu": "yes",
-      "Fri": "yes",
-      "SU": "yes",
-      "M": "yes",
-      "T": "yes",
-      "W": "yes",
-      "TH": "yes"
-    },
-    "Hanna": {
-      "Mon": null,
-      "W": "yes"
-    },
-    "Gavin": {
-      "Fri": "yes",
-      "W": "yes",
-      "TH": "yes"
-    },
-    "Aki": {
-      "Fri": "no"
-    },
-    "Isaac": {
-      "Mon": "yes",
-      "TH": "yes"
-    },
-    "Paulo": {
-      "W": "no"
-    }
-  },
+  "weekStatus": {},
   "team": [
     {
       "name": "Gavin",
@@ -315,5 +286,5 @@
       "status": "Backlog — pilot pending"
     }
   ],
-  "boardWeek": 19
+  "boardWeek": 20
 }
