@@ -109,7 +109,7 @@ const DOMAINS = [
     colorBg: '#EEF2FF',
     colorBorder: '#C7D2FE',
     repo: 'ambientintel/ambientcloud',
-    lsKey: 'ambient-cloud-checklist-v1',
+    lsKey: 'ambient-cloud-checklist-v2',
     checklistTotal: 22,
     checklistDefault: 16,
     stepsTotal: 12,
