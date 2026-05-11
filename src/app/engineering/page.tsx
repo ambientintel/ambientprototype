@@ -156,6 +156,7 @@ export default function EngineeringPage() {
   const todayKey = new Date().toISOString().slice(0, 10);
 
   const [loading, setLoading] = useState(true);
+  const [subProgress, setSubProgress] = useState<Record<string, number>>({});
   const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
   const boardShaRef    = useRef<string | null>(null);
   const saveTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -443,6 +444,26 @@ export default function EngineeringPage() {
     progress:   { height:4, borderRadius:4, background:"var(--surface-2)", overflow:"hidden", flex:1 },
   };
 
+  // ── Subsystem checklist progress from shared server state ─────────────────
+  useEffect(() => {
+    const DOMAIN_MAP = [
+      { key: 'firmware',   total: 20 },
+      { key: 'ee',         total: 22 },
+      { key: 'cloud',      total: 22 },
+      { key: 'webapp',     total: 20 },
+      { key: 'mobileapp',  total: 23 },
+      { key: 'mechanical', total: 22 },
+    ];
+    fetch('/api/eng/state').then(r => r.json()).then((all) => {
+      const p: Record<string, number> = {};
+      DOMAIN_MAP.forEach(({ key, total }) => {
+        const d = all[key];
+        if (d && Array.isArray(d.checked)) p[key] = Math.round((d.checked.length / total) * 100);
+      });
+      setSubProgress(p);
+    }).catch(() => {});
+  }, []);
+
   // ── Noon prompt: fire when clock crosses 12:00 ─────────────────────────────
   useEffect(() => {
     if (loading) return;
@@ -576,11 +597,12 @@ export default function EngineeringPage() {
               <span style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--text-3)" }}>Ambient Intelligence</span>
             </Link>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <NavCard href="/firmware"  label="Firmware"   color="#00B4D8" />
-              <NavCard href="/ee"        label="EE"         color="#2563EB" lsKey="ambient-ee-checklist-v1"        total={22} defaultDone={13} />
-              <NavCard href="/cloudengineering" label="Cloud Eng"  color="#38BDF8" lsKey="ambient-cloud-checklist-v1" total={22} defaultDone={13} />
-              <NavCard href="/webapp"    label="Web App"    color="#3DCC91" lsKey="ambient-webapp-checklist-v1"    total={20} defaultDone={13} />
-              <NavCard href="/mobileapp" label="Mobile App" color="#FB923C" lsKey="ambient-mobileapp-checklist-v1" total={20} defaultDone={7} />
+              <NavCard href="/firmware"        label="Firmware"   color="#00B4D8" lsKey="ambient-fw-checklist-v2"          total={20} defaultDone={9}  serverPct={subProgress['firmware']} />
+              <NavCard href="/ee"              label="EE"         color="#2563EB" lsKey="ambient-ee-checklist-v1"          total={22} defaultDone={13} serverPct={subProgress['ee']} />
+              <NavCard href="/cloudengineering" label="Cloud Eng" color="#38BDF8" lsKey="ambient-cloud-checklist-v2"       total={22} defaultDone={16} serverPct={subProgress['cloud']} />
+              <NavCard href="/webapp"          label="Web App"    color="#3DCC91" lsKey="ambient-webapp-checklist-v1"      total={20} defaultDone={13} serverPct={subProgress['webapp']} />
+              <NavCard href="/mobileapp"       label="Mobile App" color="#FB923C" lsKey="ambient-mobileapp-checklist-v1"  total={23} defaultDone={5}  serverPct={subProgress['mobileapp']} />
+              <NavCard href="/mechanical"      label="Mechanical" color="#34D399" lsKey="ambient-mechanical-checklist-v1" total={22} defaultDone={5}  serverPct={subProgress['mechanical']} />
             </div>
           </div>
 
@@ -631,36 +653,6 @@ export default function EngineeringPage() {
 
           {/* ── Shot Clock ── */}
           <ShotClock/>
-
-          {/* ── Subsystems strip ── */}
-          <div style={{ padding:"10px 0 4px" }}>
-            <div style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)", marginBottom:8 }}>Subsystems</div>
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-              {subsystems.map(sub => {
-                const barColor = sub.progress >= 75 ? "#3DCC91" : sub.progress >= 40 ? sub.color : "#FF6B6B";
-                return (
-                  <div key={sub.id} style={{ display:"flex", flexDirection:"column", gap:5, padding:"8px 12px 10px", borderRadius:8, background:"var(--surface-1)", border:`1px solid var(--line)`, transition:"border-color 0.15s", minWidth:0, flex:"1 1 110px" }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = sub.color + "55"; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; }}>
-                    {/* Label + percentage */}
-                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                      <span style={{ width:6, height:6, borderRadius:2, background:sub.color, flexShrink:0 }}/>
-                      <span style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-3)", flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{sub.name}</span>
-                      <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, color:barColor, flexShrink:0 }}>{sub.progress}%</span>
-                    </div>
-                    {/* Progress bar */}
-                    <div style={{ height:8, borderRadius:4, background:"var(--surface-2)", overflow:"hidden" }}>
-                      <div style={{ height:"100%", width:`${sub.progress}%`, background:barColor, borderRadius:4, transition:"width 0.3s" }}/>
-                    </div>
-                    {/* Slider */}
-                    <input type="range" min={0} max={100} value={sub.progress}
-                      onChange={e => setSubsystems(prev => prev.map(s => s.id === sub.id ? { ...s, progress: Number(e.target.value) } : s))}
-                      style={{ width:"100%", accentColor:"var(--text-3)", cursor:"pointer", margin:0, height:2, opacity:0.5 }}/>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
 
           {/* View tabs */}
           <div style={{ display:"flex", gap:0, borderBottom:"none", marginTop:-4 }}>
@@ -2022,21 +2014,22 @@ function SectionDivider({ label, n }: { label: string; n?: string }) {
 }
 
 // ── NavCard ───────────────────────────────────────────────────────────────
-function NavCard({ href, label, color, lsKey, total, defaultDone }: {
+function NavCard({ href, label, color, lsKey, total, defaultDone, serverPct }: {
   href: string; label: string; color: string;
-  lsKey?: string; total?: number; defaultDone?: number;
+  lsKey?: string; total?: number; defaultDone?: number; serverPct?: number;
 }) {
   const [hov, setHov] = useState(false);
   const [pct, setPct] = useState<number | null>(() =>
     total ? Math.round(((defaultDone ?? 0) / total) * 100) : null
   );
   useEffect(() => {
+    if (serverPct !== undefined) { setPct(serverPct); return; }
     if (!lsKey || !total) return;
     try {
       const raw = localStorage.getItem(lsKey);
       if (raw) setPct(Math.round((JSON.parse(raw).length / total) * 100));
     } catch { /* ignore */ }
-  }, [lsKey, total]);
+  }, [lsKey, total, serverPct]);
 
   return (
     <Link href={href} style={{ textDecoration:"none" }}>

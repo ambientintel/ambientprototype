@@ -76,7 +76,7 @@ const PIPELINE: Record<string, {
   ella:          { synth: { status: 'success', age: '~1h ago', duration: '0m 29s', sha: '51e6de5' }, deploy: { status: 'success', age: '~1h ago', duration: '2m 04s', sha: '51e6de5' }, env: 'dev' },
   api:           { synth: { status: 'success', age: '~1h ago', duration: '0m 24s', sha: '51e6de5' }, deploy: { status: 'success', age: '~1h ago', duration: '1m 47s', sha: '51e6de5' }, env: 'dev' },
   cloudtrail:    { synth: { status: 'success', age: '~2h ago', duration: '0m 19s', sha: '8c79e98' }, deploy: { status: 'success', age: '~2h ago', duration: '1m 01s', sha: '8c79e98' }, env: 'dev' },
-  observability: { synth: { status: 'running', age: 'now',     duration: '—',      sha: '51d16d2' }, deploy: { status: 'queued',  age: '—',        duration: '—',      sha: '51d16d2' }, env: 'dev' },
+  observability: { synth: { status: 'skipped', age: '—',       duration: '—',      sha: '51d16d2' }, deploy: { status: 'skipped',  age: '—',        duration: '—',      sha: '51d16d2' }, env: 'dev' },
 };
 
 const HEALTH: Record<string, {
@@ -95,7 +95,7 @@ const HEALTH: Record<string, {
   ella:          { status: 'healthy',  lambda: { invocations: 48,   errors: 0,  p50: '4.2s',  p99: '12.1s', throttles: 0 }, ddb: { reads: 144,   writes: 48,   throttles: 0 }, lastSeen: '2m ago' },
   api:           { status: 'healthy',  lambda: { invocations: 1247, errors: 3,  p50: '89ms',  p99: '420ms', throttles: 0 }, ddb: { reads: 3741,  writes: 89,   throttles: 0 }, lastSeen: '<1m ago' },
   cloudtrail:    { status: 'healthy',  lastSeen: 'always-on' },
-  observability: { status: 'degraded', issue: 'Metric stream pending deploy', lastSeen: 'pending' },
+  observability: { status: 'degraded', issue: 'Optional stack — observability_account context not configured', lastSeen: 'pending' },
 };
 
 const COSTS = [
@@ -266,7 +266,7 @@ class ApiStack(Stack):
         self.user_pool = cognito.UserPool(self, "Pool",
             user_pool_name=f"{pfx}-users",
             sign_in_aliases=cognito.SignInAliases(email=True),
-            mfa=cognito.Mfa.REQUIRED,
+            mfa=cognito.Mfa.OPTIONAL if env == "dev" else cognito.Mfa.REQUIRED,
             mfa_second_factor=cognito.MfaSecondFactor(otp=True, sms=False),
             password_policy=cognito.PasswordPolicy(
                 min_length=12, require_uppercase=True,
@@ -297,7 +297,12 @@ class ApiStack(Stack):
         self.api_lambda = lambda_.Function(self, "ApiFn",
             function_name=f"{pfx}-api",
             runtime=PYTHON_RUNTIME, handler="main.handler",
-            code=lambda_.Code.from_asset("../services/api/src"),
+            code=lambda_.Code.from_asset("../services/api",
+                bundling=lambda_.BundlingOptions(
+                    image=lambda_.Runtime.PYTHON_3_12.bundling_image,
+                    command=["bash","-c",
+                        "pip install -r requirements.txt -t /asset-output && "
+                        "cp -r src/* /asset-output"])),
             timeout=TIMEOUT_API, memory_size=MEMORY_API, role=api_role,
             environment={
                 "COGNITO_USER_POOL_ID": self.user_pool.user_pool_id,
@@ -516,12 +521,14 @@ class TelemetryStack(Stack):
                         .OutputFormatConfigurationProperty(
                         serializer=firehose.CfnDeliveryStream.SerializerProperty(
                             parquet_ser_de=firehose.CfnDeliveryStream.ParquetSerDeProperty(
-                                compression="ZSTD"))),
+                                compression="SNAPPY"))),
                     schema_configuration=firehose.CfnDeliveryStream
                         .SchemaConfigurationProperty(
                         role_arn=firehose_role.role_arn, catalog_id=self.account,
                         database_name=db_name, table_name="aggregates",
                         region=self.region, version_id="LATEST"))))
+        # Firehose validates Glue permissions at creation time — explicit dep avoids race
+        self.telemetry_firehose.node.add_dependency(firehose_role)
 
         # IoT Rule: legacy cold path MQTT → Firehose (retiring)
         iot_firehose_role = iam.Role(self, "IotFirehoseRole",
@@ -686,6 +693,13 @@ class UrlMinterStack(Stack):
         self.device_upload_role.add_to_policy(iam.PolicyStatement(
             actions=["lambda:InvokeFunctionUrl"],
             resources=[self.url_minter_lambda.function_arn]))
+
+        # IoT ThingType required when Things have >3 searchable attributes
+        self.device_thing_type = iot.CfnThingType(self, "DeviceThingType",
+            thing_type_name=f"{pfx}-device",
+            thing_type_properties=iot.CfnThingType.ThingTypePropertiesProperty(
+                thing_type_description="Ambient Intelligence radar sensor node",
+                searchable_attributes=["facilityId", "subjectId", "roomId"]))
 
         self.iot_role_alias = iot.CfnRoleAlias(self, "DeviceUploadAlias",
             role_alias=f"{pfx}-device-upload",
@@ -944,9 +958,8 @@ self.fall_alert_rule = iot.CfnTopicRule(self, "FallAlertRule",
                 role_arn=iot_error_role.role_arn))))
 
 # TELEMETRY_SQL (legacy cold path, retiring):
-#   "SELECT *, clientid() AS deviceId,
-#    aws_iot::things(clientid(), 'facilityId') AS facilityId, ...
-#    FROM 'ambient/v1/telemetry/+'"
+#   "SELECT *, clientid() AS deviceId FROM 'ambient/v1/telemetry/+'"
+#   facilityId/subjectId come from device payload — aws_iot::things() is not valid IoT SQL
 
 self.telemetry_rule = iot.CfnTopicRule(self, "TelemetryRule", ...)
 
@@ -1622,7 +1635,7 @@ function ArchDiagram() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <Group label="Cold path (new) — device-side Parquet" type="coldnew" iac="url-minter">
           <Row>
-            <Node label="Device" sub="5-min batch · ZSTD" type="device" />
+            <Node label="Device" sub="5-min batch · SNAPPY" type="device" />
             <Arr />
             <Node label="url-minter" sub="SigV4 · Shadow scope check" type="coldnew" />
             <Arr />
