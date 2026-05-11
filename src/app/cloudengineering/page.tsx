@@ -370,7 +370,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'cold-path', phase: '08', title: 'Cold Path — URL Minter + Parquet', status: 'pending', tag: 'Deploy', time: '~2 hrs',
+    id: 'cold-path', phase: '08', title: 'Cold Path — URL Minter + Parquet', status: 'done', tag: 'Deploy', time: '~2 hrs',
     summary: 'url-minter Lambda deployed. Devices obtain presigned S3 PUT URLs for 5-min Parquet batches. Dual-write reconciler running — both Firehose and device-Parquet paths active. Migration proceeds per-facility.',
     sections: [
       {
@@ -400,7 +400,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'narrative', phase: '09', title: 'Narrative Path — Ella + Bedrock', status: 'pending', tag: 'Deploy', time: '~1 hr',
+    id: 'narrative', phase: '09', title: 'Narrative Path — Ella + Bedrock', status: 'done', tag: 'Deploy', time: '~1 hr',
     summary: 'EventBridge cron fires at 07:00 and 19:00 → SQS fanout → Ella Lambda → Bedrock Claude Sonnet 4.5 → DynamoDB daily-updates. Produces de-identified 12h activity summaries for clinical staff.',
     sections: [
       {
@@ -441,7 +441,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'api-auth', phase: '10', title: 'API & Auth — FastAPI + Cognito', status: 'pending', tag: 'Deploy', time: '~2 hrs',
+    id: 'api-auth', phase: '10', title: 'API & Auth — FastAPI + Cognito', status: 'done', tag: 'Deploy', time: '~2 hrs',
     summary: 'FastAPI Lambda behind API Gateway HTTP API with Cognito JWT authorizer. Twelve endpoints with row-level facility scoping. Users provisioned by admin-cli only — no self-signup.',
     sections: [
       {
@@ -599,7 +599,7 @@ const CHECKLIST_ITEMS = [
   'Production runbooks dry-run complete',
 ];
 
-const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 17, 18]);
 
 const OPEN_DECISIONS = [
   'Sonnet 4.6 upgrade — evaluate against de-id system prompt before flipping the model ID in Ella',

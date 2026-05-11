@@ -111,13 +111,13 @@ const DOMAINS = [
     repo: 'ambientintel/ambientcloud',
     lsKey: 'ambient-cloud-checklist-v1',
     checklistTotal: 22,
-    checklistDefault: 13,
+    checklistDefault: 16,
     stepsTotal: 12,
-    stepsDone: 7,
+    stepsDone: 10,
     phases: [
       { label: 'Architect', done: 3, total: 3 },
       { label: 'Infra',     done: 3, total: 3 },
-      { label: 'Deploy',    done: 1, total: 4 },
+      { label: 'Deploy',    done: 4, total: 4 },
       { label: 'Validate',  done: 0, total: 2 },
     ],
     specs: [
@@ -127,7 +127,7 @@ const DOMAINS = [
       { k: 'IaC',     v: 'CDK v2' },
     ],
     description: 'CDK v2 · 10 CloudFormation stacks · Five data paths: fall alerts, Parquet cold path, Ella narrative, nurse API, reconciler. HIPAA §164.514(c) coded data.',
-    currentStep: '08 · Cold Path — URL Minter + Parquet',
+    currentStep: '11 · Integration Tests',
     freezeKey: 'ambient-cloud-frozen-v1',
     freezeLabel: 'Production Freeze',
   },
@@ -231,11 +231,11 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve remaining Environment setup item to unblock step 04', owner: 'Mobile' },
   ],
   cloudengineering: [
-    { task: 'cdk deploy Ambient-dev-UrlMinter — presigned S3 URL Lambda, IoT role alias, device mTLS policy (step 08)', owner: 'Cloud' },
-    { task: 'Validate dual-write reconciler — TelemetryDivergence alarm on AmbientIntelligence/Telemetry, promote one facility to parquet_only', owner: 'Cloud' },
-    { task: 'cdk deploy Ambient-dev-Ella — Claude Sonnet 4.5 narrative, EventBridge crons 07:00 + 19:00 CT, de-id prompt eval (step 09)', owner: 'Cloud+AI' },
-    { task: 'cdk deploy Ambient-dev-Api — FastAPI + Cognito JWT, 12 facility-scoped endpoints, cross-facility denial test (step 10)', owner: 'Cloud' },
-    { task: 'Run integration test suite — FakeDevice end-to-end, 75 unit tests green, production sign-off checklist (steps 11–12)', owner: 'Cloud+Security' },
+    { task: 'Run integration test suite — FakeDevice end-to-end, 75 unit tests green against real AWS (step 11)', owner: 'Cloud+Security' },
+    { task: 'Verify dual-write reconciler — TelemetryDivergence alarm, promote FAC-PILOT-001 to parquet_only', owner: 'Cloud' },
+    { task: 'Upgrade Ella from Sonnet 4.5 → 4.6 — evaluate de-id prompt fidelity on 20 test narratives first', owner: 'Cloud+AI' },
+    { task: 'Production sign-off checklist — runbooks dry-run, CloudTrail data event verification (step 12)', owner: 'Cloud+Security' },
+    { task: 'Enable Cognito MFA for all admin and nurse users in us-east-1_lz15iZT97', owner: 'Cloud' },
   ],
   mechanical: [
     { task: 'Complete PCB layout in Altium — route controlled-impedance traces, run DRC to zero errors', owner: 'Layout' },
@@ -269,8 +269,8 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Register APNS token and test SNS → APNS delivery end-to-end',
   ],
   cloudengineering: [
-    'cdk deploy Ambient-dev-UrlMinter — test presigned URL issuance, IoT role alias, device shadow check',
-    'cdk deploy Ambient-dev-Ella — verify cron(0 12) + cron(0 0) rules fire, de-id narrative eval on 5 subjects',
+    'Run integration test suite — FakeDevice lifecycle, 75 unit tests green, verify all 5 data paths against real AWS',
+    'Promote FAC-PILOT-001 to parquet_only after reconciler shows 0% divergence over 24h',
   ],
   mechanical: [
     'Route all Altium traces, run DRC to zero errors, export preliminary Gerber',
@@ -300,8 +300,8 @@ const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text
 
 const BLOCKERS: { blocked: string; blocking: string; issue: string }[] = [
   { blocked: 'Firmware',   blocking: 'EE Hardware',      issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
-  { blocked: 'Mobile App', blocking: 'Cloud Engineering', issue: 'Cognito UserPool (Ambient-dev-Api, step 10) not yet deployed — app can\'t register push tokens or authenticate' },
-  { blocked: 'Web App',    blocking: 'Cloud Engineering', issue: 'FastAPI + Ella narrative endpoints (steps 09–10) not deployed — dashboard running on mock data' },
+  { blocked: 'Mobile App', blocking: 'Cloud Engineering', issue: 'Cognito UserPool deployed (us-east-1_lz15iZT97) — app needs to integrate real auth flows and APNS push token registration' },
+  { blocked: 'Web App',    blocking: 'Cloud Engineering', issue: 'FastAPI + Ella endpoints live at kfdi49uke9.execute-api.us-east-1.amazonaws.com — replace mock data with real API calls' },
   { blocked: 'Mechanical', blocking: 'EE Hardware',       issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
 ];
 

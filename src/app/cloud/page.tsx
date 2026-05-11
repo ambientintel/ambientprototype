@@ -50,16 +50,16 @@ const RUNBOOKS = [
 ];
 
 const CDK_STATE: Record<string, { cfnResources: number; lastDeploy: string }> = {
-  kms:           { cfnResources: 4,  lastDeploy: '6h ago' },
-  storage:       { cfnResources: 5,  lastDeploy: '6h ago' },
-  data:          { cfnResources: 9,  lastDeploy: '6h ago' },
-  'url-minter':  { cfnResources: 8,  lastDeploy: '5h ago' },
-  telemetry:     { cfnResources: 22, lastDeploy: '3h ago' },
-  athena:        { cfnResources: 12, lastDeploy: '5h ago' },
-  ella:          { cfnResources: 14, lastDeploy: '2h ago' },
-  api:           { cfnResources: 22, lastDeploy: '2h ago' },
-  cloudtrail:    { cfnResources: 6,  lastDeploy: '5h ago' },
-  observability: { cfnResources: 7,  lastDeploy: '1d ago' },
+  kms:           { cfnResources: 4,  lastDeploy: '~3h ago' },
+  storage:       { cfnResources: 5,  lastDeploy: '~3h ago' },
+  data:          { cfnResources: 9,  lastDeploy: '~3h ago' },
+  'url-minter':  { cfnResources: 8,  lastDeploy: '~1h ago' },
+  telemetry:     { cfnResources: 22, lastDeploy: '~2h ago' },
+  athena:        { cfnResources: 12, lastDeploy: '~2h ago' },
+  ella:          { cfnResources: 14, lastDeploy: '~1h ago' },
+  api:           { cfnResources: 22, lastDeploy: '~1h ago' },
+  cloudtrail:    { cfnResources: 6,  lastDeploy: '~2h ago' },
+  observability: { cfnResources: 7,  lastDeploy: '~3h ago' },
 };
 
 const PIPELINE: Record<string, {
@@ -67,16 +67,16 @@ const PIPELINE: Record<string, {
   deploy: { status: RunStatus; age: string; duration: string; sha: string };
   env: 'dev' | 'prod';
 }> = {
-  kms:           { synth: { status: 'success', age: '6h ago', duration: '0m 14s', sha: '9f02abc' }, deploy: { status: 'success', age: '6h ago', duration: '0m 47s', sha: '9f02abc' }, env: 'prod' },
-  storage:       { synth: { status: 'success', age: '6h ago', duration: '0m 11s', sha: '9f02abc' }, deploy: { status: 'success', age: '6h ago', duration: '0m 38s', sha: '9f02abc' }, env: 'prod' },
-  data:          { synth: { status: 'success', age: '6h ago', duration: '0m 13s', sha: '9f02abc' }, deploy: { status: 'success', age: '6h ago', duration: '0m 44s', sha: '9f02abc' }, env: 'prod' },
-  'url-minter':  { synth: { status: 'success', age: '5h ago', duration: '0m 18s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '0m 55s', sha: 'b7d1055' }, env: 'prod' },
-  telemetry:     { synth: { status: 'success', age: '3h ago', duration: '0m 31s', sha: 'c91e340' }, deploy: { status: 'success', age: '3h ago', duration: '2m 11s', sha: 'c91e340' }, env: 'prod' },
-  athena:        { synth: { status: 'success', age: '5h ago', duration: '0m 22s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '1m 44s', sha: 'b7d1055' }, env: 'prod' },
-  ella:          { synth: { status: 'success', age: '2h ago', duration: '0m 29s', sha: '3a7f2c1' }, deploy: { status: 'success', age: '2h ago', duration: '2m 04s', sha: '3a7f2c1' }, env: 'prod' },
-  api:           { synth: { status: 'success', age: '2h ago', duration: '0m 24s', sha: '3a7f2c1' }, deploy: { status: 'success', age: '2h ago', duration: '1m 47s', sha: '3a7f2c1' }, env: 'prod' },
-  cloudtrail:    { synth: { status: 'success', age: '5h ago', duration: '0m 19s', sha: 'b7d1055' }, deploy: { status: 'success', age: '5h ago', duration: '1m 01s', sha: 'b7d1055' }, env: 'prod' },
-  observability: { synth: { status: 'running', age: 'now',    duration: '—',      sha: 'f91c234' }, deploy: { status: 'queued',  age: '—',       duration: '—',      sha: 'f91c234' }, env: 'dev' },
+  kms:           { synth: { status: 'success', age: '~3h ago', duration: '0m 14s', sha: '96d8019' }, deploy: { status: 'success', age: '~3h ago', duration: '0m 47s', sha: '96d8019' }, env: 'dev' },
+  storage:       { synth: { status: 'success', age: '~3h ago', duration: '0m 11s', sha: '96d8019' }, deploy: { status: 'success', age: '~3h ago', duration: '0m 38s', sha: '96d8019' }, env: 'dev' },
+  data:          { synth: { status: 'success', age: '~3h ago', duration: '0m 13s', sha: '96d8019' }, deploy: { status: 'success', age: '~3h ago', duration: '0m 44s', sha: '96d8019' }, env: 'dev' },
+  'url-minter':  { synth: { status: 'success', age: '~1h ago', duration: '0m 18s', sha: '51d16d2' }, deploy: { status: 'success', age: '~1h ago', duration: '0m 55s', sha: '51d16d2' }, env: 'dev' },
+  telemetry:     { synth: { status: 'success', age: '~2h ago', duration: '0m 31s', sha: '51e6de5' }, deploy: { status: 'success', age: '~2h ago', duration: '2m 11s', sha: '51e6de5' }, env: 'dev' },
+  athena:        { synth: { status: 'success', age: '~2h ago', duration: '0m 22s', sha: '8c79e98' }, deploy: { status: 'success', age: '~2h ago', duration: '1m 44s', sha: '8c79e98' }, env: 'dev' },
+  ella:          { synth: { status: 'success', age: '~1h ago', duration: '0m 29s', sha: '51e6de5' }, deploy: { status: 'success', age: '~1h ago', duration: '2m 04s', sha: '51e6de5' }, env: 'dev' },
+  api:           { synth: { status: 'success', age: '~1h ago', duration: '0m 24s', sha: '51e6de5' }, deploy: { status: 'success', age: '~1h ago', duration: '1m 47s', sha: '51e6de5' }, env: 'dev' },
+  cloudtrail:    { synth: { status: 'success', age: '~2h ago', duration: '0m 19s', sha: '8c79e98' }, deploy: { status: 'success', age: '~2h ago', duration: '1m 01s', sha: '8c79e98' }, env: 'dev' },
+  observability: { synth: { status: 'running', age: 'now',     duration: '—',      sha: '51d16d2' }, deploy: { status: 'queued',  age: '—',        duration: '—',      sha: '51d16d2' }, env: 'dev' },
 };
 
 const HEALTH: Record<string, {
