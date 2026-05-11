@@ -484,18 +484,62 @@ const STEPS: Step[] = [
   },
   {
     id: 'integration-tests', phase: '11', title: 'Integration Tests', status: 'pending', tag: 'Validate', time: '~1 hr',
-    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 75 unit tests passing across 5 services (admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2). Requires AMBIENT_* env vars for integration run.',
+    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 75 unit tests passing across 5 services (admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2). Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
     sections: [
       {
         heading: 'Run integration tests',
         commands: [
-          { label: 'set required environment variables', code: '# Integration tests require real AWS credentials and tenant account vars\nexport AMBIENT_ACCOUNT_ID=<tenant-account-id>\nexport AMBIENT_REGION=us-east-1\nexport AMBIENT_IOT_ENDPOINT=$(aws iot describe-endpoint \\\n  --endpoint-type iot:Data-ATS --query endpointAddress --output text)\nexport AMBIENT_API_URL=https://<api-id>.execute-api.us-east-1.amazonaws.com/prod\nexport AMBIENT_USER_POOL_ID=<pool-id>\nexport AMBIENT_S3_BUCKET=ambient-<tenant>-parquet' },
-          { label: 'run full test suite', code: 'cd /path/to/ambientcloud\npip install -e ".[test]"\n\n# Unit tests (no AMBIENT_* vars needed)\npytest -v\n# Expected: 75 passed\n# admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2\n\n# Integration suite (requires AMBIENT_* env vars)\npytest -v -m integration tests/integration/' },
-          { label: 'run end-to-end with FakeDevice', code: '# FakeDevice simulates a full device lifecycle:\n# provision → connect → publish fall alert → upload Parquet → verify narrative\npytest -v tests/integration/test_end_to_end.py -k "test_full_device_lifecycle"\n\n# Confirm all five data paths exercised:\n# ✓ fall alert → DDB + SNS\n# ✓ Parquet upload via url-minter\n# ✓ Athena query (via API /subjects/{id})\n# ✓ Ella narrative triggered\n# ✓ API returns subject detail with narrative' },
+          { label: 'set required environment variables', code: `# AMBIENT_* vars can be sourced from CDK stack outputs:
+export AWS_REGION=us-east-1
+export AMBIENT_ENV=dev
+export AMBIENT_DEVICE_TABLE=$(aws cloudformation describe-stacks --stack-name Ambient-dev-Data \\
+  --query "Stacks[0].Outputs[?OutputKey=='DevicesTableName'].OutputValue" --output text)
+export AMBIENT_ALERT_TABLE=$(aws cloudformation describe-stacks --stack-name Ambient-dev-Data \\
+  --query "Stacks[0].Outputs[?OutputKey=='AlertsTableName'].OutputValue" --output text)
+export AMBIENT_UPDATE_TABLE=$(aws cloudformation describe-stacks --stack-name Ambient-dev-Data \\
+  --query "Stacks[0].Outputs[?OutputKey=='UpdatesTableName'].OutputValue" --output text)
+export AMBIENT_IOT_POLICY=$(aws cloudformation describe-stacks --stack-name Ambient-dev-UrlMinter \\
+  --query "Stacks[0].Outputs[?OutputKey=='DevicePolicyName'].OutputValue" --output text)
+export AMBIENT_ELLA_LAMBDA=ambient-dev-ella
+export AMBIENT_TELEMETRY_DB=ambient_dev_telemetry
+export AMBIENT_ATHENA_WG=ambient-dev-analytics
+export AMBIENT_ATHENA_OUT=s3://ambient-dev-athena-results/queries/
+export AMBIENT_IOT_ENDPOINT=$(aws iot describe-endpoint \\
+  --endpoint-type iot:Data-ATS --query endpointAddress --output text)` },
+          { label: 'install test dependencies', code: `pip install boto3>=1.34 paho-mqtt>=2.0 pytest>=8.0` },
+          { label: 'run unit tests (no AWS needed)', code: `# Unit tests across all services — no AWS credentials required
+cd services/admin-cli && pip install -e ".[dev]" -q && cd -
+cd services/api      && pip install -e ".[dev]" -q && cd -
+cd services/ella     && pip install -e ".[dev]" -q && cd -
+cd services/telemetry && pip install -e ".[dev]" -q && cd -
+
+pytest services/ -v
+# Expected: 75 passed (admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2)` },
+          { label: 'run integration suite (requires AWS)', code: `# Full suite — the telemetry test waits 6 min for Firehose buffer
+pytest tests/integration -m integration -v
+
+# Skip Firehose test for fast smoke runs (all tests except telemetry: ~90s)
+pytest tests/integration -m integration -v -k "not telemetry"
+
+# Shorten Firehose wait if you know the buffer is about to flush
+AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
         ],
       },
       {
-        heading: 'Test coverage by service',
+        heading: 'Integration test suite (tests/integration/)',
+        table: {
+          cols: ['Test', 'Path exercised', 'Wall time'],
+          rows: [
+            ['test_fall_alert_lands_in_ddb_and_sns',       'MQTT → IoT Rule → Lambda → DDB enrichment + acknowledged=False', '~15s'],
+            ['test_duplicate_alert_is_deduplicated',        'Same eventId twice → exactly one DDB row',                       '~10s'],
+            ['test_telemetry_lands_in_parquet_and_queryable','MQTT → Firehose → S3 Parquet → Athena query',                   '~6 min'],
+            ['test_on_demand_narrative_generation',         'Ella Lambda invoke → DDB updates row + de-id regression check',  '~30s'],
+            ['test_alert_then_narrative_reflects_fall',     'Alert persists → narrative acknowledges fall via metricsSnapshot','~45s'],
+          ],
+        },
+      },
+      {
+        heading: 'Unit test coverage by service',
         table: {
           cols: ['Service', 'Tests', 'Key scenarios covered'],
           rows: [
@@ -508,13 +552,24 @@ const STEPS: Step[] = [
         },
       },
       {
-        heading: 'CI/CD target (not yet wired)',
+        heading: 'Nightly CI (.github/workflows/integration-tests.yml)',
         commands: [
-          { label: 'target GitHub Actions workflow structure', code: '# .github/workflows/ci.yml (integration CI — in progress)\n# on: push: branches: [main]\n# jobs:\n#   test:\n#     - run: pytest -v  # 75 unit tests, no AMBIENT_* vars\n#   validate-infra:\n#     - run: cd infra && cdk synth --all  # validates all CDK stacks\n#   integration: (requires OIDC creds — see cdk-deploy.yml for role setup)\n#     - if: branch == main\n#     - run: pytest -v -m integration tests/integration/' },
+          { label: 'workflow triggers and behavior', code: `# Triggers:
+#   schedule: 0 6 * * *  (nightly 06:00 UTC / 01:00 CT)
+#   workflow_dispatch     (manual with skip_telemetry option)
+#   pull_request          (PR runs skip the 6-min Firehose test automatically)
+#
+# Uses GitHub OIDC — same role as cdk-deploy.yml (no stored AWS keys).
+# Resolves AMBIENT_* vars from CloudFormation stack outputs at runtime.
+# On failure: lists orphan DEV-E2E* Things for manual cleanup via admin-cli.
+#
+# Required repo vars: AWS_REGION, AWS_DEPLOY_ROLE_ARN
+# Cost per nightly run: ~$0.03 (Athena + Bedrock + DDB/Lambda/IoT)` },
         ],
         warnings: [
-          'Integration tests hit real AWS — they create and delete real resources in the tenant account. Run only against a non-production tenant account or a dedicated test tenant. Never run against the production tenant.',
-          'The integration test conftest.py provisions a test FakeDevice and cleans it up after the session. If a test run is interrupted, orphan Things and certs may be left in IoT Core. Run `ambientcloud-admin cleanup-test-devices` to purge them.',
+          'Integration tests hit real AWS — they provision and tear down a real IoT Thing and DDB rows on every run. Use the dev account only. Never point AMBIENT_* vars at a production tenant.',
+          'If a run is interrupted mid-teardown, orphan DEV-E2E* Things may be left in IoT Core. Scan: aws iot list-things | grep DEV-E2E, then retire each with `ambientcloud-admin retire <deviceId>`.',
+          'Bedrock model access must be granted once per account via Bedrock → Model access → Manage model access. Without it the narrative tests fail with AccessDeniedException.',
         ],
       },
     ],
@@ -533,7 +588,7 @@ const STEPS: Step[] = [
           'CloudTrail retention: 7-year Glacier Deep Archive per HIPAA §164.316(b)(2)(i)',
           'All DynamoDB tables using SSE-KMS with tenant CMK',
           'All S3 buckets using SSE-KMS with tenant CMK',
-          'VPC endpoints active: S3, KMS, Secrets Manager, DynamoDB',
+          'VPC endpoint gateway active for S3 and DynamoDB (Lambdas run in default VPC; add interface endpoints if moving to private subnet)',
           'SNS subscriptions verified for all active facility staff',
           'Cognito MFA enabled for all admin and nurse users',
           'Break-glass role documented and tested — CloudTrail event verified on assumption',
