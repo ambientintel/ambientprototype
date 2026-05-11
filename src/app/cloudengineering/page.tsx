@@ -611,7 +611,7 @@ const OPEN_DECISIONS = [
 
 // ── Page component ─────────────────────────────────────────────────────────────
 
-const LS_KEY        = 'ambient-cloud-checklist-v1';
+const LS_KEY        = 'ambient-cloud-checklist-v2';
 const LS_FREEZE_KEY = 'ambient-cloud-frozen-v1';
 
 export default function CloudEngineeringPage() {
