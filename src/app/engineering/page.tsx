@@ -554,9 +554,12 @@ export default function EngineeringPage() {
 
           {/* ── Top nav strip ── */}
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingBottom:14, borderBottom:"1px solid var(--line)", marginBottom:4 }}>
-            <Link href="/" style={{ textDecoration:"none" }}>
-              <span style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--text-3)" }}>Ambient Intelligence</span>
-            </Link>
+            <div>
+              <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", textTransform:"uppercase", letterSpacing:"0.12em", marginBottom:4 }}>Engineering / Sprint {weekNum}</div>
+              <h1 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:26, letterSpacing:"-0.02em" }}>
+                Sprint <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>{weekNum} · Board</em>
+              </h1>
+            </div>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
               <NavCard href="/firmware"        label="Firmware"   color="#00B4D8" lsKey="ambient-fw-checklist-v2"          total={20} defaultDone={9}  serverPct={subProgress['firmware']} />
               <NavCard href="/ee"              label="EE"         color="#2563EB" lsKey="ambient-ee-checklist-v1"          total={22} defaultDone={13} serverPct={subProgress['ee']} />
@@ -567,27 +570,19 @@ export default function EngineeringPage() {
             </div>
           </div>
 
-          <div style={s.topbarRow}>
-            <div>
-              <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", textTransform:"uppercase", letterSpacing:"0.12em", marginBottom:4 }}>Engineering / Sprint {weekNum}</div>
-              <h1 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:26, letterSpacing:"-0.02em" }}>
-                Sprint <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>{weekNum} · Board</em>
-              </h1>
-            </div>
-            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-              {syncStatus !== "idle" && (
-                <span style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.08em", color: syncStatus === "error" ? "#FF6B6B" : syncStatus === "conflict" ? "#FFC940" : "#3DCC91", display:"flex", alignItems:"center", gap:5 }}>
-                  {syncStatus === "saving"   && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940", animation:"pulse 1s infinite" }}/> Saving…</>}
-                  {syncStatus === "saved"    && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#3DCC91" }}/> Synced</>}
-                  {syncStatus === "error"    && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FF6B6B" }}/> Save error</>}
-                  {syncStatus === "conflict" && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940" }}/> Conflict — retrying</>}
-                </span>
-              )}
-              <button style={s.btn} onClick={() => setShowCreate(true)}>
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
-                Create Issue
-              </button>
-            </div>
+          <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:8 }}>
+            {syncStatus !== "idle" && (
+              <span style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.08em", color: syncStatus === "error" ? "#FF6B6B" : syncStatus === "conflict" ? "#FFC940" : "#3DCC91", display:"flex", alignItems:"center", gap:5 }}>
+                {syncStatus === "saving"   && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940", animation:"pulse 1s infinite" }}/> Saving…</>}
+                {syncStatus === "saved"    && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#3DCC91" }}/> Synced</>}
+                {syncStatus === "error"    && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FF6B6B" }}/> Save error</>}
+                {syncStatus === "conflict" && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940" }}/> Conflict — retrying</>}
+              </span>
+            )}
+            <button style={s.btn} onClick={() => setShowCreate(true)}>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
+              Create Issue
+            </button>
           </div>
 
           {/* Sprint bar */}
