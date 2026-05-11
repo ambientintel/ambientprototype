@@ -598,18 +598,6 @@ export default function EngineeringPage() {
                   {syncStatus === "conflict" && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940" }}/> Conflict — retrying</>}
                 </span>
               )}
-              <Link href="/ee" style={{ ...s.btn, textDecoration:"none" }}>
-                <span style={{ width:6, height:6, borderRadius:2, background:"#FB923C", flexShrink:0 }}/>
-                EE
-              </Link>
-              <Link href="/mechanical" style={{ ...s.btn, textDecoration:"none" }}>
-                <span style={{ width:6, height:6, borderRadius:2, background:"#34D399", flexShrink:0 }}/>
-                Mechanical
-              </Link>
-              <Link href="/firmware" style={{ ...s.btn, textDecoration:"none" }}>
-                <span style={{ width:6, height:6, borderRadius:2, background:"#00B4D8", flexShrink:0 }}/>
-                Firmware
-              </Link>
               <button style={s.btn} onClick={() => setShowCreate(true)}>
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
                 Create Issue
