@@ -955,6 +955,36 @@ const MET_ALGOS: { id: METAlgoId; label: string; color: string; sub: string }[] 
   { id: 'intensity_zones',    label: 'Intensity Zones',      color: C.purple, sub: 'Sedentary · light · moderate · vigorous' },
 ];
 
+// ── Ambient Index taxonomy map ────────────────────────────────
+const ALGO_INDEX_MAP: Partial<Record<AlgoId, { name: string; short: string; color: string }>> = {
+  radar_signal:        { name: 'AmbientActivityIndex',  short: 'Activity',  color: C.sage   },
+  intensity_zones:     { name: 'AmbientActivityIndex',  short: 'Activity',  color: C.sage   },
+  fragmentation:       { name: 'AmbientActivityIndex',  short: 'Activity',  color: C.sage   },
+  circadian:           { name: 'AmbientCircadianIndex', short: 'Circadian', color: C.coral  },
+  shap_features:       { name: 'AmbientRiskIndex',      short: 'Risk',      color: C.red    },
+  fall_risk:           { name: 'AmbientRiskIndex',      short: 'Risk',      color: C.red    },
+  risk_panel:          { name: 'AmbientRiskIndex',      short: 'Risk',      color: C.red    },
+  age_strata:          { name: 'AmbientRiskIndex',      short: 'Risk',      color: C.red    },
+  risk_evolution:      { name: 'AmbientRiskIndex',      short: 'Risk',      color: C.red    },
+  sleep_arch:          { name: 'AmbientSleepIndex',     short: 'Sleep',     color: C.purple },
+  sleep_sii:           { name: 'AmbientSleepIndex',     short: 'Sleep',     color: C.purple },
+  sleep_hrv:           { name: 'AmbientSleepIndex',     short: 'Sleep',     color: C.purple },
+  recovery:            { name: 'AmbientSleepIndex',     short: 'Sleep',     color: C.purple },
+  chronotype:          { name: 'AmbientSleepIndex',     short: 'Sleep',     color: C.purple },
+  sed_overview:        { name: 'AmbientSedentaryIndex', short: 'Sedentary', color: C.amber  },
+  sed_bouts:           { name: 'AmbientSedentaryIndex', short: 'Sedentary', color: C.amber  },
+  sed_breaks:          { name: 'AmbientSedentaryIndex', short: 'Sedentary', color: C.amber  },
+  sed_intensity:       { name: 'AmbientSedentaryIndex', short: 'Sedentary', color: C.amber  },
+  glucose_trace:       { name: 'AmbientMetabolicIndex', short: 'Metabolic', color: C.sage   },
+  time_in_range:       { name: 'AmbientMetabolicIndex', short: 'Metabolic', color: C.sage   },
+  agp:                 { name: 'AmbientMetabolicIndex', short: 'Metabolic', color: C.sage   },
+  glucose_variability: { name: 'AmbientMetabolicIndex', short: 'Metabolic', color: C.sage   },
+  step_detection:      { name: 'AmbientGaitIndex',      short: 'Gait',      color: C.accent },
+  gait_speed:          { name: 'AmbientGaitIndex',      short: 'Gait',      color: C.accent },
+  cadence:             { name: 'AmbientGaitIndex',      short: 'Gait',      color: C.accent },
+  gait_variability:    { name: 'AmbientGaitIndex',      short: 'Gait',      color: C.accent },
+};
+
 // ── Interpretation helpers ────────────────────────────────────
 function interpCC(cc: number)  { return cc <= 3 ? { text: 'Minimal branching', c: C.sage } : cc <= 6 ? { text: 'Moderate complexity', c: C.amber } : cc <= 10 ? { text: 'High complexity', c: C.coral } : { text: 'Wandering pattern', c: C.red }; }
 function interpDFA(a: number)  { return a < 0.5 ? { text: 'Anti-correlated', c: C.red } : a < 0.75 ? { text: 'Near-random noise', c: C.amber } : a <= 1.25 ? { text: 'Long-range correlated', c: C.sage } : { text: 'Non-stationary', c: C.purple }; }
@@ -1320,6 +1350,7 @@ export default function AlgorithmLabPage() {
   const metEpochData   = useMemo(() => radarMETEpochs(radarFrames), [radarFrames]);
   const stepData       = useMemo(() => detectSteps(radarFrames), [radarFrames]);
   const gaitStats      = useMemo(() => computeGaitMetrics(radarFrames), [radarFrames]);
+  const currentAlgoIndex = useMemo(() => ALGO_INDEX_MAP[algo] ?? null, [algo]);
 
   const handleRadarUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1358,86 +1389,50 @@ export default function AlgorithmLabPage() {
           {([
             ['/algorithmlab',     'Algorithm Lab',<><path key="a1" d="M3 13L6 8l3 3 3-5 3 3" strokeLinecap="round" strokeLinejoin="round"/><circle key="a2" cx="13" cy="9" r="1.5" fill="currentColor"/></>],
             ['/datascience',      'Data Science',<><circle key="ds1" cx="5" cy="5" r="2.5"/><circle key="ds2" cx="11" cy="11" r="2.5"/><path key="ds3" d="M11 5.5a2.5 2.5 0 110 0z"/><path key="ds4" d="M5 11a2.5 2.5 0 110 0z"/></>],
+            ['/methodology',      'Methodology',<><path key="m1" d="M4 8h3" strokeLinecap="round"/><circle key="m2" cx="11" cy="5" r="1.5"/><circle key="m3" cx="11" cy="11" r="1.5"/><path key="m4" d="M7 8V5h1.5M7 8v3h1.5" strokeLinecap="round" strokeLinejoin="round"/></>],
           ] as [string, string, React.ReactNode][]).map(([href, label, icon]) => (
             <Link key={label} href={href} className={`nav-item${href === '/algorithmlab' ? ' active' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>
               {label}
             </Link>
           ))}
+          <a href="https://ellamemory.com" target="_blank" rel="noopener noreferrer" className="nav-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+              <circle cx="8" cy="9" r="2"/>
+              <path d="M5 6.2a4.2 4.2 0 0 1 6 0" strokeLinecap="round"/>
+              <path d="M3 4a7.5 7.5 0 0 1 10 0" strokeLinecap="round"/>
+            </svg>
+            Ella Memory
+          </a>
         </nav>
 
         <nav className="nav-section">
-          <div className="nav-label">Radar · Point Cloud</div>
-          {RADAR_ALGOS.map(a => (
+          <div className="nav-label">Primary</div>
+          {([
+            { id: 'radar_signal',    label: 'Height Signal',    color: C.accent, idxColor: C.sage,   idxShort: 'Activity'  },
+            { id: 'intensity_zones', label: 'Intensity Zones',  color: C.purple, idxColor: C.sage,   idxShort: 'Activity'  },
+            { id: 'shap_features',   label: 'SHAP Features',    color: C.accent, idxColor: C.red,    idxShort: 'Risk'      },
+            { id: 'fragmentation',   label: 'Fragmentation',    color: C.sage,   idxColor: C.sage,   idxShort: 'Activity'  },
+            { id: 'circadian',       label: 'Circadian Rhythm', color: C.purple, idxColor: C.coral,  idxShort: 'Circadian' },
+            { id: 'sleep_arch',      label: 'Hypnogram',        color: C.purple, idxColor: C.purple, idxShort: 'Sleep'     },
+          ] as { id: AlgoId; label: string; color: string; idxColor: string; idxShort: string }[]).map(a => (
             <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
               <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, color: a.idxColor, opacity: algo === a.id ? 0.9 : 0.55, letterSpacing: '0.02em', flexShrink: 0 }}>{a.idxShort}</span>
             </button>
           ))}
         </nav>
 
-        <nav className="nav-section">
-          <div className="nav-label">Gait Analysis</div>
-          {GAIT_ALGOS.map(a => (
-            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
-              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
-              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
-            </button>
-          ))}
-        </nav>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px 6px', margin: '4px 0 0' }}>
+          <div style={{ flex: 1, height: 1, background: C.line }} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text3, letterSpacing: '0.12em', textTransform: 'uppercase', userSelect: 'none' }}>secondary</span>
+          <div style={{ flex: 1, height: 1, background: C.line }} />
+        </div>
 
         <nav className="nav-section">
-          <div className="nav-label">METs & Energy</div>
-          {MET_ALGOS.map(a => (
-            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
-              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
-              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <nav className="nav-section">
-          <div className="nav-label">Signal Processing</div>
-          {SIGNAL_ALGOS.map(a => (
-            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
-              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
-              {a.label}
-            </button>
-          ))}
-        </nav>
-
-        <nav className="nav-section">
-          <div className="nav-label">Complexity Suite</div>
-          {COMPLEX_ALGOS.map(a => (
-            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
-              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
-              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <nav className="nav-section">
-          <div className="nav-label">Predictive Intelligence</div>
-          {PREDICTIVE_ALGOS.map(a => (
-            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
-              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
-              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <nav className="nav-section">
-          <div className="nav-label">Activity Analysis</div>
-          {ACTIVITY_ALGOS.map(a => (
-            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
-              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
-              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <nav className="nav-section">
-          <div className="nav-label">Sleep Analysis</div>
+          <div className="nav-label" style={{ color: C.text3 }}>Sleep Analysis</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.purple, padding: '0 8px', marginBottom: 6, marginTop: -6, letterSpacing: '0.04em' }}>AmbientSleepIndex</div>
           {SLEEP_ALGOS.map(a => (
             <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
@@ -1447,7 +1442,8 @@ export default function AlgorithmLabPage() {
         </nav>
 
         <nav className="nav-section">
-          <div className="nav-label">Sedentary Behavior</div>
+          <div className="nav-label" style={{ color: C.text3 }}>Sedentary Behavior</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.amber, padding: '0 8px', marginBottom: 6, marginTop: -6, letterSpacing: '0.04em' }}>AmbientSedentaryIndex</div>
           {SEDENTARY_ALGOS.map(a => (
             <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
@@ -1457,8 +1453,9 @@ export default function AlgorithmLabPage() {
         </nav>
 
         <nav className="nav-section">
-          <div className="nav-label">Stress & Autonomic</div>
-          {AUTONOMIC_ALGOS.map(a => (
+          <div className="nav-label" style={{ color: C.text3 }}>Risk Evolution</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.red, padding: '0 8px', marginBottom: 6, marginTop: -6, letterSpacing: '0.04em' }}>AmbientRiskIndex</div>
+          {LONGITUDINAL_ALGOS.filter(a => a.id === 'risk_evolution').map(a => (
             <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
               <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
@@ -1466,10 +1463,17 @@ export default function AlgorithmLabPage() {
           ))}
         </nav>
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px 6px', margin: '4px 0 0' }}>
+          <div style={{ flex: 1, height: 1, background: C.line }} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, letterSpacing: '0.12em', textTransform: 'uppercase', userSelect: 'none' }}>archive</span>
+          <div style={{ flex: 1, height: 1, background: C.line }} />
+        </div>
+
         <nav className="nav-section">
-          <div className="nav-label" style={{ color: C.text4 }}>Archive · Metabolic/CGM</div>
+          <div className="nav-label" style={{ color: C.text4 }}>Metabolic / CGM</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.sage, padding: '0 8px', marginBottom: 6, marginTop: -6, letterSpacing: '0.04em', opacity: 0.70 }}>AmbientMetabolicIndex</div>
           {METABOLIC_ALGOS.map(a => (
-            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined, opacity: algo === a.id ? 1 : 0.70 }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
               <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
             </button>
@@ -1477,9 +1481,10 @@ export default function AlgorithmLabPage() {
         </nav>
 
         <nav className="nav-section">
-          <div className="nav-label">Longitudinal</div>
-          {LONGITUDINAL_ALGOS.map(a => (
-            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+          <div className="nav-label" style={{ color: C.text4 }}>Gait Analysis</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.accent, padding: '0 8px', marginBottom: 6, marginTop: -6, letterSpacing: '0.04em', opacity: 0.70 }}>AmbientGaitIndex</div>
+          {GAIT_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined, opacity: algo === a.id ? 1 : 0.70 }}>
               <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
               <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
             </button>
@@ -1496,8 +1501,18 @@ export default function AlgorithmLabPage() {
       <main className="main">
         <header className="topbar" style={{ marginBottom: 32 }}>
           <div>
-            <div className="crumb">Ambient Intelligence · {inRadar ? 'Radar · Height Signal · Phase Timeline · Point Density' : inGait ? 'Gait · Step Detection · Speed · Cadence · Variability' : inMET ? 'METs & Energy · Activity Classes · MET Timeline · Energy · Intensity Zones' : inLongitudinal ? 'Longitudinal · Timeline · Correlation · Calendar · Risk Evolution' : inMetabolic ? 'Metabolic · CGM Trace · TIR · AGP · Variability' : inAutonomic ? 'Autonomic · LF/HF · Poincaré · Stress · 24h' : inSedentary ? 'Sedentary · Overview · Bouts · Breaks · Intensity' : inSleep ? 'Sleep Analysis · Architecture · SII · HRV · Recovery · Chronotype' : inPredictive ? 'Predictive Intelligence · MSE · Phase Space · CUSUM · Risk Panel · Fall Risk · SHAP · Age Strata' : inActivity ? 'Activity Analysis · Fragmentation · Circadian' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}</div>
+            <div className="crumb">
+              Ambient Intelligence · {currentAlgoIndex ? currentAlgoIndex.name : inRadar ? 'Radar · Height Signal · Phase Timeline · Point Density' : inMET ? 'METs & Energy · Activity Classes · MET Timeline · Energy · Intensity Zones' : inAutonomic ? 'Autonomic · LF/HF · Poincaré · Stress · 24h' : inLongitudinal ? 'Longitudinal · Timeline · Correlation · Calendar' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}
+            </div>
             <h1 className="page-title">Algorithm <em>Lab</em></h1>
+            {currentAlgoIndex && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', borderRadius: 999, background: `${currentAlgoIndex.color}1A`, border: `1px solid ${currentAlgoIndex.color}55`, color: currentAlgoIndex.color, fontFamily: 'var(--mono)', fontSize: 11.5, letterSpacing: '0.04em', fontWeight: 500 }}>
+                  {currentAlgoIndex.name}
+                </span>
+                <Link href="/methodology" style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textDecoration: 'none', letterSpacing: '0.06em' }}>→ methodology</Link>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>{files.length ? files.map(f => f.name).join(', ') : 'synthetic demo data'}</span>
@@ -1809,6 +1824,9 @@ export default function AlgorithmLabPage() {
                       ? 'ASTP · SATP · bout power law · activity fragmentation index'
                       : 'IS · IV · RA · M10 / L5 · non-parametric circadian analysis'}
                   </div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999, background: algo === 'fragmentation' ? `${C.sage}18` : `${C.coral}18`, border: `1px solid ${algo === 'fragmentation' ? C.sage : C.coral}40`, color: algo === 'fragmentation' ? C.sage : C.coral, fontFamily: 'var(--mono)', fontSize: 9.5, marginTop: 10, letterSpacing: '0.04em' }}>
+                    {algo === 'fragmentation' ? 'AmbientActivityIndex' : 'AmbientCircadianIndex'}
+                  </span>
                 </div>
                 <SliderRow label="VISIBLE POINTS" min={30} max={200} step={5} value={visPoints} onChange={setVisPoints} />
               </div>
@@ -2201,6 +2219,11 @@ export default function AlgorithmLabPage() {
                      algo === 'age_strata' ? 'top predictors differ significantly across young, middle-aged, and older adults' :
                      'Cross-suite composite score — Signal Processing · Complexity Suite · Activity Analysis · Circadian'}
                   </div>
+                  {(algo === 'fall_risk' || algo === 'shap_features' || algo === 'age_strata' || algo === 'risk_panel') && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999, background: `${C.red}18`, border: `1px solid ${C.red}40`, color: C.red, fontFamily: 'var(--mono)', fontSize: 9.5, marginTop: 10, letterSpacing: '0.04em' }}>
+                      AmbientRiskIndex
+                    </span>
+                  )}
                 </div>
                 <SliderRow label="Visible points" min={30} max={200} step={5} value={visPoints} onChange={setVisPoints} />
               </div>
@@ -2534,6 +2557,9 @@ export default function AlgorithmLabPage() {
                      algo === 'sed_breaks'   ? 'cumulative breaks across the day · target ≥7 breaks/sedentary hour' :
                      'METs pyramid · sedentary / light / moderate / vigorous intensity zones'}
                   </div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999, background: `${C.amber}18`, border: `1px solid ${C.amber}40`, color: C.amber, fontFamily: 'var(--mono)', fontSize: 9.5, marginTop: 10, letterSpacing: '0.04em' }}>
+                    AmbientSedentaryIndex
+                  </span>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2907,6 +2933,9 @@ export default function AlgorithmLabPage() {
                      algo === 'agp'                  ? 'p5/p25/p50/p75/p95 percentile bands · 24-hour glucose pattern from CGM data' :
                      'CV% · MAGE · rolling 1h SD · glucose distribution by zone'}
                   </div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999, background: `${C.sage}18`, border: `1px solid ${C.sage}40`, color: C.sage, fontFamily: 'var(--mono)', fontSize: 9.5, marginTop: 10, letterSpacing: '0.04em' }}>
+                    AmbientMetabolicIndex
+                  </span>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -3084,6 +3113,11 @@ export default function AlgorithmLabPage() {
                      algo === 'health_calendar'   ? '30-day grid colored by recovery score · identify patterns and anomalies' :
                      'recovery trajectory · reference bands · anomaly days · 30-day trend line'}
                   </div>
+                  {algo === 'risk_evolution' && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999, background: `${C.red}18`, border: `1px solid ${C.red}40`, color: C.red, fontFamily: 'var(--mono)', fontSize: 9.5, marginTop: 10, letterSpacing: '0.04em' }}>
+                      AmbientRiskIndex
+                    </span>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -3278,6 +3312,9 @@ export default function AlgorithmLabPage() {
                      algo === 'recovery'   ? 'composite readiness score · HRV · efficiency · deep sleep · duration' :
                      'sleep timing distribution · social jetlag · chronotype classification'}
                   </div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999, background: `${C.purple}18`, border: `1px solid ${C.purple}40`, color: C.purple, fontFamily: 'var(--mono)', fontSize: 9.5, marginTop: 10, letterSpacing: '0.04em' }}>
+                    AmbientSleepIndex
+                  </span>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -3574,7 +3611,7 @@ export default function AlgorithmLabPage() {
             )}
 
             {algo === 'point_density' && (
-              <ChartCard title="Point Density" sub="Detected radar points per 5-second epoch · higher during walking phases" badge="PointsDetected" full>
+              <ChartCard title="Point Density" sub="Detected radar points per 5-second epoch · higher during walking phases" badge="ambientActivityCount" full>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={radarEpochData.map(ep => {
                     const sl = radarFrames.slice(ep.epoch * 100, (ep.epoch + 1) * 100);
@@ -3599,6 +3636,9 @@ export default function AlgorithmLabPage() {
             <div className="section-header">
               <div className="section-title">Gait Analysis</div>
               <div className="section-sub">Walking speed · step detection · cadence · variability · TUG estimate</div>
+              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999, background: `${C.accent}18`, border: `1px solid ${C.accent}40`, color: C.accent, fontFamily: 'var(--mono)', fontSize: 9.5, marginTop: 10, letterSpacing: '0.04em' }}>
+                AmbientGaitIndex
+              </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 28 }}>

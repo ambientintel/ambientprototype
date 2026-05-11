@@ -46,6 +46,7 @@ export default authkitMiddleware({
       "/accelerate/(.*)",
       "/api/accelerate/(.*)",
       "/mn",
+      "/carlson",
       "/ee",
       "/cloudengineering",
       "/eng",

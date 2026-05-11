@@ -4700,6 +4700,982 @@ const flowGlowBg: BgDef = {
   },
 };
 
+// ─── mathematical series 2 ────────────────────────────────────────────────────
+
+const phyllotaxisBg: BgDef = {
+  id: 'phyllotaxis',
+  label: 'Phyllotaxis',
+  description: 'Golden angle sunflower spiral — dots placed at golden angle intervals, spread by √(i/n) radius',
+  defaults: { n: 800, speed: 0.4, hue: 210, dotSize: 1.5 },
+  sliders: [
+    { key: 'n',       label: 'Count',    min: 100, max: 2000, step: 50  },
+    { key: 'speed',   label: 'Speed',    min: 0,   max: 2.0,  step: 0.05 },
+    { key: 'hue',     label: 'Hue',      min: 0,   max: 360,  step: 1   },
+    { key: 'dotSize', label: 'Dot size', min: 0.5, max: 4.0,  step: 0.1 },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.004;
+      ctx.fillStyle = '#020510'; ctx.fillRect(0, 0, W, H);
+      const cx = W / 2, cy = H / 2, maxR = Math.min(W, H) * 0.47;
+      const n = Math.round(c.n);
+      for (let i = 0; i < n; i++) {
+        const frac = i / n;
+        const r = maxR * Math.sqrt(frac);
+        const a = i * GOLDEN + t;
+        ctx.globalAlpha = 0.35 + 0.65 * frac;
+        ctx.fillStyle = `hsl(${c.hue},80%,68%)`;
+        ctx.beginPath();
+        ctx.arc(cx + r * Math.cos(a), cy + r * Math.sin(a), c.dotSize * (0.5 + frac), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const ulamBg: BgDef = {
+  id: 'ulam',
+  label: 'Ulam Spiral',
+  description: 'Ulam spiral prime visualization — integers arranged in a square spiral, primes marked as glowing dots with pulsing brightness',
+  defaults: { n: 1600, speed: 0.2, hue: 260 },
+  sliders: [
+    { key: 'n',     label: 'Count', min: 400,  max: 6400, step: 100 },
+    { key: 'speed', label: 'Speed', min: 0,    max: 2.0,  step: 0.05 },
+    { key: 'hue',   label: 'Hue',   min: 0,    max: 360,  step: 1   },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const sieve = (n: number) => {
+      const p = new Uint8Array(n + 1).fill(1);
+      p[0] = p[1] = 0;
+      for (let i = 2; i * i <= n; i++) if (p[i]) for (let j = i * i; j <= n; j += i) p[j] = 0;
+      return p;
+    };
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      const n = Math.max(100, Math.round(c.n));
+      t += c.speed * 0.01;
+      ctx.fillStyle = '#020510'; ctx.fillRect(0, 0, W, H);
+      const primes = sieve(n);
+      const cx = W / 2, cy = H / 2;
+      const cell = Math.min(W, H) / (2 * Math.sqrt(n) + 4);
+      let x = 0, y = 0, dx = 1, dy = 0, step = 1, stepCnt = 0, turns = 0;
+      const pulse = Math.sin(t) * 0.25;
+      for (let i = 1; i <= n; i++) {
+        if (primes[i]) {
+          ctx.globalAlpha = Math.max(0.15, 0.65 + pulse);
+          ctx.fillStyle = `hsl(${c.hue},80%,68%)`;
+          ctx.fillRect(cx + x * cell - cell * 0.4, cy + y * cell - cell * 0.4, cell * 0.8, cell * 0.8);
+        }
+        x += dx; y += dy; stepCnt++;
+        if (stepCnt === step) {
+          stepCnt = 0; [dx, dy] = [dy, -dx]; turns++;
+          if (turns % 2 === 0) step++;
+        }
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const chladniBg: BgDef = {
+  id: 'chladni',
+  label: 'Chladni Figures',
+  description: 'Chladni figures — random points kept where nodal line condition is met; m1, m2 evolve with time revealing resonance patterns',
+  defaults: { n: 600, speed: 0.15, hue: 45, threshold: 9 },
+  sliders: [
+    { key: 'n',         label: 'Points',    min: 100, max: 2000, step: 50  },
+    { key: 'speed',     label: 'Speed',     min: 0,   max: 1.0,  step: 0.01 },
+    { key: 'hue',       label: 'Hue',       min: 0,   max: 360,  step: 1   },
+    { key: 'threshold', label: 'Threshold', min: 2,   max: 20,   step: 1   },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.003;
+      ctx.fillStyle = '#020510'; ctx.fillRect(0, 0, W, H);
+      const m1 = 2 + Math.floor(Math.sin(t * 0.7) * 1.5 + 1.5);
+      const m2 = 3 + Math.floor(Math.cos(t * 0.5) * 1.5 + 1.5);
+      const n = Math.round(c.n);
+      const thresh = c.threshold / 100;
+      for (let i = 0; i < n; i++) {
+        const px = Math.random() * 2 - 1;
+        const py = Math.random() * 2 - 1;
+        const v = Math.abs(Math.sin(m1 * Math.PI * px) * Math.cos(m2 * Math.PI * py) -
+                           Math.cos(m1 * Math.PI * py) * Math.sin(m2 * Math.PI * px));
+        if (v < thresh) {
+          ctx.globalAlpha = (thresh - v) / thresh * 0.85;
+          ctx.fillStyle = `hsl(${c.hue},80%,68%)`;
+          ctx.fillRect((px + 1) / 2 * W, (py + 1) / 2 * H, 1.5, 1.5);
+        }
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const apollonianBg: BgDef = {
+  id: 'apollonian',
+  label: 'Apollonian Gasket',
+  description: 'Apollonian gasket — recursive circle packing starting from one large circle, subdividing by placing 4 smaller circles at cardinal positions',
+  defaults: { depth: 5, speed: 0.2, hue: 150 },
+  sliders: [
+    { key: 'depth', label: 'Depth', min: 1,  max: 8,   step: 1    },
+    { key: 'speed', label: 'Speed', min: 0,  max: 2.0, step: 0.05 },
+    { key: 'hue',   label: 'Hue',   min: 0,  max: 360, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    type Circ = [number, number, number];
+    const circles: Circ[] = [];
+    const pack = (cx: number, cy: number, r: number, d: number, maxD: number) => {
+      if (r < 1.5 || d > maxD) return;
+      circles.push([cx, cy, r]);
+      const r1 = r * 0.45;
+      pack(cx + r - r1, cy, r1, d + 1, maxD);
+      pack(cx - r + r1, cy, r1, d + 1, maxD);
+      pack(cx, cy + r - r1, r1, d + 1, maxD);
+      pack(cx, cy - r + r1, r1, d + 1, maxD);
+    };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.005;
+      const maxD = Math.max(2, Math.round(c.depth));
+      circles.length = 0;
+      pack(W / 2, H / 2, Math.min(W, H) * 0.46, 0, maxD);
+      ctx.fillStyle = '#020510'; ctx.fillRect(0, 0, W, H);
+      const R0 = Math.min(W, H) * 0.46;
+      circles.forEach(([cx, cy, r], i) => {
+        ctx.globalAlpha = (0.15 + 0.55 * (r / R0)) + Math.sin(t + i * 0.13) * 0.07;
+        ctx.strokeStyle = `hsl(${c.hue},80%,68%)`;
+        ctx.lineWidth = Math.max(0.4, r * 0.04);
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const polytopeBg: BgDef = {
+  id: 'polytope',
+  label: '4D Polytope',
+  description: '4D tesseract — 16 vertices connected by edges that differ in exactly one coordinate, rotating with compound 4D rotations and stereographic projection',
+  defaults: { speed: 0.3, hue: 320, lineWidth: 1.2 },
+  sliders: [
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hue',       label: 'Hue',        min: 0,   max: 360, step: 1    },
+    { key: 'lineWidth', label: 'Line width', min: 0.3, max: 4.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const verts4 = Array.from({ length: 16 }, (_, i): number[] => [
+      (i & 1) ? 1 : -1, (i & 2) ? 1 : -1, (i & 4) ? 1 : -1, (i & 8) ? 1 : -1,
+    ]);
+    const edges: [number, number][] = [];
+    for (let a = 0; a < 16; a++) for (let b = a + 1; b < 16; b++) {
+      let diff = 0;
+      for (let d = 0; d < 4; d++) if (verts4[a][d] !== verts4[b][d]) diff++;
+      if (diff === 1) edges.push([a, b]);
+    }
+    const rot = (v: number[], tm: number) => {
+      let [x, y, z, w] = v;
+      const c1 = Math.cos(tm * 0.7), s1 = Math.sin(tm * 0.7);
+      [x, y] = [c1 * x - s1 * y, s1 * x + c1 * y];
+      const c2 = Math.cos(tm * 0.5), s2 = Math.sin(tm * 0.5);
+      [z, w] = [c2 * z - s2 * w, s2 * z + c2 * w];
+      const c3 = Math.cos(tm * 0.31), s3 = Math.sin(tm * 0.31);
+      [x, z] = [c3 * x - s3 * z, s3 * x + c3 * z];
+      return [x, y, z, w];
+    };
+    const project = (v: number[]) => {
+      const d = 3, f3 = d / (d - v[2] * 0.4), f4 = d / (d - v[3] * 0.4);
+      return [v[0] * f3 * f4, v[1] * f3 * f4];
+    };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.006;
+      ctx.fillStyle = 'rgba(2,5,16,0.18)'; ctx.fillRect(0, 0, W, H);
+      const scale = Math.min(W, H) * 0.22;
+      const projected = verts4.map(v => { const [px, py] = project(rot(v, t)); return [W/2+px*scale, H/2+py*scale]; });
+      edges.forEach(([a, b]) => {
+        ctx.globalAlpha = 0.55; ctx.strokeStyle = `hsl(${c.hue},80%,68%)`; ctx.lineWidth = c.lineWidth;
+        ctx.beginPath(); ctx.moveTo(projected[a][0], projected[a][1]); ctx.lineTo(projected[b][0], projected[b][1]); ctx.stroke();
+      });
+      projected.forEach(([px, py]) => {
+        ctx.globalAlpha = 0.9; ctx.fillStyle = `hsl(${c.hue},80%,68%)`;
+        ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const superformulaBg: BgDef = {
+  id: 'superformula',
+  label: 'Superformula',
+  description: 'Gielis superformula — polar curve r=(|cos(mφ/4)|^n2 + |sin(mφ/4)|^n3)^(-1/n1) with m, n1, n2, n3 morphing in time; 3 layered copies',
+  defaults: { steps: 400, speed: 0.25, hue: 25, lineWidth: 1.5 },
+  sliders: [
+    { key: 'steps',     label: 'Steps',      min: 100, max: 800, step: 50  },
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hue',       label: 'Hue',        min: 0,   max: 360, step: 1   },
+    { key: 'lineWidth', label: 'Line width', min: 0.3, max: 4.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const superR = (phi: number, m: number, n1: number, n2: number, n3: number) => {
+      const t1 = Math.abs(Math.cos(m * phi / 4)) ** n2;
+      const t2 = Math.abs(Math.sin(m * phi / 4)) ** n3;
+      return (t1 + t2) ** (-1 / n1);
+    };
+    const draw = () => {
+      const c = getCfg();
+      const steps = Math.round(c.steps);
+      t += c.speed * 0.005;
+      ctx.fillStyle = 'rgba(2,5,16,0.10)'; ctx.fillRect(0, 0, W, H);
+      const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.38;
+      for (let layer = 0; layer < 3; layer++) {
+        const lt = t + layer * 1.1;
+        const m = 3 + Math.sin(lt * 0.31) * 2.4;
+        const n1 = 1 + Math.sin(lt * 0.17) * 0.8;
+        const n2 = 1 + Math.cos(lt * 0.23) * 0.9;
+        const n3 = 1 + Math.sin(lt * 0.19) * 0.9;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const phi = (i / steps) * Math.PI * 2;
+          const r = superR(phi, m, n1, n2, n3) * R * (0.7 + layer * 0.15);
+          const x = cx + r * Math.cos(phi + t * 0.1);
+          const y = cy + r * Math.sin(phi + t * 0.1);
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.globalAlpha = 0.55 - layer * 0.15;
+        ctx.strokeStyle = `hsl(${c.hue},80%,68%)`; ctx.lineWidth = c.lineWidth - layer * 0.3; ctx.stroke();
+        ctx.globalAlpha = 0.04;
+        ctx.fillStyle = `hsl(${c.hue},80%,68%)`; ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const deJongBg: BgDef = {
+  id: 'dejong',
+  label: 'De Jong Attractor',
+  description: 'De Jong strange attractor — iterating xn=sin(a·y)−cos(b·x), yn=sin(c·x)−cos(d·y) with slowly changing parameters, plotting density as emergent form',
+  defaults: { n: 60000, speed: 0.15, hue: 320 },
+  sliders: [
+    { key: 'n',     label: 'Points', min: 10000, max: 120000, step: 5000 },
+    { key: 'speed', label: 'Speed',  min: 0,     max: 1.0,   step: 0.01 },
+    { key: 'hue',   label: 'Hue',    min: 0,     max: 360,   step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    let x = 0.1, y = 0.1;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.003;
+      const a = 1.4 + Math.sin(t * 0.29) * 0.8;
+      const b = -2.3 + Math.cos(t * 0.19) * 0.6;
+      const cc = 2.4 + Math.sin(t * 0.13) * 0.5;
+      const d = -2.1 + Math.cos(t * 0.23) * 0.7;
+      ctx.fillStyle = 'rgba(2,5,16,0.04)'; ctx.fillRect(0, 0, W, H);
+      const n = Math.round(c.n), scale = Math.min(W, H) * 0.22;
+      const cx = W / 2, cy = H / 2;
+      ctx.fillStyle = `hsl(${c.hue},80%,68%)`; ctx.globalAlpha = 0.3;
+      for (let i = 0; i < n; i++) {
+        const xn = Math.sin(a * y) - Math.cos(b * x);
+        const yn = Math.sin(cc * x) - Math.cos(d * y);
+        x = xn; y = yn;
+        ctx.fillRect(cx + x * scale, cy + y * scale, 1, 1);
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const geodesicBg: BgDef = {
+  id: 'geodesic',
+  label: 'Geodesic Sphere',
+  description: 'Geodesic sphere — icosahedron faces subdivided twice and projected to unit sphere, rotating continuously with depth-based edge alpha',
+  defaults: { speed: 0.2, hue: 150, lineWidth: 0.7 },
+  sliders: [
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hue',       label: 'Hue',        min: 0,   max: 360, step: 1    },
+    { key: 'lineWidth', label: 'Line width', min: 0.2, max: 3.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    type V3 = [number, number, number];
+    const norm = (v: V3): V3 => { const l = Math.hypot(...v); return [v[0]/l, v[1]/l, v[2]/l]; };
+    const mid = (a: V3, b: V3): V3 => norm([(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2]);
+    const φ = (1 + Math.sqrt(5)) / 2;
+    const iV: V3[] = [[0,1,φ],[0,-1,φ],[0,1,-φ],[0,-1,-φ],[1,φ,0],[-1,φ,0],[1,-φ,0],[-1,-φ,0],[φ,0,1],[φ,0,-1],[-φ,0,1],[-φ,0,-1]].map(v => norm(v as V3));
+    const iF: [number,number,number][] = [[0,1,8],[0,8,4],[0,4,5],[0,5,10],[0,10,1],[1,6,8],[8,6,9],[8,9,4],[4,9,2],[4,2,5],[5,2,11],[5,11,10],[10,11,7],[10,7,1],[1,7,6],[3,9,6],[3,6,7],[3,7,11],[3,11,2],[3,2,9]];
+    const sub = (verts: V3[], faces: [number,number,number][], times: number) => {
+      let V = [...verts], F = [...faces];
+      for (let s = 0; s < times; s++) {
+        const nF: [number,number,number][] = [], cache: Record<string,number> = {};
+        const gm = (a: number, b: number) => { const k = a<b?`${a}_${b}`:`${b}_${a}`; if (cache[k]!=null) return cache[k]; const i=V.length; V.push(mid(V[a],V[b])); return cache[k]=i; };
+        F.forEach(([a,b,c]) => { const ab=gm(a,b),bc=gm(b,c),ca=gm(c,a); nF.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]); });
+        F = nF;
+      }
+      return { verts: V, faces: F };
+    };
+    const { verts, faces } = sub(iV, iF, 2);
+    const rotY = (v: V3, a: number): V3 => [v[0]*Math.cos(a)+v[2]*Math.sin(a),v[1],-v[0]*Math.sin(a)+v[2]*Math.cos(a)];
+    const rotX = (v: V3, a: number): V3 => [v[0],v[1]*Math.cos(a)-v[2]*Math.sin(a),v[1]*Math.sin(a)+v[2]*Math.cos(a)];
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.004;
+      ctx.fillStyle = 'rgba(2,5,16,0.15)'; ctx.fillRect(0, 0, W, H);
+      const scale = Math.min(W, H) * 0.38, cx = W/2, cy = H/2;
+      const proj = (v: V3) => { let r = rotY(v, t); r = rotX(r, t*0.6); const f = 2.5/(2.5-r[2]*0.4); return [cx+r[0]*scale*f, cy+r[1]*scale*f, r[2]]; };
+      const drawn = new Set<string>();
+      faces.forEach(([a,b,cc]) => {
+        const pa=proj(verts[a]),pb=proj(verts[b]),pc=proj(verts[cc]);
+        const avgZ=(pa[2]+pb[2]+pc[2])/3;
+        [[a,b],[b,cc],[cc,a]].forEach(([i,j]) => {
+          const key=i<j?`${i}_${j}`:`${j}_${i}`; if(drawn.has(key)) return; drawn.add(key);
+          const pi=proj(verts[i]),pj=proj(verts[j]);
+          ctx.globalAlpha = 0.12 + 0.5*((avgZ+1)/2);
+          ctx.strokeStyle=`hsl(${c.hue},80%,68%)`; ctx.lineWidth=c.lineWidth;
+          ctx.beginPath(); ctx.moveTo(pi[0],pi[1]); ctx.lineTo(pj[0],pj[1]); ctx.stroke();
+        });
+      });
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const hyperboloidBg: BgDef = {
+  id: 'hyperboloid',
+  label: 'Hyperboloid',
+  description: 'Hyperboloid of one sheet — ruled lines drawn from top circle to bottom circle with a twist angle, rotating continuously',
+  defaults: { lines: 24, speed: 0.25, hue: 210, lineWidth: 0.9 },
+  sliders: [
+    { key: 'lines',     label: 'Lines',      min: 6,   max: 60,  step: 2   },
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hue',       label: 'Hue',        min: 0,   max: 360, step: 1   },
+    { key: 'lineWidth', label: 'Line width', min: 0.2, max: 4.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.005;
+      const lines = Math.round(c.lines);
+      ctx.fillStyle = 'rgba(2,5,16,0.18)'; ctx.fillRect(0, 0, W, H);
+      const cx = W/2, cy = H/2, sc = Math.min(W, H) * 0.32;
+      const twist = t, spinA = t * 0.4;
+      for (let i = 0; i < lines; i++) {
+        const phi = (i / lines) * Math.PI * 2;
+        const x0 = Math.cos(phi + twist), z0 = Math.sin(phi + twist);
+        const x1 = Math.cos(phi - twist), z1 = Math.sin(phi - twist);
+        const steps = 32;
+        ctx.beginPath();
+        for (let s = 0; s <= steps; s++) {
+          const lf = s / steps;
+          const lx = x0 + (x1-x0)*lf, ly = -1 + 2*lf, lz = z0 + (z1-z0)*lf;
+          const rx = lx*Math.cos(spinA) - lz*Math.sin(spinA);
+          const rz = lx*Math.sin(spinA) + lz*Math.cos(spinA);
+          const f = 3/(3+rz*0.6);
+          s===0 ? ctx.moveTo(cx+rx*sc*f, cy+ly*sc*0.8*f) : ctx.lineTo(cx+rx*sc*f, cy+ly*sc*0.8*f);
+        }
+        ctx.globalAlpha = 0.28 + 0.35*Math.abs(Math.sin(phi));
+        ctx.strokeStyle = `hsl(${c.hue},80%,68%)`; ctx.lineWidth = c.lineWidth; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const aizawaBg: BgDef = {
+  id: 'aizawa',
+  label: 'Aizawa Attractor',
+  description: 'Aizawa attractor — integrating dx=(z−b)x−dy, dy=dx+(z−b)y, dz=c+az−z³/3−(x²+y²)(1+ez)+fzx³; plotted density rotates slowly',
+  defaults: { n: 60000, speed: 0.3, hue: 260 },
+  sliders: [
+    { key: 'n',     label: 'Points', min: 10000, max: 120000, step: 5000 },
+    { key: 'speed', label: 'Speed',  min: 0,     max: 1.0,   step: 0.01 },
+    { key: 'hue',   label: 'Hue',    min: 0,     max: 360,   step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    let x = 0.1, y = 0, z = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.003;
+      const a=0.95, b=0.7, cc=0.6, d=3.5, e=0.25, f=0.1, dt=0.002;
+      ctx.fillStyle = 'rgba(2,5,16,0.04)'; ctx.fillRect(0, 0, W, H);
+      const n = Math.round(c.n), sc = Math.min(W, H) * 0.28;
+      const cx = W/2, cy = H/2, rotA = t * 0.3;
+      ctx.fillStyle = `hsl(${c.hue},80%,68%)`; ctx.globalAlpha = 0.22;
+      for (let i = 0; i < n; i++) {
+        const dx2 = (z-b)*x - d*y;
+        const dy2 = d*x + (z-b)*y;
+        const dz2 = cc + a*z - z**3/3 - (x**2+y**2)*(1+e*z) + f*z*x**3;
+        x += dx2*dt; y += dy2*dt; z += dz2*dt;
+        const rx = x*Math.cos(rotA) - z*Math.sin(rotA);
+        ctx.fillRect(cx + rx*sc, cy - y*sc, 1, 1);
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+// ─── mathematical series 3 ────────────────────────────────────────────────────
+
+const limaconBg: BgDef = {
+  id: 'limacon',
+  label: 'Rose Curves',
+  description: 'Rose curves — drawing r=cos(k·φ) family as polar curves with k animating slowly; 3 copies with phase offsets create layered petal geometry',
+  defaults: { k: 6, speed: 0.2, hue: 320, lineWidth: 1.2 },
+  sliders: [
+    { key: 'k',         label: 'Petals',     min: 1,   max: 12,  step: 1   },
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hue',       label: 'Hue',        min: 0,   max: 360, step: 1   },
+    { key: 'lineWidth', label: 'Line width', min: 0.3, max: 4.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.003;
+      ctx.fillStyle = 'rgba(2,5,16,0.08)'; ctx.fillRect(0, 0, W, H);
+      const cx = W/2, cy = H/2, R = Math.min(W, H) * 0.42;
+      const k = Math.max(1, Math.round(c.k));
+      for (let ri = 0; ri < 3; ri++) {
+        const kk = k + ri, totalPhi = Math.PI * (kk % 2 === 0 ? 2 : 1) * Math.PI;
+        ctx.beginPath();
+        for (let i = 0; i <= 1200; i++) {
+          const phi = (i / 1200) * totalPhi;
+          const r = R * Math.cos(kk * phi + t * 0.15 * (ri + 1));
+          i === 0 ? ctx.moveTo(cx + r * Math.cos(phi + t*0.08), cy + r * Math.sin(phi + t*0.08))
+                  : ctx.lineTo(cx + r * Math.cos(phi + t*0.08), cy + r * Math.sin(phi + t*0.08));
+        }
+        ctx.globalAlpha = 0.35 - ri * 0.08;
+        ctx.strokeStyle = `hsl(${c.hue},80%,68%)`; ctx.lineWidth = c.lineWidth; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const standingWaveBg: BgDef = {
+  id: 'standingwave',
+  label: 'Standing Waves',
+  description: '2D standing wave interference — pixel grid intensity = (sin(nx+t)·cos(ny+t·0.7) + sin(1.5nx−0.8t)·sin(0.7ny+t) + 2)/4; rendered 4x downsampled',
+  defaults: { modes: 3, speed: 0.5, hue: 210 },
+  sliders: [
+    { key: 'modes', label: 'Modes', min: 1,  max: 8,   step: 1   },
+    { key: 'speed', label: 'Speed', min: 0,  max: 2.0, step: 0.05 },
+    { key: 'hue',   label: 'Hue',   min: 0,  max: 360, step: 1   },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const off = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+    const oc = off ? off.getContext('2d') : null;
+    const STEP = 4;
+    const resize = () => {
+      W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight;
+      if (off) { off.width = Math.ceil(W/STEP); off.height = Math.ceil(H/STEP); }
+    };
+    // convert hsl to rgb for pixel-level rendering
+    const hslRgb = (h: number) => {
+      const s = 0.8, l = 0.68;
+      const C=(1-Math.abs(2*l-1))*s, X=C*(1-Math.abs((h/60)%2-1)), m=l-C/2;
+      let r=0,g=0,b=0;
+      if(h<60){r=C;g=X;}else if(h<120){r=X;g=C;}else if(h<180){g=C;b=X;}
+      else if(h<240){g=X;b=C;}else if(h<300){r=X;b=C;}else{r=C;b=X;}
+      return [(r+m)*255,(g+m)*255,(b+m)*255];
+    };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.03;
+      if (!off || !oc) { animId = requestAnimationFrame(draw); return; }
+      const ow = off.width, oh = off.height;
+      const img = oc.createImageData(ow, oh);
+      const [cr, cg, cb] = hslRgb(c.hue);
+      const m = Math.max(1, Math.round(c.modes));
+      for (let py = 0; py < oh; py++) for (let px = 0; px < ow; px++) {
+        const nx = px/ow * Math.PI * 2 * m, ny = py/oh * Math.PI * 2 * m;
+        const v = (Math.sin(nx+t)*Math.cos(ny+t*0.7) + Math.sin(nx*1.5-t*0.8)*Math.sin(ny*0.7+t) + 2) / 4;
+        const idx = (py*ow+px)*4;
+        img.data[idx]=cr*v; img.data[idx+1]=cg*v; img.data[idx+2]=cb*v; img.data[idx+3]=220;
+      }
+      oc.putImageData(img, 0, 0);
+      ctx.drawImage(off, 0, 0, W, H);
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const complexMapBg: BgDef = {
+  id: 'complexmap',
+  label: 'Complex Map',
+  description: 'Complex function domain coloring — for each pixel compute f(z)=z³+e^(it)·z, color by argument (hue) and magnitude (brightness); rendered 5x downsampled',
+  defaults: { speed: 0.2, zoom: 1.0 },
+  sliders: [
+    { key: 'speed', label: 'Speed', min: 0,   max: 1.0, step: 0.01 },
+    { key: 'zoom',  label: 'Zoom',  min: 0.3, max: 3.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const off = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+    const oc = off ? off.getContext('2d') : null;
+    const STEP = 5;
+    const resize = () => {
+      W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight;
+      if (off) { off.width = Math.ceil(W/STEP); off.height = Math.ceil(H/STEP); }
+    };
+    const hsl2rgb = (h: number, s: number, l: number) => {
+      const C=(1-Math.abs(2*l-1))*s, X=C*(1-Math.abs((h/60)%2-1)), m=l-C/2;
+      let r=0,g=0,b=0;
+      if(h<60){r=C;g=X;}else if(h<120){r=X;g=C;}else if(h<180){g=C;b=X;}
+      else if(h<240){g=X;b=C;}else if(h<300){r=X;b=C;}else{r=C;b=X;}
+      return [(r+m)*255,(g+m)*255,(b+m)*255];
+    };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.008;
+      if (!off || !oc) { animId = requestAnimationFrame(draw); return; }
+      const ow = off.width, oh = off.height;
+      const img = oc.createImageData(ow, oh);
+      const span = 2.8 / c.zoom;
+      for (let py = 0; py < oh; py++) for (let px = 0; px < ow; px++) {
+        const re = (px/ow - 0.5)*span, im = (py/oh - 0.5)*span;
+        const r2 = re*re-im*im, i2 = 2*re*im;
+        const r3 = r2*re-i2*im, i3 = r2*im+i2*re;
+        const cs = Math.cos(t), ss = Math.sin(t);
+        const fr = r3 + cs*re - ss*im, fi = i3 + ss*re + cs*im;
+        const mag = Math.sqrt(fr*fr+fi*fi);
+        const phase = (Math.atan2(fi,fr)/(Math.PI*2)+0.5)*360;
+        const bright = 1-1/(1+mag*0.5);
+        const [r,g,b] = hsl2rgb(phase, 0.85, bright*0.6);
+        const idx=(py*ow+px)*4;
+        img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=235;
+      }
+      oc.putImageData(img, 0, 0);
+      ctx.drawImage(off, 0, 0, W, H);
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const epitrochoidBg: BgDef = {
+  id: 'epitrochoid',
+  label: 'Epitrochoid',
+  description: 'Epitrochoid — x=(R+r)cos(θ)−d·cos((R+r)/r·θ), y=(R+r)sin(θ)−d·sin((R+r)/r·θ); 3 layers with different d ratios create complex gear-trace geometry',
+  defaults: { k: 5, speed: 0.3, hue: 150, lineWidth: 1.2 },
+  sliders: [
+    { key: 'k',         label: 'Teeth',      min: 2,   max: 12,  step: 1   },
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hue',       label: 'Hue',        min: 0,   max: 360, step: 1   },
+    { key: 'lineWidth', label: 'Line width', min: 0.3, max: 4.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.003;
+      ctx.fillStyle = 'rgba(2,5,16,0.06)'; ctx.fillRect(0, 0, W, H);
+      const cx = W/2, cy = H/2, R = Math.min(W, H) * 0.32;
+      const k = Math.max(2, Math.round(c.k));
+      const r = R / (k + 1), d = r * 1.25;
+      const steps = 2000 * k;
+      for (let layer = 0; layer < 3; layer++) {
+        const phase = layer * Math.PI * 0.4 + t * 0.15;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const theta = (i / steps) * Math.PI * 2 * k + phase;
+          const x = cx + (R+r)*Math.cos(theta) - d*Math.cos((R+r)/r*theta);
+          const y = cy + (R+r)*Math.sin(theta) - d*Math.sin((R+r)/r*theta);
+          i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        }
+        ctx.globalAlpha = 0.3 - layer*0.07;
+        ctx.strokeStyle = `hsl(${c.hue},80%,68%)`; ctx.lineWidth = c.lineWidth - layer*0.3; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const billiardBg: BgDef = {
+  id: 'billiard',
+  label: 'Elliptic Billiard',
+  description: 'Elliptic billiard — many trajectories reflecting inside an ellipse, drawn as caustic lines with low alpha revealing the envelope geometry',
+  defaults: { n: 80, speed: 0.5, hue: 45, bounces: 10 },
+  sliders: [
+    { key: 'n',       label: 'Rays',    min: 10,  max: 200,  step: 5   },
+    { key: 'speed',   label: 'Speed',   min: 0,   max: 2.0,  step: 0.05 },
+    { key: 'hue',     label: 'Hue',     min: 0,   max: 360,  step: 1   },
+    { key: 'bounces', label: 'Bounces', min: 2,   max: 30,   step: 1   },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.005;
+      ctx.fillStyle = 'rgba(2,5,16,0.12)'; ctx.fillRect(0, 0, W, H);
+      const cx = W/2, cy = H/2;
+      const a = Math.min(W,H)*0.42, b = Math.min(W,H)*0.26;
+      ctx.beginPath();
+      for (let i = 0; i <= 200; i++) { const phi=(i/200)*Math.PI*2; i===0?ctx.moveTo(cx+a*Math.cos(phi),cy+b*Math.sin(phi)):ctx.lineTo(cx+a*Math.cos(phi),cy+b*Math.sin(phi)); }
+      ctx.globalAlpha=0.2; ctx.strokeStyle=`hsl(${c.hue},80%,68%)`; ctx.lineWidth=1; ctx.stroke();
+      const nT = Math.round(c.n), bounces = Math.round(c.bounces);
+      for (let tr = 0; tr < nT; tr++) {
+        const sa = (tr/nT)*Math.PI*2 + t*0.04;
+        let px=a*Math.cos(sa), py=b*Math.sin(sa);
+        const nx=px/(a*a), ny=py/(b*b), nl=Math.hypot(nx,ny);
+        let dx=-ny/nl, dy=nx/nl;
+        ctx.beginPath(); ctx.moveTo(cx+px,cy+py);
+        ctx.globalAlpha=0.1; ctx.strokeStyle=`hsl(${c.hue},80%,68%)`; ctx.lineWidth=0.55;
+        for (let s=0; s<bounces; s++) {
+          const A=dx*dx/(a*a)+dy*dy/(b*b), B=2*(px*dx/(a*a)+py*dy/(b*b)), C=px*px/(a*a)+py*py/(b*b)-1;
+          const disc=B*B-4*A*C; if(disc<0) break;
+          const tt=(-B+Math.sqrt(disc))/(2*A); if(tt<0.001) break;
+          px+=dx*tt; py+=dy*tt; ctx.lineTo(cx+px,cy+py);
+          const nx2=px/(a*a),ny2=py/(b*b),nl2=Math.hypot(nx2,ny2);
+          const dot=dx*nx2/nl2+dy*ny2/nl2; dx-=2*dot*nx2/nl2; dy-=2*dot*ny2/nl2;
+        }
+        ctx.stroke();
+      }
+      ctx.globalAlpha=1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const circlePackBg: BgDef = {
+  id: 'circlepack',
+  label: 'Circle Packing',
+  description: 'Circle packing — non-overlapping circles of varying radii placed by rejection sampling, animated with gentle ±8% pulse',
+  defaults: { n: 100, speed: 0.15, hue: 25 },
+  sliders: [
+    { key: 'n',     label: 'Count', min: 10,  max: 300,  step: 10  },
+    { key: 'speed', label: 'Speed', min: 0,   max: 2.0,  step: 0.05 },
+    { key: 'hue',   label: 'Hue',   min: 0,   max: 360,  step: 1   },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    let circles: { x: number; y: number; r: number; ph: number }[] = [];
+    const rebuild = (n: number) => {
+      circles = [];
+      for (let tries = 0; tries < n*30 && circles.length < n; tries++) {
+        const r = 5 + Math.random()*38, x = r+Math.random()*(W-2*r), y = r+Math.random()*(H-2*r);
+        if (circles.every(ci => Math.hypot(ci.x-x,ci.y-y) >= ci.r+r+2))
+          circles.push({ x, y, r, ph: Math.random()*Math.PI*2 });
+      }
+    };
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; rebuild(Math.round(getCfg().n)); };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.005;
+      ctx.fillStyle = 'rgba(2,5,16,0.15)'; ctx.fillRect(0, 0, W, H);
+      circles.forEach(ci => {
+        const pulse = Math.sin(t*1.2+ci.ph)*0.08+0.92;
+        ctx.globalAlpha = 0.22*pulse; ctx.strokeStyle = `hsl(${c.hue},80%,68%)`; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(ci.x, ci.y, ci.r*pulse, 0, Math.PI*2); ctx.stroke();
+        ctx.globalAlpha = 0.035*pulse; ctx.fillStyle = `hsl(${c.hue},80%,68%)`; ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const lemniscateBg: BgDef = {
+  id: 'lemniscate',
+  label: 'Lemniscate Traces',
+  description: 'Lemniscate of Bernoulli — r²=a²·cos(2θ) family at multiple scales, rotating; gaps where cos(2θ)<0 create the characteristic figure-eight silhouette',
+  defaults: { layers: 10, speed: 0.3, hue: 210, lineWidth: 0.8 },
+  sliders: [
+    { key: 'layers',    label: 'Layers',     min: 1,   max: 20,  step: 1   },
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hue',       label: 'Hue',        min: 0,   max: 360, step: 1   },
+    { key: 'lineWidth', label: 'Line width', min: 0.2, max: 4.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.004;
+      ctx.fillStyle = 'rgba(2,5,16,0.06)'; ctx.fillRect(0, 0, W, H);
+      const cx = W/2, cy = H/2, a = Math.min(W,H)*0.30;
+      const n = Math.max(1, Math.round(c.layers));
+      for (let layer = 0; layer < n; layer++) {
+        const phase = (layer/n)*Math.PI*2 + t*0.5;
+        const sc = a*(0.45 + 0.55*(layer/n));
+        ctx.beginPath();
+        for (let i = 0; i <= 800; i++) {
+          const theta = (i/800)*Math.PI*2;
+          const cos2 = Math.cos(2*theta);
+          if (cos2 < 0) { ctx.beginPath(); continue; }
+          const r = sc*Math.sqrt(cos2);
+          const x = cx + r*Math.cos(theta+phase);
+          const y = cy + r*Math.sin(theta+phase)*0.72;
+          i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        }
+        ctx.globalAlpha = 0.12 + 0.2*(layer/n);
+        ctx.strokeStyle = `hsl(${c.hue},80%,68%)`; ctx.lineWidth = c.lineWidth; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const trochoidBg: BgDef = {
+  id: 'trochoid',
+  label: 'Trochoid Scope',
+  description: 'Hypotrochoid scope — x=(R−r)cos(θ)+d·cos((R−r)/r·θ); 4 traces with different d parameters overlap to create an oscilloscope-like Lissajous form',
+  defaults: { k: 5, speed: 0.25, hue: 320, lineWidth: 1.0 },
+  sliders: [
+    { key: 'k',         label: 'Loops',      min: 1,   max: 12,  step: 1   },
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hue',       label: 'Hue',        min: 0,   max: 360, step: 1   },
+    { key: 'lineWidth', label: 'Line width', min: 0.2, max: 4.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.002;
+      ctx.fillStyle = 'rgba(2,5,16,0.07)'; ctx.fillRect(0, 0, W, H);
+      const cx = W/2, cy = H/2, R = Math.min(W,H)*0.4;
+      const k = Math.max(1, Math.round(c.k));
+      for (let tr = 0; tr < 4; tr++) {
+        const r = R * 0.6, d = r*(0.48 + tr*0.14);
+        const phase = (tr/4)*Math.PI*0.5 + t*0.1;
+        ctx.beginPath();
+        for (let i = 0; i <= 3000; i++) {
+          const theta = (i/3000)*Math.PI*2*k + phase;
+          const x = cx + (R-r)*Math.cos(theta) + d*Math.cos((R-r)/r*theta);
+          const y = cy + (R-r)*Math.sin(theta) - d*Math.sin((R-r)/r*theta);
+          i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        }
+        ctx.globalAlpha = 0.22 - tr*0.04;
+        ctx.strokeStyle = `hsl(${c.hue},80%,68%)`; ctx.lineWidth = c.lineWidth; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const waveletBg: BgDef = {
+  id: 'wavelet',
+  label: 'Morlet Wavelet',
+  description: 'Morlet wavelet rows — each row draws y=A·exp(−(x−center)²/σ)·cos(2π·freq·(x−t·v)); higher rows have higher frequency creating a scalogram-like display',
+  defaults: { rows: 8, speed: 0.3, hue: 150, lineWidth: 1.2 },
+  sliders: [
+    { key: 'rows',      label: 'Rows',       min: 2,   max: 24,  step: 1   },
+    { key: 'speed',     label: 'Speed',      min: 0,   max: 2.0, step: 0.05 },
+    { key: 'hue',       label: 'Hue',        min: 0,   max: 360, step: 1   },
+    { key: 'lineWidth', label: 'Line width', min: 0.3, max: 4.0, step: 0.1  },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    const resize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed * 0.006;
+      ctx.fillStyle = 'rgba(2,5,16,0.12)'; ctx.fillRect(0, 0, W, H);
+      const rows = Math.max(2, Math.round(c.rows));
+      const rowH = H / rows;
+      for (let row = 0; row < rows; row++) {
+        const freq = 1 + row * 1.4;
+        const cy = rowH*(row+0.5), amp = rowH*0.42;
+        ctx.beginPath();
+        for (let i = 0; i <= W; i++) {
+          const x = i/W;
+          const center = 0.5 + Math.sin(t*0.4+row)*0.18;
+          const gauss = Math.exp(-((x-center)**2)/(0.07+0.035*row));
+          const wave = Math.cos(2*Math.PI*freq*(x - t*0.18));
+          i===0 ? ctx.moveTo(i, cy - amp*gauss*wave) : ctx.lineTo(i, cy - amp*gauss*wave);
+        }
+        ctx.globalAlpha = 0.5 - row*0.03;
+        ctx.strokeStyle = `hsl(${c.hue},80%,68%)`; ctx.lineWidth = c.lineWidth; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
+const penroseBg: BgDef = {
+  id: 'penrose',
+  label: 'Penrose Tiling',
+  description: 'Penrose tiling — 10 initial kite triangles around center subdivided using Robinson triangle rules; kite/dart triangles filled with alternating alpha levels',
+  defaults: { depth: 5, speed: 0.1, hue: 260 },
+  sliders: [
+    { key: 'depth', label: 'Depth', min: 2,  max: 7,   step: 1    },
+    { key: 'speed', label: 'Speed', min: 0,  max: 1.0, step: 0.01 },
+    { key: 'hue',   label: 'Hue',   min: 0,  max: 360, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId = 0, W = 0, H = 0, t = 0;
+    type Tri = { k:0|1; ax:number;ay:number; bx:number;by:number; cx:number;cy:number };
+    const φ = (1+Math.sqrt(5))/2;
+    const sub = (tris: Tri[]): Tri[] => {
+      const out: Tri[] = [];
+      tris.forEach(({ k, ax, ay, bx, by, cx, cy }) => {
+        if (k===0) {
+          const qx=ax+(bx-ax)/φ, qy=ay+(by-ay)/φ;
+          out.push({k:0,ax:qx,ay:qy,bx:cx,by:cy,cx:bx,cy:by});
+          out.push({k:1,ax:cx,ay:cy,bx:qx,by:qy,cx:ax,cy:ay});
+        } else {
+          const rx=bx+(ax-bx)/φ,ry=by+(ay-by)/φ, qx=bx+(cx-bx)/φ,qy=by+(cy-by)/φ;
+          out.push({k:1,ax:rx,ay:ry,bx:bx,by:by,cx:qx,cy:qy});
+          out.push({k:0,ax:qx,ay:qy,bx:ax,by:ay,cx:rx,cy:ry});
+          out.push({k:1,ax:ax,ay:ay,bx:qx,by:qy,cx:cx,cy:cy});
+        }
+      });
+      return out;
+    };
+    let tris: Tri[] = [], built = false;
+    const build = () => {
+      const R = Math.hypot(W,H)*0.7;
+      tris = Array.from({length:10},(_,i): Tri => {
+        const a=(2*i-1)*Math.PI/10, b=(2*i+1)*Math.PI/10;
+        return {k:0,ax:W/2,ay:H/2,bx:W/2+R*Math.cos(a),by:H/2+R*Math.sin(a),cx:W/2+R*Math.cos(b),cy:H/2+R*Math.sin(b)};
+      });
+      const depth = Math.max(2, Math.round(getCfg().depth));
+      for (let d=0; d<depth; d++) tris = sub(tris);
+      built = true;
+    };
+    const resize = () => { W=canvas.width=canvas.offsetWidth; H=canvas.height=canvas.offsetHeight; built=false; };
+    const draw = () => {
+      const c = getCfg();
+      t += c.speed*0.003;
+      if (!built) build();
+      ctx.fillStyle='rgba(2,5,16,0.15)'; ctx.fillRect(0,0,W,H);
+      const glow = Math.sin(t)*0.08;
+      tris.forEach((tri,i) => {
+        ctx.beginPath(); ctx.moveTo(tri.ax,tri.ay); ctx.lineTo(tri.bx,tri.by); ctx.lineTo(tri.cx,tri.cy); ctx.closePath();
+        ctx.globalAlpha = tri.k===0 ? 0.06+glow : 0.025; ctx.fillStyle=`hsl(${c.hue},80%,68%)`; ctx.fill();
+        ctx.globalAlpha = 0.16 + Math.sin(t*0.5+i*0.01)*0.05;
+        ctx.strokeStyle=`hsl(${c.hue},80%,68%)`; ctx.lineWidth=0.5; ctx.stroke();
+      });
+      ctx.globalAlpha=1;
+      animId = requestAnimationFrame(draw);
+    };
+    resize(); animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => { resize(); }); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── registry ─────────────────────────────────────────────────────────────────
 
 const BACKGROUNDS: BgDef[] = [
@@ -4717,15 +5693,19 @@ const BACKGROUNDS: BgDef[] = [
   marbleBg, waterSimBg, cycloidBg, supernovaBg, moireBg,
   gravityLensBg, eulerSpiralBg, kaleidoscopeBg, terrainBg, ribbonsBg,
   appleGlowBg, ambientGlowBg, axiGlowBg, deepGlowBg, flowGlowBg,
+  phyllotaxisBg, ulamBg, chladniBg, apollonianBg, polytopeBg,
+  superformulaBg, deJongBg, geodesicBg, hyperboloidBg, aizawaBg,
+  limaconBg, standingWaveBg, complexMapBg, epitrochoidBg, billiardBg,
+  circlePackBg, lemniscateBg, trochoidBg, waveletBg, penroseBg,
 ];
 
 const CATEGORIES: { id: string; label: string; color: string; ids: string[] }[] = [
   { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','ambientglow','axiglow','deepglow','flowglow','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
   { id: 'physics',  label: 'Physics',  color: '#34d399', ids: ['particles','ripple','pendulum','doublependulum','fluid','boids','nbody','sand','watersim','gravitylens'] },
-  { id: 'math',     label: 'Math',     color: '#60a5fa', ids: ['topographic','lissajous','fourier','spirograph','waveinterference','wireframe','harmonograph','torusknot','cymatics','cycloid','moire','eulerspiral'] },
+  { id: 'math',     label: 'Math',     color: '#60a5fa', ids: ['topographic','lissajous','fourier','spirograph','waveinterference','wireframe','harmonograph','torusknot','cymatics','cycloid','moire','eulerspiral','phyllotaxis','ulam','chladni','apollonian','polytope','superformula','geodesic','hyperboloid','limacon','standingwave','complexmap','epitrochoid','billiard','circlepack','lemniscate','trochoid','wavelet','penrose'] },
   { id: 'networks', label: 'Networks', color: '#fb923c', ids: ['sparknetwork','orbital','flowfield','voronoi','magneticfield','curlnoise','domainwarp'] },
   { id: 'fractals', label: 'Fractals', color: '#f472b6', ids: ['fractaltree','ifsfractal','julia','newtonfractal','mandelbrot','burningship'] },
-  { id: 'chaos',    label: 'Chaos',    color: '#fbbf24', ids: ['attractor','lorenz','clifford','rossler','thomas','bifurcation'] },
+  { id: 'chaos',    label: 'Chaos',    color: '#fbbf24', ids: ['attractor','lorenz','clifford','rossler','thomas','bifurcation','dejong','aizawa'] },
   { id: 'cellular', label: 'Cellular', color: '#2dd4bf', ids: ['reactiondiffusion','physarum','dlacrystal','gameoflife','langton','ising','bzreaction'] },
 ];
 
@@ -4742,6 +5722,21 @@ function loadCfg(bg: BgDef): Cfg {
   } catch { return { ...bg.defaults }; }
 }
 
+type Preset = { name: string; cfg: Cfg };
+const lsPresetsKey = (id: string) => `bglab-presets-${id}`;
+
+function loadPresets(): Record<string, Preset[]> {
+  if (typeof window === 'undefined') return {};
+  const out: Record<string, Preset[]> = {};
+  BACKGROUNDS.forEach(bg => {
+    try {
+      const raw = localStorage.getItem(lsPresetsKey(bg.id));
+      if (raw) out[bg.id] = JSON.parse(raw);
+    } catch {}
+  });
+  return out;
+}
+
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function BackgroundLab() {
@@ -4753,6 +5748,10 @@ export default function BackgroundLab() {
   const [copied, setCopied] = React.useState(false);
   const [slideshow, setSlideshow] = React.useState(false);
   const [shuffled, setShuffled] = React.useState(false);
+  const [uiHidden, setUiHidden] = React.useState(false);
+  const [presets, setPresets] = React.useState<Record<string, Preset[]>>(() => loadPresets());
+  const [savingPreset, setSavingPreset] = React.useState(false);
+  const [presetName, setPresetName] = React.useState('');
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const cfgRef = React.useRef<Cfg>(configs[activeId]);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -4809,6 +5808,8 @@ export default function BackgroundLab() {
       } else if (e.key === ' ') {
         e.preventDefault();
         shuffle();
+      } else if (e.key === 'f' || e.key === 'F') {
+        setUiHidden(v => !v);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -4847,10 +5848,62 @@ export default function BackgroundLab() {
   };
 
   const handleCopy = () => {
-    const lines = Object.entries(cfg).map(([k, v]) => `  ${k}: ${v},`).join('\n');
-    navigator.clipboard.writeText(`// ${activeBg.label}\nconst config = {\n${lines}\n};`);
+    const cfgLines = Object.entries(cfg).map(([k, v]) => `    ${k}: ${v},`).join('\n');
+    const componentName = activeBg.label.replace(/[^a-zA-Z0-9]/g, '');
+    const createSrc = activeBg.create.toString();
+    // Method shorthand toString() → "create(canvas, getCfg) { ... }", wrap as function expression
+    const fnExpr = createSrc.startsWith('create(') ? `function ${createSrc}` : createSrc;
+    const snippet = `'use client';
+import { useEffect, useRef } from 'react';
+
+type Cfg = Record<string, number>;
+
+// ${activeBg.label} — config snapshot from Background Lab
+export function ${componentName}Bg() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cfgRef = useRef<Cfg>({
+${cfgLines}
+  });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const create = ${fnExpr};
+    return create(canvas, () => cfgRef.current);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
+    />
+  );
+}`;
+    navigator.clipboard.writeText(snippet);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const savePreset = (name: string) => {
+    const trimmed = name.trim() || `Preset ${(presets[activeId]?.length ?? 0) + 1}`;
+    const next = [...(presets[activeId] ?? []), { name: trimmed, cfg: { ...cfg } }];
+    setPresets(prev => ({ ...prev, [activeId]: next }));
+    localStorage.setItem(lsPresetsKey(activeId), JSON.stringify(next));
+    setSavingPreset(false);
+    setPresetName('');
+  };
+
+  const loadPreset = (bgId: string, idx: number) => {
+    const preset = presets[bgId]?.[idx];
+    if (!preset) return;
+    setActiveId(bgId);
+    setConfigs(prev => ({ ...prev, [bgId]: { ...preset.cfg } }));
+  };
+
+  const deletePreset = (bgId: string, idx: number) => {
+    const next = (presets[bgId] ?? []).filter((_, i) => i !== idx);
+    setPresets(prev => ({ ...prev, [bgId]: next }));
+    localStorage.setItem(lsPresetsKey(bgId), JSON.stringify(next));
   };
 
   const btnBase: React.CSSProperties = { padding: '7px 0', borderRadius: 7, fontSize: 11, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.45)' };
@@ -4863,8 +5916,21 @@ export default function BackgroundLab() {
         <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
       </div>
 
+      {/* Focus toggle — always visible */}
+      <button onClick={() => setUiHidden(v => !v)} title={uiHidden ? 'Exit focus (F)' : 'Focus mode (F)'} style={{
+        position: 'fixed', top: 16, right: 16, zIndex: 400,
+        background: 'rgba(10,11,14,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7,
+        width: 32, height: 32, cursor: 'pointer',
+        color: 'rgba(255,255,255,0.45)', fontSize: 15,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'opacity 0.2s',
+      }}>
+        {uiHidden ? '⤢' : '⤡'}
+      </button>
+
       {/* Side drawer */}
-      <div style={{
+      {!uiHidden && <div style={{
         position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 200,
         width: 224,
         background: 'rgba(10,11,14,0.97)',
@@ -4904,28 +5970,46 @@ export default function BackgroundLab() {
                   {cat.label}
                 </div>
                 {catBgs.map(bg => (
-                  <button key={bg.id} onClick={() => setActiveId(bg.id)} style={{
-                    display: 'block', width: '100%', padding: '6px 14px 6px 16px',
-                    background: activeId === bg.id ? 'rgba(45,114,210,0.12)' : 'transparent',
-                    border: 'none',
-                    borderLeft: activeId === bg.id ? '2px solid #3b82f6' : '2px solid transparent',
-                    cursor: 'pointer', textAlign: 'left',
-                    fontSize: 12,
-                    color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.4)',
-                    fontWeight: activeId === bg.id ? 500 : 400,
-                    transition: 'all 0.1s',
-                  }}>
-                    {bg.label}
-                  </button>
+                  <div key={bg.id}>
+                    <button onClick={() => setActiveId(bg.id)} style={{
+                      display: 'block', width: '100%', padding: '6px 14px 6px 16px',
+                      background: activeId === bg.id ? 'rgba(45,114,210,0.12)' : 'transparent',
+                      border: 'none',
+                      borderLeft: activeId === bg.id ? '2px solid #3b82f6' : '2px solid transparent',
+                      cursor: 'pointer', textAlign: 'left',
+                      fontSize: 12,
+                      color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.4)',
+                      fontWeight: activeId === bg.id ? 500 : 400,
+                      transition: 'all 0.1s',
+                    }}>
+                      {bg.label}
+                    </button>
+                    {(presets[bg.id] ?? []).map((preset, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', paddingLeft: 22, paddingRight: 6 }}>
+                        <button onClick={() => loadPreset(bg.id, idx)} style={{
+                          flex: 1, padding: '3px 4px 3px 0', background: 'transparent',
+                          border: 'none', cursor: 'pointer', textAlign: 'left',
+                          fontSize: 11, color: 'rgba(255,255,255,0.28)',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          · {preset.name}
+                        </button>
+                        <button onClick={() => deletePreset(bg.id, idx)} style={{
+                          padding: '2px 5px', background: 'transparent', border: 'none',
+                          cursor: 'pointer', color: 'rgba(255,255,255,0.18)', fontSize: 11, flexShrink: 0,
+                        }}>×</button>
+                      </div>
+                    ))}
+                  </div>
                 ))}
               </div>
             );
           })}
         </div>
-      </div>
+      </div>}
 
       {/* ← → arrows */}
-      {['left','right'].map(dir => (
+      {!uiHidden && ['left','right'].map(dir => (
         <button key={dir} onClick={() => setActiveId(prev => {
           const i = BACKGROUNDS.findIndex(b => b.id === prev);
           return BACKGROUNDS[dir === 'right' ? (i+1)%BACKGROUNDS.length : (i-1+BACKGROUNDS.length)%BACKGROUNDS.length].id;
@@ -4940,7 +6024,7 @@ export default function BackgroundLab() {
       ))}
 
       {/* Center title */}
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center', zIndex: 10, pointerEvents: 'none', width: '80%', maxWidth: 480 }}>
+      {!uiHidden && <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center', zIndex: 10, pointerEvents: 'none', width: '80%', maxWidth: 480 }}>
         <div style={{ fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.18)', marginBottom: 12 }}>
           Background Lab
         </div>
@@ -4951,12 +6035,12 @@ export default function BackgroundLab() {
           {activeBg.description}
         </p>
         <div style={{ marginTop: 14, fontSize: 9, color: 'rgba(255,255,255,0.13)', letterSpacing: 1.5 }}>
-          ← → navigate &nbsp;·&nbsp; R reset &nbsp;·&nbsp; Space shuffle
+          ← → navigate &nbsp;·&nbsp; R reset &nbsp;·&nbsp; Space shuffle &nbsp;·&nbsp; F focus
         </div>
-      </div>
+      </div>}
 
       {/* Control panel */}
-      <div style={{
+      {!uiHidden && <div style={{
         position: 'fixed', bottom: 24, right: 24, zIndex: 200,
         background: 'rgba(12,14,18,0.96)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14,
@@ -5017,7 +6101,38 @@ export default function BackgroundLab() {
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
-      </div>
+
+        {/* Save preset */}
+        {savingPreset ? (
+          <div style={{ display: 'flex', gap: 5, marginTop: 8 }}>
+            <input
+              autoFocus
+              value={presetName}
+              onChange={e => setPresetName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') savePreset(presetName);
+                if (e.key === 'Escape') { setSavingPreset(false); setPresetName(''); }
+              }}
+              placeholder={`Preset ${(presets[activeId]?.length ?? 0) + 1}`}
+              style={{
+                flex: 1, background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6,
+                padding: '5px 8px', color: '#fff', fontSize: 11, outline: 'none',
+              }}
+            />
+            <button onClick={() => savePreset(presetName)} style={{ ...btnBase, padding: '5px 10px' }}>✓</button>
+            <button onClick={() => { setSavingPreset(false); setPresetName(''); }} style={{ ...btnBase, padding: '5px 9px' }}>✕</button>
+          </div>
+        ) : (
+          <button onClick={() => setSavingPreset(true)} style={{
+            ...btnBase, width: '100%', marginTop: 6,
+            background: 'rgba(45,114,210,0.08)', border: '1px solid rgba(45,114,210,0.22)',
+            color: 'rgba(120,170,240,0.6)',
+          }}>
+            + Save Preset
+          </button>
+        )}
+      </div>}
     </div>
   );
 }
