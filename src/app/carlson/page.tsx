@@ -348,49 +348,6 @@ export default function CarlsonPage() {
                     ))
                   )}
 
-                  {/* animated walking person — stick figure with alternating leg/arm poses */}
-                  <g>
-                    <animateMotion dur="13s" repeatCount="indefinite" calcMode="linear"
-                      path="M 278,420 L 365,382 L 410,455 L 390,575 L 312,675 L 214,692 L 160,628 L 163,515 Z"
-                    />
-                    {/* outer ambient glow */}
-                    <circle cx="0" cy="-20" r="32" fill="rgba(79,156,249,0.10)" />
-                    {/* ground shadow */}
-                    <ellipse cx="0" cy="14" rx="16" ry="5" fill="rgba(79,156,249,0.28)" />
-
-                    {/* bobbing wrapper — rises slightly on each step */}
-                    <g>
-                      <animateTransform attributeName="transform" type="translate"
-                        values="0,0; 0,-4; 0,0; 0,-4; 0,0"
-                        keyTimes="0;0.25;0.5;0.75;1"
-                        dur="0.52s" repeatCount="indefinite" />
-
-                      {/* pose A — right foot forward */}
-                      <g>
-                        <animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.47;0.5;0.97;1" dur="0.52s" repeatCount="indefinite" />
-                        <line x1="3"  y1="-6" x2="11" y2="13"   stroke="#1b3f8a" strokeWidth="3.5" strokeLinecap="round" />
-                        <line x1="-3" y1="-6" x2="-7" y2="11"   stroke="#1b3f8a" strokeWidth="3.5" strokeLinecap="round" />
-                        <line x1="2"  y1="-22" x2="13" y2="-12" stroke="#1b3f8a" strokeWidth="3"   strokeLinecap="round" />
-                        <line x1="-2" y1="-22" x2="-13" y2="-12" stroke="#1b3f8a" strokeWidth="3"  strokeLinecap="round" />
-                      </g>
-
-                      {/* pose B — left foot forward */}
-                      <g opacity="0">
-                        <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.47;0.5;0.97;1" dur="0.52s" repeatCount="indefinite" />
-                        <line x1="-3" y1="-6" x2="-11" y2="13"  stroke="#1b3f8a" strokeWidth="3.5" strokeLinecap="round" />
-                        <line x1="3"  y1="-6" x2="7"   y2="11"  stroke="#1b3f8a" strokeWidth="3.5" strokeLinecap="round" />
-                        <line x1="-2" y1="-22" x2="-13" y2="-12" stroke="#1b3f8a" strokeWidth="3"  strokeLinecap="round" />
-                        <line x1="2"  y1="-22" x2="13" y2="-12" stroke="#1b3f8a" strokeWidth="3"   strokeLinecap="round" />
-                      </g>
-
-                      {/* torso */}
-                      <line x1="0" y1="-28" x2="0" y2="-6" stroke="#1b3f8a" strokeWidth="4" strokeLinecap="round" />
-                      {/* head glow */}
-                      <circle cx="0" cy="-38" r="13" fill="rgba(79,156,249,0.22)" />
-                      {/* head */}
-                      <circle cx="0" cy="-38" r="10" fill="#1b3f8a" stroke="#4F9CF9" strokeWidth="2" />
-                    </g>
-                  </g>
                 </svg>
               </div>
               <p style={{ fontFamily: C.mono, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.13em', color: C.text4, margin: 0, textAlign: 'center' }}>
