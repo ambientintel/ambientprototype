@@ -24,14 +24,6 @@ interface Issue {
   blockedBy?: string[]; // issue IDs that must be done first
 }
 
-interface Subsystem {
-  id: string;
-  name: string;
-  color: string;
-  progress: number;
-  status: string;
-}
-
 // ── Data ───────────────────────────────────────────────────────────────────
 const INITIAL_ISSUES: Issue[] = [
   { id:"ENG-142", type:"story",  title:"Sensor fusion: merge radar + PIR confidence scores",        priority:"high",     points:8,  assignee:"Gavin",  assigneeInitial:"G", assigneeColor:"#00B4D8", labels:["ml","sensors"],    column:"todo",       description:"Combine radar motion confidence with PIR interrupt signals to produce a unified presence score per room. Output should feed the alert engine.", created:"Apr 22", updated:"Apr 27" },
@@ -91,16 +83,6 @@ const DISCIPLINES = [
   { name:"Cloud Cybersecurity", color:"#22D3EE", members:["Abdul"] },
 ];
 
-const DEFAULT_SUBSYSTEMS: Subsystem[] = [
-  { id:"electrical",  name:"Electrical",         color:"#FB923C", progress:35, status:"PCB rev 2 in fab" },
-  { id:"firmware",    name:"Firmware",            color:"#00B4D8", progress:50, status:"IWR6843AOP driver stable" },
-  { id:"device-app",  name:"Device Application",  color:"#34D399", progress:45, status:"Python agent on device" },
-  { id:"api",         name:"API",                 color:"#818CF8", progress:60, status:"FastAPI + Cognito live" },
-  { id:"cloud-arch",  name:"Cloud Architecture",  color:"#22D3EE", progress:55, status:"Terraform infra deployed" },
-  { id:"web-app",     name:"Web App",             color:"#7C6EAD", progress:70, status:"Dashboard in review" },
-  { id:"mobile-app",  name:"Mobile App",          color:"#F472B6", progress:10, status:"Backlog — pilot pending" },
-];
-
 // ── Create issue form state type ───────────────────────────────────────────
 interface NewIssueForm {
   title: string;
@@ -113,7 +95,7 @@ interface NewIssueForm {
 // ── Component ──────────────────────────────────────────────────────────────
 export default function EngineeringPage() {
   const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
-  const [view, setView] = useState<"board" | "backlog" | "people" | "subsystems">("board");
+  const [view, setView] = useState<"board" | "backlog" | "people">("board");
   const [search, setSearch] = useState("");
   const [filterAssignee, setFilterAssignee] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -144,9 +126,6 @@ export default function EngineeringPage() {
   const [showAddEng, setShowAddEng] = useState(false);
   const [newEng, setNewEng] = useState({ name:"", color:"#A78BFA", discipline:"" });
   const [editEng, setEditEng] = useState<{original:string; name:string; color:string; discipline:string}|null>(null);
-  const [subsystems, setSubsystems] = useState<Subsystem[]>(DEFAULT_SUBSYSTEMS);
-  const [showAddSub, setShowAddSub] = useState(false);
-  const [newSub, setNewSub] = useState({ name:"", color:"#A78BFA", progress:0, status:"" });
   const [dragEngIdx, setDragEngIdx] = useState<number|null>(null);
   const [dragOverEngIdx, setDragOverEngIdx] = useState<number|null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -175,7 +154,7 @@ export default function EngineeringPage() {
   // ── Load: API first → localStorage fallback → INITIAL_ISSUES ─────────────
   useEffect(() => {
     (async () => {
-      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[]; subsystems?: Subsystem[]; boardWeek?: number };
+      type BoardData = { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[]; boardWeek?: number };
       let loaded: BoardData | null = null;
       try {
         const res  = await fetch("/api/engineering");
@@ -194,7 +173,6 @@ export default function EngineeringPage() {
         setHistory(loaded.history     ?? []);
         setWeekStatus((loaded.boardWeek ?? weekNum) !== weekNum ? {} : (loaded.weekStatus ?? {}));
         if (loaded.team?.length) setTeam(loaded.team.map(tm => ({ ...TEAM.find(d => d.name === tm.name), ...tm })));
-        if (loaded.subsystems?.length) setSubsystems(loaded.subsystems);
       }
       // Show daily prompt at noon or later if not yet answered today
       const todayKeyLocal = new Date().toISOString().slice(0, 10);
@@ -212,7 +190,7 @@ export default function EngineeringPage() {
     setSyncStatus("saving");
     saveTimerRef.current = setTimeout(async () => {
       saveTimerRef.current = null;
-      const board = { issues, personalTasks, completedTasks, history, weekStatus, team, subsystems, boardWeek: weekNum };
+      const board = { issues, personalTasks, completedTasks, history, weekStatus, team, boardWeek: weekNum };
       // Always persist locally first — instant, no network
       lsSave(board);
       if (!apiEnabledRef.current) { setSyncStatus("saved"); setTimeout(() => setSyncStatus("idle"), 1500); return; }
@@ -237,7 +215,7 @@ export default function EngineeringPage() {
       } catch { setSyncStatus("error"); }
     }, 800);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [issues, personalTasks, completedTasks, history, weekStatus, team, subsystems, loading]);
+  }, [issues, personalTasks, completedTasks, history, weekStatus, team, loading]);
 
   // ── Poll for remote changes every 30s (only when API is configured) ────────
   useEffect(() => {
@@ -246,7 +224,7 @@ export default function EngineeringPage() {
       if (!apiEnabledRef.current || saveTimerRef.current) return;
       try {
         const res  = await fetch("/api/engineering");
-        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[]; subsystems?: Subsystem[]; boardWeek?: number }; sha: string | null };
+        const data = await res.json() as { board: null | { issues: Issue[]; personalTasks: Record<string,string[]>; completedTasks: Record<string,string[]>; history: Issue[]; weekStatus: Record<string,Record<string,"yes"|"no"|null>>; team?: {name:string;initial:string;color:string;discipline?:string}[]; boardWeek?: number }; sha: string | null };
         if (data.sha && data.sha !== boardShaRef.current && data.board) {
           isMountingRef.current = true;
           setIssues(data.board.issues       ?? INITIAL_ISSUES);
@@ -255,7 +233,6 @@ export default function EngineeringPage() {
           setHistory(data.board.history     ?? []);
           setWeekStatus((data.board.boardWeek ?? weekNum) !== weekNum ? {} : (data.board.weekStatus ?? {}));
           if (data.board.team?.length) setTeam(data.board.team.map(tm => ({ ...TEAM.find(d => d.name === tm.name), ...tm })));
-          setSubsystems(data.board.subsystems ?? DEFAULT_SUBSYSTEMS);
           boardShaRef.current = data.sha;
           lsSave(data.board);
           setSyncStatus("saved");
@@ -523,7 +500,6 @@ export default function EngineeringPage() {
             { label:"Board",    icon:<path d="M2.5 2.5h4v11h-4zM9.5 2.5h4v6h-4zM9.5 11.5h4v2h-4z" strokeLinejoin="round"/>, v:"board" as const },
             { label:"Backlog",  icon:<><rect x="2.5" y="3" width="11" height="1.5" rx=".75"/><rect x="2.5" y="6.5" width="11" height="1.5" rx=".75"/><rect x="2.5" y="10" width="11" height="1.5" rx=".75"/></>, v:"backlog" as const },
             { label:"People",   icon:<><circle cx="5" cy="5.5" r="2.5"/><circle cx="11" cy="5.5" r="2.5"/><path d="M1 13c0-2.2 1.8-4 4-4s4 1.8 4 4M7 13c0-2.2 1.8-4 4-4s4 1.8 4 4" strokeLinecap="round"/></>, v:"people" as const },
-            { label:"Subsystems", icon:<><rect x="2.5" y="2.5" width="3.5" height="3.5" rx="0.75"/><rect x="2.5" y="7.5" width="3.5" height="3.5" rx="0.75"/><path d="M8.5 4.25h5M8.5 9.25h5" strokeLinecap="round" strokeWidth="1.6"/></>, v:"subsystems" as const },
           ].map(({ label, icon, v }) => (
             <div key={label} style={{ ...s.navItem, background: view === v ? "var(--surface-2)" : "transparent", color: view === v ? "var(--text)" : "var(--text-2)" }} onClick={() => setView(v)}>
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>
@@ -656,9 +632,9 @@ export default function EngineeringPage() {
 
           {/* View tabs */}
           <div style={{ display:"flex", gap:0, borderBottom:"none", marginTop:-4 }}>
-            {(["board","backlog","people","subsystems"] as const).map(v => (
-              <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", cursor:"pointer", padding:"8px 16px 12px", fontSize:13, fontFamily:"var(--sans)", color: view===v ? "var(--text)" : "var(--text-3)", borderBottom: view===v ? "2px solid var(--accent)" : "2px solid transparent", transition:"color 0.15s", textTransform:"capitalize", display: v === "subsystems" ? "none" : undefined }}>
-                {v === "board" ? "Board" : v === "backlog" ? "Backlog" : v === "people" ? "People" : "Subsystems"}
+            {(["board","backlog","people"] as const).map(v => (
+              <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", cursor:"pointer", padding:"8px 16px 12px", fontSize:13, fontFamily:"var(--sans)", color: view===v ? "var(--text)" : "var(--text-3)", borderBottom: view===v ? "2px solid var(--accent)" : "2px solid transparent", transition:"color 0.15s", textTransform:"capitalize" }}>
+                {v === "board" ? "Board" : v === "backlog" ? "Backlog" : "People"}
               </button>
             ))}
           </div>
@@ -1309,54 +1285,6 @@ export default function EngineeringPage() {
             </div>
           </div>
         )}
-        {/* ── Subsystems View ── */}
-        {view === "subsystems" && (
-          <div style={{ ...s.content, flex:1 }}>
-            {/* Header row */}
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-              <div style={{ fontFamily:"var(--serif)", fontWeight:300, fontSize:22, letterSpacing:"-0.01em" }}>Subsystems <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>overview</em></div>
-              <button onClick={() => { setNewSub({ name:"", color:"#A78BFA", progress:0, status:"" }); setShowAddSub(true); }}
-                style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", borderRadius:7, border:"1px solid var(--line-strong)", background:"var(--surface-2)", color:"var(--text-2)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:10.5, letterSpacing:"0.08em", textTransform:"uppercase", transition:"all 0.14s" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-3)"; e.currentTarget.style.color = "var(--text)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--text-2)"; }}>
-                <span style={{ fontSize:14, lineHeight:1 }}>+</span> Add Subsystem
-              </button>
-            </div>
-            {/* Overall progress */}
-            <div style={{ background:"var(--surface-1)", border:"1px solid var(--line)", borderRadius:14, padding:"22px 28px", marginBottom:32 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
-                <div style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-3)" }}>Overall progress</div>
-                <div style={{ flex:1, height:6, borderRadius:4, background:"var(--surface-2)", overflow:"hidden" }}>
-                  <div style={{ height:"100%", width:`${Math.round(subsystems.reduce((a,sub)=>a+sub.progress,0)/subsystems.length)}%`, background:"var(--accent)", borderRadius:4, transition:"width 0.5s" }}/>
-                </div>
-                <div style={{ fontFamily:"var(--mono)", fontSize:16, fontWeight:600, color:"var(--accent)", whiteSpace:"nowrap" }}>
-                  {Math.round(subsystems.reduce((a,sub)=>a+sub.progress,0)/subsystems.length)}%
-                </div>
-              </div>
-              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                {subsystems.map(sub => (
-                  <div key={sub.id} style={{ display:"flex", alignItems:"center", gap:5, padding:"3px 10px 3px 7px", borderRadius:5, background: sub.color+"18", border:`1px solid ${sub.color}30` }}>
-                    <span style={{ width:6, height:6, borderRadius:2, background:sub.color, flexShrink:0 }}/>
-                    <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:sub.color, letterSpacing:"0.06em" }}>{sub.name}</span>
-                    <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-4)", marginLeft:3 }}>{sub.progress}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Subsystem cards */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:16 }}>
-              {subsystems.map(sub => (
-                <SubsystemCard key={sub.id} sub={sub}
-                  onUpdate={(progress, status) =>
-                    setSubsystems(prev => prev.map(s => s.id === sub.id ? { ...s, progress, status } : s))
-                  }
-                  onRemove={() => setSubsystems(prev => prev.filter(s => s.id !== sub.id))}
-                />
-              ))}
-            </div>
-          </div>
-        )}
       </main>
 
       {/* ── Add Engineer Modal ── */}
@@ -1463,59 +1391,6 @@ export default function EngineeringPage() {
                 setTeam(prev => prev.map(tm => tm.name === editEng.original ? { ...tm, name:n, initial, color:editEng.color, discipline:editEng.discipline||undefined } : tm));
                 setEditEng(null);
               }} style={{ ...s.btnPrimary, opacity: editEng.name.trim() ? 1 : 0.4 }}>Save Changes</button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Add Subsystem Modal ── */}
-      {showAddSub && (
-        <>
-          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(4px)", zIndex:70 }} onClick={() => setShowAddSub(false)}/>
-          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:71, width:400, background:"var(--surface-1)", border:"1px solid var(--line-strong)", borderRadius:14, padding:"28px 28px 24px", display:"flex", flexDirection:"column", gap:20, boxShadow:"0 20px 60px rgba(0,0,0,0.45)" }}>
-            <div>
-              <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.16em", color:"var(--text-4)", marginBottom:6 }}>Subsystems / New</div>
-              <h2 style={{ margin:0, fontFamily:"var(--serif)", fontWeight:300, fontSize:22, letterSpacing:"-0.02em" }}>Add <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>subsystem</em></h2>
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-              <div style={s.formRow}>
-                <label style={s.formLabel}>Name</label>
-                <input autoFocus value={newSub.name} onChange={e => setNewSub(p => ({ ...p, name: e.target.value }))}
-                  style={s.formInput} placeholder="e.g. Firmware, Cloud API…"/>
-              </div>
-              <div style={s.formRow}>
-                <label style={s.formLabel}>Status note</label>
-                <input value={newSub.status} onChange={e => setNewSub(p => ({ ...p, status: e.target.value }))}
-                  style={s.formInput} placeholder="e.g. In development…"/>
-              </div>
-              <div style={s.formRow}>
-                <label style={s.formLabel}>Progress</label>
-                <div style={{ display:"flex", alignItems:"center", gap:8, flex:1 }}>
-                  <input type="range" min={0} max={100} value={newSub.progress}
-                    onChange={e => setNewSub(p => ({ ...p, progress: Number(e.target.value) }))}
-                    style={{ flex:1, accentColor: newSub.color }}/>
-                  <span style={{ fontFamily:"var(--mono)", fontSize:12, color:"var(--text-2)", minWidth:36, textAlign:"right" }}>{newSub.progress}%</span>
-                </div>
-              </div>
-              <div style={s.formRow}>
-                <label style={s.formLabel}>Color</label>
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  {["#00B4D8","#F472B6","#FB923C","#818CF8","#34D399","#22D3EE","#A78BFA","#FCD34D","#F87171","#4ADE80","#38BDF8","#E879F9"].map(c => (
-                    <button key={c} onClick={() => setNewSub(p => ({ ...p, color: c }))}
-                      style={{ width:24, height:24, borderRadius:"50%", background:c, border: newSub.color === c ? "2px solid white" : "2px solid transparent", cursor:"pointer", boxShadow: newSub.color === c ? `0 0 0 2px ${c}` : "none", transition:"all 0.14s ease" }}/>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => setShowAddSub(false)} style={{ ...s.btn }}>Cancel</button>
-              <button onClick={() => {
-                const n = newSub.name.trim();
-                if (!n) return;
-                const id = n.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") + "-" + Date.now();
-                setSubsystems(prev => [...prev, { id, name: n, color: newSub.color, progress: newSub.progress, status: newSub.status.trim() }]);
-                setShowAddSub(false);
-              }} style={{ ...s.btnPrimary, opacity: newSub.name.trim() ? 1 : 0.4 }}>Add Subsystem</button>
             </div>
           </div>
         </>
@@ -1797,90 +1672,6 @@ export default function EngineeringPage() {
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-// ── SubsystemCard ─────────────────────────────────────────────────────────
-function SubsystemCard({ sub, onUpdate, onRemove }: { sub: Subsystem; onUpdate: (progress: number, status: string) => void; onRemove: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({ progress: sub.progress, status: sub.status });
-
-  const barColor = sub.progress >= 75 ? "#3DCC91" : sub.progress >= 40 ? sub.color : "#FF6B6B";
-
-  function commit() {
-    onUpdate(Math.min(100, Math.max(0, draft.progress)), draft.status);
-    setEditing(false);
-  }
-
-  return (
-    <div style={{ background:"var(--surface-1)", border:`1px solid var(--line)`, borderRadius:14, overflow:"hidden", transition:"border-color 0.15s, box-shadow 0.15s" }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = sub.color + "55"; e.currentTarget.style.boxShadow = `0 4px 20px ${sub.color}18`; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.boxShadow = "none"; }}>
-      {/* Colored top strip */}
-      <div style={{ height:3, background:`linear-gradient(90deg, ${sub.color} ${sub.progress}%, var(--surface-2) ${sub.progress}%)`, transition:"background 0.5s" }}/>
-
-      <div style={{ padding:"18px 20px 20px" }}>
-        {/* Header */}
-        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
-          <span style={{ width:9, height:9, borderRadius:2, background:sub.color, flexShrink:0 }}/>
-          <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text-2)", flex:1 }}>{sub.name}</span>
-          <button onClick={onRemove}
-            style={{ background:"none", border:"1px solid var(--line)", cursor:"pointer", color:"var(--text-3)", fontSize:10, fontFamily:"var(--mono)", letterSpacing:"0.08em", textTransform:"uppercase", padding:"3px 8px", borderRadius:5, transition:"all 0.14s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#FF6B6B55"; e.currentTarget.style.color = "#FF6B6B"; e.currentTarget.style.background = "rgba(255,107,107,0.08)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-3)"; e.currentTarget.style.background = "none"; }}>Remove</button>
-        </div>
-
-        {/* Progress bar */}
-        <div style={{ marginBottom:12 }}>
-          <div style={{ height:8, borderRadius:6, background:"var(--surface-2)", overflow:"hidden", marginBottom:6 }}>
-            <div style={{ height:"100%", width:`${sub.progress}%`, background:barColor, borderRadius:6, transition:"width 0.5s, background 0.3s", boxShadow: sub.progress > 0 ? `0 0 8px ${barColor}55` : "none" }}/>
-          </div>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.1em", textTransform:"uppercase" }}>Progress</span>
-            <span style={{ fontFamily:"var(--mono)", fontSize:20, fontWeight:600, color:barColor }}>{sub.progress}%</span>
-          </div>
-        </div>
-
-        {/* Status */}
-        <div style={{ fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text-3)", marginBottom:16, minHeight:16 }}>{sub.status}</div>
-
-        {/* Edit button / inline editor */}
-        {!editing ? (
-          <button onClick={() => { setDraft({ progress: sub.progress, status: sub.status }); setEditing(true); }}
-            style={{ width:"100%", padding:"7px 0", borderRadius:7, border:"1px solid var(--line)", background:"var(--surface-2)", color:"var(--text-3)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.1em", textTransform:"uppercase", transition:"all 0.14s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = sub.color + "66"; e.currentTarget.style.color = sub.color; e.currentTarget.style.background = sub.color + "12"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-3)"; e.currentTarget.style.background = "var(--surface-2)"; }}>
-            Edit Progress
-          </button>
-        ) : (
-          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <input type="range" min={0} max={100} value={draft.progress}
-                onChange={e => setDraft(p => ({ ...p, progress: Number(e.target.value) }))}
-                style={{ flex:1, accentColor: sub.color }}/>
-              <input type="number" min={0} max={100} value={draft.progress}
-                onChange={e => setDraft(p => ({ ...p, progress: Math.min(100,Math.max(0,Number(e.target.value)||0)) }))}
-                style={{ width:52, background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:5, padding:"4px 7px", fontSize:12, color:"var(--text)", fontFamily:"var(--mono)", textAlign:"center", outline:"none" }}/>
-              <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-3)" }}>%</span>
-            </div>
-            <input value={draft.status}
-              onChange={e => setDraft(p => ({ ...p, status: e.target.value }))}
-              placeholder="Status note…"
-              style={{ width:"100%", background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"6px 10px", fontSize:12, color:"var(--text)", fontFamily:"var(--mono)", outline:"none", boxSizing:"border-box" as const }}/>
-            <div style={{ display:"flex", gap:6 }}>
-              <button onClick={commit}
-                style={{ flex:1, padding:"7px 0", borderRadius:6, border:"none", background:"var(--accent)", color:"#fff", cursor:"pointer", fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.1em", textTransform:"uppercase", fontWeight:600 }}>
-                Save
-              </button>
-              <button onClick={() => setEditing(false)}
-                style={{ padding:"7px 14px", borderRadius:6, border:"1px solid var(--line)", background:"var(--surface-2)", color:"var(--text-3)", cursor:"pointer", fontFamily:"var(--mono)", fontSize:10 }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
