@@ -193,7 +193,8 @@
   "weekStatus": {
     "Brian": {
       "Mon": "yes",
-      "SU": "yes"
+      "SU": "yes",
+      "M": "yes"
     }
   },
   "team": [
