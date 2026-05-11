@@ -537,21 +537,6 @@ export default function EngineeringPage() {
           })()}
         </div>
 
-        {/* Workspaces */}
-        <div>
-          <div style={s.navLabel}>Workspaces</div>
-          {[
-            { label:"Electrical", href:"/ee",         color:"#FB923C" },
-            { label:"Mechanical", href:"/mechanical",  color:"#34D399" },
-            { label:"Firmware",   href:"/firmware",    color:"#00B4D8" },
-          ].map(({ label, href, color }) => (
-            <Link key={href} href={href} style={{ ...s.navItem, color:"var(--text-2)", textDecoration:"none" }}>
-              <span style={{ width:6, height:6, borderRadius:2, background:color, flexShrink:0 }}/>
-              <span style={{ fontSize:12.5 }}>{label}</span>
-            </Link>
-          ))}
-        </div>
-
         {/* Footer */}
         <div style={{ marginTop:"auto", fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", letterSpacing:"0.1em", textTransform:"uppercase" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
