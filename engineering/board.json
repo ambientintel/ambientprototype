@@ -164,12 +164,28 @@
       "description": "",
       "created": "May 7",
       "updated": "May 7"
+    },
+    {
+      "id": "ENG-L1778536502225",
+      "type": "task",
+      "title": "AWS engineering",
+      "priority": "medium",
+      "points": 1,
+      "assignee": "Brian",
+      "assigneeInitial": "B",
+      "assigneeColor": "#22D3EE",
+      "labels": [],
+      "column": "inprogress",
+      "description": "",
+      "created": "May 11",
+      "updated": "May 11"
     }
   ],
   "personalTasks": {
     "Brian": [
       "Website for pilot study",
-      "Mobile app for pilot study"
+      "Mobile app for pilot study",
+      "AWS engineering"
     ],
     "Gavin": [
       "finish routing PMIC to the OSD62",
