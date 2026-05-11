@@ -361,133 +361,6 @@ export default function CarlsonPage() {
 
       <Divider />
 
-      {/* ── EVENT DETAILS GRID ───────────────────────────────────────────────── */}
-      <section className="carlson-section" style={{ padding: '72px 48px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4, margin: '0 0 36px' }}>Event Details</p>
-
-          <div className="carlson-info-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-
-            <div style={{ padding: '32px 32px 28px', background: C.surf1, border: `1px solid ${C.lineStrg}`, borderRadius: 14 }}>
-              <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.15em', color: C.gold, margin: '0 0 16px' }}>When</p>
-              <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', margin: '0 0 8px', lineHeight: 1.2 }}>
-                Wednesday<br/>May 13, 2026
-              </p>
-              <p style={{ fontSize: 16, color: C.text2, margin: '0 0 20px' }}>4:30 PM – 7:00 PM</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: C.green, animation: 'pulse-green 2.2s ease-out infinite' }} />
-                <span style={{ fontFamily: C.mono, fontSize: 10, color: C.green, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Free Admission</span>
-              </div>
-            </div>
-
-            <div style={{ padding: '32px 32px 28px', background: C.surf1, border: `1px solid ${C.lineStrg}`, borderRadius: 14 }}>
-              <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.15em', color: C.maroon, margin: '0 0 16px' }}>Where</p>
-              <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', margin: '0 0 8px', lineHeight: 1.2 }}>
-                Walter Library<br/><em style={{ fontStyle: 'italic', color: C.text2 }}>&amp; Toaster Hub</em>
-              </p>
-              <p style={{ fontSize: 14, color: C.text2, margin: '0 0 20px', fontStyle: 'italic' }}>117 Pleasant St SE<br/>Minneapolis, MN 55455</p>
-              <Tag color={C.accent} bg={C.accentSoft}>University of Minnesota Campus</Tag>
-            </div>
-
-            <div style={{ padding: '32px 32px 28px', background: C.surf1, border: `1px solid ${C.lineStrg}`, borderRadius: 14 }}>
-              <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.15em', color: C.accent, margin: '0 0 16px' }}>What&apos;s Happening</p>
-              <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 22, letterSpacing: '-0.015em', margin: '0 0 18px', lineHeight: 1.3 }}>
-                Innovation &amp; Entrepreneurship Showcase
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                {['MVP Challenge — 25 student projects', 'Startup Showcase — UMN spinouts', 'Entrepreneurship Awards ceremony', 'Networking at the Toaster Hub'].map(item => (
-                  <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{ color: C.accent, fontSize: 12, marginTop: 2, flexShrink: 0 }}>—</span>
-                    <span style={{ fontSize: 13.5, color: C.text2 }}>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      <Divider />
-
-      {/* ── VISIT OUR TABLE ──────────────────────────────────────────────────── */}
-      <section className="carlson-section" style={{ padding: '80px 48px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 64, alignItems: 'start' }} className="carlson-tech-grid">
-
-            <div>
-              <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4, margin: '0 0 18px' }}>Visit Our Table</p>
-              <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(36px, 4.5vw, 54px)', lineHeight: 1.1, letterSpacing: '-0.025em', margin: '0 0 22px' }}>
-                Ambient Intelligence<br/><em style={{ fontStyle: 'italic', color: C.text2 }}>at the Toaster Hub</em>
-              </h2>
-              <p style={{ fontSize: 15, lineHeight: 1.72, color: C.text2, margin: '0 0 28px' }}>
-                We&apos;re showcasing our ambient sensor platform for skilled nursing care — live demonstrations, early performance data, and a conversation about the future of passive patient monitoring in Minnesota.
-              </p>
-              <a href="mailto:bribradley@gmail.com" className="carlson-btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 999, background: C.maroon, color: '#fff', fontSize: 13, fontWeight: 500, textDecoration: 'none', letterSpacing: '0.01em', transition: 'background 0.15s' }}>
-                Schedule a Conversation
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-              </a>
-            </div>
-
-            <div className="carlson-feat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-              {[
-                {
-                  color: C.accent, bg: C.accentSoft,
-                  title: 'Ella AI Nurse Assistant',
-                  desc:  'Live demonstration of our ambient intelligence platform generating plain-language care summaries from radar-based motion data.',
-                  tags:  ['Live Demo', 'AI', 'Care Workflow'],
-                  icon:  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><line x1="12" y1="2.5" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21.5" y2="12"/></svg>,
-                },
-                {
-                  color: C.gold, bg: C.goldSoft,
-                  title: '60 GHz Radar Sensor',
-                  desc:  'Our EVT-0.1 hardware prototype — a TI IWR6843AOP mmWave sensor that detects falls and motion with no cameras and no wearables.',
-                  tags:  ['Hardware', 'Privacy-First', 'Non-Contact'],
-                  icon:  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h4m12 0h4M12 2v4m0 12v4"/><path d="M6.3 6.3l2.8 2.8m5.6 5.6l2.8 2.8M6.3 17.7l2.8-2.8m5.6-5.6l2.8-2.8"/><circle cx="12" cy="12" r="3"/></svg>,
-                },
-                {
-                  color: C.green, bg: C.greenSoft,
-                  title: 'Clinical Validation',
-                  desc:  'F1 0.81 on held-out lab data. IRB application in preparation with UMN for our Minneapolis skilled nursing pilot launching Summer 2026.',
-                  tags:  ['IRB', 'MN Pilot', 'Class II'],
-                  icon:  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
-                },
-              ].map(card => (
-                <div key={card.title} className="carlson-feature-card" style={{ padding: '28px 24px 24px', background: C.surf1, border: `1px solid ${C.lineStrg}`, borderRadius: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ color: card.color, width: 36, height: 36, borderRadius: 9, background: card.bg, border: `1px solid ${card.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {card.icon}
-                  </div>
-                  <div>
-                    <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 18, letterSpacing: '-0.01em', margin: '0 0 10px', lineHeight: 1.25 }}>{card.title}</p>
-                    <p style={{ fontSize: 13, lineHeight: 1.65, color: C.text2, margin: 0 }}>{card.desc}</p>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 'auto' }}>
-                    {card.tags.map(tag => <Tag key={tag} color={card.color} bg={card.bg}>{tag}</Tag>)}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      <Divider />
-
-      {/* ── STATS STRIP ──────────────────────────────────────────────────────── */}
-      <section style={{ background: C.surf1, borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div className="carlson-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)' }}>
-            <StatCell value="60 GHz"  label="mmWave radar"        color={C.accent}  />
-            <StatCell value="Class B" label="IEC 62304 software"  color={C.text}    />
-            <StatCell value="F1 0.81" label="Fall detection"       color={C.green}   />
-            <StatCell value="EVT-0.1" label="Hardware revision"    color={C.text}    />
-            <StatCell value="57"      label="BOM components"       color={C.gold}    />
-            <StatCell value="2026"    label="MN pilot launch"      color={C.maroon}  />
-          </div>
-        </div>
-      </section>
-
       {/* ── TECHNOLOGY OVERVIEW ──────────────────────────────────────────────── */}
       <section className="carlson-section" style={{ padding: '88px 48px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -735,7 +608,7 @@ export default function CarlsonPage() {
         <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.18em', color: C.text4, margin: '0 0 20px' }}>May 13 · Toaster Innovation Hub</p>
           <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 5vw, 64px)', lineHeight: 1.08, letterSpacing: '-0.03em', margin: '0 0 22px' }}>
-            Come see what<br/><em style={{ fontStyle: 'italic', color: C.text2 }}>room-scale AI looks like.</em>
+            Engineered for<br/><em style={{ fontStyle: 'italic', color: C.text2 }}>Memory Care.</em>
           </h2>
           <p style={{ fontSize: 17, lineHeight: 1.72, color: C.text2, margin: '0 0 44px' }}>
             We&apos;ll have a live demo running at our table — radar sensor data flowing into Ella AI, surfacing insights in real time. No pitch deck. Just the actual product.
