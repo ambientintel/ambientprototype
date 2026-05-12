@@ -560,14 +560,14 @@ export default function EngineeringPage() {
                 Sprint <em style={{ fontStyle:"italic", color:"var(--text-2)" }}>{weekNum} · Board</em>
               </h1>
             </div>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ display:"flex", alignItems:"stretch", gap:8 }}>
               <NavCard href="/firmware"        label="Firmware"   color="#00B4D8" lsKey="ambient-fw-checklist-v2"          total={20} defaultDone={9}  serverPct={subProgress['firmware']} />
               <NavCard href="/ee"              label="EE"         color="#2563EB" lsKey="ambient-ee-checklist-v1"          total={22} defaultDone={13} serverPct={subProgress['ee']} />
               <NavCard href="/cloudengineering" label="Cloud Eng" color="#38BDF8" lsKey="ambient-cloud-checklist-v2"       total={22} defaultDone={16} serverPct={subProgress['cloud']} />
               <NavCard href="/webapp"          label="Web App"    color="#3DCC91" lsKey="ambient-webapp-checklist-v1"      total={20} defaultDone={13} serverPct={subProgress['webapp']} />
               <NavCard href="/mobileapp"       label="Mobile App" color="#FB923C" lsKey="ambient-mobileapp-checklist-v1"  total={23} defaultDone={5}  serverPct={subProgress['mobileapp']} />
               <NavCard href="/mechanical"      label="Mechanical" color="#34D399" lsKey="ambient-mechanical-checklist-v1" total={22} defaultDone={5}  serverPct={subProgress['mechanical']} />
-              <div style={{ width:1, height:36, background:"var(--line)", flexShrink:0, marginLeft:4 }}/>
+              <div style={{ width:1, background:"var(--line)", flexShrink:0, marginLeft:4, alignSelf:"stretch" }}/>
               {syncStatus !== "idle" && (
                 <span style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.08em", color: syncStatus === "error" ? "#FF6B6B" : syncStatus === "conflict" ? "#FFC940" : "#3DCC91", display:"flex", alignItems:"center", gap:5 }}>
                   {syncStatus === "saving"   && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940", animation:"pulse 1s infinite" }}/> Saving…</>}
@@ -576,10 +576,7 @@ export default function EngineeringPage() {
                   {syncStatus === "conflict" && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940" }}/> Conflict — retrying</>}
                 </span>
               )}
-              <button style={s.btnPrimary} onClick={() => setShowCreate(true)}>
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
-                Create Issue
-              </button>
+              <CreateIssueBtn onClick={() => setShowCreate(true)} />
             </div>
           </div>
 
@@ -1797,6 +1794,95 @@ function NavCard({ href, label, color, lsKey, total, defaultDone, serverPct }: {
         </div>
       </div>
     </Link>
+  );
+}
+
+// ── CreateIssueBtn ────────────────────────────────────────────────────────
+function CreateIssueBtn({ onClick }: { onClick: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cfgRef = useRef({ cornerRadius: 8, speed: 0.72, blobSize: 0.66, intensity: 0.73, strokeWidth: 1.5, padding: 0 });
+  const [hov, setHov] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    // FlowGlow animation (Background Lab pattern)
+    const create = function create(e: HTMLCanvasElement, t: () => Record<string, number>) {
+      let a: number;
+      const l = e.getContext("2d")!;
+      let i = 0, n = 0, r = performance.now();
+      const o: [number,number,number][] = [[188,130,243],[245,185,234],[141,159,255],[255,103,120],[255,186,113],[198,134,255]];
+      const s = [{fx:.31,fy:.47,px:0,py:.5*Math.PI},{fx:.53,fy:.29,px:Math.PI,py:1.2*Math.PI},{fx:.41,fy:.67,px:.7*Math.PI,py:0},{fx:.23,fy:.53,px:1.5*Math.PI,py:.8*Math.PI},{fx:.59,fy:.37,px:.3*Math.PI,py:1.7*Math.PI},{fx:.43,fy:.61,px:1.1*Math.PI,py:.3*Math.PI}];
+      const h = ["#BC82F3","#F5B9EA","#8D9FFF","#FF6778","#FFBA71","#C686FF"];
+      let d = [...h], m = [...h], c = 1, p = .45;
+      const g = (e: string) => { const t = parseInt(e.replace("#",""),16); return [t>>16&255,t>>8&255,255&t] as [number,number,number]; };
+      const u = () => { const t = e.getBoundingClientRect(); e.width = t.width||200; e.height = t.height||50; };
+      const b = (x: number, y: number, w: number, h: number, r: number) => {
+        r = Math.max(0,Math.min(r,w/2,h/2));
+        l.beginPath(); l.moveTo(x+r,y); l.lineTo(x+w-r,y); l.arcTo(x+w,y,x+w,y+r,r);
+        l.lineTo(x+w,y+h-r); l.arcTo(x+w,y+h,x+w-r,y+h,r);
+        l.lineTo(x+r,y+h); l.arcTo(x,y+h,x,y+h-r,r);
+        l.lineTo(x,y+r); l.arcTo(x,y,x+r,y,r); l.closePath();
+      };
+      const f = (ts: number) => {
+        const y = Math.min((ts-r)/1e3,.05); r = ts;
+        const M = t(), x = e.width, w = e.height, k = x/2, S = w/2, v = Math.min(x,w);
+        i += M.speed*y; n += .4*y; c = Math.min(1,c+y/.55);
+        if ((p-=y) <= 0 && c >= 1) { p = .4+.15*Math.random(); d = [...m]; c = 0; m = [...h].sort(()=>Math.random()-.5); }
+        const C = d.map((e,idx) => {
+          const [l1,i1,n1] = g(e), [r1,o1,s1] = g(m[idx]);
+          return `rgb(${Math.round(l1+(r1-l1)*c)},${Math.round(i1+(o1-i1)*c)},${Math.round(n1+(s1-n1)*c)})`;
+        });
+        l.clearRect(0,0,x,w); l.fillStyle="#080810"; l.fillRect(0,0,x,w);
+        const R = M.padding, F = M.strokeWidth, A = M.intensity, I = x-2*R, P = w-2*R, $ = M.cornerRadius, z = v*M.blobSize;
+        l.save(); b(R,R,I,P,$); l.clip(); l.globalCompositeOperation = "screen" as GlobalCompositeOperation;
+        s.forEach((e,idx) => {
+          const [a2,n2,r2] = o[idx];
+          const sx = k+.4*I*Math.sin(i*e.fx+e.px), sy = S+.4*P*Math.cos(i*e.fy+e.py);
+          const dg = l.createRadialGradient(sx,sy,0,sx,sy,z);
+          dg.addColorStop(0,`rgba(${a2},${n2},${r2},${.82*A})`); dg.addColorStop(.42,`rgba(${a2},${n2},${r2},${.36*A})`); dg.addColorStop(1,`rgba(${a2},${n2},${r2},0)`);
+          l.beginPath(); l.arc(sx,sy,z,0,2*Math.PI); l.fillStyle=dg; l.fill();
+        });
+        l.restore();
+        const B = (lw: number, blur: number, alpha: number) => {
+          l.save(); if (blur>0) l.filter=`blur(${blur}px)`; l.globalAlpha=alpha;
+          const cg = l.createConicGradient(n-Math.PI/2,k,S);
+          C.forEach((e,idx) => cg.addColorStop(idx/C.length,e)); cg.addColorStop(1,C[0]);
+          l.strokeStyle=cg; l.lineWidth=lw; l.lineCap="round" as CanvasLineCap;
+          b(R,R,I,P,$); l.stroke(); l.restore();
+        };
+        B(4.5*F,26*A,.3*A); B(2.8*F,14*A,.5*A); B(1.6*F,5*A,.72*A); B(F,0,1);
+        a = requestAnimationFrame(f);
+      };
+      u(); a = requestAnimationFrame(f);
+      const obs = new ResizeObserver(() => u()); obs.observe(e);
+      return () => { cancelAnimationFrame(a); obs.disconnect(); };
+    };
+    return create(canvas, () => cfgRef.current);
+  }, []);
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        position: "relative", overflow: "hidden",
+        padding: "0 18px", borderRadius: 8,
+        border: `1px solid rgba(188,130,243,${hov ? 0.7 : 0.35})`,
+        cursor: "pointer", background: "transparent",
+        display: "inline-flex", alignItems: "center", alignSelf: "stretch",
+        gap: 7, transition: "border-color 0.2s, box-shadow 0.2s",
+        boxShadow: hov ? "0 0 22px rgba(188,130,243,0.35), 0 0 0 1px rgba(188,130,243,0.15)" : "none",
+        minWidth: 120,
+      }}
+    >
+      <canvas ref={canvasRef} style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none" }} />
+      <span style={{ position:"relative", zIndex:1, display:"flex", alignItems:"center", gap:7, color:"#fff", fontFamily:"var(--sans)", fontSize:13, fontWeight:500, whiteSpace:"nowrap" as const, textShadow:"0 1px 8px rgba(0,0,0,0.6)" }}>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
+        Create Issue
+      </span>
+    </button>
   );
 }
 
