@@ -62,10 +62,10 @@ function SectionMeta({ n, label }: { n: string; label: string }) {
 }
 
 function HowItWorksDiagram() {
-  const rx = 48, ry = 52, rw = 504, rh = 450;
+  const rx = 48, ry = 52, rw = 504, rh = 520;
   const bwX = 408, bwY = 222;
   const maroon = '#7A0019', accent = '#4F9CF9', gold = '#F0B429', green = '#3DCC91';
-  const personPath = 'M 220 270 C 168 198 118 238 148 332 C 178 428 298 448 372 370 C 438 296 412 182 336 150 C 260 118 200 208 220 270 Z';
+  const personPath = 'M 220 300 C 162 212 112 258 148 372 C 184 488 302 512 376 424 C 441 342 413 202 340 166 C 267 130 198 224 220 300 Z';
   const sNodes = [
     { cx: rx,    cy: ry,    id: 'A', color: accent, sweepFrom: '0',   sweepTo: '360',  sweepDur: '5s',   lx: rx+13,    ly: ry-13,    anchor: 'start' as const },
     { cx: rx+rw, cy: ry,    id: 'B', color: gold,   sweepFrom: '180', sweepTo: '-180', sweepDur: '6.5s', lx: rx+rw-13, ly: ry-13,    anchor: 'end'   as const },
@@ -81,7 +81,7 @@ function HowItWorksDiagram() {
   const trailDelays = [0.4, 0.8, 1.2, 1.6];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-      <svg viewBox="0 0 600 600" style={{ width: '100%', height: 'auto', display: 'block' }}>
+      <svg viewBox="0 0 600 690" style={{ width: '100%', height: 'auto', display: 'block' }}>
         <defs>
           <filter id="hiw-glow" x="-100%" y="-100%" width="300%" height="300%">
             <feGaussianBlur stdDeviation="6" result="b"/>
@@ -243,14 +243,14 @@ function HowItWorksDiagram() {
         ))}
 
         {/* Readout strip */}
-        <line x1={rx} y1={521} x2={rx+rw} y2={521} stroke="rgba(255,255,255,0.07)" strokeWidth={1}/>
-        <text x={rx+10} y={538} fontFamily="monospace" fontSize={8.5} fill="rgba(255,255,255,0.25)" letterSpacing={2}>MOTION: AMBULATORY</text>
-        <text x={rx+10} y={556} fontFamily="monospace" fontSize={7.5} fill="rgba(255,255,255,0.14)" letterSpacing={2}>GAIT: NORMAL · FALL RISK: LOW · PATENT PENDING</text>
-        <text x={rx+rw-10} y={538} textAnchor="end" fontFamily="monospace" fontSize={8.5} fill="rgba(255,255,255,0.25)" letterSpacing={2}>IWR6843AOP</text>
-        <text x={rx+rw-10} y={556} textAnchor="end" fontFamily="monospace" fontSize={7.5} fill="rgba(255,255,255,0.14)" letterSpacing={2}>60 GHz FMCW · UMN OTC</text>
+        <line x1={rx} y1={591} x2={rx+rw} y2={591} stroke="rgba(255,255,255,0.07)" strokeWidth={1}/>
+        <text x={rx+10} y={608} fontFamily="monospace" fontSize={8.5} fill="rgba(255,255,255,0.25)" letterSpacing={2}>MOTION: AMBULATORY</text>
+        <text x={rx+10} y={626} fontFamily="monospace" fontSize={7.5} fill="rgba(255,255,255,0.14)" letterSpacing={2}>GAIT: NORMAL · FALL RISK: LOW · PATENT PENDING</text>
+        <text x={rx+rw-10} y={608} textAnchor="end" fontFamily="monospace" fontSize={8.5} fill="rgba(255,255,255,0.25)" letterSpacing={2}>IWR6843AOP</text>
+        <text x={rx+rw-10} y={626} textAnchor="end" fontFamily="monospace" fontSize={7.5} fill="rgba(255,255,255,0.14)" letterSpacing={2}>60 GHz FMCW · UMN OTC</text>
 
         {/* LIVE indicator */}
-        <g transform={`translate(${rx+rw/2}, 574)`}>
+        <g transform={`translate(${rx+rw/2}, 644)`}>
           <circle r={3.5} fill={green} cx={-28}>
             <animate attributeName="opacity" values="1;0.15;1" dur="1.4s" repeatCount="indefinite"/>
           </circle>
@@ -262,7 +262,7 @@ function HowItWorksDiagram() {
 
         {/* Heartbeat waveform */}
         <polyline
-          points={`${rx+10},574 ${rx+55},574 ${rx+68},574 ${rx+76},558 ${rx+84},590 ${rx+92},566 ${rx+100},574 ${rx+150},574 ${rx+163},574 ${rx+171},558 ${rx+179},590 ${rx+187},566 ${rx+195},574 ${rx+240},574`}
+          points={`${rx+10},644 ${rx+55},644 ${rx+68},644 ${rx+76},628 ${rx+84},660 ${rx+92},636 ${rx+100},644 ${rx+150},644 ${rx+163},644 ${rx+171},628 ${rx+179},660 ${rx+187},636 ${rx+195},644 ${rx+240},644`}
           fill="none" stroke={accent} strokeWidth={1.2} opacity={0.22}
         />
       </svg>
@@ -383,7 +383,7 @@ export default function CarlsonPage() {
       <section className="c-sec" style={{ padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="02" label="How It Works" />
-          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }}>
+          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
             <div>
               <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 60px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
                 The resident moves freely.<br/>
