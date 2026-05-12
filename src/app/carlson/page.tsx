@@ -430,57 +430,134 @@ export default function CarlsonPage() {
               </div>
             </div>
             <div>
-              <svg viewBox="0 0 480 320" style={{ width: '100%', height: 'auto', display: 'block' }}>
+              <svg viewBox="0 0 480 360" style={{ width: '100%', height: 'auto', display: 'block' }}>
                 <defs>
-                  <filter id="cf-glow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="3" result="blur"/>
-                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  <filter id="cf-glow" x="-60%" y="-60%" width="220%" height="220%">
+                    <feGaussianBlur stdDeviation="5" result="b"/>
+                    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
                   </filter>
+                  <filter id="cf-glow-sm" x="-100%" y="-100%" width="300%" height="300%">
+                    <feGaussianBlur stdDeviation="2.5" result="b"/>
+                    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                  <pattern id="cf-dots" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <circle cx="20" cy="20" r="0.9" fill="rgba(255,255,255,0.06)"/>
+                  </pattern>
+                  <linearGradient id="cf-line1" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#7A0019" stopOpacity="0.5"/>
+                    <stop offset="100%" stopColor="#F0B429" stopOpacity="0.5"/>
+                  </linearGradient>
+                  <linearGradient id="cf-line2" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#F0B429" stopOpacity="0.5"/>
+                    <stop offset="100%" stopColor="#4F9CF9" stopOpacity="0.5"/>
+                  </linearGradient>
                 </defs>
-                {Array.from({ length: 8 }, (_, i) => <line key={`vg${i}`} x1={i*68} y1="0" x2={i*68} y2="320" stroke="rgba(79,156,249,0.03)" strokeWidth="1"/>)}
-                {Array.from({ length: 6 }, (_, i) => <line key={`hg${i}`} x1="0" y1={i*64} x2="480" y2={i*64} stroke="rgba(79,156,249,0.03)" strokeWidth="1"/>)}
-                <line x1="80" y1="160" x2="190" y2="160" stroke="rgba(79,156,249,0.12)" strokeWidth="1"/>
-                <line x1="290" y1="160" x2="400" y2="160" stroke="rgba(79,156,249,0.12)" strokeWidth="1"/>
-                <line x1="240" y1="100" x2="240" y2="220" stroke="rgba(240,180,41,0.10)" strokeWidth="1" strokeDasharray="3 3"/>
-                <g filter="url(#cf-glow)">
-                  <circle cx="80" cy="160" r="28" fill="rgba(122,0,25,0.15)" stroke="#7A0019" strokeWidth="1.2"/>
-                  <circle cx="80" cy="160" r="18" fill="rgba(122,0,25,0.25)"/>
-                  <circle cx="80" cy="160" r="8"  fill="#7A0019" opacity="0.9"/>
-                  <circle cx="80" cy="160" r="4"  fill="#fff" opacity="0.5"/>
-                </g>
-                <text x="80" y="204" textAnchor="middle" fill="rgba(240,241,242,0.55)" fontSize="9" fontFamily="var(--mono,monospace)" letterSpacing="0.1em">RADAR SENSOR</text>
-                <text x="80" y="217" textAnchor="middle" fill="rgba(122,0,25,0.9)" fontSize="8" fontFamily="var(--mono,monospace)" letterSpacing="0.08em">IWR6843AOP</text>
-                <g filter="url(#cf-glow)">
-                  <circle cx="240" cy="160" r="28" fill="rgba(240,180,41,0.12)" stroke="#F0B429" strokeWidth="1.2"/>
-                  <circle cx="240" cy="160" r="18" fill="rgba(240,180,41,0.2)"/>
-                  <circle cx="240" cy="160" r="8"  fill="#F0B429" opacity="0.85"/>
-                  <circle cx="240" cy="160" r="4"  fill="#fff" opacity="0.5"/>
-                </g>
-                <text x="240" y="204" textAnchor="middle" fill="rgba(240,241,242,0.55)" fontSize="9" fontFamily="var(--mono,monospace)" letterSpacing="0.1em">CLOUD AI</text>
-                <text x="240" y="217" textAnchor="middle" fill="rgba(240,180,41,0.9)" fontSize="8" fontFamily="var(--mono,monospace)" letterSpacing="0.08em">AWS BEDROCK</text>
-                <g filter="url(#cf-glow)">
-                  <circle cx="400" cy="160" r="28" fill="rgba(79,156,249,0.12)" stroke="#4F9CF9" strokeWidth="1.2"/>
-                  <circle cx="400" cy="160" r="18" fill="rgba(79,156,249,0.2)"/>
-                  <circle cx="400" cy="160" r="8"  fill="#4F9CF9" opacity="0.85"/>
-                  <circle cx="400" cy="160" r="4"  fill="#fff" opacity="0.5"/>
-                </g>
-                <text x="400" y="204" textAnchor="middle" fill="rgba(240,241,242,0.55)" fontSize="9" fontFamily="var(--mono,monospace)" letterSpacing="0.1em">NURSE DASHBOARD</text>
-                <text x="400" y="217" textAnchor="middle" fill="rgba(79,156,249,0.9)" fontSize="8" fontFamily="var(--mono,monospace)" letterSpacing="0.08em">ELLA AI</text>
-                {[36,46,58].map((rv, i) => (
-                  <circle key={rv} cx="80" cy="160" r={rv} fill="none" stroke="rgba(122,0,25,0.18)" strokeWidth="0.7" opacity="0">
-                    <animate attributeName="r" from="28" to={rv+12} dur={`${2.2+i*0.6}s`} begin={`${i*0.5}s`} repeatCount="indefinite"/>
-                    <animate attributeName="opacity" from="0.45" to="0" dur={`${2.2+i*0.6}s`} begin={`${i*0.5}s`} repeatCount="indefinite"/>
+
+                {/* Background + dot grid */}
+                <rect width="480" height="360" fill="#080808"/>
+                <rect width="480" height="360" fill="url(#cf-dots)"/>
+
+                {/* Connection lines with gradient */}
+                <line x1="124" y1="175" x2="234" y2="175" stroke="url(#cf-line1)" strokeWidth="1.4"/>
+                <line x1="282" y1="175" x2="392" y2="175" stroke="url(#cf-line2)" strokeWidth="1.4"/>
+                <text x="179" y="163" textAnchor="middle" fontFamily="monospace" fontSize="7.5" fill="rgba(255,255,255,0.18)" letterSpacing="1.5">POINT CLOUD</text>
+                <text x="337" y="163" textAnchor="middle" fontFamily="monospace" fontSize="7.5" fill="rgba(255,255,255,0.18)" letterSpacing="1.5">AI INSIGHTS</text>
+
+                {/* NODE 1 — AMBIENT SENSORS (maroon) */}
+                {/* Staggered pulse rings */}
+                {[0,1,2].map(j => (
+                  <circle key={j} cx="100" cy="175" r="22" fill="none" stroke="#7A0019" strokeWidth="1.2">
+                    <animate attributeName="r" from="22" to="64" dur="3s" begin={`${j}s`} repeatCount="indefinite"/>
+                    <animate attributeName="opacity" from="0.65" to="0" dur="3s" begin={`${j}s`} repeatCount="indefinite"/>
+                    <animate attributeName="stroke-width" from="2" to="0.3" dur="3s" begin={`${j}s`} repeatCount="indefinite"/>
                   </circle>
                 ))}
-                <circle r="3" fill="#F0B429" opacity="0.9"><animateMotion dur="2.4s" repeatCount="indefinite" path="M80,160 L240,160"/><animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.1;0.9;1" dur="2.4s" repeatCount="indefinite"/></circle>
-                <circle r="2" fill="#4F9CF9" opacity="0.7"><animateMotion dur="2.4s" begin="-1.2s" repeatCount="indefinite" path="M80,160 L240,160"/><animate attributeName="opacity" values="0;0.7;0.7;0" keyTimes="0;0.1;0.9;1" dur="2.4s" begin="-1.2s" repeatCount="indefinite"/></circle>
-                <circle r="3" fill="#4F9CF9" opacity="0.9"><animateMotion dur="2s" begin="-0.6s" repeatCount="indefinite" path="M240,160 L400,160"/><animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.1;0.9;1" dur="2s" begin="-0.6s" repeatCount="indefinite"/></circle>
-                <circle r="2" fill="#3DCC91" opacity="0.7"><animateMotion dur="2s" begin="-1.6s" repeatCount="indefinite" path="M240,160 L400,160"/><animate attributeName="opacity" values="0;0.7;0.7;0" keyTimes="0;0.1;0.9;1" dur="2s" begin="-1.6s" repeatCount="indefinite"/></circle>
-                <circle r="2" fill="rgba(122,0,25,0.7)"><animateMotion dur="4s" repeatCount="indefinite" path="M45,125 A35,35 0 1,1 115,125 A35,35 0 1,1 45,125"/></circle>
-                <circle r="1.5" fill="rgba(240,180,41,0.7)"><animateMotion dur="3.2s" begin="-1s" repeatCount="indefinite" path="M205,125 A35,35 0 1,1 275,125 A35,35 0 1,1 205,125"/></circle>
-                <circle r="1.5" fill="rgba(79,156,249,0.7)"><animateMotion dur="3.8s" begin="-2s" repeatCount="indefinite" path="M365,125 A35,35 0 1,1 435,125 A35,35 0 1,1 365,125"/></circle>
-                <text x="160" y="150" textAnchor="middle" fill="rgba(240,241,242,0.18)" fontSize="7.5" fontFamily="var(--mono,monospace)" letterSpacing="0.08em">KINESIS</text>
-                <text x="320" y="150" textAnchor="middle" fill="rgba(240,241,242,0.18)" fontSize="7.5" fontFamily="var(--mono,monospace)" letterSpacing="0.08em">API GATEWAY</text>
+                {/* 4 satellite sensor nodes — echoes HowItWorksDiagram corner sensors */}
+                {[[-22,-22],[22,-22],[-22,22],[22,22]].map((d,i) => (
+                  <g key={i}>
+                    <line x1="100" y1="175" x2={100+d[0]} y2={175+d[1]} stroke="rgba(122,0,25,0.22)" strokeWidth="0.8" strokeDasharray="2,3"/>
+                    <circle cx={100+d[0]} cy={175+d[1]} r="4" fill="#7A0019" opacity="0.85" filter="url(#cf-glow-sm)"/>
+                    <circle cx={100+d[0]} cy={175+d[1]} r="1.8" fill="#fff" opacity="0.8"/>
+                  </g>
+                ))}
+                {/* Main hub */}
+                <g filter="url(#cf-glow)">
+                  <circle cx="100" cy="175" r="22" fill="rgba(122,0,25,0.15)" stroke="#7A0019" strokeWidth="1.5"/>
+                  <circle cx="100" cy="175" r="14" fill="rgba(122,0,25,0.26)"/>
+                  <circle cx="100" cy="175" r="6"  fill="#7A0019" opacity="0.9"/>
+                  <circle cx="100" cy="175" r="3"  fill="#fff" opacity="0.9"/>
+                </g>
+                {/* Orbit particle */}
+                <circle r="2.2" fill="rgba(122,0,25,0.85)" filter="url(#cf-glow-sm)">
+                  <animateMotion dur="4s" repeatCount="indefinite" path="M 62 175 A 38 38 0 1 1 138 175 A 38 38 0 1 1 62 175"/>
+                </circle>
+                <text x="100" y="216" textAnchor="middle" fontFamily="monospace" fontSize="8.5" fill="rgba(255,255,255,0.52)" letterSpacing="1.5">AMBIENT SENSORS</text>
+
+                {/* NODE 2 — CLOUD AI (gold) */}
+                <line x1="258" y1="90" x2="258" y2="153" stroke="rgba(240,180,41,0.14)" strokeWidth="1" strokeDasharray="4,4"/>
+                <line x1="258" y1="197" x2="258" y2="260" stroke="rgba(240,180,41,0.14)" strokeWidth="1" strokeDasharray="4,4"/>
+                <g filter="url(#cf-glow)">
+                  <circle cx="258" cy="175" r="22" fill="rgba(240,180,41,0.12)" stroke="#F0B429" strokeWidth="1.5"/>
+                  <circle cx="258" cy="175" r="14" fill="rgba(240,180,41,0.22)"/>
+                  <circle cx="258" cy="175" r="6"  fill="#F0B429" opacity="0.88"/>
+                  <circle cx="258" cy="175" r="3"  fill="#fff" opacity="0.9"/>
+                </g>
+                <circle r="2.2" fill="rgba(240,180,41,0.85)" filter="url(#cf-glow-sm)">
+                  <animateMotion dur="3.4s" begin="-1.2s" repeatCount="indefinite" path="M 220 175 A 38 38 0 1 1 296 175 A 38 38 0 1 1 220 175"/>
+                </circle>
+                <text x="258" y="216" textAnchor="middle" fontFamily="monospace" fontSize="8.5" fill="rgba(255,255,255,0.52)" letterSpacing="1.5">CLOUD AI</text>
+
+                {/* NODE 3 — ELLA AI NURSE ASSISTANT (accent) */}
+                {[0,1].map(j => (
+                  <circle key={j} cx="416" cy="175" r="22" fill="none" stroke="#4F9CF9" strokeWidth="1.2">
+                    <animate attributeName="r" from="22" to="56" dur={`${2.2+j*0.9}s`} begin={`${j*1.4}s`} repeatCount="indefinite"/>
+                    <animate attributeName="opacity" from="0.55" to="0" dur={`${2.2+j*0.9}s`} begin={`${j*1.4}s`} repeatCount="indefinite"/>
+                  </circle>
+                ))}
+                <g filter="url(#cf-glow)">
+                  <circle cx="416" cy="175" r="22" fill="rgba(79,156,249,0.12)" stroke="#4F9CF9" strokeWidth="1.5"/>
+                  <circle cx="416" cy="175" r="14" fill="rgba(79,156,249,0.22)"/>
+                  <circle cx="416" cy="175" r="6"  fill="#4F9CF9" opacity="0.88"/>
+                  <circle cx="416" cy="175" r="3"  fill="#fff" opacity="0.9"/>
+                </g>
+                <circle r="2.2" fill="rgba(79,156,249,0.85)" filter="url(#cf-glow-sm)">
+                  <animateMotion dur="4.4s" begin="-2.1s" repeatCount="indefinite" path="M 378 175 A 38 38 0 1 1 454 175 A 38 38 0 1 1 378 175"/>
+                </circle>
+                <text x="416" y="216" textAnchor="middle" fontFamily="monospace" fontSize="8.5" fill="rgba(255,255,255,0.52)" letterSpacing="1.5">ELLA AI</text>
+                <text x="416" y="230" textAnchor="middle" fontFamily="monospace" fontSize="7.5" fill="rgba(79,156,249,0.72)" letterSpacing="1.5">NURSE ASSISTANT</text>
+
+                {/* Data packets: Sensors → Cloud */}
+                <circle r="3" fill="#7A0019" filter="url(#cf-glow-sm)">
+                  <animateMotion dur="2.4s" repeatCount="indefinite" path="M 124 175 L 234 175"/>
+                  <animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.1;0.9;1" dur="2.4s" repeatCount="indefinite"/>
+                </circle>
+                <circle r="2" fill="#F0B429">
+                  <animateMotion dur="2.4s" begin="-1.2s" repeatCount="indefinite" path="M 124 175 L 234 175"/>
+                  <animate attributeName="opacity" values="0;0.7;0.7;0" keyTimes="0;0.1;0.9;1" dur="2.4s" begin="-1.2s" repeatCount="indefinite"/>
+                </circle>
+
+                {/* Data packets: Cloud → Ella */}
+                <circle r="3" fill="#F0B429" filter="url(#cf-glow-sm)">
+                  <animateMotion dur="2s" begin="-0.4s" repeatCount="indefinite" path="M 282 175 L 392 175"/>
+                  <animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.1;0.9;1" dur="2s" begin="-0.4s" repeatCount="indefinite"/>
+                </circle>
+                <circle r="2" fill="#4F9CF9">
+                  <animateMotion dur="2s" begin="-1.4s" repeatCount="indefinite" path="M 282 175 L 392 175"/>
+                  <animate attributeName="opacity" values="0;0.7;0.7;0" keyTimes="0;0.1;0.9;1" dur="2s" begin="-1.4s" repeatCount="indefinite"/>
+                </circle>
+
+                {/* Corner brackets */}
+                <polyline points="8,20 8,8 20,8"       fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2"/>
+                <polyline points="460,8 472,8 472,20"   fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2"/>
+                <polyline points="8,340 8,352 20,352"   fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2"/>
+                <polyline points="460,352 472,352 472,340" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2"/>
+
+                {/* LIVE indicator */}
+                <circle cx="456" cy="344" r="3.2" fill="#3DCC91">
+                  <animate attributeName="opacity" values="1;0.15;1" dur="1.4s" repeatCount="indefinite"/>
+                </circle>
+                <text x="448" y="348" textAnchor="end" fontFamily="monospace" fontSize="8" fill="#3DCC91" letterSpacing="2">LIVE</text>
+                <text x="16" y="348" fontFamily="monospace" fontSize="7.5" fill="rgba(255,255,255,0.15)" letterSpacing="1.5">AMBIENT INTELLIGENCE · DATA PIPELINE</text>
               </svg>
             </div>
           </div>
