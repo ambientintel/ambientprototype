@@ -505,16 +505,6 @@ export default function CarlsonPage() {
         </div>
       </section>
 
-      {/* ── INTERSTITIAL STATEMENT ───────────────────────────────────────────── */}
-      <Rule />
-      <section style={{ background: C.bg2, padding: '80px 56px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'baseline', gap: 48 }}>
-          <span style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.22em', color: C.text4, flexShrink: 0 }}>The technology</span>
-          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(24px, 3vw, 42px)', lineHeight: 1.44, letterSpacing: '-0.016em', color: C.text2, margin: 0 }}>
-            A 60 GHz FMCW radar sensor sees motion through fabric — detecting posture, gait, and falls — without ever capturing an image.
-          </p>
-        </div>
-      </section>
 
       {/* ── 02: TECHNOLOGY ───────────────────────────────────────────────────── */}
       <Rule />
