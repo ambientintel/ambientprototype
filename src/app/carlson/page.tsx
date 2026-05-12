@@ -3,15 +3,15 @@ import { useEffect, useRef } from 'react';
 
 /* ── Palette ─────────────────────────────────────────────────────────────────── */
 const C = {
-  bg:         '#07090E',
-  bg2:        '#0B0E17',
-  surf1:      '#0D111A',
-  line:       'rgba(255,255,255,0.07)',
-  lineStrg:   'rgba(255,255,255,0.13)',
-  text:       '#F0F1F2',
-  text2:      'rgba(240,241,242,0.62)',
-  text3:      'rgba(240,241,242,0.40)',
-  text4:      'rgba(240,241,242,0.24)',
+  bg:         '#080808',
+  bg2:        '#0F0F0F',
+  surf1:      '#161616',
+  line:       'rgba(255,255,255,0.08)',
+  lineStrg:   'rgba(255,255,255,0.14)',
+  text:       '#FFFFFF',
+  text2:      'rgba(255,255,255,0.52)',
+  text3:      'rgba(255,255,255,0.34)',
+  text4:      'rgba(255,255,255,0.22)',
   maroon:     '#7A0019',
   gold:       '#F0B429',
   accent:     '#4F9CF9',
@@ -32,7 +32,7 @@ function FlowGlowBg() {
     if (!canvas) return;
     const create = function create(e: HTMLCanvasElement, t: () => Cfg) {
       // @ts-ignore — minified canvas engine
-      let a,l=e.getContext("2d"),i=0,n=0,r=performance.now(),o=[[188,130,243],[245,185,234],[141,159,255],[255,103,120],[255,186,113],[198,134,255]],s=[{fx:.31,fy:.47,px:0,py:.5*Math.PI},{fx:.53,fy:.29,px:Math.PI,py:1.2*Math.PI},{fx:.41,fy:.67,px:.7*Math.PI,py:0},{fx:.23,fy:.53,px:1.5*Math.PI,py:.8*Math.PI},{fx:.59,fy:.37,px:.3*Math.PI,py:1.7*Math.PI},{fx:.43,fy:.61,px:1.1*Math.PI,py:.3*Math.PI}],h=["#BC82F3","#F5B9EA","#8D9FFF","#FF6778","#FFBA71","#C686FF"],d=[...h],m=[...h],c=1,p=.45,g=e=>{let t=parseInt(e.replace("#",""),16);return[t>>16&255,t>>8&255,255&t]},u=()=>{let t=e.getBoundingClientRect();e.width=t.width||window.innerWidth,e.height=t.height||window.innerHeight},b=(e,t,a,i,n)=>{n=Math.max(0,Math.min(n,a/2,i/2)),l.beginPath(),l.moveTo(e+n,t),l.lineTo(e+a-n,t),l.arcTo(e+a,t,e+a,t+n,n),l.lineTo(e+a,t+i-n),l.arcTo(e+a,t+i,e+a-n,t+i,n),l.lineTo(e+n,t+i),l.arcTo(e,t+i,e,t+i-n,n),l.lineTo(e,t+n),l.arcTo(e,t,e+n,t,n),l.closePath()},f=u=>{let y=Math.min((u-r)/1e3,.05);r=u;let M=t(),x=e.width,w=e.height,k=x/2,S=w/2,v=Math.min(x,w);i+=M.speed*y,n+=.4*y,c=Math.min(1,c+y/.55),(p-=y)<=0&&c>=1&&(p=.4+.15*Math.random(),d=[...m],c=0,m=[...h].sort(()=>Math.random()-.5));let C=d.map((e,t)=>((e,t,a)=>{let[l,i,n]=g(e),[r,o,s]=g(t);return`rgb(${Math.round(l+(r-l)*a)},${Math.round(i+(o-i)*a)},${Math.round(n+(s-n)*a)})`})(e,m[t],c));l.clearRect(0,0,x,w),l.fillStyle="#080810",l.fillRect(0,0,x,w);let R=M.padding,F=M.strokeWidth,A=M.intensity,I=x-2*R,P=w-2*R,$=M.cornerRadius,z=v*M.blobSize;l.save(),b(R,R,I,P,$),l.clip(),l.globalCompositeOperation="screen",s.forEach((e,t)=>{let[a,n,r]=o[t],s=k+.4*I*Math.sin(i*e.fx+e.px),h=S+.4*P*Math.cos(i*e.fy+e.py),d=l.createRadialGradient(s,h,0,s,h,z);d.addColorStop(0,`rgba(${a},${n},${r},${.82*A})`),d.addColorStop(.42,`rgba(${a},${n},${r},${.36*A})`),d.addColorStop(1,`rgba(${a},${n},${r},0)`),l.beginPath(),l.arc(s,h,z,0,2*Math.PI),l.fillStyle=d,l.fill()}),l.restore();let B=(e,t,a)=>{let i;l.save(),t>0&&(l.filter=`blur(${t}px)`),l.globalAlpha=a,i=l.createConicGradient(n-Math.PI/2,k,S),C.forEach((e,t)=>i.addColorStop(t/C.length,e)),i.addColorStop(1,C[0]),l.strokeStyle=i,l.lineWidth=e,l.lineCap="round",b(R,R,I,P,$),l.stroke(),l.restore()};B(4.5*F,26*A,.3*A),B(2.8*F,14*A,.5*A),B(1.6*F,5*A,.72*A),B(F,0,1),a=requestAnimationFrame(f)};u(),a=requestAnimationFrame(f);let y=new ResizeObserver(()=>u());return y.observe(e),()=>{cancelAnimationFrame(a),y.disconnect()}
+      let a,l=e.getContext("2d"),i=0,n=0,r=performance.now(),o=[[188,130,243],[245,185,234],[141,159,255],[255,103,120],[255,186,113],[198,134,255]],s=[{fx:.31,fy:.47,px:0,py:.5*Math.PI},{fx:.53,fy:.29,px:Math.PI,py:1.2*Math.PI},{fx:.41,fy:.67,px:.7*Math.PI,py:0},{fx:.23,fy:.53,px:1.5*Math.PI,py:.8*Math.PI},{fx:.59,fy:.37,px:.3*Math.PI,py:1.7*Math.PI},{fx:.43,fy:.61,px:1.1*Math.PI,py:.3*Math.PI}],h=["#BC82F3","#F5B9EA","#8D9FFF","#FF6778","#FFBA71","#C686FF"],d=[...h],m=[...h],c=1,p=.45,g=e=>{let t=parseInt(e.replace("#",""),16);return[t>>16&255,t>>8&255,255&t]},u=()=>{let t=e.getBoundingClientRect();e.width=t.width||window.innerWidth,e.height=t.height||window.innerHeight},b=(e,t,a,i,n)=>{n=Math.max(0,Math.min(n,a/2,i/2)),l.beginPath(),l.moveTo(e+n,t),l.lineTo(e+a-n,t),l.arcTo(e+a,t,e+a,t+n,n),l.lineTo(e+a,t+i-n),l.arcTo(e+a,t+i,e+a-n,t+i,n),l.lineTo(e+n,t+i),l.arcTo(e,t+i,e,t+i-n,n),l.lineTo(e,t+n),l.arcTo(e,t,e+n,t,n),l.closePath()},f=u=>{let y=Math.min((u-r)/1e3,.05);r=u;let M=t(),x=e.width,w=e.height,k=x/2,S=w/2,v=Math.min(x,w);i+=M.speed*y,n+=.4*y,c=Math.min(1,c+y/.55),(p-=y)<=0&&c>=1&&(p=.4+.15*Math.random(),d=[...m],c=0,m=[...h].sort(()=>Math.random()-.5));let C=d.map((e,t)=>((e,t,a)=>{let[l,i,n]=g(e),[r,o,s]=g(t);return`rgb(${Math.round(l+(r-l)*a)},${Math.round(i+(o-i)*a)},${Math.round(n+(s-n)*a)})`})(e,m[t],c));l.clearRect(0,0,x,w),l.fillStyle="#080808",l.fillRect(0,0,x,w);let R=M.padding,F=M.strokeWidth,A=M.intensity,I=x-2*R,P=w-2*R,$=M.cornerRadius,z=v*M.blobSize;l.save(),b(R,R,I,P,$),l.clip(),l.globalCompositeOperation="screen",s.forEach((e,t)=>{let[a,n,r]=o[t],s=k+.4*I*Math.sin(i*e.fx+e.px),h=S+.4*P*Math.cos(i*e.fy+e.py),d=l.createRadialGradient(s,h,0,s,h,z);d.addColorStop(0,`rgba(${a},${n},${r},${.82*A})`),d.addColorStop(.42,`rgba(${a},${n},${r},${.36*A})`),d.addColorStop(1,`rgba(${a},${n},${r},0)`),l.beginPath(),l.arc(s,h,z,0,2*Math.PI),l.fillStyle=d,l.fill()}),l.restore();let B=(e,t,a)=>{let i;l.save(),t>0&&(l.filter=`blur(${t}px)`),l.globalAlpha=a,i=l.createConicGradient(n-Math.PI/2,k,S),C.forEach((e,t)=>i.addColorStop(t/C.length,e)),i.addColorStop(1,C[0]),l.strokeStyle=i,l.lineWidth=e,l.lineCap="round",b(R,R,I,P,$),l.stroke(),l.restore()};B(4.5*F,26*A,.3*A),B(2.8*F,14*A,.5*A),B(1.6*F,5*A,.72*A),B(F,0,1),a=requestAnimationFrame(f)};u(),a=requestAnimationFrame(f);let y=new ResizeObserver(()=>u());return y.observe(e),()=>{cancelAnimationFrame(a),y.disconnect()}
     };
     return create(canvas, () => cfgRef.current);
   }, []);
@@ -54,7 +54,7 @@ function Tag({ children, color, bg }: { children: React.ReactNode; color: string
 
 function SectionMeta({ n, label }: { n: string; label: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 56 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 64 }}>
       <span style={{ fontFamily: C.mono, fontSize: 10, letterSpacing: '0.22em', color: C.text4, paddingRight: 20, borderRight: `1px solid ${C.line}`, marginRight: 20 }}>{n}</span>
       <span style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.22em', color: C.text4 }}>{label}</span>
     </div>
@@ -91,19 +91,19 @@ export default function CarlsonPage() {
         @media(max-width:960px){
           .c-two { grid-template-columns:1fr!important; }
           .c-three { grid-template-columns:1fr 1fr!important; }
-          .c-hero { padding:100px 28px 80px!important; }
-          .c-sec { padding:72px 28px!important; }
+          .c-hero { padding:108px 36px 84px!important; }
+          .c-sec { padding:80px 36px!important; }
           .c-stat-row { grid-template-columns:1fr 1fr!important; }
         }
         @media(max-width:600px){
           .c-three { grid-template-columns:1fr!important; }
-          .c-sec { padding:56px 20px!important; }
+          .c-sec { padding:64px 24px!important; }
           .c-stat-row { grid-template-columns:1fr 1fr!important; }
         }
       ` }} />
 
       {/* ── NAV ─────────────────────────────────────────────────────────────── */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', background: 'rgba(7,9,14,0.88)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.line}` }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 50, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 80px', background: 'rgba(8,8,8,0.90)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.line}` }}>
         <span style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 15, letterSpacing: '-0.01em' }}>
           Ambient <em style={{ fontStyle: 'italic', color: C.text2 }}>Intelligence</em>
         </span>
@@ -119,8 +119,8 @@ export default function CarlsonPage() {
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
       <section style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
         <FlowGlowBg />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(7,9,14,0.52) 0%,rgba(7,9,14,0.08) 35%,rgba(7,9,14,0.08) 65%,rgba(7,9,14,0.88) 100%)', pointerEvents: 'none', zIndex: 1 }} />
-        <div className="c-hero" style={{ position: 'relative', zIndex: 2, maxWidth: 1160, margin: '0 auto', padding: '148px 56px 120px', width: '100%' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(8,8,8,0.52) 0%,rgba(7,9,14,0.08) 35%,rgba(7,9,14,0.08) 65%,rgba(8,8,8,0.90) 100%)', pointerEvents: 'none', zIndex: 1 }} />
+        <div className="c-hero" style={{ position: 'relative', zIndex: 2, maxWidth: 1280, margin: '0 auto', padding: '148px 56px 120px', width: '100%' }}>
           <p className="c-e" style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.24em', color: C.gold, margin: '0 0 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: C.gold, animation: 'pulse-gold 2s ease-out infinite', flexShrink: 0 }} />
             Carlson School of Management &middot; University of Minnesota
@@ -145,11 +145,11 @@ export default function CarlsonPage() {
       {/* ── PULL QUOTE ───────────────────────────────────────────────────────── */}
       <Rule />
       <section style={{ background: C.bg2, padding: '96px 56px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
-          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(26px, 3.4vw, 46px)', lineHeight: 1.36, letterSpacing: '-0.018em', color: C.text, margin: '0 0 64px', maxWidth: 860 }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: 1.36, letterSpacing: '-0.018em', color: C.text, margin: '0 0 64px', maxWidth: 860 }}>
             Two-thirds of memory care incidents happen at night — unwitnessed, in the minutes between rounds. We built a system that is always present without ever being intrusive.
           </p>
-          <div className="c-stat-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderTop: `1px solid ${C.line}`, paddingTop: 48 }}>
+          <div className="c-stat-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderTop: `1px solid ${C.line}`, paddingTop: 56 }}>
             {[
               { n: '60 GHz',  label: 'Radar frequency'              },
               { n: '<50 ms',  label: 'Detection latency'            },
@@ -157,7 +157,7 @@ export default function CarlsonPage() {
               { n: '0',       label: 'Resident interactions needed' },
             ].map((s, i) => (
               <div key={s.n} style={{ paddingRight: 32, borderRight: i < 3 ? `1px solid ${C.line}` : 'none', paddingLeft: i > 0 ? 32 : 0 }}>
-                <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(32px, 3.5vw, 52px)', lineHeight: 1, letterSpacing: '-0.03em', margin: '0 0 10px', color: C.text }}>{s.n}</p>
+                <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(44px, 5.5vw, 72px)', lineHeight: 1, letterSpacing: '-0.03em', margin: '0 0 12px', color: C.text }}>{s.n}</p>
                 <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4, margin: 0 }}>{s.label}</p>
               </div>
             ))}
@@ -167,16 +167,16 @@ export default function CarlsonPage() {
 
       {/* ── 01: HOW IT WORKS ─────────────────────────────────────────────────── */}
       <Rule />
-      <section className="c-sec" style={{ padding: '112px 56px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+      <section className="c-sec" style={{ padding: '128px 80px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="01" label="How It Works" />
-          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 96, alignItems: 'center' }}>
+          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }}>
             <div>
-              <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(34px, 3.8vw, 54px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
+              <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 60px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
                 The resident moves freely.<br/>
                 <em style={{ fontStyle: 'italic', color: C.text2 }}>We never interfere.</em>
               </h2>
-              <p style={{ fontSize: 16, lineHeight: 1.82, color: C.text2, margin: '0 0 40px' }}>
+              <p style={{ fontSize: 18, lineHeight: 1.76, color: C.text2, margin: '0 0 40px' }}>
                 Small sensors mount unobtrusively in the room and continuously map motion through space — covering the bedroom and bathroom without cameras, wearables, or any interaction from residents or staff.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -188,7 +188,7 @@ export default function CarlsonPage() {
                 ].map((item, i) => (
                   <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 0, borderTop: `1px solid ${C.line}`, padding: '18px 0' }}>
                     <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', color: item.color, marginRight: 20, marginTop: 3, flexShrink: 0, paddingRight: 20, borderRight: `1px solid ${C.line}` }}>0{i+1}</span>
-                    <span style={{ fontSize: 14.5, color: C.text2, lineHeight: 1.58 }}>{item.text}</span>
+                    <span style={{ fontSize: 16, color: C.text2, lineHeight: 1.58 }}>{item.text}</span>
                   </div>
                 ))}
               </div>
@@ -228,9 +228,9 @@ export default function CarlsonPage() {
       {/* ── INTERSTITIAL STATEMENT ───────────────────────────────────────────── */}
       <Rule />
       <section style={{ background: C.bg2, padding: '80px 56px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', alignItems: 'baseline', gap: 48 }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'baseline', gap: 48 }}>
           <span style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.22em', color: C.text4, flexShrink: 0 }}>The technology</span>
-          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(22px, 2.8vw, 36px)', lineHeight: 1.44, letterSpacing: '-0.016em', color: C.text2, margin: 0 }}>
+          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(24px, 3vw, 42px)', lineHeight: 1.44, letterSpacing: '-0.016em', color: C.text2, margin: 0 }}>
             A 60 GHz FMCW radar sensor sees motion through fabric — detecting posture, gait, and falls — without ever capturing an image.
           </p>
         </div>
@@ -238,16 +238,16 @@ export default function CarlsonPage() {
 
       {/* ── 02: TECHNOLOGY ───────────────────────────────────────────────────── */}
       <Rule />
-      <section className="c-sec" style={{ padding: '112px 56px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+      <section className="c-sec" style={{ padding: '128px 80px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="02" label="Technology" />
-          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 96, alignItems: 'center' }}>
+          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }}>
             <div>
-              <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(34px, 3.8vw, 54px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
+              <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 60px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
                 Passive sensing.<br/>
                 <em style={{ fontStyle: 'italic', color: C.text2 }}>Active intelligence.</em>
               </h2>
-              <p style={{ fontSize: 16, lineHeight: 1.82, color: C.text2, margin: '0 0 40px' }}>
+              <p style={{ fontSize: 18, lineHeight: 1.76, color: C.text2, margin: '0 0 40px' }}>
                 Point-cloud data flows through AWS Kinesis into a Bedrock-powered AI model that generates plain-language summaries for the nurse dashboard in real time. No images. No identifiable data in transit.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
@@ -316,10 +316,10 @@ export default function CarlsonPage() {
 
       {/* ── 03: ELLA AI ──────────────────────────────────────────────────────── */}
       <Rule />
-      <section className="c-sec" style={{ background: C.bg2, padding: '112px 56px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+      <section className="c-sec" style={{ background: C.bg2, padding: '128px 80px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="03" label="Flagship Product" />
-          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 96, alignItems: 'start' }}>
+          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
 
             {/* Dashboard card — left */}
             <div style={{ background: C.surf1, border: `1px solid ${C.line}`, overflow: 'hidden' }}>
@@ -359,7 +359,7 @@ export default function CarlsonPage() {
                 </div>
               ))}
               <div style={{ padding: '18px 20px', borderLeft: `2px solid ${C.accent}` }}>
-                <p style={{ fontFamily: C.mono, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: C.accent, margin: '0 0 10px' }}>Ella AI · Room 114A Summary</p>
+                <p style={{ fontFamily: C.mono, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: C.accent, margin: '0 0 12px' }}>Ella AI · Room 114A Summary</p>
                 <p style={{ fontFamily: C.serif, fontSize: 13.5, lineHeight: 1.66, color: C.text2, margin: 0, fontStyle: 'italic' }}>
                   &ldquo;Mrs. Johansson showed increased nighttime movement between 2:00 and 4:00 AM. No fall events detected. Recommend checking in this morning.&rdquo;
                 </p>
@@ -368,11 +368,11 @@ export default function CarlsonPage() {
 
             {/* Text — right */}
             <div style={{ paddingTop: 8 }}>
-              <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(34px, 3.8vw, 54px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
+              <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 60px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
                 Ella AI<br/>
                 <em style={{ fontStyle: 'italic', color: C.text2 }}>Nurse Assistant</em>
               </h2>
-              <p style={{ fontSize: 16, lineHeight: 1.82, color: C.text2, margin: '0 0 36px' }}>
+              <p style={{ fontSize: 18, lineHeight: 1.76, color: C.text2, margin: '0 0 36px' }}>
                 Ella is the AI layer that makes ambient sensor data meaningful. It continuously analyzes motion patterns and generates plain-language summaries — surfacing what matters to the care team without requiring any interaction from residents or nurses.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginBottom: 40 }}>
@@ -384,7 +384,7 @@ export default function CarlsonPage() {
                 ].map((item, i) => (
                   <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 0, borderTop: `1px solid ${C.line}`, padding: '17px 0' }}>
                     <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', color: item.color, marginRight: 20, marginTop: 3, flexShrink: 0, paddingRight: 20, borderRight: `1px solid ${C.line}` }}>0{i+1}</span>
-                    <span style={{ fontSize: 14.5, color: C.text2, lineHeight: 1.58 }}>{item.text}</span>
+                    <span style={{ fontSize: 16, color: C.text2, lineHeight: 1.58 }}>{item.text}</span>
                   </div>
                 ))}
               </div>
@@ -398,10 +398,10 @@ export default function CarlsonPage() {
 
       {/* ── 04: MINNESOTA ────────────────────────────────────────────────────── */}
       <Rule />
-      <section className="c-sec" style={{ padding: '112px 56px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+      <section className="c-sec" style={{ padding: '128px 80px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="04" label="Minnesota Roots" />
-          <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(36px, 4vw, 56px)', lineHeight: 1.08, letterSpacing: '-0.028em', margin: '0 0 64px', maxWidth: 640 }}>
+          <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(40px, 4.5vw, 60px)', lineHeight: 1.08, letterSpacing: '-0.028em', margin: '0 0 64px', maxWidth: 640 }}>
             Built in Minnesota.<br/>
             <em style={{ fontStyle: 'italic', color: C.text2 }}>For Minnesota care.</em>
           </h2>
@@ -442,8 +442,8 @@ export default function CarlsonPage() {
 
       {/* ── CTA ─────────────────────────────────────────────────────────────────── */}
       <Rule />
-      <section style={{ background: C.bg2, padding: '120px 56px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 96, alignItems: 'center' }} className="c-two">
+      <section style={{ background: C.bg2, padding: '120px 80px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }} className="c-two">
           <div>
             <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.22em', color: C.text4, margin: '0 0 24px' }}>May 13 · Toaster Innovation Hub</p>
             <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 62px)', lineHeight: 1.06, letterSpacing: '-0.032em', margin: '0 0 24px' }}>
@@ -468,8 +468,8 @@ export default function CarlsonPage() {
 
       {/* ── FOOTER ──────────────────────────────────────────────────────────────── */}
       <Rule />
-      <footer style={{ padding: '24px 56px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <footer style={{ padding: '28px 80px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <span style={{ fontFamily: C.serif, fontSize: 14, fontWeight: 300, color: C.text2 }}>Ambient Intelligence</span>
           <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.text4, margin: 0, textAlign: 'center' }}>
             PCT Patent · UMN OTC · Minneapolis 2026 · gener8tor
