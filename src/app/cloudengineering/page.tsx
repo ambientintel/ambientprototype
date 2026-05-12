@@ -170,14 +170,14 @@ const STEPS: Step[] = [
             ['0',   'Ambient-{env}-Kms',          '4 CMKs (data, s3, sns, sqs) · auto-rotation · RemovalPolicy.RETAIN'],
             ['0',   'Ambient-{env}-Storage',       'S3: parquet, athena-results (30-day expire), cloudtrail (HIPAA 7-yr), iot-errors'],
             ['1',   'Ambient-{env}-Data',           'DynamoDB: devices, alerts, daily-updates — PAY_PER_REQUEST + PITR + CMK'],
-            ['2',   'Ambient-{env}-Telemetry',      'SNS fall-alerts topic (CfnOutput: FallAlertTopicArn), alert Lambda, IoT rules, Firehose+Glue, Reconciler Lambda+cron+alarm'],
+            ['2',   'Ambient-{env}-Telemetry',      'SNS fall-alerts topic (CfnOutput: FallAlertTopicArn), alert Lambda (X-Ray tracing, reserved concurrency=50), IoT rules, Firehose+Glue, Reconciler Lambda+cron+alarm'],
             ['2',   'Ambient-{env}-UrlMinter',      'Lambda + Function URL · IoT role alias · device mTLS policy'],
             ['2',   'Ambient-{env}-Athena',         'Glue database + raw frames table (partition projection) · Athena workgroup'],
             ['2',   'Ambient-{env}-Ella',           'SQS fanout · Ella Lambda · EventBridge crons (07:00 + 19:00 CT)'],
-            ['3',   'Ambient-{env}-Api',            'Cognito UserPool (CfnOutputs: UserPoolId, UserPoolClientId), HTTP API (ApiEndpointUrl), FastAPI Lambda, facility-scoped authorizer'],
+            ['3',   'Ambient-{env}-Api',            'Cognito UserPool (AdvancedSecurityMode=ENFORCED, CfnOutputs: UserPoolId, UserPoolClientId), HTTP API (ApiEndpointUrl), FastAPI Lambda, facility-scoped authorizer'],
             ['3',   'Ambient-{env}-CloudTrail',     'Multi-region trail · DDB + S3 data events · 7-year Glacier retention'],
             ['opt', 'Ambient-{env}-Observability',  'CloudWatch Metric Stream → central account · scalar only · no PHI'],
-            ['opt', 'Ambient-{env}-Dashboard',      'CloudWatch operator dashboard · AlarmStatusWidget (8 alarms) · 5 Lambda graphs (invocations/errors/duration) · Ella DLQ depth · TelemetryDivergence metric · API concurrent executions · SNS alarm topic (AlarmTopicArn)'],
+            ['opt', 'Ambient-{env}-Dashboard',      'CloudWatch operator dashboard · AlarmStatusWidget (8 alarms) · 5 Lambda graphs (invocations/errors/duration) · Ella DLQ depth · TelemetryDivergence metric · API concurrent executions · SNS alarm topic (AlarmTopicArn) · AWS Budget ($100/mo, 80% actual + 100% forecasted alerts)'],
           ],
         },
       },
@@ -185,12 +185,13 @@ const STEPS: Step[] = [
         heading: 'CDK conventions',
         checklist: [
           'Single infra/app.py deploys all stacks — CDK manages dependency order via stack references',
-          'AmbientLambda L3 construct: Python 3.12, standardized log retention, X-Ray active tracing, env var injection',
+          'AmbientLambda L3 construct: Python 3.12, standardized log retention, X-Ray active tracing on all 5 Lambdas, env var injection',
           'AmbientTable L3 construct: PAY_PER_REQUEST + PITR + KMS encryption + RemovalPolicy.RETAIN on all tables',
           'KMS keys: enable_key_rotation=True, no pending_window (prevents accidental early deletion)',
           'Context variables drive all config: environment, tenant_id, facility_ids — no hardcoded account IDs',
           'All stacks tagged via _tag() helper: Application, TenantId, Environment, ManagedBy=cdk',
           'CloudFormation manages stack state — no separate state backend or lock table needed',
+          'infra/config/constants.py centralises shared constants: ALERTS_RESERVED_CONCURRENCY=50, BUDGET_MONTHLY_USD=100',
         ],
       },
       {
@@ -219,6 +220,23 @@ const STEPS: Step[] = [
           'CDK bootstrap must run once per account/region before first deploy: cdk bootstrap aws://<account>/<region>. Creates CDKToolkit stack with the S3 staging bucket used by the deployer.',
           'All per-service Terraform infra/ directories have been removed in the CDK migration. Do not reintroduce Terraform — add new infrastructure as a Stack in infra/stacks/ and wire it into infra/app.py.',
           'Required repo variables (Settings → Variables): AWS_PROD_DEPLOY_ROLE_ARN (prod deployer role) and AWS_PROD_ACCOUNT_ID (prod AWS account ID). Required GitHub Environments (Settings → Environments): dev (no protection rules, auto-deploys) and production (add required reviewers to gate prod deploys).',
+        ],
+      },
+      {
+        heading: 'AWS Budgets (commit 522c338, dashboard_stack.py)',
+        body: 'DashboardStack now also owns cost control via a CfnBudget. Budget constant: BUDGET_MONTHLY_USD=100 in infra/config/constants.py. The SNS topic resource policy was updated to allow budgets.amazonaws.com to publish alongside CloudWatch Alarms.',
+        table: {
+          cols: ['Budget name', 'Limit', 'Alert type', 'Threshold', 'Destination'],
+          rows: [
+            ['ambient-{env}-monthly', '$100/month', 'ACTUAL',    '80%',  'operator alarm SNS topic'],
+            ['ambient-{env}-monthly', '$100/month', 'FORECASTED','100%', 'operator alarm SNS topic'],
+          ],
+        },
+        commands: [
+          { label: 'verify budget exists', code: 'aws budgets describe-budgets \\\n  --account-id $(aws sts get-caller-identity --query Account --output text) \\\n  --query "Budgets[?BudgetName==\'ambient-dev-monthly\'].[BudgetName,BudgetLimit.Amount]"\n# Expected: [["ambient-dev-monthly", "100.0"]]' },
+        ],
+        warnings: [
+          'The operator alarm SNS topic resource policy must include a Statement allowing Service=budgets.amazonaws.com to sns:Publish. Without this statement the budget alert silently drops — CloudFormation succeeds but no notification is sent.',
         ],
       },
       {
@@ -301,7 +319,7 @@ const STEPS: Step[] = [
           cols: ['Table', 'PK', 'GSIs', 'Purpose'],
           rows: [
             ['ambient-{env}-devices',       'deviceId (S)',        'facility-index (facilityId)',             'Device registry — Thing name, subject, facility, cert status'],
-            ['ambient-{env}-alerts',        'subject_date (S) / detectedAt (S)', 'facility-time, eventId-index', 'Fall event audit log — enriched alert with facility scoping'],
+            ['ambient-{env}-alerts',        'subject_date (S) / detectedAt (S)', 'facility-time, eventId-index', 'Fall event audit log — enriched alert with facility scoping. 7-year HIPAA TTL (attr: ttl, _ALERT_TTL_SECONDS = 7×365×24×3600). DynamoDB ignores items missing the ttl attribute (safe for pre-TTL rows).'],
             ['ambient-{env}-daily-updates', 'subjectId (S) / generatedAt (S)',   'facility-time',                'Ella narratives — 90-day TTL (attr: ttl), per-subject summary'],
           ],
         },
@@ -325,7 +343,7 @@ const STEPS: Step[] = [
         ],
         warnings: [
           'Athena uses partition projection on key path raw/date=YYYY-MM-DD/facility=.../subject=.../device=... — there is no Glue crawler. If the device changes its S3 key format, update the Glue partition projection in athena_stack.py immediately or all historical queries will return zero rows.',
-          'DynamoDB TTL (90 days) on daily-updates uses TTL attribute name ttl (not expires_at). Ella Lambda writes this field on every put — verify in integration tests.',
+          'DynamoDB TTL on daily-updates (90-day, attr: ttl) and alerts (7-year HIPAA, attr: ttl) both use the same attribute name. Ella Lambda writes ttl on every daily-updates put; the alert enricher writes ttl on every alert put. Verify both in integration tests.',
         ],
       },
     ],
@@ -371,7 +389,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'hot-path', phase: '07', title: 'Hot Path — Fall Alert Lambda', status: 'done', tag: 'Deploy', time: '~1 hr',
-    summary: 'Fall alert enricher Lambda deployed. MQTT QoS 1 → IoT Basic Ingest → Lambda → DynamoDB alerts table + SNS fan-out to staff subscriptions. Sub-2s end-to-end latency verified.',
+    summary: 'Fall alert enricher Lambda deployed. MQTT QoS 1 → IoT Basic Ingest → Lambda → DynamoDB alerts table + SNS fan-out to staff subscriptions. Sub-2s end-to-end latency verified. Hardening sprint (commit 522c338): X-Ray active tracing enabled; reserved concurrency=50 guarantees dedicated capacity for the fall-alert critical path.',
     sections: [
       {
         heading: 'Deploy fall alert Lambda',
@@ -379,6 +397,22 @@ const STEPS: Step[] = [
           { label: 'deploy TelemetryStack', code: 'cd infra\ncdk deploy Ambient-dev-Telemetry \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify Lambda deployed\naws lambda get-function \\\n  --function-name ambient-dev-alerts-enricher\n# State: Active, Runtime: python3.12' },
           { label: 'verify IoT Rule and Lambda trigger', code: '# Confirm IoT Rule is active\naws iot get-topic-rule \\\n  --rule-name fall-enricher\n# ruleDisabled: false, actions[0].lambda.functionArn: <lambda-arn>\n\n# Confirm Lambda function exists\naws lambda get-function \\\n  --function-name ambient-dev-fall-enricher\n# State: Active, Runtime: python3.12' },
           { label: 'inject a synthetic fall event to test end-to-end', code: '# Publish directly to the Rules Engine via Basic Ingest\naws iot-data publish \\\n  --topic "\\$aws/rules/fall-enricher/ambient/v1/alerts/fall/test-001" \\\n  --payload \'{"deviceId":"DEV-0001","eventId":"test-001","ts_utc":"2026-05-07T12:00:00Z","confidence":0.92}\' \\\n  --qos 1 \\\n  --region us-east-1\n\n# Verify DDB write:\naws dynamodb get-item \\\n  --table-name ambient-<tenant>-alerts \\\n  --key \'{"subject_date":{"S":"PILOT-0042_2026-05-07"}}\'  ' },
+        ],
+      },
+      {
+        heading: 'Reliability hardening (commit 522c338)',
+        body: 'Two reliability controls landed on alerts-enricher in the pilot hardening sprint:',
+        table: {
+          cols: ['Control', 'CDK property', 'Effect'],
+          rows: [
+            ['X-Ray active tracing', 'tracing=lambda_.Tracing.ACTIVE on all 5 Lambdas (alerts-enricher, ella, api, url-minter, reconciler). CDK auto-grants xray:PutTraceSegments + xray:PutTelemetryRecords on each execution role.', 'Distributed traces visible in X-Ray Service Map after first invocation. Reveals latency breakdowns across IoT Rule → Lambda → DDB → SNS.'],
+            ['Reserved concurrency (50)', 'reserved_concurrent_executions=50 on alerts-enricher only', 'Guarantees 50 Lambda executions for the fall-alert path even if account-level concurrency is exhausted by other workloads. The ambient-{env}-alerts-errors alarm (≥1 error, 1×1 min) will catch any throttling that slips through.'],
+          ],
+        },
+        commands: [
+          { label: 'verify X-Ray tracing on alerts-enricher', code: 'aws lambda get-function-configuration \\\n  --function-name ambient-dev-alerts-enricher \\\n  --query "TracingConfig"\n# Expected: {"Mode": "Active"}' },
+          { label: 'verify reserved concurrency', code: 'aws lambda get-function-concurrency \\\n  --function-name ambient-dev-alerts-enricher\n# Expected: {"ReservedConcurrentExecutions": 50}' },
+          { label: 'view X-Ray service map (console URL)', code: '# After first invocation, open the X-Ray Service Map in the AWS Console:\n# https://us-east-1.console.aws.amazon.com/xray/home#/service-map\n# Look for nodes: IoT Rule → ambient-dev-alerts-enricher → DynamoDB + SNS' },
         ],
       },
       {
@@ -487,7 +521,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'api-auth', phase: '10', title: 'API & Auth — FastAPI + Cognito', status: 'done', tag: 'Deploy', time: '~2 hrs',
-    summary: 'FastAPI Lambda behind API Gateway HTTP API with Cognito JWT authorizer. Sixteen endpoints with row-level facility scoping. Alert list endpoints return paginated AlertPage responses. Admin user management routes (list/reset-password/disable/enable) backed by Cognito admin APIs. Users provisioned by admin-cli only — no self-signup.',
+    summary: 'FastAPI Lambda behind API Gateway HTTP API with Cognito JWT authorizer. Sixteen endpoints with row-level facility scoping. Alert list endpoints return paginated AlertPage responses. Admin user management routes (list/reset-password/disable/enable) backed by Cognito admin APIs. Users provisioned by admin-cli only — no self-signup. Hardening sprint (commit 522c338): Cognito Advanced Security ENFORCED on the UserPool — adaptive authentication, compromised credential detection, and account takeover protection.',
     sections: [
       {
         heading: 'Deploy API service',
@@ -509,6 +543,24 @@ const STEPS: Step[] = [
             ['max_age',        '300',                                    'Preflight cache 5 min'],
           ],
         },
+      },
+      {
+        heading: 'Cognito Advanced Security ENFORCED (commit 522c338)',
+        body: 'advanced_security_mode=cognito.AdvancedSecurityMode.ENFORCED is set on the UserPool (not the pool client). This enables three risk controls at no additional cost at pilot scale (< 10K MAU free tier):',
+        table: {
+          cols: ['Feature', 'What it does', 'Notes'],
+          rows: [
+            ['Adaptive authentication', 'Risk-scores each login based on IP, device fingerprint, and user behavior. High-risk logins can be blocked or require MFA challenge.', 'Risk scores visible in CloudWatch under UserPool/Risk metrics.'],
+            ['Compromised credential detection', 'Checks submitted passwords against known-breached credential databases. Blocks sign-in if a match is found.', 'Fires a CompromisedCredentialRisk event — monitor in CloudTrail.'],
+            ['Account takeover protection', 'Detects unusual sign-in patterns (new device, impossible travel). Can notify or block.', 'Works in concert with MFA enforcement — ensure all users have MFA enrolled.'],
+          ],
+        },
+        commands: [
+          { label: 'verify advanced security mode on UserPool', code: 'POOL_ID=$(aws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Api \\\n  --query "Stacks[0].Outputs[?OutputKey==\'UserPoolId\'].OutputValue" \\\n  --output text)\n\naws cognito-idp describe-user-pool \\\n  --user-pool-id $POOL_ID \\\n  --query "UserPool.UserPoolAddOns"\n# Expected: {"AdvancedSecurityMode": "ENFORCED"}' },
+        ],
+        warnings: [
+          'advanced_security_mode=ENFORCED applies to the UserPool, not the pool client. All clients sharing this UserPool benefit from — and are subject to — the advanced security controls. Do not set it to AUDIT-only in production; ENFORCED mode actually blocks risky logins rather than just logging them.',
+        ],
       },
       {
         heading: 'ApiStack — recent CDK changes',
@@ -690,7 +742,7 @@ pytest -m smoke -v
             ['url-minter',  '28 pass', 'Presigned URL issuance, subject= S3 key path, SigV4 validation, rate limiting'],
             ['api',         '37 pass', 'Facility scoping, cross-facility auth denial, alert pagination (AlertPage + next_token), single alert by eventId (GSI lookup), subject detail, on-demand narrative, admin user management (list/reset-password/disable/enable), admin metrics, PATCH device (DDB + IoT shadow)'],
             ['ella',        '11 pass', 'Athena query construction, Bedrock invoke, de-id system prompt adherence, DLQ retry'],
-            ['telemetry',   '15 pass', 'Fall event enrichment, DDB write, SNS publish with facility filter, synthetic event injection'],
+            ['telemetry',   '15 pass', 'Fall event enrichment, DDB write (includes ttl assertion: assert "ttl" in item and item["ttl"] > 0), SNS publish with facility filter, synthetic event injection'],
             ['reconciler',  '2 pass',  'Athena row-count delta per facility, TelemetryDivergence metric emission, alarm threshold 0.1%'],
           ],
         },
@@ -763,6 +815,11 @@ pytest -m smoke -v
           'At least one facility promoted to parquet_only and reconciler shows zero divergence',
           'Ella narratives verified de-identified on 20+ test subjects',
           'API cross-facility denial test passed in integration suite',
+          'X-Ray active tracing verified on all 5 Lambdas — traces visible in X-Ray Service Map after first invocation',
+          'alerts-enricher reserved concurrency = 50 confirmed (aws lambda get-function-concurrency)',
+          'alerts table DynamoDB TTL enabled (attr: ttl, 7-year HIPAA retention) — both alerts and daily-updates tables now have data lifecycle policy',
+          'Cognito Advanced Security ENFORCED on UserPool — adaptive auth, compromised credential detection, account takeover protection active',
+          'AWS Budget $100/month provisioned — 80% ACTUAL + 100% FORECASTED alerts route to operator alarm SNS topic',
           'Runbooks dry-run: device-offline, fall-alert-missed, api-5xx, cost-spike',
           'IRB data request runbook reviewed with PI / medical lead',
         ],
@@ -816,8 +873,9 @@ const CHECKLIST_ITEMS = [
   'Ella Lambda deployed — narrative de-id verified (20+ subjects)',
   'FastAPI Lambda deployed — 16 endpoints smoke-tested',
   'Cognito MFA enabled for all users',
-  'Unit tests: 161 passing (admin-cli 71, url-minter 28, api 37, telemetry 15, ella 11, reconciler 2)',
+  'Unit tests: 166 passing (admin-cli 71, url-minter 28, api 37, telemetry 15, ella 11, reconciler 2) — includes hardening sprint TTL assertion',
   'Smoke tests: 9 passing (pytest -m smoke) — alert pagination, admin user API, active feed teardown verified',
+  'Hardening sprint (522c338): X-Ray tracing, reserved concurrency, alerts TTL, Cognito Adv Security, AWS Budgets',
   'Production runbooks dry-run complete',
 ];
 
