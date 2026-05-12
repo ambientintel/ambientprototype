@@ -238,15 +238,16 @@ async function registerForPush(): Promise<string | null> {
       },
       {
         heading: 'Alert payload structure',
-        body: 'ambientcloud sends push payloads with coded identifiers only. The push notification body never contains resident names, room numbers, or any PHI.',
+        body: 'ambientcloud sends push payloads matching the IoT contract §4.1. The push notification body never contains resident names, room numbers, or any PHI.',
         table: {
           cols: ['Payload field', 'Type', 'Example', 'Notes'],
           rows: [
-            ['alert_id',  'string', '"ALT-20260507-0042"',  'Unique alert ID for deduplication'],
-            ['coded_id',  'string', '"MOCAREV-0014"',       'Coded resident ID — no PHI'],
-            ['type',      'string', '"fall"',               'fall | absence | distress'],
-            ['confidence','number', '0.94',                 '0–1 sensor confidence score'],
-            ['ts',        'number', '1746641284',           'Unix timestamp UTC'],
+            ['eventId',          'string', '"550e8400-e29b-41d4-a716-..."', 'Unique event UUID for deduplication'],
+            ['deviceId',         'string', '"DEV-ROOM-301"',               'Device client ID — coded, no PHI'],
+            ['detectedAt',       'string', '"2026-05-12T12:00:00Z"',       'ISO-8601 UTC timestamp from device'],
+            ['confidence',       'number', '0.853',                        '0–1 sensor confidence score'],
+            ['zone',             'string', '"bed"',                        'Coded zone label (null if unknown)'],
+            ['heightAtDetection','number', '0.30',                         'Estimated height at fall moment (m)'],
           ],
         },
         commands: [
@@ -284,15 +285,15 @@ export function useNotificationNavigation() {
   useEffect(() => {
     // Warm start: app backgrounded, notification tapped
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      const { alert_id } = response.notification.request.content.data as { alert_id: string };
-      navigation.navigate('AlertDetail', { alertId: alert_id });
+      const { eventId } = response.notification.request.content.data as { eventId: string };
+      navigation.navigate('AlertDetail', { alertId: eventId });
     });
 
     // Cold start: app launched from notification tap
     Notifications.getLastNotificationResponseAsync().then(response => {
       if (!response) return;
-      const { alert_id } = response.notification.request.content.data as { alert_id: string };
-      navigation.navigate('AlertDetail', { alertId: alert_id });
+      const { eventId } = response.notification.request.content.data as { eventId: string };
+      navigation.navigate('AlertDetail', { alertId: eventId });
     });
 
     return () => responseListener.current?.remove();
@@ -305,12 +306,12 @@ export function useNotificationNavigation() {
       },
       {
         heading: 'Alert deduplication',
-        body: 'The sensor pipeline has an 800 ms dedup window, but network retransmission can still deliver duplicates. Maintain a Set of seen alert_ids in memory (and persist to AsyncStorage) and skip rendering duplicates.',
+        body: 'The sensor pipeline has an 800 ms dedup window, but network retransmission can still deliver duplicates. Maintain a Set of seen eventIds in memory (and persist to AsyncStorage) and skip rendering duplicates.',
         commands: [{ label: 'dedup on receive', code: `const seenAlerts = useRef(new Set<string>());
 
 function onNewAlert(payload: AlertPayload) {
-  if (seenAlerts.current.has(payload.alert_id)) return;
-  seenAlerts.current.add(payload.alert_id);
+  if (seenAlerts.current.has(payload.eventId)) return;
+  seenAlerts.current.add(payload.eventId);
   setAlerts(prev => [payload, ...prev].slice(0, 50));
 }` }],
       },
@@ -435,7 +436,7 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
   },
   {
     id: 'build', phase: '10', title: 'EAS Build', status: 'warning', tag: 'Distribution', time: '~20–40 min per build',
-    summary: 'eas.json done (distribution: internal). App icons done. Android unblocked — 3 steps: Firebase project → google-services.json → run setup script → eas build android. iOS blocked on D-U-N-S / Apple org account.',
+    summary: 'EAS iOS build queued (second attempt) with Admin ASC API key U4BSUK3SZ8. Associated Domains capability (applinks:ellamemory.com) enabled in Apple Developer portal. Push notifications use raw APNS tokens via AWS SNS directly — Expo push service not required, no APNs key needed in EAS credentials. Awaiting build result.',
     sections: [
       {
         heading: 'Android build — do now (no Apple account needed)',
@@ -450,10 +451,10 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
         ],
       },
       {
-        heading: 'iOS build — blocked on Apple Developer org',
-        body: 'D-U-N-S applied. Once the Apple Developer Organization account is active (2–5 business days from D-U-N-S): create APNs Auth Key → run setup_ios_push.sh → eas credentials → eas build --platform ios --profile preview.',
+        heading: 'iOS build — ready, needs APNs .p8 key',
+        body: 'Full step-by-step guide at docs/ios-pilot-build.md. One-time steps: create APNs Auth Key in Apple Developer portal → run scripts/setup_ios_push.sh to activate SNS APNS platform app → register test devices → eas build --profile preview.',
         commands: [
-          { label: 'iOS build (run after Apple account)', code: 'eas credentials  # provisions signing certificate + provisioning profile\neas build --platform ios --profile preview' },
+          { label: 'iOS build (see docs/ios-pilot-build.md)', code: '# 1. Create APNs Auth Key at developer.apple.com (Key ID + .p8 file)\n# 2. Activate SNS APNS platform application\nscripts/setup_ios_push.sh <KEY_ID> <TEAM_ID> <path/to/AuthKey.p8>\n# 3. Register nurse test devices\neas device:create\n# 4. Build for internal distribution (~20 min)\neas build --platform ios --profile preview' },
         ],
         artifacts: [
           { file: 'eas.json', role: 'EAS build profiles — development / preview (internal APK+IPA) / production', size: '' },
@@ -590,7 +591,7 @@ const CHECKLIST_ITEMS = [
   'CI pipeline passing on main',
 ];
 
-const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 11, 12, 13, 14, 15, 17, 22]);
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 13, 14, 15, 16, 17, 18, 22]);
 
 const OPEN_DECISIONS = [
   'Offline alert queue: cache unacknowledged alerts in AsyncStorage when connectivity drops in the care facility',

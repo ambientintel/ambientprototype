@@ -80,14 +80,14 @@ const DOMAINS = [
     repo: 'ambientintel/ambientapp',
     lsKey: 'ambient-mobileapp-checklist-v1',
     checklistTotal: 23,
-    checklistDefault: 14,
+    checklistDefault: 16,
     stepsTotal: 12,
-    stepsDone: 7,
+    stepsDone: 10,
     phases: [
       { label: 'Environment',  done: 3, total: 3 },
       { label: 'Development',  done: 3, total: 3 },
-      { label: 'Features',     done: 1, total: 3 },
-      { label: 'Distribution', done: 0, total: 3 },
+      { label: 'Features',     done: 3, total: 3 },
+      { label: 'Distribution', done: 2, total: 3 },
     ],
     specs: [
       { k: 'Framework', v: 'Expo 54' },
@@ -95,8 +95,8 @@ const DOMAINS = [
       { k: 'Push',      v: 'APNS+FCM' },
       { k: 'Build',     v: 'EAS' },
     ],
-    description: 'Nurse fall alert app. Cognito SRP auth + SecureStore session. Alert list (30s poll), alert detail + acknowledge. Push deep-link via addNotificationResponseReceivedListener. Awaiting APNS cert + EAS build.',
-    currentStep: '08 · APNS Certificate + EAS Build',
+    description: 'Nurse fall alert app. Cognito SRP auth + SecureStore session. Alert list, detail, acknowledge, false-positive flag all done. APNs Auth Key registered (W9YM2HUCU3), SNS APNS platform app active (ella-apns-sandbox). EAS iOS build queued with Admin ASC API key — Associated Domains enabled, devices registered.',
+    currentStep: '10 · EAS Build (queued)',
     freezeKey: 'ambient-mobileapp-frozen-v1',
     freezeLabel: 'Phase I Lock',
   },
@@ -126,7 +126,7 @@ const DOMAINS = [
       { k: 'AI',      v: 'Sonnet 4.6' },
       { k: 'IaC',     v: 'CDK v2' },
     ],
-    description: 'CDK v2 · 10 CloudFormation stacks · 18 API endpoints · 166 unit tests · 9 smoke tests. X-Ray tracing, reserved concurrency, HIPAA 7-yr TTL, Cognito Advanced Security ENFORCED, $100/month budget alarm. 5-job CI/CD deploy pipeline.',
+    description: 'CDK v2 · 11 CloudFormation stacks · 18 API endpoints · 166 unit tests · 9 smoke tests. IotStack device policy + corrected IoT rule SQL. X-Ray tracing, reserved concurrency, HIPAA 7-yr TTL, Cognito Advanced Security ENFORCED. 5-job CI/CD pipeline.',
     currentStep: '12 · CDK Deploy → Pilot',
     freezeKey: 'ambient-cloud-frozen-v1',
     freezeLabel: 'Production Freeze',
@@ -175,12 +175,12 @@ const DOMAINS = [
     checklistTotal: 20,
     checklistDefault: 13,
     stepsTotal: 13,
-    stepsDone: 8,
+    stepsDone: 11,
     phases: [
       { label: 'Setup',     done: 4, total: 4 },
       { label: 'Build',     done: 4, total: 4 },
-      { label: 'Integrate', done: 0, total: 2 },
-      { label: 'Ship',      done: 0, total: 3 },
+      { label: 'Integrate', done: 1, total: 2 },
+      { label: 'Ship',      done: 2, total: 3 },
     ],
     specs: [
       { k: 'Runtime',  v: 'Next.js 16' },
@@ -188,7 +188,7 @@ const DOMAINS = [
       { k: 'Workspace', v: 'pnpm 9' },
       { k: 'Pilot',    v: '10 Rooms' },
     ],
-    description: 'Ella Memory nurse dashboard — WorkOS SSO, HIPAA de-identification, floor map, Ella narrative, web push alerts. Vercel deploy.',
+    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, floor map, Ella narrative. Cognito API proxy wired to ambientcloud. Web push alerts pending.',
     currentStep: '09 · Web Push',
     freezeKey: 'ambient-webapp-frozen-v1',
     freezeLabel: 'Deployment Lock',
@@ -199,7 +199,7 @@ type Domain = typeof DOMAINS[number];
 
 const INTEGRATIONS = [
   { from: 'Firmware', to: 'EE Hardware',      desc: 'Custom DTB targets OSD62x-PM BGA carrier; IWR6843AOP GPIO/SPI pin assignments from schematic' },
-  { from: 'Firmware', to: 'Cloud Engineering', desc: 'Device agent publishes MQTT fall events + uploads Parquet batches via url-minter presigned URLs' },
+  { from: 'Firmware', to: 'Cloud Engineering', desc: 'Device publishes to ambient/v1/alerts/fall/{deviceId} (MQTT QoS 1) → IoT rule → alerts-enricher Lambda → SNS. Parquet frames uploaded via url-minter presigned URLs.' },
   { from: 'EE Hardware', to: 'Firmware',       desc: 'Power rail sequencing, JTAG header, UART debug pin positions — PCB stackup drives DTB addresses' },
   { from: 'Cloud Engineering', to: 'Mobile App', desc: 'FastAPI + Cognito JWT auth; SNS → APNS/FCM push; facility-scoped alert endpoints feed the app' },
   { from: 'Mechanical', to: 'EE Hardware', desc: 'PCB outline and mounting hole pattern locks enclosure form factor; ceiling bracket bolt pattern matches PCB stackup' },
@@ -224,18 +224,18 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Open DHF and begin 21 CFR 820 design history documentation', owner: 'QA' },
   ],
   mobileapp: [
-    { task: 'Complete Cognito sign-in, token refresh, and sign-out flows (step 03)', owner: 'Mobile' },
-    { task: 'Register APNS + FCM tokens and wire SNS push notification end-to-end', owner: 'Mobile' },
-    { task: 'Build alert list and detail screens with facility-scoped data from Cloud API', owner: 'Mobile' },
-    { task: 'Configure EAS build profile and submit first build to TestFlight', owner: 'Mobile+DevOps' },
-    { task: 'Resolve remaining Environment setup item to unblock step 04', owner: 'Mobile' },
+    { task: 'Await EAS iOS build result — if successful, distribute via OTA install link or submit to TestFlight', owner: 'Mobile' },
+    { task: 'Set up Firebase project → google-services.json → setup_android_push.sh → eas build --platform android', owner: 'Mobile+DevOps' },
+    { task: 'Distribute to nurses: TestFlight invitations (iOS) + APK download link (Android)', owner: 'Mobile' },
+    { task: 'Switch Lambda APNS_PLATFORM_APP_ARN from ella-apns-sandbox to ella-apns-prod before App Store submission', owner: 'DevOps' },
+    { task: 'Resolve Apple Developer account -20209 lock via Apple Support for future direct portal access', owner: 'Mobile' },
   ],
   cloudengineering: [
+    { task: 'cdk deploy Ambient-dev-Iot to create ambient-device-policy in IoT Core (new IotStack)', owner: 'Cloud' },
     { task: 'Run integration test suite — FakeDevice end-to-end, 75 unit tests green against real AWS (step 11)', owner: 'Cloud+Security' },
     { task: 'Verify dual-write reconciler — TelemetryDivergence alarm, promote FAC-PILOT-001 to parquet_only', owner: 'Cloud' },
     { task: 'Upgrade Ella from Sonnet 4.5 → 4.6 — evaluate de-id prompt fidelity on 20 test narratives first', owner: 'Cloud+AI' },
     { task: 'Production sign-off checklist — runbooks dry-run, CloudTrail data event verification (step 12)', owner: 'Cloud+Security' },
-    { task: 'Enable Cognito MFA for all admin and nurse users in us-east-1_lz15iZT97', owner: 'Cloud' },
   ],
   mechanical: [
     { task: 'Complete PCB layout in Altium — route controlled-impedance traces, run DRC to zero errors', owner: 'Layout' },
@@ -245,11 +245,11 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve PoE+ vs barrel jack decision before Rev B — affects power routing and BOM cost', owner: 'Lead' },
   ],
   webapp: [
+    { task: 'Run pilot validation: nurse auth, keyring unlock, Ella TTS, fall alert acknowledge across MOH 301–310', owner: 'Product+FE' },
     { task: 'Implement Web Push — generate VAPID keys, register service worker, wire fall event push end-to-end', owner: 'FE' },
-    { task: 'Replace mock data with ambientcloud REST API — coordinate endpoint contracts with Cloud team', owner: 'FE+Cloud' },
-    { task: 'Validate pnpm build: zero TypeScript strict errors, zero ESLint errors', owner: 'FE' },
-    { task: 'Deploy to Vercel production and verify ellamemory.com is live with WorkOS SSO', owner: 'FE+DevOps' },
-    { task: 'Run pilot validation across MOH 301–310 and collect nurse feedback for iteration', owner: 'Product' },
+    { task: 'Seed real room assignments from pilot coordinator once MOH device-to-room mapping is confirmed', owner: 'Product+FE' },
+    { task: 'Monitor /api/ambient proxy for 502s — keep AMBIENT_WEB_SVC_PASSWORD in sync with Cognito', owner: 'DevOps' },
+    { task: 'Confirm WorkOS SSO redirect URI registered for ellamemory.com production and preview domains', owner: 'FE+DevOps' },
   ],
 };
 
@@ -265,8 +265,8 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Place BOM order at DigiKey — confirm IWR6843AOP + OSD62x-PM lead times',
   ],
   mobileapp: [
-    'Complete Cognito sign-in / token refresh / sign-out flows (step 03)',
-    'Register APNS token and test SNS → APNS delivery end-to-end',
+    'Await EAS iOS build result → distribute via TestFlight / OTA install link to pilot nurses',
+    'Set up Firebase + Android FCM build in parallel while iOS build completes',
   ],
   cloudengineering: [
     'Run integration test suite — FakeDevice lifecycle, 75 unit tests green, verify all 5 data paths against real AWS',
@@ -277,8 +277,8 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Finalize ceiling-mount bracket geometry and print FDM prototype for fit-check',
   ],
   webapp: [
-    'Implement VAPID service worker and wire fall event web push end-to-end (step 09)',
-    'Replace all mock API calls with Cloud REST endpoints — align on contract with Cloud team',
+    'Run pilot validation: nurse auth + Ella TTS + alert acknowledge flow across MOH 301–310',
+    'Implement VAPID service worker and wire fall event web push end-to-end (step 09 — remaining)',
   ],
 };
 
@@ -290,7 +290,6 @@ const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text
   { domain: 'Firmware',          urgency: 'high',   text: 'Mender vs SWUpdate for OTA — Mender adds ~8 MB to rootfs; SWUpdate is lighter but less managed.' },
   { domain: 'Cloud Engineering', urgency: 'medium', text: 'Sonnet 4.6 upgrade for Ella — evaluate de-id system prompt fidelity before flipping model ID in EllaStack.' },
   { domain: 'Cloud Engineering', urgency: 'low',    text: 'Firehose retirement timeline — 90-day window after all facilities reach parquet_only; not yet contractually nailed down.' },
-  { domain: 'Mobile App',        urgency: 'medium', text: 'iOS TestFlight vs Enterprise Distribution for the 10-room clinical pilot.' },
   { domain: 'Web App',           urgency: 'medium', text: 'Ella narrative poll interval — 30 s vs WebSocket for real-time nurse alert delivery.' },
   { domain: 'Firmware',          urgency: 'low',    text: 'Kernel version pin: 6.1 LTS vs 6.6 LTS — both supported by TI SDK 11, no urgency.' },
   { domain: 'Mechanical',        urgency: 'low',    text: 'Enclosure finish: matte vs glossy ABS — cosmetic only, deferred to Rev B.' },
@@ -299,10 +298,9 @@ const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text
 // ── Cross-domain blockers ──────────────────────────────────────────────────────
 
 const BLOCKERS: { blocked: string; blocking: string; issue: string }[] = [
-  { blocked: 'Firmware',   blocking: 'EE Hardware',      issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
-  { blocked: 'Mobile App', blocking: 'Cloud Engineering', issue: 'Cognito UserPool deployed (us-east-1_lz15iZT97) — app needs to integrate real auth flows and APNS push token registration' },
-  { blocked: 'Web App',    blocking: 'Cloud Engineering', issue: 'FastAPI + Ella endpoints live at kfdi49uke9.execute-api.us-east-1.amazonaws.com — replace mock data with real API calls' },
-  { blocked: 'Mechanical', blocking: 'EE Hardware',       issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
+  { blocked: 'Firmware',   blocking: 'EE Hardware',  issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
+  { blocked: 'Mobile App', blocking: 'Apple',        issue: 'Apple account -20209 lock still blocking direct Apple Developer Portal API — workaround (Admin ASC API key) in use; build queued' },
+  { blocked: 'Mechanical', blocking: 'EE Hardware',  issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────────────
