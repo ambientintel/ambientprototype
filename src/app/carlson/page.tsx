@@ -63,7 +63,7 @@ function SectionMeta({ n, label }: { n: string; label: string }) {
 
 function HowItWorksDiagram() {
   const rx = 48, ry = 52, rw = 504, rh = 720;
-  const bwX = 408, bwY = 222;
+  const bwX = 352, bwY = 290;
   const maroon = '#7A0019', accent = '#4F9CF9', gold = '#F0B429', green = '#3DCC91';
   const personPath = 'M 224 388 C 158 270 104 330 142 488 C 180 648 314 676 392 566 C 456 468 424 292 346 242 C 268 192 200 310 224 388 Z';
   const sNodes = [
@@ -167,10 +167,10 @@ function HowItWorksDiagram() {
 
         {/* Bed silhouette */}
         <g clipPath="url(#hiw-clip)">
-          <rect x={82} y={210} width={185} height={138} rx={5} fill="url(#hiw-bed)" stroke="rgba(255,255,255,0.09)" strokeWidth={1}/>
-          <rect x={82} y={210} width={185} height={46} rx={5} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.06)" strokeWidth={1}/>
-          <rect x={92} y={218} width={78} height={30} rx={3} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.06)" strokeWidth={0.7}/>
-          <rect x={181} y={218} width={78} height={30} rx={3} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.06)" strokeWidth={0.7}/>
+          <rect x={296} y={588} width={252} height={178} rx={5} fill="url(#hiw-bed)" stroke="rgba(255,255,255,0.1)" strokeWidth={1.2}/>
+          <rect x={507} y={588} width={41} height={178} rx={5} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.07)" strokeWidth={1}/>
+          <rect x={492} y={596} width={30} height={74} rx={3} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.07)" strokeWidth={0.7}/>
+          <rect x={492} y={686} width={30} height={74} rx={3} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.07)" strokeWidth={0.7}/>
         </g>
 
         {/* Person + trail */}
@@ -201,8 +201,8 @@ function HowItWorksDiagram() {
         <path d={`M ${bwX} ${bwY-48} A 48 48 0 0 1 ${bwX+48} ${bwY}`} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={0.8} strokeDasharray="3,6"/>
 
         {/* Room labels */}
-        <text x={220} y={145} textAnchor="middle" fontFamily="monospace" fontSize={10} fill="rgba(255,255,255,0.1)" letterSpacing={6}>BEDROOM</text>
-        <text x={480} y={150} textAnchor="middle" fontFamily="monospace" fontSize={9} fill="rgba(255,255,255,0.08)" letterSpacing={4}>BATH</text>
+        <text x={200} y={440} textAnchor="middle" fontFamily="monospace" fontSize={10} fill="rgba(255,255,255,0.1)" letterSpacing={6}>BEDROOM</text>
+        <text x={452} y={171} textAnchor="middle" fontFamily="monospace" fontSize={9} fill="rgba(255,255,255,0.08)" letterSpacing={4}>BATH</text>
 
         {/* Data packets */}
         {pktPaths.map((path, i) => (
