@@ -55,7 +55,7 @@ function Tag({ children, color, bg }: { children: React.ReactNode; color: string
 function SectionMeta({ n, label }: { n: string; label: string }) {
   return (
     <div style={{ marginBottom: 64 }}>
-      <span style={{ fontFamily: C.mono, fontSize: 11, letterSpacing: '0.22em', color: C.text4, display: 'block', marginBottom: 20 }}>{n}</span>
+      <span style={{ fontFamily: C.mono, fontSize: 'clamp(22px, 2.5vw, 32px)', fontWeight: 300, letterSpacing: '0.12em', color: C.text3, display: 'block', marginBottom: 18 }}>{n}</span>
       <p style={{ fontFamily: C.sans, fontWeight: 500, fontSize: 'clamp(36px, 4.5vw, 52px)', letterSpacing: '-0.022em', lineHeight: 1.08, color: C.text, margin: 0 }}>{label}</p>
     </div>
   );
