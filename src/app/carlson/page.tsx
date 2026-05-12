@@ -146,7 +146,7 @@ export default function CarlsonPage() {
       <Rule />
       <section style={{ background: C.bg2, padding: '96px 56px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: 1.36, letterSpacing: '-0.018em', color: C.text, margin: '0 0 64px', maxWidth: 860 }}>
+          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: 1.36, letterSpacing: '-0.018em', color: C.text, margin: '0 0 64px' }}>
             Two-thirds of memory care incidents happen at night — unwitnessed, in the minutes between rounds. We built a system that is always present without ever being intrusive.
           </p>
           <div className="c-stat-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderTop: `1px solid ${C.line}`, paddingTop: 56 }}>
