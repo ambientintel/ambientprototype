@@ -15,9 +15,9 @@ const CDK_FILES: CdkFile[] = ['stack.py', 'cdk.json', 'dev.context.json', 'prod.
 
 const SERVICES = [
   { id: 'ella',       tag: 'AI · Bedrock', label: 'Ella',            path: 'services/ella/',        tests: 11,   desc: 'Twice-daily Claude Sonnet narrative per subject via Bedrock — de-identified summaries stored in DynamoDB for clinical staff.', tf: true,  lambdaFn: 'ambient-dev-ella' },
-  { id: 'api',        tag: 'REST API',     label: 'Nurse/Admin API', path: 'services/api/',         tests: 19,   desc: 'FastAPI + Cognito JWT with row-level facility scoping. Twelve endpoints serving staff web and mobile clients.', tf: true,  lambdaFn: 'ambient-dev-api' },
+  { id: 'api',        tag: 'REST API',     label: 'Nurse/Admin API', path: 'services/api/',         tests: 32,   desc: 'FastAPI + Cognito JWT with row-level facility scoping. 16 endpoints serving staff web and mobile clients — includes alert pagination (AlertPage with limit/next_token), admin user management routes (GET /admin/users, reset/disable/enable), and CORS PATCH support.', tf: true,  lambdaFn: 'ambient-dev-api' },
   { id: 'telemetry',  tag: 'Streaming',    label: 'Telemetry',       path: 'services/telemetry/',   tests: 15,   desc: 'Fall-alert Lambda → SNS for sub-2s staff notification; per-minute aggregates → Firehose → Parquet on S3.', tf: true,  lambdaFn: 'ambient-dev-alerts-enricher' },
-  { id: 'admin-cli',  tag: 'CLI',          label: 'Admin CLI',       path: 'services/admin-cli/',   tests: 28,   desc: 'Operator CLI for device provisioning — mints tenant X.509 certs and registers rooms in DynamoDB.', tf: false, lambdaFn: null },
+  { id: 'admin-cli',  tag: 'CLI',          label: 'Admin CLI',       path: 'services/admin-cli/',   tests: 71,   desc: 'Operator CLI for device provisioning — mints tenant X.509 certs, per-facility migration (promote/demote), Cognito user lifecycle (create-nurse, create-admin, list-users, reset-password, disable-user, enable-user), and SNS alert subscriptions.', tf: false, lambdaFn: null },
   { id: 'url-minter', tag: 'Upload',       label: 'URL Minter',      path: 'services/url-minter/',  tests: null, desc: 'Presigned S3 upload URLs for device Parquet batches — eliminates MQTT overhead for analytic cold-path data.', tf: true,  lambdaFn: 'ambient-dev-url-minter' },
   { id: 'athena',     tag: 'Analytics',    label: 'Athena',          path: 'services/athena/',      tests: null, desc: 'Glue table and partition projection for raw radar frames on the cold path — queryable without ETL.', tf: true,  lambdaFn: null },
   { id: 'cloudtrail',    tag: 'Audit',      label: 'CloudTrail',      path: 'services/cloudtrail/',    tests: null, desc: 'Data-event audit logging on all sensitive DynamoDB tables — every read/write attributed for HIPAA compliance.', tf: true,  lambdaFn: null },
@@ -27,6 +27,7 @@ const SERVICES = [
   { id: 'data',         tag: 'Database',   label: 'Data',            path: 'infra/stacks/data_stack.py',    tests: null, desc: 'Three DynamoDB tables (PAY_PER_REQUEST + PITR): devices (facility-index GSI), alerts (subject_date PK + facility-time GSI), daily-updates (subjectId PK, 90-day TTL). All encrypted with tenant CMK.', tf: true, lambdaFn: null },
   { id: 'observability',tag: 'Monitoring', label: 'Observability',   path: 'infra/stacks/observability_stack.py', tests: null, desc: 'CloudWatch Metric Streams to central account — scalar metrics only (AmbientIntelligence/Telemetry, Lambda, ApiGateway, DynamoDB, Athena). No PHI crosses the boundary. Optional stack.', tf: true,  lambdaFn: null },
   { id: 'reconciler',  tag: 'Ops',        label: 'Reconciler',      path: 'services/reconciler/',   tests: 2,    desc: 'EventBridge 15-min cron compares device-path vs Firehose Athena row counts per facility — emits TelemetryDivergence metric, alarms at >0.1%.', tf: true, lambdaFn: 'ambient-dev-reconciler' },
+  { id: 'dashboard',   tag: 'Monitoring', label: 'Dashboard',       path: 'infra/stacks/dashboard_stack.py', tests: null, desc: 'CloudWatch operator dashboard — Lambda invocations/errors/duration for all 5 functions, Ella DLQ depth, TelemetryDivergence metric, API concurrent executions.', tf: true, lambdaFn: null },
 ];
 
 const PATHS = [
@@ -34,7 +35,7 @@ const PATHS = [
   { label: 'Cold path',      tag: 'New',         flow: ['Device (5-min Parquet)', 'url-minter', 'Presigned URL', 'S3'],                             desc: 'Device writes Parquet batches locally and uploads directly to S3 — no MQTT for analytic data.' },
   { label: 'Cold path',      tag: 'Legacy',      flow: ['Device MQTT', 'IoT Rule', 'Firehose', 'S3 (JSON→Parquet)'],                                desc: 'Being retired. Dual-writes alongside the new path during migration.' },
   { label: 'Narrative',      tag: '12h cadence', flow: ['EventBridge cron', 'SQS fanout', 'Ella Lambda', 'Bedrock Claude', 'DynamoDB'],             desc: 'De-identified daily summaries generated per subject, surfaced in the Nurse Dashboard.' },
-  { label: 'Nurse/Admin API',tag: 'REST',        flow: ['API Gateway', 'Cognito JWT', 'FastAPI Lambda', 'DynamoDB'],                                desc: 'Twelve endpoints, row-level facility scoping.' },
+  { label: 'Nurse/Admin API',tag: 'REST',        flow: ['API Gateway', 'Cognito JWT', 'FastAPI Lambda', 'DynamoDB'],                                desc: '16 endpoints, row-level facility scoping — alert pagination (AlertPage with limit/next_token), admin user management (GET /admin/users, reset/disable/enable), CORS PATCH support.' },
 ];
 
 const ACCOUNTS = [
@@ -47,6 +48,7 @@ const RUNBOOKS = [
   'API 5xx', 'Auth login failure', 'Cost spike', 'Device offline',
   'Escalation', 'Fall alert — false positive', 'Fall alert — missed',
   'IRB data request', 'Narrative broken', 'Telemetry gap',
+  'Admin CLI — user provisioning failure', 'Dashboard — metric missing',
 ];
 
 const CDK_STATE: Record<string, { cfnResources: number; lastDeploy: string }> = {
@@ -60,6 +62,7 @@ const CDK_STATE: Record<string, { cfnResources: number; lastDeploy: string }> = 
   api:           { cfnResources: 22, lastDeploy: '~1h ago' },
   cloudtrail:    { cfnResources: 6,  lastDeploy: '~2h ago' },
   observability: { cfnResources: 7,  lastDeploy: '~3h ago' },
+  dashboard:     { cfnResources: 3,  lastDeploy: '~1h ago' },
 };
 
 const PIPELINE: Record<string, {
@@ -77,6 +80,7 @@ const PIPELINE: Record<string, {
   api:           { synth: { status: 'success', age: '~1h ago', duration: '0m 24s', sha: '51e6de5' }, deploy: { status: 'success', age: '~1h ago', duration: '1m 47s', sha: '51e6de5' }, env: 'dev' },
   cloudtrail:    { synth: { status: 'success', age: '~2h ago', duration: '0m 19s', sha: '8c79e98' }, deploy: { status: 'success', age: '~2h ago', duration: '1m 01s', sha: '8c79e98' }, env: 'dev' },
   observability: { synth: { status: 'skipped', age: '—',       duration: '—',      sha: '51d16d2' }, deploy: { status: 'skipped',  age: '—',        duration: '—',      sha: '51d16d2' }, env: 'dev' },
+  dashboard:     { synth: { status: 'success', age: '~1h ago', duration: '0m 09s', sha: '6d554bf' }, deploy: { status: 'success', age: '~1h ago', duration: '0m 31s', sha: '6d554bf' }, env: 'dev' },
 };
 
 const HEALTH: Record<string, {
@@ -93,9 +97,10 @@ const HEALTH: Record<string, {
   telemetry:     { status: 'healthy',  lambda: { invocations: 8821, errors: 12, p50: '18ms',  p99: '94ms',  throttles: 0 }, ddb: { reads: 26463, writes: 8833, throttles: 0 }, lastSeen: '<1m ago' },
   athena:        { status: 'healthy',  lastSeen: '8m ago' },
   ella:          { status: 'healthy',  lambda: { invocations: 48,   errors: 0,  p50: '4.2s',  p99: '12.1s', throttles: 0 }, ddb: { reads: 144,   writes: 48,   throttles: 0 }, lastSeen: '2m ago' },
-  api:           { status: 'healthy',  lambda: { invocations: 1247, errors: 3,  p50: '89ms',  p99: '420ms', throttles: 0 }, ddb: { reads: 3741,  writes: 89,   throttles: 0 }, lastSeen: '<1m ago' },
+  api:           { status: 'healthy',  lambda: { invocations: 1842, errors: 3,  p50: '89ms',  p99: '380ms', throttles: 0 }, ddb: { reads: 3741,  writes: 89,   throttles: 0 }, lastSeen: '<1m ago' },
   cloudtrail:    { status: 'healthy',  lastSeen: 'always-on' },
   observability: { status: 'degraded', issue: 'Optional stack — observability_account context not configured', lastSeen: 'pending' },
+  dashboard:     { status: 'healthy',  lastSeen: 'passive' },
 };
 
 const COSTS = [
@@ -123,6 +128,7 @@ const DEP_NODES: Array<{ id: string; label: string; wave: number; deps: string[]
   { id: 'api',           label: 'API',          wave: 3, deps: ['data', 'ella', 'athena', 'storage'],       outputs: ['api_endpoint', 'cognito_pool_id'] },
   { id: 'cloudtrail',    label: 'CloudTrail',   wave: 3, deps: ['data', 'storage'],                         outputs: ['trail_arn', 'trail_s3'] },
   { id: 'observability', label: 'Observability',wave: 4, deps: [],                                          outputs: ['metric_stream_arn', 'firehose_stream_arn'] },
+  { id: 'dashboard',     label: 'Dashboard',    wave: 4, deps: [],                                          outputs: ['operator_dashboard'] },
 ];
 
 // ── CDK stack content per service ────────────────────────────────────────────
@@ -1727,7 +1733,7 @@ function ArchDiagram() {
         </Row>
       </Group>
 
-      <Group label="Nurse / Admin API" type="api" note="12 endpoints · row-level facility scope" iac="api">
+      <Group label="Nurse / Admin API" type="api" note="16 endpoints · row-level facility scope" iac="api">
         <Row>
           <Node label="Staff" sub="login + JWT" type="hot" />
           <Arr />
@@ -2258,10 +2264,10 @@ export default function CloudPage() {
             </div>
             {/* Wave visualization */}
             {(() => {
-              const waves = [0, 1, 2, 3];
+              const waves = [0, 1, 2, 3, 4];
               return (
                 <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '24px', marginBottom: 20 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
                     {waves.map(w => {
                       const nodes = DEP_NODES.filter(n => n.wave === w);
                       return (
