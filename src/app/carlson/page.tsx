@@ -237,8 +237,72 @@ export default function CarlsonPage() {
         <span style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 15, letterSpacing: '-0.005em' }}>
           Ambient <em style={{ fontStyle: 'italic', color: C.text2, fontWeight: 300 }}>Intelligence</em>
         </span>
-        <div className="carlson-nav-meta" style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em', color: C.text3 }}>
-          Carlson Founder&apos;s Day &middot; May 13, 2026 &middot; Toaster Innovation Hub
+        {/* ── NAV MOTION GRAPHIC ── signal timeline strip */}
+        <div className="carlson-nav-meta" style={{ lineHeight: 0 }}>
+          <svg viewBox="0 0 480 26" width="480" height="26" style={{ display: 'block', overflow: 'visible' }}>
+            <defs>
+              <filter id="nav-gf" x="-120%" y="-120%" width="340%" height="340%">
+                <feGaussianBlur stdDeviation="1.8" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+
+            {/* backbone */}
+            <line x1="0" y1="22" x2="480" y2="22" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
+            {/* tick marks */}
+            {Array.from({ length: 25 }, (_, i) => (
+              <line key={i} x1={i * 20} y1="19" x2={i * 20} y2="25"
+                stroke="rgba(255,255,255,0.07)" strokeWidth="0.6"/>
+            ))}
+
+            {/* separator node 1 — gold — at x=160 */}
+            <circle cx="160" cy="22" r="2.2" fill="#F0B429" filter="url(#nav-gf)"/>
+            <circle cx="160" cy="22" r="2.2" fill="none" stroke="#F0B429" strokeWidth="1">
+              <animate attributeName="r"       from="2.2" to="11" dur="2.6s" begin="0s"   repeatCount="indefinite"/>
+              <animate attributeName="opacity" from="0.85" to="0"  dur="2.6s" begin="0s"   repeatCount="indefinite"/>
+            </circle>
+
+            {/* separator node 2 — accent — at x=320 */}
+            <circle cx="320" cy="22" r="2.2" fill="#4F9CF9" filter="url(#nav-gf)"/>
+            <circle cx="320" cy="22" r="2.2" fill="none" stroke="#4F9CF9" strokeWidth="1">
+              <animate attributeName="r"       from="2.2" to="11" dur="2.6s" begin="1.2s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" from="0.85" to="0"  dur="2.6s" begin="1.2s" repeatCount="indefinite"/>
+            </circle>
+
+            {/* traveling glow halo */}
+            <circle r="6" fill="rgba(240,180,41,0.14)" filter="url(#nav-gf)">
+              <animateMotion dur="6s" repeatCount="indefinite" calcMode="spline"
+                keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"
+                path="M 0,22 L 480,22 L 0,22"/>
+              <animate attributeName="opacity" values="0;0.8;0.8;0" keyTimes="0;0.06;0.94;1" dur="6s" repeatCount="indefinite"/>
+              <animate attributeName="fill"    values="rgba(240,180,41,0.14);rgba(240,180,41,0.14);rgba(79,156,249,0.14);rgba(79,156,249,0.14);rgba(240,180,41,0.14)"
+                keyTimes="0;0.3;0.36;0.68;1" dur="6s" repeatCount="indefinite"/>
+            </circle>
+
+            {/* traveling core spark */}
+            <circle r="2.5" fill="#F0B429" filter="url(#nav-gf)">
+              <animateMotion dur="6s" repeatCount="indefinite" calcMode="spline"
+                keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"
+                path="M 0,22 L 480,22 L 0,22"/>
+              <animate attributeName="opacity" values="0;1;1;0"    keyTimes="0;0.06;0.94;1" dur="6s" repeatCount="indefinite"/>
+              <animate attributeName="fill"    values="#F0B429;#F0B429;#4F9CF9;#4F9CF9;#F0B429"
+                keyTimes="0;0.3;0.36;0.68;1" dur="6s" repeatCount="indefinite"/>
+            </circle>
+
+            {/* text labels */}
+            <text x="80"  y="13" textAnchor="middle"
+              style={{ fill: 'rgba(246,247,248,0.42)', fontSize: '9px', fontFamily: 'var(--mono, monospace)', letterSpacing: '0.13em' }}>
+              CARLSON FOUNDER&apos;S DAY
+            </text>
+            <text x="240" y="13" textAnchor="middle"
+              style={{ fill: 'rgba(246,247,248,0.42)', fontSize: '9px', fontFamily: 'var(--mono, monospace)', letterSpacing: '0.13em' }}>
+              MAY 13, 2026
+            </text>
+            <text x="400" y="13" textAnchor="middle"
+              style={{ fill: 'rgba(246,247,248,0.42)', fontSize: '9px', fontFamily: 'var(--mono, monospace)', letterSpacing: '0.13em' }}>
+              TOASTER INNOVATION HUB
+            </text>
+          </svg>
         </div>
         <a href="mailto:bribradley@gmail.com" className="carlson-btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', borderRadius: 999, background: C.maroon, color: '#fff', fontSize: 12, fontWeight: 500, textDecoration: 'none', letterSpacing: '0.01em', transition: 'background 0.15s' }}>
           Connect
