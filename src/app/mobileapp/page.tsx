@@ -476,8 +476,8 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
           { label: 'rebuild to extend window (if expired)', code: 'eas build --platform ios --profile preview\n# Creates a fresh build with new 13-day window\n# Build ~20 min · uses Admin ASC API key U4BSUK3SZ8 (bypass Apple -20209 lock)' },
         ],
         warnings: [
-          'EAS preview builds expire after 13 days. If nurses haven't installed by May 25, rebuild with eas build --platform ios --profile preview.',
-          'Nurses must trust the enterprise profile on device: Settings → General → VPN & Device Management → Trust.',
+          "EAS preview builds expire after 13 days. If nurses haven’t installed by May 25, rebuild with eas build --platform ios --profile preview.",
+          "Nurses must trust the enterprise profile on device: Settings → General → VPN & Device Management → Trust.",
         ],
       },
       {
