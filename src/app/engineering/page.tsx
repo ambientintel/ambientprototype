@@ -621,8 +621,24 @@ export default function EngineeringPage() {
             <option value="task">Task</option>
             <option value="epic">Epic</option>
           </select>
-          <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-2)", marginLeft:"auto" }}>
-            {filtered.length} issue{filtered.length !== 1 ? "s" : ""}
+          <div
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.13)"; }}
+            style={{
+              marginLeft:"auto", display:"flex", alignItems:"center", gap:8,
+              padding:"5px 12px", border:"1px solid rgba(255,255,255,0.13)",
+              borderRadius:7, background:"rgba(255,255,255,0.04)",
+              transition:"background 0.15s, border-color 0.15s",
+              cursor:"default", userSelect:"none",
+            }}
+          >
+            <span style={{ fontFamily:"var(--mono)", fontSize:16, fontWeight:600, color:"var(--text)", lineHeight:1 }}>
+              {filtered.length}
+            </span>
+            <div style={{ width:1, height:14, background:"rgba(255,255,255,0.15)" }}/>
+            <span style={{ fontFamily:"var(--mono)", fontSize:8.5, textTransform:"uppercase", letterSpacing:"0.18em", color:"var(--text-3)", lineHeight:1 }}>
+              {filtered.length === 1 ? "Issue" : "Issues"}
+            </span>
           </div>
         </div>
 
