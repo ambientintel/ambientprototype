@@ -409,7 +409,7 @@ export default function EngineeringPage() {
     btn:        { display:"inline-flex", alignItems:"center", gap:7, padding:"7px 14px", borderRadius:6, border:"1px solid var(--line)", fontSize:13, fontFamily:"var(--sans)", cursor:"pointer", background:"var(--surface-2)", color:"var(--text-2)", transition:"background 0.15s, border-color 0.15s" },
     btnPrimary: { display:"inline-flex", alignItems:"center", gap:7, padding:"7px 16px", borderRadius:6, border:"none", fontSize:13, fontFamily:"var(--sans)", cursor:"pointer", background:"var(--accent)", color:"#fff", fontWeight:500 },
     sprint:     { display:"flex", alignItems:"center", gap:16, padding:"12px 0 16px" },
-    navLabel:   { fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase" as const, letterSpacing:"0.14em", color:"var(--text-4)", padding:"0 8px", marginBottom:8 },
+    navLabel:   { fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase" as const, letterSpacing:"0.14em", color:"var(--text-3)", padding:"0 8px", marginBottom:8 },
     navItem:    { display:"flex", alignItems:"center", gap:10, padding:"7px 10px", fontSize:13, color:"var(--text-2)", borderRadius:4, cursor:"pointer", textDecoration:"none" },
     drawer:     { position:"fixed", top:0, right:0, bottom:0, width:480, background:"var(--surface-1)", borderLeft:"1px solid var(--line)", zIndex:50, display:"flex", flexDirection:"column", overflowY:"auto" },
     overlay:    { position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", zIndex:49 },
@@ -613,7 +613,7 @@ export default function EngineeringPage() {
             <option value="task">Task</option>
             <option value="epic">Epic</option>
           </select>
-          <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-4)", marginLeft:"auto" }}>
+          <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-2)", marginLeft:"auto" }}>
             {filtered.length} issue{filtered.length !== 1 ? "s" : ""}
           </div>
         </div>
@@ -623,7 +623,7 @@ export default function EngineeringPage() {
           <div style={{ ...s.content, flex:1 }}>
 
             {/* ── Engineer personal lanes ── */}
-            <SectionDivider label="Engineer Lanes" n="01" />
+            <SectionDivider label="Engineer Lanes" n="01" first />
             <div style={{ marginBottom:8 }}>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:12 }}>
                 {team.map(t => {
@@ -1708,15 +1708,15 @@ function IssueCard({ issue, colIndex, isBlocked, isBlocking, onSelect, onMoveBac
 }
 
 // ── SectionDivider ────────────────────────────────────────────────────────
-function SectionDivider({ label, n }: { label: string; n?: string }) {
+function SectionDivider({ label, n, first }: { label: string; n?: string; first?: boolean }) {
   return (
-    <div style={{ margin:"52px 0 22px", display:"flex", flexDirection:"column" as const, gap:6 }}>
+    <div style={{ margin:`${first ? 6 : 48}px 0 20px`, display:"flex", flexDirection:"column" as const, gap:5 }}>
       {n && (
-        <span style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--accent)", letterSpacing:"0.2em", opacity:0.75, userSelect:"none" as const }}>{n} ——</span>
+        <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", letterSpacing:"0.18em", userSelect:"none" as const }}>{n} ——</span>
       )}
       <div style={{ display:"flex", alignItems:"center", gap:18 }}>
         <span style={{ fontFamily:"var(--mono)", fontSize:13, letterSpacing:"0.18em", textTransform:"uppercase" as const, color:"var(--text-2)", fontWeight:500, whiteSpace:"nowrap" as const, userSelect:"none" as const }}>{label}</span>
-        <div style={{ flex:1, height:"1px", background:"var(--line)", opacity:0.5 }}/>
+        <div style={{ flex:1, height:"1px", background:"var(--line-strong)" }}/>
       </div>
     </div>
   );
