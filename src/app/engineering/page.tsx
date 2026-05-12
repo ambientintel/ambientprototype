@@ -397,7 +397,7 @@ export default function EngineeringPage() {
 
   const s: Record<string, React.CSSProperties> = {
     page:       { display:"flex", minHeight:"100vh", background:"var(--bg)", color:"var(--text)", fontFamily:"var(--sans)" },
-    sidebar:    { width:224, flexShrink:0, background:"var(--bg)", borderRight:"1px solid var(--line)", padding:"28px 22px 32px", display:"flex", flexDirection:"column", gap:32, position:"sticky", top:0, height:"100vh", overflowY:"auto" },
+    sidebar:    { width:224, flexShrink:0, background:"#1d1d1f", borderRight:"1px solid var(--line)", padding:"28px 22px 32px", display:"flex", flexDirection:"column", gap:32, position:"sticky", top:0, height:"100vh", overflowY:"auto" },
     main:       { flex:1, display:"flex", flexDirection:"column", minWidth:0, background:"#1A1F2B" },
     topbar:     { borderBottom:"1px solid var(--line)", padding:"20px 32px 0", display:"flex", flexDirection:"column", gap:12 },
     topbarRow:  { display:"flex", alignItems:"center", gap:12, justifyContent:"space-between" },
