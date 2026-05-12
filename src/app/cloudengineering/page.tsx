@@ -78,7 +78,7 @@ const STEPS: Step[] = [
           cols: ['Service / Stack', 'Path', 'CDK Stack', 'Tests'],
           rows: [
             ['admin-cli',    'services/admin-cli/',              '—',                      '71 pass'],
-            ['api',          'services/api/',                    'Ambient-{env}-Api',       '22 pass'],
+            ['api',          'services/api/',                    'Ambient-{env}-Api',       '32 pass'],
             ['athena',       'services/athena/',                 'Ambient-{env}-Athena',    'n/a'],
             ['cloudtrail',   'services/cloudtrail/',             'Ambient-{env}-CloudTrail','n/a'],
             ['ella',         'services/ella/',                   'Ambient-{env}-Ella',      '11 pass'],
@@ -453,7 +453,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'api-auth', phase: '10', title: 'API & Auth — FastAPI + Cognito', status: 'done', tag: 'Deploy', time: '~2 hrs',
-    summary: 'FastAPI Lambda behind API Gateway HTTP API with Cognito JWT authorizer. Twelve endpoints with row-level facility scoping. Users provisioned by admin-cli only — no self-signup.',
+    summary: 'FastAPI Lambda behind API Gateway HTTP API with Cognito JWT authorizer. Sixteen endpoints with row-level facility scoping. Alert list endpoints return paginated AlertPage responses. Admin user management routes (list/reset-password/disable/enable) backed by Cognito admin APIs. Users provisioned by admin-cli only — no self-signup.',
     sections: [
       {
         heading: 'Deploy API service',
@@ -465,16 +465,59 @@ const STEPS: Step[] = [
       },
       {
         heading: 'CORS configuration',
-        body: 'HTTP API CORS is configured in ApiStack. allow_methods includes PATCH to support user update operations from the nurse dashboard.',
+        body: 'HTTP API CORS is configured in ApiStack. allow_methods includes PATCH to support user update operations from the nurse dashboard and the new admin user management routes.',
         table: {
           cols: ['CORS setting', 'Value', 'Notes'],
           rows: [
             ['allow_origins',  '[nurse-dashboard origin]',              'Facility dashboard domain — not wildcard'],
-            ['allow_methods',  'GET, POST, PATCH, OPTIONS',             'PATCH added for /users/{id} and future mutation endpoints'],
+            ['allow_methods',  'GET, POST, PATCH, OPTIONS',             'PATCH added for /users/{id}, /admin/users/{email}/disable, /admin/users/{email}/enable'],
             ['allow_headers',  'Authorization, Content-Type',           'JWT + JSON body'],
             ['max_age',        '300',                                    'Preflight cache 5 min'],
           ],
         },
+      },
+      {
+        heading: 'ApiStack — recent CDK changes',
+        body: 'The ApiStack was updated to support the admin user management API and pilot smoke tests. Three CDK-level changes land together:',
+        table: {
+          cols: ['Change', 'CDK construct / property', 'Why'],
+          rows: [
+            ['Cognito IAM permissions on Lambda role', 'api_lambda.add_to_role_policy — cognito-idp: ListUsers, AdminListGroupsForUser, AdminResetUserPassword, AdminDisableUser, AdminEnableUser on the tenant UserPool ARN', 'FastAPI Lambda must call Cognito admin APIs for the /admin/users/* routes; without these grants the Lambda gets AccessDeniedException'],
+            ['admin_user_password=True on dev pool client', 'CfnUserPoolClient — explicit_auth_flows includes ALLOW_ADMIN_USER_PASSWORD_AUTH', 'Enables ADMIN_USER_PASSWORD_AUTH flow used by the smoke test Cognito fixture to obtain JWTs without a browser redirect'],
+            ['PATCH added to API Gateway CORS preflight', 'HttpApi cors_preflight — allow_methods includes CorsHttpMethod.PATCH', 'Required for the browser to issue PATCH requests to /admin/users/{email}/disable and /enable from the nurse dashboard'],
+          ],
+        },
+        warnings: [
+          'admin_user_password=True must only be set on the dev pool client. Do not enable ALLOW_ADMIN_USER_PASSWORD_AUTH on the staging or production pool clients — it bypasses SRP and reduces the security posture of Cognito authentication.',
+          'The Cognito IAM policy on the Lambda role is scoped to the specific tenant UserPool ARN exported by ApiStack. If a new tenant pool is created, the Lambda role policy must be updated. Hardcoding the ARN is intentional — it prevents cross-tenant user enumeration if the Lambda is ever misconfigured.',
+        ],
+      },
+      {
+        heading: 'Alert pagination — AlertPage response',
+        body: 'GET /facilities/{id}/alerts and GET /facilities/{id}/alerts/active return an AlertPage envelope rather than a bare array. Clients must follow next_token to retrieve subsequent pages. The token is a base64-encoded DynamoDB ExclusiveStartKey and is opaque — do not attempt to parse or construct it client-side.',
+        table: {
+          cols: ['Field', 'Type', 'Notes'],
+          rows: [
+            ['AlertPage.items',      'Alert[]',          'Up to limit alerts, newest first within the page'],
+            ['AlertPage.next_token', 'string | null',    'null when no more pages remain; pass as ?next_token=<value> for next page'],
+            ['?limit',               '1–200 (default 50)', 'Controls page size; values outside range are clamped'],
+            ['?next_token',          'base64 string',    'Resume from previous page; base64-encoded DynamoDB ExclusiveStartKey'],
+          ],
+        },
+        commands: [
+          { label: 'paginate through all alerts for a facility', code: `# Page 1 — newest 50 alerts
+curl -H "Authorization: Bearer $TOKEN" \\
+  "$API_URL/facilities/<fac-id>/alerts?limit=50"
+# Response: { "items": [...], "next_token": "eyJ..." }
+
+# Page 2 — pass next_token from previous response
+curl -H "Authorization: Bearer $TOKEN" \\
+  "$API_URL/facilities/<fac-id>/alerts?limit=50&next_token=eyJ..."
+# Response: { "items": [...], "next_token": null }  ← last page` },
+          { label: 'paginate active (unacknowledged) alerts', code: `curl -H "Authorization: Bearer $TOKEN" \\
+  "$API_URL/facilities/<fac-id>/alerts/active?limit=20"
+# Same AlertPage envelope; next_token follows same convention` },
+        ],
       },
       {
         heading: 'API endpoint inventory',
@@ -489,10 +532,16 @@ const STEPS: Step[] = [
             ['GET /subjects',            'facilityIds claim',  'Subject list — coded IDs only, no demographic data'],
             ['GET /subjects/{id}',       'facilityIds claim',  'Subject detail + activity summary'],
             ['POST /subjects/{id}/narrative', 'facilityIds claim', 'On-demand Ella invoke for one subject'],
+            ['GET /facilities/{id}/alerts',        'facilityIds claim', 'Paginated facility alerts — returns AlertPage { items, next_token }; ?limit=1-200&next_token=<token>'],
+            ['GET /facilities/{id}/alerts/active', 'facilityIds claim', 'Unacknowledged alerts only — same AlertPage envelope + pagination params'],
             ['POST /facilities',         'admin only',        'Create facility'],
             ['POST /users',              'admin only',        'Provision nurse or admin user'],
             ['PATCH /users/{id}',        'admin only',        'Update role or facilityIds claim'],
             ['POST /devices/provision',  'admin only',        'Provision device + register in IoT + DDB'],
+            ['GET /admin/users',                          'admin only', 'List Cognito users; optional ?facility_id= filter; returns UserSummary[]'],
+            ['POST /admin/users/{email}/reset-password',  'admin only', 'Send Cognito temporary password to user email → 204'],
+            ['PATCH /admin/users/{email}/disable',        'admin only', 'Prevent user sign-in (does not delete account) → 204'],
+            ['PATCH /admin/users/{email}/enable',         'admin only', 'Re-enable a disabled user account → 204'],
           ],
         },
       },
@@ -518,7 +567,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'integration-tests', phase: '11', title: 'Integration Tests', status: 'done', tag: 'Validate', time: '~1 hr',
-    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 151 unit tests passing across 6 services (admin-cli 71, url-minter 28, api 22, telemetry 15, ella 11, reconciler 2) + 9 integration tests. Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
+    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 161 unit tests passing across 6 services (admin-cli 71, url-minter 28, api 32, telemetry 15, ella 11, reconciler 2) + 9 integration tests + 9 smoke tests (live AWS, pytest -m smoke). Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
     sections: [
       {
         heading: 'Run integration tests',
@@ -553,7 +602,7 @@ cd services/telemetry && pip install -e ".[dev]" -q && cd -
 cd services/url-minter && pip install -e ".[dev]" -q && cd -
 
 pytest services/ -v
-# Expected: 151 passed (admin-cli 71, url-minter 28, api 22, telemetry 15, ella 11, reconciler 2)` },
+# Expected: 161 passed (admin-cli 71, url-minter 28, api 32, telemetry 15, ella 11, reconciler 2)` },
           { label: 'run integration suite (requires AWS)', code: `# Full suite — the telemetry test waits 6 min for Firehose buffer
 pytest tests/integration -m integration -v
 
@@ -562,6 +611,23 @@ pytest tests/integration -m integration -v -k "not telemetry"
 
 # Shorten Firehose wait if you know the buffer is about to flush
 AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
+          { label: 'run pilot smoke tests (requires live AWS + env vars)', code: `# Smoke tests live in tests/smoke/ and require a live pilot environment.
+# Required env vars (set from CDK stack outputs):
+export AMBIENT_USER_POOL_ID=<from Ambient-dev-Api output UserPoolId>
+export AMBIENT_USER_POOL_CLIENT_ID=<from Ambient-dev-Api output UserPoolClientId>
+export AMBIENT_API_URL=<from Ambient-dev-Api output ApiEndpointUrl>
+export AMBIENT_DEVICE_TABLE=<from Ambient-dev-Data output DevicesTableName>
+export AMBIENT_ALERT_TABLE=<from Ambient-dev-Data output AlertsTableName>
+export AMBIENT_IOT_POLICY=<from Ambient-dev-UrlMinter output DevicePolicyName>
+export AMBIENT_ALERTS_LAMBDA=ambient-dev-alerts-enricher
+
+# Run smoke suite (provisions real disposable device + Cognito nurse user,
+# fires a fall alert via Lambda invoke, verifies alert lands in API,
+# acknowledges, verifies active feed clears, then tears down)
+pytest -m smoke -v
+
+# Note: requires admin_user_password=True on the dev pool client
+# (ADMIN_USER_PASSWORD_AUTH flow used by the smoke test Cognito fixture)` },
         ],
       },
       {
@@ -588,12 +654,34 @@ AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
           rows: [
             ['admin-cli',   '71 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard, telemetry migration (promote/demote), Cognito user provisioning, SNS alert subscriptions, list-users pagination, reset-password, disable-user, enable-user'],
             ['url-minter',  '28 pass', 'Presigned URL issuance, subject= S3 key path, SigV4 validation, rate limiting'],
-            ['api',         '22 pass', 'Facility scoping, cross-facility auth denial, alert pagination, single alert by eventId (GSI lookup), subject detail, on-demand narrative'],
+            ['api',         '32 pass', 'Facility scoping, cross-facility auth denial, alert pagination (AlertPage + next_token), single alert by eventId (GSI lookup), subject detail, on-demand narrative, admin user management (list/reset-password/disable/enable)'],
             ['ella',        '11 pass', 'Athena query construction, Bedrock invoke, de-id system prompt adherence, DLQ retry'],
             ['telemetry',   '15 pass', 'Fall event enrichment, DDB write, SNS publish with facility filter, synthetic event injection'],
             ['reconciler',  '2 pass',  'Athena row-count delta per facility, TelemetryDivergence metric emission, alarm threshold 0.1%'],
           ],
         },
+      },
+      {
+        heading: 'Pilot smoke tests (tests/smoke/)',
+        body: 'The smoke suite provisions a real disposable device and Cognito nurse user, fires a fall alert via direct Lambda invoke, verifies the alert appears in the API, acknowledges it, verifies the active alerts feed clears, and tears everything down. Requires a live pilot environment — never run against production. The dev pool client must have admin_user_password=True to enable ADMIN_USER_PASSWORD_AUTH for the Cognito fixture.',
+        table: {
+          cols: ['Test', 'Flow exercised', 'Wall time'],
+          rows: [
+            ['test_smoke_device_provision',         'admin-cli provision → DDB + IoT Thing registered',                                              '~10s'],
+            ['test_smoke_cognito_nurse_user',        'Cognito nurse user created + ADMIN_USER_PASSWORD_AUTH login → JWT obtained',                    '~8s'],
+            ['test_smoke_fall_alert_via_lambda',     'Lambda invoke (alert enricher) → DDB write + SNS publish',                                      '~12s'],
+            ['test_smoke_alert_in_api',             'GET /facilities/{id}/alerts → AlertPage contains smoke alert',                                   '~8s'],
+            ['test_smoke_alert_pagination',         'GET /facilities/{id}/alerts?limit=1 → next_token present; follow token → second page',           '~10s'],
+            ['test_smoke_alert_acknowledge',        'POST /alerts/{eventId}/acknowledge → 204; GET single alert → acknowledged=True',                 '~8s'],
+            ['test_smoke_active_feed_clears',       'GET /facilities/{id}/alerts/active → smoke alert absent after ack',                              '~8s'],
+            ['test_smoke_admin_list_users',         'GET /admin/users?facility_id=... → UserSummary[] includes nurse fixture',                        '~8s'],
+            ['test_smoke_teardown',                 'admin-cli decommission + Cognito user delete; DDB rows removed; IoT Thing retired',              '~15s'],
+          ],
+        },
+        warnings: [
+          'Smoke tests require AMBIENT_USER_POOL_CLIENT_ID to be the dev pool client with admin_user_password=True. If the pool client is missing this flag, all Cognito fixture steps will fail with NotAuthorizedException.',
+          'AMBIENT_ALERTS_LAMBDA must point to the enricher Lambda (ambient-dev-alerts-enricher), not the FastAPI Lambda. Using the wrong function name causes the fall-alert inject step to write malformed rows with no facilityId.',
+        ],
       },
       {
         heading: 'Nightly CI (.github/workflows/integration-tests.yml)',
@@ -626,7 +714,7 @@ AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
         heading: 'Production readiness checklist',
         checklist: [
           'All CDK stacks deployed: Kms, Storage, Data, Telemetry, UrlMinter, Athena, Ella, Api, CloudTrail, Dashboard',
-          '151 unit tests passing; integration test suite green against production tenant',
+          '161 unit tests passing; 9 integration tests green; 9 smoke tests passing against dev tenant',
           'CloudTrail data events enabled on devices, alerts, and daily-updates DDB tables',
           'CloudTrail data events enabled on ambient-<tenant>-parquet S3 bucket',
           'CloudTrail retention: 7-year Glacier Deep Archive per HIPAA §164.316(b)(2)(i)',
@@ -648,7 +736,7 @@ AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
       {
         heading: 'Commit production sign-off',
         commands: [
-          { label: 'tag the production release', code: '# Tag the exact commit deployed to production\ngit tag -a v1.0.0-prod \\\n  -m "Production release — IRB pilot cohort. All CDK stacks deployed, 151 tests passing."\ngit push origin v1.0.0-prod\n\n# Record in deployment-status.md\ncat >> docs/deployment-status.md << EOF\n\n## Production Release\n- Date: $(date -u +%Y-%m-%d)\n- Tag: v1.0.0-prod\n- Tenant: <tenant-id>\n- CDK stacks: all 11 deployed\n- Tests: 151 passing\n- IRB protocol: active\nEOF\ngit commit -am "docs: record production release v1.0.0-prod"\ngit push' },
+          { label: 'tag the production release', code: '# Tag the exact commit deployed to production\ngit tag -a v1.0.0-prod \\\n  -m "Production release — IRB pilot cohort. All CDK stacks deployed, 161 unit + 9 integration + 9 smoke tests passing."\ngit push origin v1.0.0-prod\n\n# Record in deployment-status.md\ncat >> docs/deployment-status.md << EOF\n\n## Production Release\n- Date: $(date -u +%Y-%m-%d)\n- Tag: v1.0.0-prod\n- Tenant: <tenant-id>\n- CDK stacks: all 11 deployed\n- Tests: 161 unit + 9 integration + 9 smoke passing\n- IRB protocol: active\nEOF\ngit commit -am "docs: record production release v1.0.0-prod"\ngit push' },
         ],
         artifacts: [
           { file: 'docs/deployment-status.md', role: 'Service inventory, merge history, and production release record.' },
@@ -692,9 +780,10 @@ const CHECKLIST_ITEMS = [
   'Dual-write reconciler running — TelemetryDivergence alarm set',
   'At least one facility promoted to parquet_only',
   'Ella Lambda deployed — narrative de-id verified (20+ subjects)',
-  'FastAPI Lambda deployed — 12 endpoints smoke-tested',
+  'FastAPI Lambda deployed — 16 endpoints smoke-tested',
   'Cognito MFA enabled for all users',
-  'Unit tests: 151 passing (admin-cli 71, url-minter 28, api 22, telemetry 15, ella 11, reconciler 2)',
+  'Unit tests: 161 passing (admin-cli 71, url-minter 28, api 32, telemetry 15, ella 11, reconciler 2)',
+  'Smoke tests: 9 passing (pytest -m smoke) — alert pagination, admin user API, active feed teardown verified',
   'Production runbooks dry-run complete',
 ];
 
