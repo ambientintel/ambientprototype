@@ -57,7 +57,7 @@ const PIPELINE_PHASES = [
 const STEPS: Step[] = [
   {
     id: 'repo', phase: '01', title: 'Repository Setup', status: 'done', tag: 'Environment', time: '< 5 min',
-    summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. Core screens implemented: LoginScreen, AlertListScreen, AlertDetailScreen. Auth, push, alerts, EAS build, CI, and app icons all complete. ~80% complete toward TestFlight launch.',
+    summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. All screens implemented and type-checked clean. AppState session refresh, cold-start notification handler, and expo-splash-screen added. ~82% complete toward TestFlight launch.',
     sections: [
       {
         heading: 'Clone and install',
@@ -435,7 +435,7 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
   },
   {
     id: 'build', phase: '10', title: 'EAS Build', status: 'warning', tag: 'Distribution', time: '~20–40 min per build',
-    summary: 'eas.json committed. App icons generated (1024×1024 navy/blue-E design). Blocked on Apple Developer org account (D-U-N-S pending). Once D-U-N-S resolves: enroll org → create APNS key → eas credentials → eas build --platform ios --profile preview.',
+    summary: 'eas.json committed with corrected preview profile (distribution: internal). App icons done. iOS blocked on Apple Developer org (D-U-N-S pending). Android unblocked — complete Firebase FCM setup, then: eas build --platform android --profile preview.',
     sections: [
       {
         heading: 'EAS setup',
@@ -606,7 +606,7 @@ const CHECKLIST_ITEMS = [
   'CI pipeline passing on main',
 ];
 
-const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 11, 12, 13, 14, 15, 17]);
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 11, 12, 13, 14, 15, 17, 22]);
 
 const OPEN_DECISIONS = [
   'Offline alert queue: cache unacknowledged alerts in AsyncStorage when connectivity drops in the care facility',
