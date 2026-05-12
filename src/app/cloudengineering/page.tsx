@@ -350,7 +350,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'iot-core', phase: '06', title: 'IoT Core & Provisioning', status: 'done', tag: 'Infra', time: '~2 hrs',
-    summary: 'Fleet provisioning with factory bootstrap cert → tenant X.509 cert lifecycle. Basic Ingest on fall alert topic. IoT Credentials Provider for device AWS API access. admin-cli for operator provisioning.',
+    summary: 'Fleet provisioning with factory bootstrap cert → tenant X.509 cert lifecycle. Basic Ingest on fall alert topic. IoT Credentials Provider for device AWS API access. admin-cli for operator provisioning. ambient-device-policy deployed to us-east-1 (Ambient-dev-Iot stack, May 12 2026): Connect + Publish to fall/telemetry topics, scoped by ${iot:ClientId}.',
     sections: [
       {
         heading: 'Fleet provisioning flow',
@@ -370,6 +370,14 @@ const STEPS: Step[] = [
             ['telemetry-legacy',  'ambient/v1/telemetry/+',                             'Kinesis Firehose',                  'Legacy path — retiring. Still active during dual-write migration.'],
           ],
         },
+      },
+      {
+        heading: 'Device policy (ambient-device-policy · deployed May 12 2026)',
+        commands: [
+          { label: 'verify ambient-device-policy', code: 'aws iot get-policy \\\n  --policy-name ambient-device-policy \\\n  --region us-east-1\n\n# Expected statements:\n# AllowConnect: iot:Connect on arn:aws:iot:*:*:client/${iot:ClientId}\n# AllowPublishFallAlerts: iot:Publish on topic ambient/v1/alerts/fall/${iot:ClientId}\n# AllowPublishTelemetry: iot:Publish on topic ambient/v1/telemetry/${iot:ClientId}' },
+          { label: 'attach policy to a device certificate', code: '# After provisioning via admin-cli, attach the device policy\naws iot attach-policy \\\n  --policy-name ambient-device-policy \\\n  --target <certificate-arn>\n  --region us-east-1' },
+        ],
+        body: 'Policy uses ${iot:ClientId} variable substitution to scope each device to its own client ID — no per-device policy duplication needed. Deployed in Ambient-dev-Iot CDK stack (infra/stacks/iot_stack.py). ARN wildcards (*:*) are intentional: IoT policy ARNs are not region/account-qualified.',
       },
       {
         heading: 'IoT Credentials Provider',
