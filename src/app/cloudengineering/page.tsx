@@ -77,7 +77,7 @@ const STEPS: Step[] = [
         table: {
           cols: ['Service / Stack', 'Path', 'CDK Stack', 'Tests'],
           rows: [
-            ['admin-cli',    'services/admin-cli/',              '—',                      '50 pass'],
+            ['admin-cli',    'services/admin-cli/',              '—',                      '61 pass'],
             ['api',          'services/api/',                    'Ambient-{env}-Api',       '19 pass'],
             ['athena',       'services/athena/',                 'Ambient-{env}-Athena',    'n/a'],
             ['cloudtrail',   'services/cloudtrail/',             'Ambient-{env}-CloudTrail','n/a'],
@@ -170,11 +170,11 @@ const STEPS: Step[] = [
             ['0',   'Ambient-{env}-Kms',          '4 CMKs (data, s3, sns, sqs) · auto-rotation · RemovalPolicy.RETAIN'],
             ['0',   'Ambient-{env}-Storage',       'S3: parquet, athena-results (30-day expire), cloudtrail (HIPAA 7-yr), iot-errors'],
             ['1',   'Ambient-{env}-Data',           'DynamoDB: devices, alerts, daily-updates — PAY_PER_REQUEST + PITR + CMK'],
-            ['2',   'Ambient-{env}-Telemetry',      'SNS, alert Lambda, IoT rules, Firehose+Glue, Reconciler Lambda+cron+alarm'],
+            ['2',   'Ambient-{env}-Telemetry',      'SNS fall-alerts topic (CfnOutput: FallAlertTopicArn), alert Lambda, IoT rules, Firehose+Glue, Reconciler Lambda+cron+alarm'],
             ['2',   'Ambient-{env}-UrlMinter',      'Lambda + Function URL · IoT role alias · device mTLS policy'],
             ['2',   'Ambient-{env}-Athena',         'Glue database + raw frames table (partition projection) · Athena workgroup'],
             ['2',   'Ambient-{env}-Ella',           'SQS fanout · Ella Lambda · EventBridge crons (07:00 + 19:00 CT)'],
-            ['3',   'Ambient-{env}-Api',            'Cognito UserPool · HTTP API · FastAPI Lambda · facility-scoped authorizer'],
+            ['3',   'Ambient-{env}-Api',            'Cognito UserPool (CfnOutputs: UserPoolId, UserPoolClientId), HTTP API (ApiEndpointUrl), FastAPI Lambda, facility-scoped authorizer'],
             ['3',   'Ambient-{env}-CloudTrail',     'Multi-region trail · DDB + S3 data events · 7-year Glacier retention'],
             ['opt', 'Ambient-{env}-Observability',  'CloudWatch Metric Stream → central account · scalar only · no PHI'],
           ],
@@ -362,6 +362,16 @@ const STEPS: Step[] = [
           { file: 'services/telemetry/src/', role: 'Fall alert enricher Lambda — DDB lookup, alert write, SNS publish with facility filter attribute.' },
           { file: 'infra/stacks/telemetry_stack.py', role: 'TelemetryStack: SNS, alert Lambda, IoT Rules (fall-enricher + legacy Firehose), Firehose + Glue, Reconciler Lambda + EventBridge cron + CW alarm.' },
         ],
+      },
+      {
+        heading: 'Manage fall-alert subscriptions (admin-cli)',
+        body: 'Staff subscribe their phone or email to the fall-alerts SNS topic with a per-facility filter policy. The Lambda publishes with MessageAttributes (facilityId, subjectId, eventType, roomId) — subscriptions filter on facilityId. Requires AMBIENT_ALERT_TOPIC_ARN env var (CDK output: Ambient-dev-Telemetry → FallAlertTopicArn).',
+        commands: [
+          { label: 'subscribe a nurse phone to alerts for a facility', code: 'export AMBIENT_ALERT_TOPIC_ARN=$(aws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Telemetry \\\n  --query "Stacks[0].Outputs[?OutputKey==\'FallAlertTopicArn\'].OutputValue" \\\n  --output text)\n\n# SMS — nurse must confirm the subscription text\nambientcloud-admin add-subscriber \\\n  --facility-id FAC-PILOT-001 \\\n  --protocol sms \\\n  --endpoint "+15550001234"\n\n# Email\nambientcloud-admin add-subscriber \\\n  --facility-id FAC-PILOT-001 \\\n  --protocol email \\\n  --endpoint "nurse@hospital.com"\n\n# Narrow to specific rooms (unit-specific staff)\nambientcloud-admin add-subscriber \\\n  --facility-id FAC-PILOT-001 \\\n  --protocol sms \\\n  --endpoint "+15550005678" \\\n  --room-id ROOM-201 --room-id ROOM-202' },
+          { label: 'list and remove subscriptions', code: '# List all subscriptions\nambientcloud-admin list-subscribers\n\n# Filter by facility\nambientcloud-admin list-subscribers --facility-id FAC-PILOT-001\n\n# Remove a subscription by ARN\nambientcloud-admin remove-subscriber \\\n  arn:aws:sns:us-east-1:<acct>:ambient-dev-fall-alerts:<uuid>\n# Prompts for confirmation' },
+        ],
+      },
+      {
         warnings: [
           'Basic Ingest requires the topic to start with $aws/rules/<ruleName>/. If the device firmware publishes to a different topic, the Rules Engine will not match it and no MQTT messaging fee will be charged — but the alert will also never fire. Verify topic format against the device-cloud contract.',
           'The hot path must remain on MQTT QoS 1 even after the cold path migrates to device-side Parquet. S3 PUT is the wrong transport for a 2-second SLA — do not route fall alerts through the Parquet/url-minter path.',
@@ -484,7 +494,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'integration-tests', phase: '11', title: 'Integration Tests', status: 'done', tag: 'Validate', time: '~1 hr',
-    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 125 unit tests passing across 6 services (admin-cli 50, url-minter 28, api 19, telemetry 15, ella 11, reconciler 2) + 9 integration tests. Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
+    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 136 unit tests passing across 6 services (admin-cli 61, url-minter 28, api 19, telemetry 15, ella 11, reconciler 2) + 9 integration tests. Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
     sections: [
       {
         heading: 'Run integration tests',
@@ -505,7 +515,11 @@ export AMBIENT_TELEMETRY_DB=ambient_dev_telemetry
 export AMBIENT_ATHENA_WG=ambient-dev-analytics
 export AMBIENT_ATHENA_OUT=s3://ambient-dev-athena-results/queries/
 export AMBIENT_IOT_ENDPOINT=$(aws iot describe-endpoint \\
-  --endpoint-type iot:Data-ATS --query endpointAddress --output text)` },
+  --endpoint-type iot:Data-ATS --query endpointAddress --output text)
+export AMBIENT_USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name Ambient-dev-Api \\
+  --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
+export AMBIENT_ALERT_TOPIC_ARN=$(aws cloudformation describe-stacks --stack-name Ambient-dev-Telemetry \\
+  --query "Stacks[0].Outputs[?OutputKey=='FallAlertTopicArn'].OutputValue" --output text)` },
           { label: 'install test dependencies', code: `pip install boto3>=1.34 paho-mqtt>=2.0 pytest>=8.0` },
           { label: 'run unit tests (no AWS needed)', code: `# Unit tests across all services — no AWS credentials required
 cd services/admin-cli && pip install -e ".[dev]" -q && cd -
@@ -515,7 +529,7 @@ cd services/telemetry && pip install -e ".[dev]" -q && cd -
 cd services/url-minter && pip install -e ".[dev]" -q && cd -
 
 pytest services/ -v
-# Expected: 125 passed (admin-cli 50, url-minter 28, api 19, telemetry 15, ella 11, reconciler 2)` },
+# Expected: 136 passed (admin-cli 61, url-minter 28, api 19, telemetry 15, ella 11, reconciler 2)` },
           { label: 'run integration suite (requires AWS)', code: `# Full suite — the telemetry test waits 6 min for Firehose buffer
 pytest tests/integration -m integration -v
 
@@ -548,7 +562,7 @@ AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
         table: {
           cols: ['Service', 'Tests', 'Key scenarios covered'],
           rows: [
-            ['admin-cli',   '50 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard, telemetry migration (promote/demote), Cognito user provisioning'],
+            ['admin-cli',   '61 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard, telemetry migration (promote/demote), Cognito user provisioning, SNS alert subscriptions'],
             ['url-minter',  '28 pass', 'Presigned URL issuance, subject= S3 key path, SigV4 validation, rate limiting'],
             ['api',         '19 pass', 'Facility scoping, cross-facility auth denial, alert pagination, subject detail, on-demand narrative'],
             ['ella',        '11 pass', 'Athena query construction, Bedrock invoke, de-id system prompt adherence, DLQ retry'],
