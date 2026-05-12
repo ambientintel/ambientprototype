@@ -146,6 +146,7 @@ export default function CarlsonPage() {
       <Rule />
       <section style={{ background: C.bg2, padding: '96px 56px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <SectionMeta n="01" label="The Problem" />
           <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: 1.36, letterSpacing: '-0.018em', color: C.text, margin: '0 0 64px' }}>
             Two-thirds of memory care incidents happen at night — unwitnessed, in the minutes between rounds. We built a system that is always present without ever being intrusive.
           </p>
@@ -169,7 +170,7 @@ export default function CarlsonPage() {
       <Rule />
       <section className="c-sec" style={{ padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <SectionMeta n="01" label="How It Works" />
+          <SectionMeta n="02" label="How It Works" />
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }}>
             <div>
               <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 60px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
@@ -240,7 +241,7 @@ export default function CarlsonPage() {
       <Rule />
       <section className="c-sec" style={{ padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <SectionMeta n="02" label="Technology" />
+          <SectionMeta n="03" label="Technology" />
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }}>
             <div>
               <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 60px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
@@ -318,7 +319,7 @@ export default function CarlsonPage() {
       <Rule />
       <section className="c-sec" style={{ background: C.bg2, padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <SectionMeta n="03" label="Flagship Product" />
+          <SectionMeta n="04" label="Flagship Product" />
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
 
             {/* Dashboard card — left */}
@@ -400,7 +401,7 @@ export default function CarlsonPage() {
       <Rule />
       <section className="c-sec" style={{ padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <SectionMeta n="04" label="Minnesota Roots" />
+          <SectionMeta n="05" label="Minnesota Roots" />
           <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(40px, 4.5vw, 60px)', lineHeight: 1.08, letterSpacing: '-0.028em', margin: '0 0 64px', maxWidth: 640 }}>
             Built in Minnesota.<br/>
             <em style={{ fontStyle: 'italic', color: C.text2 }}>For Minnesota care.</em>
