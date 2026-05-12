@@ -625,7 +625,7 @@ const STACK_SPECS = [
   { label: 'Region',    value: 'us-east-1',        sub: 'AWS · single-region pilot' },
   { label: 'Runtime',   value: 'Python 3.12',       sub: 'Lambda + FastAPI + boto3' },
   { label: 'IaC',       value: 'AWS CDK v2',         sub: 'Python · unified infra/app.py' },
-  { label: 'AI Model',  value: 'Sonnet 4.5',         sub: 'Bedrock · HIPAA-eligible' },
+  { label: 'AI Model',  value: 'Sonnet 4.6',         sub: 'Bedrock · HIPAA-eligible' },
   { label: 'Standard',  value: 'HIPAA §164.514(c)',  sub: 'Coded data · IRB protocol' },
 ];
 
@@ -657,7 +657,6 @@ const CHECKLIST_ITEMS = [
 const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 17, 18]);
 
 const OPEN_DECISIONS = [
-  'Sonnet 4.6 upgrade — evaluate against de-id system prompt before flipping the model ID in Ella',
   'Multi-region per tenant — currently single-region us-east-1; tenants with residency requirements force this decision',
   'Cross-tenant de-identified research aggregation — separate research account with Glue Data Catalog sharing is the likely pattern',
   'Firehose retirement timeline — 90 days post-migration from parquet_only promotion is tentative, not contractually nailed down',
