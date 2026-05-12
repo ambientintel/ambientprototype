@@ -173,13 +173,13 @@ const DOMAINS = [
     repo: 'ambientintel/ambientweb',
     lsKey: 'ambient-webapp-checklist-v1',
     checklistTotal: 20,
-    checklistDefault: 16,
+    checklistDefault: 17,
     stepsTotal: 13,
-    stepsDone: 11,
+    stepsDone: 12,
     phases: [
       { label: 'Setup',     done: 4, total: 4 },
       { label: 'Build',     done: 4, total: 4 },
-      { label: 'Integrate', done: 1, total: 2 },
+      { label: 'Integrate', done: 2, total: 2 },
       { label: 'Ship',      done: 2, total: 3 },
     ],
     specs: [
@@ -188,8 +188,8 @@ const DOMAINS = [
       { k: 'Workspace', v: 'pnpm 9' },
       { k: 'Pilot',    v: '10 Rooms' },
     ],
-    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, floor map, Ella narrative. Cognito API proxy wired to ambientcloud. Web push alerts pending.',
-    currentStep: '09 · Web Push',
+    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, floor map, Ella narrative, 2-step ACK. Web push wired: VAPID + sw.js + bell toggle + new-alert detection.',
+    currentStep: '10 · Pilot Validation',
     freezeKey: 'ambient-webapp-frozen-v1',
     freezeLabel: 'Deployment Lock',
   },
@@ -245,11 +245,11 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve PoE+ vs barrel jack decision before Rev B — affects power routing and BOM cost', owner: 'Lead' },
   ],
   webapp: [
-    { task: 'Run pilot validation: nurse auth, keyring unlock, Ella TTS, fall alert acknowledge across MOH 301–310', owner: 'Product+FE' },
-    { task: 'Implement Web Push — generate VAPID keys, register service worker, wire fall event push end-to-end', owner: 'FE' },
+    { task: 'Set VERCEL_TOKEN in ambientweb project to activate push subscription storage (Edge Config ambient-push ecfg_wsm…)', owner: 'FE+DevOps' },
+    { task: 'Build device management page — coordinator view: device status, last-seen, provision runbook', owner: 'FE' },
+    { task: 'Run pilot validation: nurse auth, Ella narrative, fall alert ACK, web push delivery across MOH 301–310', owner: 'Product+FE' },
     { task: 'Seed real room assignments from pilot coordinator once MOH device-to-room mapping is confirmed', owner: 'Product+FE' },
     { task: 'Monitor /api/ambient proxy for 502s — keep AMBIENT_WEB_SVC_PASSWORD in sync with Cognito', owner: 'DevOps' },
-    { task: 'Confirm WorkOS SSO redirect URI registered for ellamemory.com production and preview domains', owner: 'FE+DevOps' },
   ],
 };
 
@@ -277,8 +277,8 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Finalize ceiling-mount bracket geometry and print FDM prototype for fit-check',
   ],
   webapp: [
-    'Run pilot validation: nurse auth + Ella TTS + alert acknowledge flow across MOH 301–310',
-    'Implement VAPID service worker and wire fall event web push end-to-end (step 09 — remaining)',
+    'Set VERCEL_TOKEN env var to activate push subscription storage and confirm push delivery end-to-end',
+    'Build device management page for study coordinator — device status + provision runbook (step 10)',
   ],
 };
 
