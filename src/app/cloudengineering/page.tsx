@@ -77,14 +77,14 @@ const STEPS: Step[] = [
         table: {
           cols: ['Service / Stack', 'Path', 'CDK Stack', 'Tests'],
           rows: [
-            ['admin-cli',    'services/admin-cli/',              '—',                      '28 pass'],
+            ['admin-cli',    'services/admin-cli/',              '—',                      '50 pass'],
             ['api',          'services/api/',                    'Ambient-{env}-Api',       '19 pass'],
             ['athena',       'services/athena/',                 'Ambient-{env}-Athena',    'n/a'],
             ['cloudtrail',   'services/cloudtrail/',             'Ambient-{env}-CloudTrail','n/a'],
             ['ella',         'services/ella/',                   'Ambient-{env}-Ella',      '11 pass'],
             ['reconciler',   'services/reconciler/',             'embedded in Telemetry',   '2 pass'],
             ['telemetry',    'services/telemetry/',              'Ambient-{env}-Telemetry', '15 pass'],
-            ['url-minter',   'services/url-minter/',             'Ambient-{env}-UrlMinter', 'n/a'],
+            ['url-minter',   'services/url-minter/',             'Ambient-{env}-UrlMinter', '28 pass'],
             ['KMS (CDK)',     'infra/stacks/kms_stack.py',       'Ambient-{env}-Kms',       'n/a'],
             ['Storage (CDK)','infra/stacks/storage_stack.py',   'Ambient-{env}-Storage',   'n/a'],
             ['Data (CDK)',    'infra/stacks/data_stack.py',      'Ambient-{env}-Data',      'n/a'],
@@ -127,7 +127,7 @@ const STEPS: Step[] = [
         },
       },
       {
-        heading: 'Three-layer PII grep (self-review v1.2)',
+        heading: 'Three-layer PII grep (self-review v1.3)',
         body: 'Every PR must pass the three-layer grep before merge. Layer 1: field-name fragments. Layer 2: clinical terminology. Layer 3: name-shaped values. Run these before opening a PR.',
         commands: [
           { label: 'Layer 1 — field name fragments', code: '# Checks for banned field names across the whole repo\ngrep -rn --include="*.py" --include="*.tf" --include="*.tofu" \\\n  -e "patient_id" -e "patientId" -e "first_name" -e "last_name" \\\n  -e "date_of_birth" -e "dob" -e "mrn" -e "/patients/" .\n# Expected: zero matches' },
@@ -138,7 +138,7 @@ const STEPS: Step[] = [
       {
         heading: 'IRB governance artifacts',
         artifacts: [
-          { file: 'docs/self-review/SELF_REVIEW.md', role: 'PR self-review worksheet v1.2 — three-layer PII grep + Terraform validate + authz check.' },
+          { file: 'docs/self-review/SELF_REVIEW.md', role: 'PR self-review worksheet v1.3 — three-layer PII grep + Terraform validate + authz check.' },
           { file: 'services/admin-cli/src/ambientcloud_admin/provisioning.py', role: 'admin-cli provisioning logic with PILOT-NNNN format enforcement and forbidden-attribute guard.' },
         ],
       },
@@ -276,7 +276,7 @@ const STEPS: Step[] = [
         commands: [
           { label: 'deploy Storage, Data, and Athena stacks', code: 'cd infra\ncdk deploy Ambient-dev-Storage Ambient-dev-Data Ambient-dev-Athena \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify DynamoDB tables\naws dynamodb list-tables --query "TableNames[?contains(@, \'ambient-dev\')]"\n\n# Verify Glue tables created\naws glue get-tables \\\n  --database-name ambient_dev_raw \\\n  --query "TableList[].Name"' },
           { label: 'verify Athena partition projection', code: '# Partition projection is configured in AthenaStack — no Glue crawler needed\naws athena start-query-execution \\\n  --query-string "SELECT COUNT(*) FROM ambient_dev_raw.frames LIMIT 1" \\\n  --work-group ambient-dev-analytics \\\n  --result-configuration OutputLocation=s3://ambient-<slug>-athena-results-<acct>/queries/\n\naws athena get-query-results \\\n  --query-execution-id <execution-id>' },
-          { label: 'verify S3 lifecycle rules', code: '# StorageStack configures lifecycle rules in CDK — verify they were applied\naws s3api get-bucket-lifecycle-configuration \\\n  --bucket ambient-<slug>-parquet-<acct>\n# Expect: tier-raw (raw/ prefix → IA → Glacier), tier-telemetry (telemetry/ prefix)' },
+          { label: 'verify S3 lifecycle rules', code: '# StorageStack configures lifecycle rules in CDK — verify they were applied\naws s3api get-bucket-lifecycle-configuration \\\n  --bucket ambient-<slug>-parquet-<acct>\n# Expect: abort-multipart, tier-raw (raw/ prefix → IA → Glacier → 7yr expiry), tier-telemetry (telemetry/ prefix → same), expire-firehose-errors (telemetry-errors/ 90d)' },
         ],
       },
       {
@@ -382,11 +382,11 @@ const STEPS: Step[] = [
       },
       {
         heading: 'Dual-write migration commands',
-        body: 'Each device has a telemetry_mode Shadow field: mqtt_only, dual, or parquet_only. Migration proceeds per-facility. Never flip a facility if the reconciler shows divergence.',
+        body: 'Per-facility telemetry mode config lives in DDB under a FAC#<facilityId> synthetic key. Promote moves a facility to parquet_only; demote rolls back to dual_write (no alarm gate — it is always safe to roll back). Never promote if TelemetryDivergence is ALARM.',
         commands: [
-          { label: 'check current telemetry mode for a device', code: 'ambientcloud-admin telemetry mode DEV-0001\n# → dual' },
-          { label: 'check reconciler divergence before migrating', code: 'ambientcloud-admin telemetry divergence <facility-uuid>\n# Must show 0.0% divergence over last 24h before proceeding\n# If non-zero: investigate before flipping — check CloudWatch TelemetryDivergence metric' },
-          { label: 'bulk-migrate a facility to parquet_only', code: '# Refuses if reconciler flagged divergence in last 24h\nambientcloud-admin telemetry migrate <facility-uuid>\n\n# After migration: verify in CloudWatch (namespace: AmbientIntelligence/Telemetry)\naws cloudwatch get-metric-statistics \\\n  --namespace AmbientIntelligence/Telemetry \\\n  --metric-name TelemetryDivergence \\\n  --dimensions Name=FacilityId,Value=<facility-uuid> \\\n  --start-time $(date -u -d "1 hour ago" +%Y-%m-%dT%H:%M:%SZ) \\\n  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \\\n  --period 300 --statistics Maximum' },
+          { label: 'check telemetry migration status (all facilities)', code: 'ambientcloud-admin migration-status\n# Shows: facility / mode / devices / updated_at / alarm\n# Facilities not yet promoted show dual_write\n# TelemetryDivergence alarm state shown in rightmost column' },
+          { label: 'promote a facility to parquet-only', code: '# Gate: TelemetryDivergence alarm must be OK (< 0.1% divergence)\n# Writes FAC# config row to DDB + pushes shadow to every active device\nambientcloud-admin promote --facility-id FAC-PILOT-001\n\n# If the alarm is currently in ALARM state but you need to force:\nambientcloud-admin promote --facility-id FAC-PILOT-001 --force\n# Note: --force should only be used when you understand why the alarm fired' },
+          { label: 'demote a facility (rollback to dual_write)', code: '# Emergency rollback — no alarm gate, succeeds unconditionally\n# Reverts facility config row + pushes dual_write shadow to all active devices\nambientcloud-admin demote --facility-id FAC-PILOT-001\n# Confirm the prompt; command reverts to Firehose dual-write mode' },
         ],
         artifacts: [
           { file: 'docs/device-parquet-sink.md', role: 'Device-side Parquet cold path spec — WAL design, presigned URL flow, dual-write migration, promotion criteria.' },
@@ -401,7 +401,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'narrative', phase: '09', title: 'Narrative Path — Ella + Bedrock', status: 'done', tag: 'Deploy', time: '~1 hr',
-    summary: 'EventBridge cron fires at 07:00 and 19:00 → SQS fanout → Ella Lambda → Bedrock Claude Sonnet 4.5 → DynamoDB daily-updates. Produces de-identified 12h activity summaries for clinical staff.',
+    summary: 'EventBridge cron fires at 07:00 and 19:00 → SQS fanout → Ella Lambda → Bedrock Claude Sonnet 4.6 → DynamoDB daily-updates. Produces de-identified 12h activity summaries for clinical staff.',
     sections: [
       {
         heading: 'Deploy Ella narrative service',
@@ -415,12 +415,12 @@ const STEPS: Step[] = [
         table: {
           cols: ['Parameter', 'Value', 'Notes'],
           rows: [
-            ['Model ID',         'anthropic.claude-sonnet-4-5-20250929-v1:0', 'Current production model — HIPAA-eligible on Bedrock'],
+            ['Model ID',         'anthropic.claude-sonnet-4-6-20260217-v1:0', 'Live since 2026-05-11 — HIPAA-eligible on Bedrock. De-id regression covered by integration test.'],
             ['Region',           'us-east-1',                                  'Must match tenant account region — no cross-region Bedrock calls'],
             ['Max tokens',       '1024',                                        'Sufficient for 12h summary — increase to 2048 if summaries truncate'],
             ['Temperature',      '0.3',                                         'Low temp for clinical consistency — not creative generation'],
             ['System prompt',    'services/ella/src/system_prompt.txt',        'De-identification instructions + forbidden-attribute guard'],
-            ['Upgrade path',     'claude-sonnet-4-6 (pending eval)',            'Available on Bedrock; needs de-id prompt evaluation before flip'],
+            ['Upgrade path',     'claude-sonnet-4-6 ✓ live',            'Upgraded 2026-05-11. Integration test test_on_demand_narrative_generation covers de-id regression — any model upgrade must keep this test green.'],
           ],
         },
       },
@@ -434,7 +434,7 @@ const STEPS: Step[] = [
           { file: 'infra/stacks/ella_stack.py', role: 'EllaStack: SQS fanout + DLQ, Ella Lambda, EventBridge crons (cron(0 12 * * ? *) and cron(0 0 * * ? *) UTC = 07:00 + 19:00 CT).' },
         ],
         warnings: [
-          'Before upgrading the Bedrock model from Sonnet 4.5 to Sonnet 4.6, run at least 20 test narratives against known Athena data and verify the de-id system prompt produces clean output — no subject names, no facility names, no clinical identifiers. Document the evaluation as a PR comment before merging the model ID change.',
+          'Sonnet 4.6 is now live (upgraded 2026-05-11). Before any future model upgrade, re-run the de-id integration test (test_on_demand_narrative_generation) and confirm forbidden_patterns are absent. Document the eval as a PR comment.',
           'Ella reads from the Athena telemetry view, which UNIONs both cold paths during dual-write. After all facilities are promoted to parquet_only, the view collapses to telemetry_device. No Ella code changes are needed — but verify Ella narratives remain consistent before and after the view transition.',
         ],
       },
@@ -448,7 +448,7 @@ const STEPS: Step[] = [
         heading: 'Deploy API service',
         commands: [
           { label: 'deploy ApiStack', code: 'cd infra\ncdk deploy Ambient-dev-Api \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify API endpoint\naws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Api \\\n  --query "Stacks[0].Outputs[?OutputKey==\'ApiEndpoint\'].OutputValue"\n\n# Verify Lambda\naws lambda get-function \\\n  --function-name ambient-dev-api' },
-          { label: 'provision the first admin user', code: '# Admin-create only — no self-signup\nambientcloud-admin user create \\\n  --email admin@facility.org \\\n  --role admin \\\n  --facility-id <facility-uuid>\n\n# Verify Cognito attributes:\naws cognito-idp admin-get-user \\\n  --user-pool-id <pool-id> \\\n  --username admin@facility.org\n# custom:role: admin, custom:facilityIds: <facility-uuid>' },
+          { label: 'provision the first admin user', code: '# Set AMBIENT_USER_POOL_ID from CDK stack output:\nexport AMBIENT_USER_POOL_ID=$(aws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Api \\\n  --query "Stacks[0].Outputs[?OutputKey==\'UserPoolId\'].OutputValue" \\\n  --output text)\n\n# Provision an admin (access to one or more facilities)\nambientcloud-admin create-admin \\\n  --email admin@facility.org \\\n  --facility-id FAC-PILOT-001\n\n# Provision a nurse (single facility, read-only dashboard access)\nambientcloud-admin create-nurse \\\n  --email nurse@facility.org \\\n  --facility-id FAC-PILOT-001\n\n# Verify Cognito attributes:\naws cognito-idp admin-get-user \\\n  --user-pool-id $AMBIENT_USER_POOL_ID \\\n  --username admin@facility.org\n# custom:role: admin, custom:facilityIds: FAC-PILOT-001' },
           { label: 'smoke-test key API endpoints', code: '# Get JWT via Cognito\nTOKEN=$(aws cognito-idp initiate-auth \\\n  --auth-flow USER_PASSWORD_AUTH \\\n  --auth-parameters USERNAME=admin@facility.org,PASSWORD=<pass> \\\n  --client-id <client-id> \\\n  --query "AuthenticationResult.IdToken" --output text)\n\n# List subjects (facility-scoped)\ncurl -H "Authorization: Bearer $TOKEN" \\\n  https://<api-id>.execute-api.us-east-1.amazonaws.com/prod/subjects\n\n# List recent alerts\ncurl -H "Authorization: Bearer $TOKEN" \\\n  https://<api-id>.execute-api.us-east-1.amazonaws.com/prod/alerts?limit=10' },
         ],
       },
@@ -483,8 +483,8 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'integration-tests', phase: '11', title: 'Integration Tests', status: 'pending', tag: 'Validate', time: '~1 hr',
-    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 75 unit tests passing across 5 services (admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2). Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
+    id: 'integration-tests', phase: '11', title: 'Integration Tests', status: 'done', tag: 'Validate', time: '~1 hr',
+    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 125 unit tests passing across 6 services (admin-cli 50, url-minter 28, api 19, telemetry 15, ella 11, reconciler 2) + 9 integration tests. Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
     sections: [
       {
         heading: 'Run integration tests',
@@ -512,9 +512,10 @@ cd services/admin-cli && pip install -e ".[dev]" -q && cd -
 cd services/api      && pip install -e ".[dev]" -q && cd -
 cd services/ella     && pip install -e ".[dev]" -q && cd -
 cd services/telemetry && pip install -e ".[dev]" -q && cd -
+cd services/url-minter && pip install -e ".[dev]" -q && cd -
 
 pytest services/ -v
-# Expected: 75 passed (admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2)` },
+# Expected: 125 passed (admin-cli 50, url-minter 28, api 19, telemetry 15, ella 11, reconciler 2)` },
           { label: 'run integration suite (requires AWS)', code: `# Full suite — the telemetry test waits 6 min for Firehose buffer
 pytest tests/integration -m integration -v
 
@@ -530,6 +531,10 @@ AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
         table: {
           cols: ['Test', 'Path exercised', 'Wall time'],
           rows: [
+            ['test_device_shadow_provisioned_state',    'IoT shadow desired state matches provisioned spec after fixture setup', '~5s'],
+            ['test_url_minter_issues_presigned_url',    'Lambda returns valid presigned PUT URL with subject= in S3 key',       '~5s'],
+            ['test_reconciler_runs_cleanly',            'Reconciler Lambda executes without FunctionError',                      '~10s'],
+            ['test_api_health_check',                   'GET /health → 200 {status: ok}',                                        '~5s'],
             ['test_fall_alert_lands_in_ddb_and_sns',       'MQTT → IoT Rule → Lambda → DDB enrichment + acknowledged=False', '~15s'],
             ['test_duplicate_alert_is_deduplicated',        'Same eventId twice → exactly one DDB row',                       '~10s'],
             ['test_telemetry_lands_in_parquet_and_queryable','MQTT → Firehose → S3 Parquet → Athena query',                   '~6 min'],
@@ -543,7 +548,8 @@ AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
         table: {
           cols: ['Service', 'Tests', 'Key scenarios covered'],
           rows: [
-            ['admin-cli',   '28 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard'],
+            ['admin-cli',   '50 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard, telemetry migration (promote/demote), Cognito user provisioning'],
+            ['url-minter',  '28 pass', 'Presigned URL issuance, subject= S3 key path, SigV4 validation, rate limiting'],
             ['api',         '19 pass', 'Facility scoping, cross-facility auth denial, alert pagination, subject detail, on-demand narrative'],
             ['ella',        '11 pass', 'Athena query construction, Bedrock invoke, de-id system prompt adherence, DLQ retry'],
             ['telemetry',   '15 pass', 'Fall event enrichment, DDB write, SNS publish with facility filter, synthetic event injection'],
