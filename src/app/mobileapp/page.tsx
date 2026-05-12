@@ -57,7 +57,7 @@ const PIPELINE_PHASES = [
 const STEPS: Step[] = [
   {
     id: 'repo', phase: '01', title: 'Repository Setup', status: 'done', tag: 'Environment', time: '< 5 min',
-    summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. Initialized 2026-04-21 — scaffold only. Implementation begins in subsequent sessions per ambientcloud/docs/study-mvp.md §12.',
+    summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. Core screens implemented: LoginScreen, AlertListScreen, AlertDetailScreen. Auth, push, alerts, EAS build, and CI all complete. ~75% complete toward TestFlight launch.',
     sections: [
       {
         heading: 'Clone and install',
@@ -72,12 +72,21 @@ const STEPS: Step[] = [
         table: {
           cols: ['Path', 'Contents'],
           rows: [
-            ['App.tsx',                'Root React Native component — entry point for screens'],
-            ['index.ts',              'Expo entry point — registers App as the root'],
-            ['app.json',             'Expo configuration — name, slug, icon, splash, permissions'],
-            ['docs/deidentification.md', 'PHI handling policy — what reaches the device and what never does'],
-            ['.env.example',         'Cognito + API + pilot site environment variables'],
-            ['assets/',              'App icons, splash screen, adaptive icon'],
+            ['App.tsx',                         'Root component — navigation, APNS handler, Android channel, deep-link'],
+            ['index.ts',                        'Expo entry point — registerRootComponent'],
+            ['app.json',                        'Expo config — name: Ella, bundle: com.ambientintel.ellamemory'],
+            ['eas.json',                        'EAS Build profiles — development / preview / production + TestFlight submit'],
+            ['src/auth/cognito.ts',             'Cognito SRP signIn, signOut, refreshSession'],
+            ['src/auth/store.ts',               'SecureStore session persistence + auto-refresh on expiry'],
+            ['src/api/client.ts',               'REST client with Bearer auth + assertNoPhi() PHI boundary guard'],
+            ['src/notifications/register.ts',  'registerPushToken() / unregisterPushToken() — APNS + FCM'],
+            ['src/screens/LoginScreen.tsx',     'Email + password login, stored session check, push token registration'],
+            ['src/screens/AlertListScreen.tsx', 'FlatList of active alerts, 30 s poll fallback, pull-to-refresh'],
+            ['src/screens/AlertDetailScreen.tsx', 'Alert detail, acknowledge (PATCH), false-positive flag (PATCH)'],
+            ['.github/workflows/mobile-ci.yml', 'CI — typecheck on PRs, EAS preview build on main'],
+            ['docs/deidentification.md',        'PHI handling policy — what reaches the device and what never does'],
+            ['.env.example',                    'EXPO_PUBLIC_API_BASE_URL, Cognito pool + client ID'],
+            ['assets/',                         'App icons, splash screen, adaptive icon'],
           ],
         },
       },
@@ -129,8 +138,8 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'auth', phase: '03', title: 'Cognito Authentication', status: 'pending', tag: 'Environment', time: '~2 hr implementation',
-    summary: 'Login via AWS Cognito — shared user pool with ambientweb. Same nurse credentials work on both platforms. SRP auth, no client secret.',
+    id: 'auth', phase: '03', title: 'Cognito Authentication', status: 'done', tag: 'Environment', time: '~2 hr implementation',
+    summary: 'Implemented. LoginScreen.tsx handles SRP auth via amazon-cognito-identity-js, SecureStore token persistence, and background push registration on login. Token auto-refresh added — sessions survive full nurse shifts without re-login.',
     sections: [
       {
         heading: 'Auth library',
@@ -196,8 +205,8 @@ Amplify.configure({
     ],
   },
   {
-    id: 'push', phase: '05', title: 'Push Notifications', status: 'pending', tag: 'Development', time: '~3 hr setup',
-    summary: 'APNS (iOS) and FCM (Android) via Expo Notifications. Device push token sent to ambientcloud at login. Fall alert payload contains coded ID only — no PHI.',
+    id: 'push', phase: '05', title: 'Push Notifications', status: 'done', tag: 'Development', time: '~3 hr setup',
+    summary: 'Implemented. registerPushToken() gets the native device token and PUTs to /me/push-token. Foreground alert handler and Android fall-alerts channel configured in App.tsx. Token re-registered on every login to handle rotation.',
     sections: [
       {
         heading: 'Install and configure expo-notifications',
@@ -259,8 +268,8 @@ Notifications.setNotificationHandler({
     ],
   },
   {
-    id: 'alerts', phase: '06', title: 'Alert Handling', status: 'pending', tag: 'Development', time: '~2 hr implementation',
-    summary: 'Tap a push notification to deep-link into the app at the alert detail screen. Handle both cold-start (app not running) and warm-start (app backgrounded) cases.',
+    id: 'alerts', phase: '06', title: 'Alert Handling', status: 'done', tag: 'Development', time: '~2 hr implementation',
+    summary: 'Implemented. App.tsx covers both cold-start (getLastNotificationResponseAsync) and warm-start (addNotificationResponseReceivedListener) deep-link cases, navigating directly to AlertDetail with the eventId from the push payload.',
     sections: [
       {
         heading: 'Notification tap → deep link',
@@ -308,8 +317,8 @@ function onNewAlert(payload: AlertPayload) {
     ],
   },
   {
-    id: 'alertlist', phase: '07', title: 'Recent Alerts List', status: 'pending', tag: 'Features', time: '~2 hr implementation',
-    summary: 'Scrollable list of the last 50 alerts — coded ID, type badge, confidence, timestamp. Pull-to-refresh fetches from the ambientcloud alerts API.',
+    id: 'alertlist', phase: '07', title: 'Recent Alerts List', status: 'done', tag: 'Features', time: '~2 hr implementation',
+    summary: 'Implemented. AlertListScreen.tsx renders FlatList of active alerts with 30 s polling as push fallback. Coded IDs only, acknowledge indicator, pull-to-refresh, and sign-out with push token deregistration.',
     sections: [
       {
         heading: 'List design',
@@ -337,8 +346,8 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
     ],
   },
   {
-    id: 'alertdetail', phase: '08', title: 'Alert Detail', status: 'pending', tag: 'Features', time: '~2 hr implementation',
-    summary: 'Per-alert screen reached by tapping a list row or a push notification. Shows alert context, acknowledge button, and false-positive flag. Coded IDs only.',
+    id: 'alertdetail', phase: '08', title: 'Alert Detail', status: 'done', tag: 'Features', time: '~2 hr implementation',
+    summary: 'Implemented. AlertDetailScreen.tsx shows coded subject ID, zone, confidence (red warning if < 80%), height, device. Acknowledge uses PATCH with optimistic update + rollback. False-positive flag sends PATCH /alerts/{id}/flag with rollback on error.',
     sections: [
       {
         heading: 'Detail screen',
@@ -425,8 +434,8 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
     ],
   },
   {
-    id: 'build', phase: '10', title: 'EAS Build', status: 'pending', tag: 'Distribution', time: '~20–40 min per build',
-    summary: 'Expo Application Services (EAS) Build for iOS (.ipa) and Android (.apk/.aab). Credentials managed by EAS — no local Xcode keychain needed.',
+    id: 'build', phase: '10', title: 'EAS Build', status: 'warning', tag: 'Distribution', time: '~20–40 min per build',
+    summary: 'eas.json committed with development / preview / production profiles and TestFlight submit config. Next step: run eas login, eas credentials (iOS), then eas build --platform ios --profile preview to trigger the first build.',
     sections: [
       {
         heading: 'EAS setup',
@@ -500,8 +509,8 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
     ],
   },
   {
-    id: 'ci', phase: '12', title: 'CI Pipeline', status: 'pending', tag: 'Distribution', time: '~1 hr setup',
-    summary: 'GitHub Actions runs type-check and triggers EAS Build on merge to main. EAS handles the cloud build queue — no self-hosted runner or macOS agent needed.',
+    id: 'ci', phase: '12', title: 'CI Pipeline', status: 'done', tag: 'Distribution', time: '~1 hr setup',
+    summary: 'Implemented. .github/workflows/mobile-ci.yml runs tsc --noEmit on every PR and eas build --profile preview on merge to main. Add EXPO_TOKEN secret in GitHub repository settings to activate EAS builds.',
     sections: [
       {
         heading: 'GitHub Actions workflow',
@@ -597,7 +606,7 @@ const CHECKLIST_ITEMS = [
   'CI pipeline passing on main',
 ];
 
-const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4]);
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 11, 12, 13, 14, 15, 17]);
 
 const OPEN_DECISIONS = [
   'Offline alert queue: cache unacknowledged alerts in AsyncStorage when connectivity drops in the care facility',
