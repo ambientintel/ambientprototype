@@ -115,6 +115,14 @@ export default function EngineeringPage() {
     const start = new Date(now.getFullYear(), 0, 1);
     return Math.ceil((((now.getTime() - start.getTime()) / 86400000) + start.getDay() + 1) / 7);
   })();
+  const sprintDates = (() => {
+    const now = new Date();
+    const toMon = now.getDay() === 0 ? -6 : 1 - now.getDay();
+    const mon = new Date(now); mon.setDate(now.getDate() + toMon);
+    const fri = new Date(mon); fri.setDate(mon.getDate() + 11);
+    const fmt = (d: Date) => d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
+    return `${fmt(mon)} – ${fmt(fri)}`;
+  })();
   const [personalTasks, setPersonalTasks] = useState<Record<string, string[]>>({});
   const [completedTasks, setCompletedTasks] = useState<Record<string, string[]>>({});
   const [personalInputs, setPersonalInputs] = useState<Record<string, string>>({});
@@ -403,7 +411,7 @@ export default function EngineeringPage() {
     badge:      { fontFamily:"var(--mono)", fontSize:9, fontWeight:600, letterSpacing:"0.08em", textTransform:"uppercase" as const, padding:"3px 7px", borderRadius:4, background:"var(--surface-2)" },
     avatar:     { width:22, height:22, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:10, fontWeight:700, flexShrink:0 },
     pts:        { fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", background:"var(--surface-2)", padding:"2px 7px", borderRadius:4 },
-    filterBar:  { display:"flex", alignItems:"center", gap:10, padding:"14px 32px", borderBottom:"1px solid var(--line)", flexWrap:"wrap" as const },
+    filterBar:  { display:"flex", alignItems:"center", gap:10, padding:"14px 32px", background:"#1E2328", borderBottom:"1px solid var(--line)", flexWrap:"wrap" as const },
     input:      { background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"7px 12px", fontSize:13, color:"var(--text)", fontFamily:"var(--sans)", outline:"none", width:220 },
     select:     { background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"6px 10px", fontSize:12, color:"var(--text-2)", fontFamily:"var(--mono)", outline:"none", cursor:"pointer" },
     btn:        { display:"inline-flex", alignItems:"center", gap:7, padding:"7px 14px", borderRadius:6, border:"1px solid var(--line)", fontSize:13, fontFamily:"var(--sans)", cursor:"pointer", background:"var(--surface-2)", color:"var(--text-2)", transition:"background 0.15s, border-color 0.15s" },
@@ -575,7 +583,7 @@ export default function EngineeringPage() {
 
           {/* Sprint bar */}
           <div style={s.sprint}>
-            <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-3)" }}>Apr 21 – May 2</div>
+            <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-3)" }}>{sprintDates}</div>
             <div style={{ ...s.progress }}><div style={{ height:"100%", width:`${progress}%`, background:"var(--accent)", borderRadius:4, transition:"width 0.4s" }}/></div>
             <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-2)", whiteSpace:"nowrap" }}>{progress}% · {donePoints}/{totalPoints} pts</div>
             <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", marginLeft:8 }}>
@@ -779,7 +787,7 @@ export default function EngineeringPage() {
             </div>
 
             {/* ── Kanban board ── */}
-            <SectionDivider label="Board" n="03" />
+            <SectionDivider label="Board" n="02" />
             <div style={s.board}>
               {COLUMNS.map((col, colIdx) => {
                 const colIssues = byColumn(col.id);
@@ -933,7 +941,7 @@ export default function EngineeringPage() {
             <div style={{ marginBottom:32 }}>
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
                 <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--text-2)" }}>Sprint {weekNum}</span>
-                <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)" }}>Apr 21 – May 2 · {issues.length} issues</span>
+                <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)" }}>{sprintDates} · {issues.length} issues</span>
               </div>
               <BacklogTable issues={filtered} onSelect={setSelected}/>
             </div>
@@ -943,6 +951,7 @@ export default function EngineeringPage() {
         {/* ── People View ── */}
         {view === "people" && (
           <div style={{ ...s.content, flex:1 }}>
+            <SectionDivider label={`${team.length} Engineers`} n="01" first />
             <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:20, minWidth:900 }}>
               {team.map((t, engIdx) => {
                 const name = t.name;
