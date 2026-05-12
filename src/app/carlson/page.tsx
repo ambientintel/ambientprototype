@@ -274,114 +274,103 @@ function HowItWorksDiagram() {
 }
 
 function TechDiagram() {
-  const maroon = '#7A0019', gold = '#F0B429', accent = '#4F9CF9', green = '#3DCC91';
+  const w = 'rgba(255,255,255,';
   const barBottom = 207;
   const barsData = [
-    { x: 353, h: '16;36;24;42;20;36;16', dur: '2.9s' },
-    { x: 366, h: '36;16;42;20;38;18;36', dur: '3.3s' },
-    { x: 379, h: '42;28;16;38;22;42;42', dur: '2.7s' },
-    { x: 392, h: '22;42;36;16;40;24;22', dur: '3.6s' },
-    { x: 405, h: '38;20;28;42;16;36;38', dur: '2.5s' },
-    { x: 418, h: '14;38;42;26;36;14;14', dur: '3.0s' },
+    { x: 355, h: '16;36;24;42;20;36;16', dur: '2.9s' },
+    { x: 368, h: '36;16;42;20;38;18;36', dur: '3.3s' },
+    { x: 381, h: '42;28;16;38;22;42;42', dur: '2.7s' },
+    { x: 394, h: '22;42;36;16;40;24;22', dur: '3.6s' },
+    { x: 407, h: '38;20;28;42;16;36;38', dur: '2.5s' },
   ].map(b => ({
     ...b,
     yv: b.h.split(';').map((v: string) => barBottom - +v).join(';'),
   }));
   const ecgPts = (bx: number) =>
-    `${bx},283 ${bx+18},283 ${bx+20},286 ${bx+24},257 ${bx+28},290 ${bx+32},283 ${bx+38},278 ${bx+44},272 ${bx+50},278 ${bx+54},283 ${bx+64},283`;
+    `${bx},283 ${bx+18},283 ${bx+20},286 ${bx+24},257 ${bx+28},290 ${bx+32},283 ${bx+40},278 ${bx+46},273 ${bx+52},278 ${bx+56},283 ${bx+64},283`;
   return (
     <svg viewBox="0 0 440 338" style={{ width: '100%', height: 'auto', display: 'block' }}>
       <defs>
-        <filter id="td-glow-sm" x="-120%" y="-120%" width="340%" height="340%">
-          <feGaussianBlur stdDeviation="2.5" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <clipPath id="td-v1"><rect x="335" y="10"  width="98" height="90"/></clipPath>
-        <clipPath id="td-v2"><rect x="335" y="124" width="98" height="90"/></clipPath>
-        <clipPath id="td-v3"><rect x="335" y="238" width="98" height="90"/></clipPath>
+        <clipPath id="td-v1"><rect x="338" y="10"  width="96" height="90"/></clipPath>
+        <clipPath id="td-v2"><rect x="338" y="124" width="96" height="90"/></clipPath>
+        <clipPath id="td-v3"><rect x="338" y="238" width="96" height="90"/></clipPath>
       </defs>
 
       <rect width="440" height="338" fill="#080808"/>
 
       {/* ── Button 1 · AMBIENT SENSORS ── */}
-      <rect x="0" y="10"  width="440" height="90" fill="#0D0D0D" stroke="rgba(255,255,255,0.07)" strokeWidth="0.8" rx="1.5"/>
-      <rect x="0" y="10"  width="3"   height="90" fill={maroon}/>
-      <rect x="335" y="10"  width="105" height="90" fill="rgba(122,0,25,0.045)"/>
-      <line x1="335" y1="10" x2="335" y2="100" stroke="rgba(122,0,25,0.16)" strokeWidth="0.6"/>
-      {/* Text */}
-      <text x="18" y="31"  fontFamily="monospace" fontSize="7"   fill="rgba(255,255,255,0.28)" letterSpacing="2">01 · SENSING</text>
-      <text x="18" y="54"  fontFamily="monospace" fontSize="15"  fill="rgba(255,255,255,0.92)" letterSpacing="0.5" fontWeight="600">AMBIENT SENSORS</text>
-      <text x="18" y="68"  fontFamily="monospace" fontSize="7.5" fill="rgba(122,0,25,0.92)"    letterSpacing="1.5">IWR6843AOP · 60 GHz FMCW</text>
-      <circle cx="18" cy="83" r="2.5" fill={green}>
-        <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/>
+      <rect x="0" y="10"  width="440" height="90" fill="#0C0C0C" stroke={`${w}0.06)`} strokeWidth="0.8" rx="1.5"/>
+      <rect x="0" y="10"  width="2"   height="90" fill={`${w}0.22)`}/>
+      <rect x="338" y="10"  width="102" height="90" fill={`${w}0.014)`}/>
+      <line x1="338" y1="10" x2="338" y2="100" stroke={`${w}0.08)`} strokeWidth="0.5"/>
+      <text x="18" y="31"  fontFamily="monospace" fontSize="7"   fill={`${w}0.24)`} letterSpacing="2">01 · SENSING</text>
+      <text x="18" y="54"  fontFamily="monospace" fontSize="15"  fill={`${w}0.92)`} fontWeight="600" letterSpacing="0.5">AMBIENT SENSORS</text>
+      <text x="18" y="68"  fontFamily="monospace" fontSize="7.5" fill={`${w}0.38)`} letterSpacing="1.5">IWR6843AOP · 60 GHz FMCW</text>
+      <circle cx="18" cy="83" r="2" fill={`${w}0.65)`}>
+        <animate attributeName="opacity" values="1;0.25;1" dur="2s" repeatCount="indefinite"/>
       </circle>
-      <text x="27" y="87" fontFamily="monospace" fontSize="7" fill={green} letterSpacing="1">ACTIVE</text>
-      {/* Radar viz */}
+      <text x="27" y="87" fontFamily="monospace" fontSize="7" fill={`${w}0.32)`} letterSpacing="1">ACTIVE</text>
       <g clipPath="url(#td-v1)">
-        <circle cx="384" cy="55" r="20" fill="none" stroke="rgba(122,0,25,0.12)" strokeWidth="0.6" strokeDasharray="2,3"/>
-        <circle cx="384" cy="55" r="36" fill="none" stroke="rgba(122,0,25,0.07)" strokeWidth="0.6" strokeDasharray="2,3"/>
+        <circle cx="386" cy="55" r="24" fill="none" stroke={`${w}0.055)`} strokeWidth="0.6" strokeDasharray="2,3"/>
+        <circle cx="386" cy="55" r="38" fill="none" stroke={`${w}0.03)`}  strokeWidth="0.6" strokeDasharray="2,3"/>
         {([0,1] as number[]).map(j => (
-          <circle key={j} cx="384" cy="55" r="10" fill="none" stroke={maroon} strokeWidth="1.2">
+          <circle key={j} cx="386" cy="55" r="10" fill="none" stroke={`${w}0.45)`} strokeWidth="1.1">
             <animate attributeName="r"       from="10" to="44" dur="2.6s" begin={`${j * 1.3}s`} repeatCount="indefinite"/>
-            <animate attributeName="opacity" from="0.65" to="0"  dur="2.6s" begin={`${j * 1.3}s`} repeatCount="indefinite"/>
+            <animate attributeName="opacity" from="0.45" to="0" dur="2.6s" begin={`${j * 1.3}s`} repeatCount="indefinite"/>
           </circle>
         ))}
-        <line x1="384" y1="55" x2="384" y2="12" stroke={maroon} strokeWidth="1" opacity="0.5">
-          <animateTransform attributeName="transform" type="rotate" from="0 384 55" to="360 384 55" dur="3.5s" repeatCount="indefinite"/>
+        <line x1="386" y1="55" x2="386" y2="14" stroke={`${w}0.35)`} strokeWidth="0.9">
+          <animateTransform attributeName="transform" type="rotate" from="0 386 55" to="360 386 55" dur="3.5s" repeatCount="indefinite"/>
         </line>
-        <circle cx="384" cy="55" r="3"   fill={maroon} filter="url(#td-glow-sm)"/>
-        <circle cx="384" cy="55" r="1.3" fill="#fff" opacity="0.9"/>
+        <circle cx="386" cy="55" r="2.8" fill={`${w}0.85)`}/>
+        <circle cx="386" cy="55" r="1.1" fill="#080808"/>
       </g>
 
       {/* ── Button 2 · CLOUD AI ── */}
-      <rect x="0" y="124" width="440" height="90" fill="#0D0D0D" stroke="rgba(255,255,255,0.07)" strokeWidth="0.8" rx="1.5"/>
-      <rect x="0" y="124" width="3"   height="90" fill={gold}/>
-      <rect x="335" y="124" width="105" height="90" fill="rgba(240,180,41,0.03)"/>
-      <line x1="335" y1="124" x2="335" y2="214" stroke="rgba(240,180,41,0.14)" strokeWidth="0.6"/>
-      {/* Text */}
-      <text x="18" y="145" fontFamily="monospace" fontSize="7"   fill="rgba(255,255,255,0.28)" letterSpacing="2">02 · PROCESSING</text>
-      <text x="18" y="168" fontFamily="monospace" fontSize="15"  fill="rgba(255,255,255,0.92)" letterSpacing="0.5" fontWeight="600">CLOUD AI</text>
-      <text x="18" y="182" fontFamily="monospace" fontSize="7.5" fill="rgba(240,180,41,0.92)"  letterSpacing="1.5">AWS BEDROCK · FOUNDATION MODEL</text>
+      <rect x="0" y="124" width="440" height="90" fill="#0C0C0C" stroke={`${w}0.06)`} strokeWidth="0.8" rx="1.5"/>
+      <rect x="0" y="124" width="2"   height="90" fill={`${w}0.22)`}/>
+      <rect x="338" y="124" width="102" height="90" fill={`${w}0.014)`}/>
+      <line x1="338" y1="124" x2="338" y2="214" stroke={`${w}0.08)`} strokeWidth="0.5"/>
+      <text x="18" y="145" fontFamily="monospace" fontSize="7"   fill={`${w}0.24)`} letterSpacing="2">02 · PROCESSING</text>
+      <text x="18" y="168" fontFamily="monospace" fontSize="15"  fill={`${w}0.92)`} fontWeight="600" letterSpacing="0.5">CLOUD AI</text>
+      <text x="18" y="182" fontFamily="monospace" fontSize="7.5" fill={`${w}0.38)`} letterSpacing="1.5">AWS BEDROCK · FOUNDATION MODEL</text>
       <g>
-        <animate attributeName="opacity" values="1;0.25;1" dur="1.8s" repeatCount="indefinite"/>
-        <circle cx="18" cy="197" r="2.5" fill={gold}/>
-        <text x="27" y="201" fontFamily="monospace" fontSize="7" fill={gold} letterSpacing="1">INFERENCING</text>
+        <animate attributeName="opacity" values="1;0.2;1" dur="1.8s" repeatCount="indefinite"/>
+        <circle cx="18" cy="197" r="2" fill={`${w}0.55)`}/>
+        <text x="27" y="201" fontFamily="monospace" fontSize="7" fill={`${w}0.32)`} letterSpacing="1">INFERENCING</text>
       </g>
-      {/* Bar chart viz */}
       <g clipPath="url(#td-v2)">
         {barsData.map((b, i) => (
           <g key={i}>
-            <rect x={b.x} y={165} width="9" height={42} rx="1" fill="rgba(240,180,41,0.07)"/>
-            <rect x={b.x} y={barBottom} width="9" height="0" rx="1" fill={gold} opacity="0.65">
+            <rect x={b.x} y={165} width="9" height={42} rx="1" fill={`${w}0.04)`}/>
+            <rect x={b.x} y={barBottom} width="9" height="0" rx="1" fill={`${w}0.55)`}>
               <animate attributeName="height" values={b.h}  dur={b.dur} repeatCount="indefinite"/>
               <animate attributeName="y"      values={b.yv} dur={b.dur} repeatCount="indefinite"/>
             </rect>
           </g>
         ))}
-        <line x1="335" y1="207" x2="433" y2="207" stroke="rgba(240,180,41,0.14)" strokeWidth="0.5"/>
+        <line x1="338" y1="207" x2="434" y2="207" stroke={`${w}0.07)`} strokeWidth="0.5"/>
       </g>
 
       {/* ── Button 3 · ELLA AI ── */}
-      <rect x="0" y="238" width="440" height="90" fill="#0D0D0D" stroke="rgba(255,255,255,0.07)" strokeWidth="0.8" rx="1.5"/>
-      <rect x="0" y="238" width="3"   height="90" fill={accent}/>
-      <rect x="335" y="238" width="105" height="90" fill="rgba(79,156,249,0.04)"/>
-      <line x1="335" y1="238" x2="335" y2="328" stroke="rgba(79,156,249,0.13)" strokeWidth="0.6"/>
-      {/* Text */}
-      <text x="18" y="259" fontFamily="monospace" fontSize="7"   fill="rgba(255,255,255,0.28)" letterSpacing="2">03 · DELIVERY</text>
-      <text x="18" y="282" fontFamily="monospace" fontSize="15"  fill="rgba(255,255,255,0.92)" letterSpacing="0.5" fontWeight="600">ELLA AI</text>
-      <text x="18" y="296" fontFamily="monospace" fontSize="7.5" fill="rgba(79,156,249,0.92)"  letterSpacing="1.5">NURSE ASSISTANT · HIPAA COMPLIANT</text>
-      <circle cx="18" cy="311" r="2.5" fill="#FF6680">
-        <animate attributeName="opacity" values="1;0.15;1" dur="1.1s" repeatCount="indefinite"/>
+      <rect x="0" y="238" width="440" height="90" fill="#0C0C0C" stroke={`${w}0.06)`} strokeWidth="0.8" rx="1.5"/>
+      <rect x="0" y="238" width="2"   height="90" fill={`${w}0.22)`}/>
+      <rect x="338" y="238" width="102" height="90" fill={`${w}0.014)`}/>
+      <line x1="338" y1="238" x2="338" y2="328" stroke={`${w}0.08)`} strokeWidth="0.5"/>
+      <text x="18" y="259" fontFamily="monospace" fontSize="7"   fill={`${w}0.24)`} letterSpacing="2">03 · DELIVERY</text>
+      <text x="18" y="282" fontFamily="monospace" fontSize="15"  fill={`${w}0.92)`} fontWeight="600" letterSpacing="0.5">ELLA AI</text>
+      <text x="18" y="296" fontFamily="monospace" fontSize="7.5" fill={`${w}0.38)`} letterSpacing="1.5">NURSE ASSISTANT · HIPAA COMPLIANT</text>
+      <circle cx="18" cy="311" r="2" fill={`${w}0.7)`}>
+        <animate attributeName="opacity" values="1;0.15;1" dur="1.2s" repeatCount="indefinite"/>
       </circle>
-      <text x="27" y="315" fontFamily="monospace" fontSize="7" fill="#FF6680" letterSpacing="1">ALERT · ROOM 204</text>
-      {/* Scrolling ECG viz */}
+      <text x="27" y="315" fontFamily="monospace" fontSize="7" fill={`${w}0.55)`} letterSpacing="1">ALERT · ROOM 204</text>
       <g clipPath="url(#td-v3)">
-        <line x1="335" y1="283" x2="433" y2="283" stroke="rgba(79,156,249,0.1)" strokeWidth="0.5"/>
+        <line x1="338" y1="283" x2="434" y2="283" stroke={`${w}0.06)`} strokeWidth="0.5"/>
         <g>
           <animateTransform attributeName="transform" type="translate" from="0 0" to="-64 0" dur="2.2s" repeatCount="indefinite"/>
           {([271, 335, 399, 463, 527] as number[]).map(bx => (
             <polyline key={bx} points={ecgPts(bx)}
-              fill="none" stroke={accent} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" opacity="0.8"/>
+              fill="none" stroke={`${w}0.55)`} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
           ))}
         </g>
       </g>
