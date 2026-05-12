@@ -104,9 +104,9 @@ function CircleGauge({ value, label, color }: { value: number; label: string; co
 
 function ReturnChart() {
   const bars = [
-    { label:'Seed Post-Money', amount:'$12M', pct:8, color:'#4A5568', note:'2026 · Baseline' },
-    { label:'Series A Pre-Money', amount:'$35M', pct:23, color:'#2D72D2', note:'~18 months · ~3× seed' },
-    { label:'5-Year Exit Target', amount:'$150M+', pct:100, color:'#3DCC91', note:'Acquisition / IPO · 12–15× seed' },
+    { label:'Seed Post-Money', amount:'$18.5M', pct:9.25, color:'#4A5568', note:'2026 · Baseline' },
+    { label:'Series A Pre-Money', amount:'$55M', pct:27.5, color:'#2D72D2', note:'~18 months · ~3× seed' },
+    { label:'5-Year Exit Target', amount:'$200M+', pct:100, color:'#3DCC91', note:'Acquisition / IPO · 10–15× seed' },
   ];
   return (
     <div style={{ background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:14, padding:'28px 32px' }}>
@@ -153,7 +153,6 @@ export default function InvestPage() {
               { id:'pilot', label:'Pilot' },
               { id:'ip', label:'Patent IP' },
               { id:'engineering', label:'Engineering' },
-              { id:'backing', label:'Backed' },
               { id:'raise', label:'Raise' },
             ].map(s => (
               <a key={s.id} href={`#${s.id}`} className="invest-nav-link">{s.label}</a>
@@ -263,15 +262,11 @@ export default function InvestPage() {
 
       {/* ── KEVIN ELLICH PERSONAL ── */}
       <section style={{ position:'relative', overflow:'hidden', height:340, borderBottom:'1px solid var(--line)', padding:'0 44px' }}>
-        {/* Page background — blends seamlessly */}
         <div style={{ position:'absolute', inset:0, background:'var(--bg)' }} />
-        {/* Soft blue orb behind the pulse point */}
         <div style={{ pointerEvents:'none', position:'absolute', right:'20%', top:'50%',
           transform:'translateY(-50%)', width:340, height:340, borderRadius:'50%',
           background:'radial-gradient(circle, rgba(45,114,210,0.09) 0%, transparent 65%)',
           filter:'blur(50px)' }} />
-
-        {/* Topographic contour — mathematical visualization */}
         <svg style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%' }}
           viewBox="0 0 1440 340" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
           <style>{`
@@ -304,8 +299,6 @@ export default function InvestPage() {
             .wca { animation:wcap 3.0s ease-in-out infinite; }
             @keyframes wcap { 0%,100% { opacity:0.85; } 50% { opacity:0.35; } }
           `}</style>
-
-          {/* Mathematical field — faint iso-curves spanning full width */}
           <path d="M 0,82 Q 105,62 210,82 T 420,82 T 630,82 T 840,82 T 1050,82 T 1260,82 T 1470,82"
             fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.45" opacity="0.03"/>
           <path d="M 0,148 Q 120,133 240,148 T 480,148 T 720,148 T 960,148 T 1200,148 T 1440,148"
@@ -314,8 +307,6 @@ export default function InvestPage() {
             fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.45" opacity="0.03"/>
           <path d="M 0,268 Q 113,280 225,268 T 450,268 T 675,268 T 900,268 T 1125,268 T 1350,268 T 1575,268"
             fill="none" stroke="rgba(246,247,248,0.9)" strokeWidth="0.4"  opacity="0.03"/>
-
-          {/* Topographic contour backbones — 8 nested tilted ellipses (outermost → innermost) */}
           <ellipse cx="1060" cy="170" rx="196" ry="136" transform="rotate(-38,1060,170)"
             className="teb" strokeWidth="0.5"  opacity="0.055"/>
           <ellipse cx="1060" cy="170" rx="162" ry="112" transform="rotate(18,1060,170)"
@@ -332,8 +323,6 @@ export default function InvestPage() {
             className="teb" strokeWidth="0.65" opacity="0.11"/>
           <ellipse cx="1060" cy="170" rx="20"  ry="15"  transform="rotate(15,1060,170)"
             className="teb" strokeWidth="0.65" opacity="0.12"/>
-
-          {/* Traveling sparks — one per contour ring, each orbiting its own ellipse */}
           <ellipse cx="1060" cy="170" rx="20"  ry="15"  transform="rotate(15,1060,170)"  className="te0" strokeWidth="2.5"/>
           <ellipse cx="1060" cy="170" rx="38"  ry="28"  transform="rotate(-20,1060,170)" className="te1" strokeWidth="2.2"/>
           <ellipse cx="1060" cy="170" rx="58"  ry="42"  transform="rotate(35,1060,170)"  className="te2" strokeWidth="2.0"/>
@@ -342,8 +331,6 @@ export default function InvestPage() {
           <ellipse cx="1060" cy="170" rx="132" ry="90"  transform="rotate(-28,1060,170)" className="te5" strokeWidth="1.4"/>
           <ellipse cx="1060" cy="170" rx="162" ry="112" transform="rotate(18,1060,170)"  className="te6" strokeWidth="1.2"/>
           <ellipse cx="1060" cy="170" rx="196" ry="136" transform="rotate(-38,1060,170)" className="te7" strokeWidth="1.0"/>
-
-          {/* Sonar pulse */}
           <circle cx="1060" cy="170" r="26" className="wr wr1"/>
           <circle cx="1060" cy="170" r="26" className="wr wr2"/>
           <circle cx="1060" cy="170" r="26" className="wr wr3"/>
@@ -351,12 +338,8 @@ export default function InvestPage() {
           <circle cx="1060" cy="170" r="6"  fill="#2D72D2" opacity="0.78" className="wca"/>
           <circle cx="1060" cy="170" r="2.5" fill="rgba(246,247,248,0.92)"/>
         </svg>
-
-        {/* Left fade — text stays readable, waves emerge to the right */}
         <div style={{ position:'absolute', inset:0,
           background:'linear-gradient(to right, var(--bg) 30%, transparent 74%)' }} />
-
-        {/* Text — aligned with page content grid (padding on section, not inner div) */}
         <div style={{ position:'relative', height:'100%', maxWidth:1280, margin:'0 auto',
           display:'flex', alignItems:'center' }}>
           <div>
@@ -502,11 +485,165 @@ export default function InvestPage() {
                 {[
                   { v:'< 2s', l:'Avg. Response' },
                   { v:'99.9%', l:'Uptime SLA' },
-                  { v:'12', l:'Residents/Node' },
+                  { v:'3', l:'Devices/Resident' },
                 ].map(m => (
                   <div key={m.l} style={{ padding:'12px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:10, textAlign:'center' }}>
                     <p style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:22, letterSpacing:'-0.02em', margin:'0 0 3px' }}>{m.v}</p>
                     <p style={{ fontFamily:'var(--mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.1em', color:'var(--text-3)', margin:0 }}>{m.l}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── HARDWARE ── */}
+      <section style={{ borderBottom:'1px solid var(--line)', padding:'72px 44px' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto' }}>
+          <p className="crumb" style={{ marginBottom:12 }}>The Hardware</p>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:64, alignItems:'center' }}>
+            {/* Photo */}
+            <div style={{ position:'relative', aspectRatio:'1' }}>
+              <style>{`
+                @keyframes hw-scan { 0%{top:8%} 100%{top:92%} }
+                @keyframes hw-ping { 0%,100%{opacity:0.9;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.35)} }
+                @keyframes hw-dash { from{stroke-dashoffset:120} to{stroke-dashoffset:0} }
+                @keyframes hw-data { 0%,100%{opacity:0.35} 60%{opacity:0.9} }
+              `}</style>
+
+              {/* dark base */}
+              <div style={{ position:'absolute', inset:0, borderRadius:20, background:'#0e1117',
+                boxShadow:'0 0 80px rgba(45,114,210,0.18), 0 0 160px rgba(45,114,210,0.07)' }} />
+
+              {/* subtle dot-grid overlay */}
+              <div style={{ pointerEvents:'none', position:'absolute', inset:0, borderRadius:20, overflow:'hidden',
+                backgroundImage:'radial-gradient(rgba(45,114,210,0.18) 1px, transparent 1px)',
+                backgroundSize:'28px 28px', opacity:0.5 }} />
+
+              {/* radial glow behind device */}
+              <div style={{ pointerEvents:'none', position:'absolute', inset:0, borderRadius:20,
+                background:'radial-gradient(ellipse at 50% 58%, rgba(45,114,210,0.15) 0%, transparent 60%)' }} />
+
+              {/* scanning line */}
+              <div style={{ pointerEvents:'none', position:'absolute', left:'8%', right:'8%', height:1,
+                background:'linear-gradient(90deg, transparent, rgba(45,114,210,0.7) 30%, rgba(61,204,145,0.5) 70%, transparent)',
+                animation:'hw-scan 3.8s ease-in-out infinite alternate',
+                boxShadow:'0 0 8px rgba(45,114,210,0.5)', zIndex:4 }} />
+
+              {/* HUD SVG — corner brackets + edge data readouts */}
+              <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', zIndex:5 }}
+                viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+                {/* corner brackets */}
+                <path d="M 28,68 L 28,28 L 68,28"   stroke="#2D72D2" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M 332,28 L 372,28 L 372,68"  stroke="#2D72D2" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M 28,332 L 28,372 L 68,372"  stroke="#2D72D2" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M 372,332 L 372,372 L 332,372" stroke="#2D72D2" strokeWidth="2" strokeLinecap="round"/>
+
+                {/* corner accent dots */}
+                <circle cx="28" cy="28" r="3" fill="#2D72D2" opacity="0.7" style={{animation:'hw-ping 2.4s ease-in-out infinite'}}/>
+                <circle cx="372" cy="28" r="3" fill="#2D72D2" opacity="0.7" style={{animation:'hw-ping 2.4s ease-in-out infinite', animationDelay:'-0.8s'}}/>
+                <circle cx="28" cy="372" r="3" fill="#2D72D2" opacity="0.7" style={{animation:'hw-ping 2.4s ease-in-out infinite', animationDelay:'-1.6s'}}/>
+                <circle cx="372" cy="372" r="3" fill="#2D72D2" opacity="0.7" style={{animation:'hw-ping 2.4s ease-in-out infinite', animationDelay:'-0.4s'}}/>
+
+                {/* animated dashed edge lines */}
+                <line x1="92" y1="28" x2="308" y2="28" stroke="rgba(45,114,210,0.3)" strokeWidth="0.8" strokeDasharray="6 8"
+                  style={{animation:'hw-dash 4s linear infinite'}}/>
+                <line x1="92" y1="372" x2="308" y2="372" stroke="rgba(45,114,210,0.3)" strokeWidth="0.8" strokeDasharray="6 8"
+                  style={{animation:'hw-dash 4s linear infinite', animationDelay:'-2s'}}/>
+                <line x1="28" y1="92" x2="28" y2="308" stroke="rgba(45,114,210,0.2)" strokeWidth="0.8" strokeDasharray="6 8"
+                  style={{animation:'hw-dash 4s linear infinite', animationDelay:'-1s'}}/>
+                <line x1="372" y1="92" x2="372" y2="308" stroke="rgba(45,114,210,0.2)" strokeWidth="0.8" strokeDasharray="6 8"
+                  style={{animation:'hw-dash 4s linear infinite', animationDelay:'-3s'}}/>
+
+                {/* top-left data label */}
+                <text x="36" y="22" fontFamily="var(--mono)" fontSize="8.5" fill="rgba(45,114,210,0.75)" textAnchor="start"
+                  style={{animation:'hw-data 2.8s ease-in-out infinite', textTransform:'uppercase', letterSpacing:'0.1em'}}>ELLA·AI</text>
+
+                {/* top-right data label */}
+                <text x="364" y="22" fontFamily="var(--mono)" fontSize="8.5" fill="rgba(61,204,145,0.7)" textAnchor="end"
+                  style={{animation:'hw-data 2.8s ease-in-out infinite', animationDelay:'-1.4s'}}>SIG: 98.3%</text>
+
+                {/* bottom-left */}
+                <text x="36" y="390" fontFamily="var(--mono)" fontSize="8.5" fill="rgba(45,114,210,0.6)" textAnchor="start"
+                  style={{animation:'hw-data 3.2s ease-in-out infinite', animationDelay:'-0.7s'}}>DC · 1M+ PTS/DAY</text>
+
+                {/* bottom-right */}
+                <text x="364" y="390" fontFamily="var(--mono)" fontSize="8.5" fill="rgba(61,204,145,0.65)" textAnchor="end"
+                  style={{animation:'hw-data 3.2s ease-in-out infinite', animationDelay:'-2.1s'}}>STATUS: ACTIVE</text>
+
+                {/* center crosshair ticks */}
+                <line x1="200" y1="24" x2="200" y2="34" stroke="rgba(45,114,210,0.4)" strokeWidth="1"/>
+                <line x1="200" y1="366" x2="200" y2="376" stroke="rgba(45,114,210,0.4)" strokeWidth="1"/>
+                <line x1="24" y1="200" x2="34" y2="200" stroke="rgba(45,114,210,0.4)" strokeWidth="1"/>
+                <line x1="366" y1="200" x2="376" y2="200" stroke="rgba(45,114,210,0.4)" strokeWidth="1"/>
+              </svg>
+
+              {/* product image */}
+              <div style={{ position:'absolute', inset:'10%', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>
+                <img src="/ella-device.jpeg" alt="Ella AI Nurse Assistant"
+                  style={{ width:'100%', height:'100%', objectFit:'contain', display:'block', borderRadius:10 }} />
+              </div>
+
+              {/* floating badge */}
+              <div style={{
+                position:'absolute', bottom:20, left:20, zIndex:6,
+                padding:'7px 14px', borderRadius:999,
+                background:'rgba(14,17,23,0.9)', backdropFilter:'blur(10px)',
+                border:'1px solid rgba(45,114,210,0.35)',
+                display:'flex', alignItems:'center', gap:8,
+              }}>
+                <span style={{ width:7, height:7, borderRadius:'50%', background:'#3DCC91',
+                  boxShadow:'0 0 0 3px rgba(61,204,145,0.2)', flexShrink:0,
+                  animation:'hw-ping 2.4s ease-in-out infinite' }} />
+                <span style={{ fontFamily:'var(--mono)', fontSize:11, color:'var(--text-2)', textTransform:'uppercase', letterSpacing:'0.12em' }}>Active · Room 214</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <h2 className="section-title" style={{ fontSize:36, marginBottom:8 }}>
+                Ella AI <em>Nurse Assistant</em>
+              </h2>
+              <p style={{ fontFamily:'var(--mono)', fontSize:12, color:'var(--accent)', textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:20 }}>
+                The ambient intelligence hardware
+              </p>
+              <p style={{ fontSize:15, lineHeight:1.7, color:'var(--text-2)', marginBottom:20 }}>
+                At the heart of every Ella deployment is a compact, purpose-built ambient sensor node —
+                designed to disappear into the care environment while continuously capturing the behavioral
+                signals that matter most. No cameras. No wearables. No disruption.
+              </p>
+              <p style={{ fontSize:15, lineHeight:1.7, color:'var(--text-2)', marginBottom:32 }}>
+                Each node pairs wirelessly in minutes and begins building a behavioral baseline for every
+                resident within range — learning what&apos;s normal before it ever flags what isn&apos;t.
+              </p>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:28 }}>
+                {[
+                  { icon:'◉', color:'#2D72D2', label:'Motion & Presence', body:'Generates 1M+ behavioral data points per resident per device daily — building a precise, continuously-updated baseline.' },
+                  { icon:'◈', color:'#3DCC91', label:'Real-Time Events', body:'Instant fall detection and critical alerts pushed directly to nurse mobile devices — zero lag, zero missed events.' },
+                  { icon:'◆', color:'#FFC940', label:'Edge ML Inference', body:'On-device models run at <100ms latency with no cloud dependency.' },
+                  { icon:'⬡', color:'#FF6B6B', label:'Zero-Camera Design', body:'Complete privacy by hardware. PHI isolation enforced at the silicon level.' },
+                ].map(f => (
+                  <div key={f.label} style={{ padding:'16px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:12 }}>
+                    <span style={{ fontSize:16, color:f.color }}>{f.icon}</span>
+                    <p style={{ fontFamily:'var(--mono)', fontSize:10.5, textTransform:'uppercase', letterSpacing:'0.1em', color:'var(--text-3)', margin:'8px 0 4px' }}>{f.label}</p>
+                    <p style={{ fontSize:12.5, lineHeight:1.55, color:'var(--text-2)', margin:0 }}>{f.body}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                {[
+                  { v:'$199', l:'Per Device' },
+                  { v:'3', l:'Devices / Resident' },
+                  { v:'5 min', l:'Install Time' },
+                  { v:'DC', l:'Power' },
+                ].map(s => (
+                  <div key={s.l} style={{ padding:'12px 18px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:10, textAlign:'center', minWidth:80 }}>
+                    <p style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:22, letterSpacing:'-0.02em', margin:'0 0 2px', lineHeight:1 }}>{s.v}</p>
+                    <p style={{ fontFamily:'var(--mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.1em', color:'var(--text-3)', margin:0 }}>{s.l}</p>
                   </div>
                 ))}
               </div>
@@ -774,151 +911,6 @@ export default function InvestPage() {
         </div>
       </section>
 
-      {/* ── INSTITUTIONAL BACKING ── */}
-      <section id="backing" style={{ position:'relative', borderBottom:'1px solid var(--line)', background:'var(--bg)', padding:'72px 44px', overflow:'hidden' }}>
-        {/* Subtle grid */}
-        <div style={{ pointerEvents:'none', position:'absolute', inset:0, opacity:0.02,
-          backgroundImage:'linear-gradient(rgba(246,247,248,1) 1px, transparent 1px), linear-gradient(90deg, rgba(246,247,248,1) 1px, transparent 1px)',
-          backgroundSize:'48px 48px' }} />
-        {/* Ambient orbs — lime left, maroon right */}
-        <div style={{ pointerEvents:'none', position:'absolute', inset:0, overflow:'hidden' }}>
-          <div style={{ position:'absolute', left:'-8%', top:'5%', width:520, height:520, borderRadius:'50%', background:'radial-gradient(circle, rgba(163,230,53,0.055) 0%, transparent 65%)', filter:'blur(80px)' }} />
-          <div style={{ position:'absolute', right:'-8%', top:'5%', width:520, height:520, borderRadius:'50%', background:'radial-gradient(circle, rgba(122,0,25,0.08) 0%, transparent 65%)', filter:'blur(80px)' }} />
-        </div>
-        {/* Dual-brand gradient top accent line */}
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
-          background:'linear-gradient(90deg, transparent 0%, rgba(163,230,53,0.6) 18%, rgba(163,230,53,0.12) 38%, rgba(26,82,118,0.12) 62%, rgba(36,113,163,0.6) 82%, transparent 100%)' }} />
-
-        <div style={{ maxWidth:1280, margin:'0 auto', position:'relative' }}>
-          <p className="crumb" style={{ marginBottom:12, textAlign:'center' }}>Institutional Validation</p>
-          <h2 className="section-title" style={{ fontSize:32, textAlign:'center', marginBottom:12 }}>
-            Backed by <em>Institutions That Matter</em>
-          </h2>
-          <p style={{ fontSize:15, color:'var(--text-2)', textAlign:'center', maxWidth:600, margin:'0 auto 48px', lineHeight:1.7 }}>
-            $348K in institutional capital — top-tier accelerator investment and a tripartite
-            public-university research grant — validates our technology before a single seed dollar is raised.
-          </p>
-
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, marginBottom:20 }}>
-
-            {/* GENER8TOR */}
-            <div style={{ position:'relative', overflow:'hidden', borderRadius:20, border:'1px solid rgba(163,230,53,0.2)', background:'var(--surface-1)' }}>
-              <div style={{ height:3, background:'linear-gradient(90deg, #A3E635 0%, #65A30D 100%)' }} />
-              <div style={{ pointerEvents:'none', position:'absolute', top:-100, right:-60, width:340, height:340, borderRadius:'50%', background:'radial-gradient(circle, rgba(163,230,53,0.09) 0%, transparent 65%)', filter:'blur(40px)' }} />
-              <div style={{ position:'relative', padding:'32px 32px 28px' }}>
-                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:28 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <div style={{ width:48, height:48, borderRadius:12, background:'rgba(10,12,8,0.95)', border:'1.5px solid rgba(163,230,53,0.32)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <span style={{ fontFamily:'var(--mono)', fontSize:13, fontWeight:700, color:'#A3E635', letterSpacing:'-0.02em' }}>g8r</span>
-                    </div>
-                    <div>
-                      <p style={{ fontSize:15, fontWeight:600, color:'var(--text)', margin:'0 0 2px', letterSpacing:'-0.01em' }}>gener8tor</p>
-                      <p style={{ fontSize:11.5, color:'var(--text-3)', margin:0 }}>National Startup Accelerator</p>
-                    </div>
-                  </div>
-                  <div style={{ padding:'4px 12px', borderRadius:999, background:'rgba(163,230,53,0.08)', border:'1px solid rgba(163,230,53,0.2)', flexShrink:0 }}>
-                    <span style={{ fontFamily:'var(--mono)', fontSize:10.5, color:'#A3E635', textTransform:'uppercase', letterSpacing:'0.1em' }}>Portfolio Co.</span>
-                  </div>
-                </div>
-                <p style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:60, letterSpacing:'-0.04em', color:'#A3E635', margin:'0 0 5px', lineHeight:1 }}>$100K</p>
-                <p style={{ fontFamily:'var(--mono)', fontSize:11.5, textTransform:'uppercase', letterSpacing:'0.14em', color:'var(--text-3)', margin:'0 0 24px' }}>Seed Investment · Accelerator Program</p>
-                <p style={{ fontSize:13, fontStyle:'italic', color:'var(--text-3)', margin:'0 0 16px', paddingLeft:14, borderLeft:'2px solid rgba(163,230,53,0.35)' }}>
-                  &ldquo;Accelerating the Best &amp; Brightest&rdquo;
-                </p>
-                <p style={{ fontSize:13.5, lineHeight:1.7, color:'var(--text-2)', margin:'0 0 24px' }}>
-                  Selected for the gener8tor accelerator program — one of the top-ranked startup accelerators
-                  in the United States, with 600+ portfolio companies spanning capital, coaching, and
-                  corporate innovation programs nationwide.
-                </p>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
-                  {['Top 10 U.S. Accelerator', '600+ Portfolio Cos.', 'Capital & Coaching'].map(tag => (
-                    <span key={tag} style={{ padding:'4px 10px', borderRadius:6, background:'rgba(163,230,53,0.06)', border:'1px solid rgba(163,230,53,0.15)', fontSize:11, color:'rgba(163,230,53,0.65)', fontFamily:'var(--mono)' }}>{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* MINNESOTA PARTNERSHIP */}
-            <div style={{ position:'relative', overflow:'hidden', borderRadius:20, border:'1px solid rgba(36,113,163,0.2)', background:'var(--surface-1)' }}>
-              {/* Three-institution color bar */}
-              <div style={{ height:3, display:'flex' }}>
-                <div style={{ flex:1, background:'#7A0019' }} />
-                <div style={{ flex:1, background:'#1A5276' }} />
-                <div style={{ flex:1, background:'#2471A3' }} />
-              </div>
-              <div style={{ pointerEvents:'none', position:'absolute', top:-100, right:-60, width:340, height:340, borderRadius:'50%', background:'radial-gradient(circle, rgba(36,113,163,0.09) 0%, transparent 65%)', filter:'blur(40px)' }} />
-              <div style={{ position:'relative', padding:'32px 32px 28px' }}>
-                {/* Institution badges */}
-                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:28, flexWrap:'wrap' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 10px', borderRadius:8, background:'rgba(122,0,25,0.12)', border:'1px solid rgba(122,0,25,0.28)' }}>
-                    <div style={{ width:18, height:18, borderRadius:3, background:'#7A0019', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <span style={{ fontFamily:'var(--serif)', fontSize:12, fontWeight:800, color:'#FFCC33', lineHeight:1 }}>M</span>
-                    </div>
-                    <span style={{ fontSize:11, color:'#c0392b', fontFamily:'var(--mono)', fontWeight:500, whiteSpace:'nowrap' }}>U of Minnesota</span>
-                  </div>
-                  <span style={{ color:'var(--line-strong)', fontSize:12, flexShrink:0 }}>·</span>
-                  <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 10px', borderRadius:8, background:'rgba(26,82,118,0.12)', border:'1px solid rgba(26,82,118,0.28)' }}>
-                    <div style={{ width:18, height:18, borderRadius:3, background:'#1A5276', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M5 1v8M1 5h8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                    </div>
-                    <span style={{ fontSize:11, color:'#2e86c1', fontFamily:'var(--mono)', fontWeight:500, whiteSpace:'nowrap' }}>Mayo Clinic</span>
-                  </div>
-                  <span style={{ color:'var(--line-strong)', fontSize:12, flexShrink:0 }}>·</span>
-                  <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 10px', borderRadius:8, background:'rgba(36,113,163,0.12)', border:'1px solid rgba(36,113,163,0.28)' }}>
-                    <div style={{ width:18, height:18, borderRadius:3, background:'#2471A3', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <polygon points="5,1 6.2,3.8 9.5,4.1 7.2,6.2 8,9.5 5,7.8 2,9.5 2.8,6.2 0.5,4.1 3.8,3.8" fill="white"/>
-                      </svg>
-                    </div>
-                    <span style={{ fontSize:11, color:'#2471a3', fontFamily:'var(--mono)', fontWeight:500, whiteSpace:'nowrap' }}>State of MN</span>
-                  </div>
-                </div>
-                <p style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:60, letterSpacing:'-0.04em', color:'var(--text)', margin:'0 0 5px', lineHeight:1 }}>$248K</p>
-                <p style={{ fontFamily:'var(--mono)', fontSize:11.5, textTransform:'uppercase', letterSpacing:'0.14em', color:'var(--text-3)', margin:'0 0 24px' }}>Research Grant · Non-Dilutive</p>
-                <p style={{ fontSize:13, fontStyle:'italic', color:'var(--text-3)', margin:'0 0 16px', paddingLeft:14, borderLeft:'2px solid rgba(36,113,163,0.38)', lineHeight:1.55 }}>
-                  Minnesota Partnership for Biotechnology<br/>and Medical Genomics
-                </p>
-                <p style={{ fontSize:13.5, lineHeight:1.7, color:'var(--text-2)', margin:'0 0 24px' }}>
-                  Awarded by the Minnesota Partnership — a tripartite initiative of the University of Minnesota,
-                  Mayo Clinic, and the State of Minnesota — funding breakthrough innovation in
-                  biomedical technology and medical genomics.
-                </p>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
-                  {['Non-Dilutive Capital', 'Medical Genomics', 'Public-University Grant'].map(tag => (
-                    <span key={tag} style={{ padding:'4px 10px', borderRadius:6, background:'rgba(36,113,163,0.06)', border:'1px solid rgba(36,113,163,0.15)', fontSize:11, color:'rgba(100,170,210,0.75)', fontFamily:'var(--mono)' }}>{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Summary bar */}
-          <div style={{ padding:'18px 28px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:14, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ width:7, height:7, borderRadius:'50%', background:'var(--sage)', boxShadow:'0 0 0 3px rgba(61,204,145,0.18)', flexShrink:0, display:'inline-block' }} />
-              <span style={{ fontSize:13.5, color:'var(--text-2)' }}>
-                $348K in institutional capital secured before seed round opens — accelerator investment plus non-dilutive grant
-              </span>
-            </div>
-            <div style={{ display:'flex', gap:28, flexShrink:0 }}>
-              {[
-                { val:'$348K', label:'Secured' },
-                { val:'4', label:'Institutions' },
-                { val:'$248K', label:'Non-Dilutive' },
-              ].map(m => (
-                <div key={m.label} style={{ textAlign:'center' }}>
-                  <p style={{ fontFamily:'var(--mono)', fontSize:13, fontWeight:600, color:'var(--text)', margin:'0 0 1px', lineHeight:1 }}>{m.val}</p>
-                  <p style={{ fontSize:10, color:'var(--text-3)', fontFamily:'var(--mono)', textTransform:'uppercase', letterSpacing:'0.1em', margin:0 }}>{m.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── INVESTMENT TERMS ── */}
       <section id="raise" style={{ borderBottom:'1px solid var(--line)', padding:'72px 44px' }}>
         <div style={{ maxWidth:1280, margin:'0 auto' }}>
@@ -929,16 +921,16 @@ export default function InvestPage() {
                 Investment Terms <em>&amp; Return Path</em>
               </h2>
               <p style={{ fontSize:15, lineHeight:1.7, color:'var(--text-2)', marginBottom:32 }}>
-                Raising $2M to complete the Minneapolis pilot, achieve first revenue,
+                Raising $4.5M to complete the Minneapolis pilot, achieve first revenue,
                 and position for FDA Breakthrough Device Designation — with a clear 18-month
                 path to Series A at demonstrated clinical outcomes.
               </p>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
                 {[
-                  { value:'$2M', label:'Target Raise', sub:'Seed round' },
-                  { value:'$10M', label:'Pre-Money', sub:'Valuation' },
-                  { value:'$12M', label:'Post-Money', sub:'Valuation' },
-                  { value:'~17%', label:'Investor Equity', sub:'Priced round' },
+                  { value:'$4.5M', label:'Target Raise', sub:'Seed round' },
+                  { value:'$14M', label:'Pre-Money', sub:'Valuation' },
+                  { value:'$18.5M', label:'Post-Money', sub:'Valuation' },
+                  { value:'~24%', label:'Investor Equity', sub:'Priced round' },
                 ].map(s => (
                   <div key={s.label} style={{ padding:'18px 20px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:12 }}>
                     <p style={{ fontFamily:'var(--serif)', fontWeight:300, fontSize:30, letterSpacing:'-0.03em', margin:'0 0 4px', lineHeight:1 }}>{s.value}</p>
@@ -952,10 +944,10 @@ export default function InvestPage() {
               <p style={{ fontFamily:'var(--mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'0.12em', color:'var(--text-3)', marginBottom:16 }}>Use of Funds</p>
               <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
                 {[
-                  { label:'Engineering & AI Platform', pct:35, color:'#2D72D2', amount:'$700K' },
-                  { label:'Clinical Pilot & Operations', pct:35, color:'#3DCC91', amount:'$700K' },
-                  { label:'Regulatory & IP Prosecution', pct:20, color:'#FFC940', amount:'$400K' },
-                  { label:'G&A, Legal & Compliance', pct:10, color:'#FF6B6B', amount:'$200K' },
+                  { label:'Engineering & AI Platform', pct:40, color:'#2D72D2', amount:'$1.8M' },
+                  { label:'Clinical Pilot & Operations', pct:30, color:'#3DCC91', amount:'$1.35M' },
+                  { label:'Regulatory & IP Prosecution', pct:20, color:'#FFC940', amount:'$0.9M' },
+                  { label:'G&A, Legal & Compliance', pct:10, color:'#FF6B6B', amount:'$0.45M' },
                 ].map(f => (
                   <div key={f.label}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
@@ -970,7 +962,7 @@ export default function InvestPage() {
               </div>
               <div style={{ marginTop:24, padding:'16px 18px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:10 }}>
                 <p style={{ fontFamily:'var(--mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'0.12em', color:'var(--text-3)', margin:'0 0 5px' }}>Lead Investor</p>
-                <p style={{ fontSize:13, color:'var(--text-2)', margin:0, lineHeight:1.6 }}>Seeking a $500K–$1.5M lead check. Strategic partners with digital health, medtech, or senior care experience preferred.</p>
+                <p style={{ fontSize:13, color:'var(--text-2)', margin:0, lineHeight:1.6 }}>Seeking a $1M–$2.5M lead check. Strategic partners with digital health, medtech, or senior care experience preferred.</p>
               </div>
             </div>
           </div>
@@ -979,9 +971,9 @@ export default function InvestPage() {
             <p style={{ fontFamily:'var(--mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'0.12em', color:'var(--text-3)', marginBottom:20 }}>Valuation Path &amp; Investor Returns</p>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:20 }}>
               {[
-                { label:'Seed Post-Money', value:'$12M', sub:'2026 · Baseline', mult:'1×', color:'var(--text-2)' },
-                { label:'Series A Pre-Money', value:'$35M', sub:'18 months post-seed', mult:'~3× seed', color:'var(--accent)' },
-                { label:'Exit Target (Yr 5)', value:'$150M+', sub:'Acquisition or IPO', mult:'12–15× seed', color:'var(--sage)' },
+                { label:'Seed Post-Money', value:'$18.5M', sub:'2026 · Baseline', mult:'1×', color:'var(--text-2)' },
+                { label:'Series A Pre-Money', value:'$55M', sub:'18 months post-seed', mult:'~3× seed', color:'var(--accent)' },
+                { label:'Exit Target (Yr 5)', value:'$200M+', sub:'Acquisition or IPO', mult:'10–15× seed', color:'var(--sage)' },
               ].map(v => (
                 <div key={v.label} style={{ padding:'24px', background:'var(--surface-1)', border:'1px solid var(--line)', borderRadius:14, textAlign:'center' }}>
                   <p style={{ fontFamily:'var(--mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'0.12em', color:'var(--text-3)', margin:'0 0 10px' }}>{v.label}</p>
@@ -1003,7 +995,7 @@ export default function InvestPage() {
                 { q:'Q1 2027', title:'FDA Filing', body:'Breakthrough Device Designation application submitted. 510(k) de novo pathway initiated.', color:'#FFC940', icon:'◈' },
                 { q:'Q2 2027', title:'Mfg. Scale-Up', body:'Sensor node manufacturing partner selected. Per-unit cost locked at volume pricing.', color:'#FF6B6B', icon:'⬡' },
                 { q:'Q2 2027', title:'IP Prosecution', body:'PCT national phase entries filed: US, EU, Japan. Co-filing with University of Minnesota OTC.', color:'#3DCC91', icon:'◎' },
-                { q:'Q3 2027', title:'Series A Raise', body:'$10M at $35M pre-money. Triggered by $1M+ ARR and peer-reviewed clinical validation.', color:'#2D72D2', icon:'◆' },
+                { q:'Q3 2027', title:'Series A Raise', body:'$15M at $55M pre-money. Triggered by $1M+ ARR and peer-reviewed clinical validation.', color:'#2D72D2', icon:'◆' },
                 { q:'Q4 2027', title:'Multi-State Ops', body:'10+ facilities across MN, WI, and IA. Channel partnerships with regional SNF operators.', color:'#FFC940', icon:'◉' },
                 { q:'2028', title:'510(k) Clearance', body:'FDA device clearance unlocks hospital-grade deployment and CMS reimbursement pathways.', color:'#FF6B6B', icon:'◈' },
               ].map((m, i) => (
