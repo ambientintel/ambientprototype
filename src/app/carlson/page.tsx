@@ -61,6 +61,170 @@ function SectionMeta({ n, label }: { n: string; label: string }) {
   );
 }
 
+function HowItWorksDiagram() {
+  const rx = 60, ry = 50, rw = 400, rh = 300;
+  const maroon = '#7A0019', accent = '#4F9CF9', gold = '#F0B429', green = '#3DCC91';
+  const personPath = 'M 200 200 C 170 160 130 185 155 245 C 175 300 255 308 305 258 C 350 208 328 138 278 118 C 228 98 185 155 200 200 Z';
+  const sNodes = [
+    { cx: rx,    cy: ry,    id: 'A', lx: rx+10,    ly: ry-10,    anchor: 'start' as const },
+    { cx: rx+rw, cy: ry,    id: 'B', lx: rx+rw-10, ly: ry-10,    anchor: 'end'   as const },
+    { cx: rx,    cy: ry+rh, id: 'C', lx: rx+10,    ly: ry+rh+18, anchor: 'start' as const },
+    { cx: rx+rw, cy: ry+rh, id: 'D', lx: rx+rw-10, ly: ry+rh+18, anchor: 'end'   as const },
+  ];
+  const pktPaths = [
+    `M ${rx} ${ry} Q 160 15 260 8`,
+    `M ${rx+rw} ${ry} Q 360 15 260 8`,
+    `M ${rx} ${ry+rh} Q 100 180 260 8`,
+    `M ${rx+rw} ${ry+rh} Q 420 180 260 8`,
+  ];
+  const pktColors = [accent, gold, green, maroon];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+      <svg viewBox="0 0 520 415" style={{ width: '100%', height: 'auto', display: 'block' }}>
+        <defs>
+          <filter id="hiw-glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="hiw-scan" x="-10%" y="-300%" width="120%" height="700%">
+            <feGaussianBlur stdDeviation="2.5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <clipPath id="hiw-clip">
+            <rect x={rx} y={ry} width={rw} height={rh}/>
+          </clipPath>
+          <radialGradient id="hiw-ca" cx="0%" cy="0%" r="100%">
+            <stop offset="0%" stopColor={accent} stopOpacity="0.16"/>
+            <stop offset="100%" stopColor={accent} stopOpacity="0"/>
+          </radialGradient>
+          <radialGradient id="hiw-cb" cx="100%" cy="0%" r="100%">
+            <stop offset="0%" stopColor={gold} stopOpacity="0.13"/>
+            <stop offset="100%" stopColor={gold} stopOpacity="0"/>
+          </radialGradient>
+          <radialGradient id="hiw-cc" cx="0%" cy="100%" r="100%">
+            <stop offset="0%" stopColor={green} stopOpacity="0.13"/>
+            <stop offset="100%" stopColor={green} stopOpacity="0"/>
+          </radialGradient>
+          <radialGradient id="hiw-cd" cx="100%" cy="100%" r="100%">
+            <stop offset="0%" stopColor={maroon} stopOpacity="0.15"/>
+            <stop offset="100%" stopColor={maroon} stopOpacity="0"/>
+          </radialGradient>
+          <linearGradient id="hiw-scanline" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={accent} stopOpacity="0"/>
+            <stop offset="45%" stopColor={accent} stopOpacity="0.8"/>
+            <stop offset="55%" stopColor={accent} stopOpacity="1"/>
+            <stop offset="100%" stopColor={accent} stopOpacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <rect width="520" height="415" fill="#080808"/>
+
+        {[0,1,2,3,4,5,6,7,8,9,10].flatMap(c => [0,1,2,3,4,5,6,7].map(r => (
+          <circle key={`d${c}-${r}`} cx={60+c*40} cy={50+r*43} r={0.9} fill="rgba(255,255,255,0.07)"/>
+        )))}
+
+        <rect x={rx} y={ry} width={rw} height={rh} fill="url(#hiw-ca)"/>
+        <rect x={rx} y={ry} width={rw} height={rh} fill="url(#hiw-cb)"/>
+        <rect x={rx} y={ry} width={rw} height={rh} fill="url(#hiw-cc)"/>
+        <rect x={rx} y={ry} width={rw} height={rh} fill="url(#hiw-cd)"/>
+
+        <g clipPath="url(#hiw-clip)">
+          <g transform={`translate(${rx},${ry})`}>
+            <line x1={0} y1={0} x2={0} y2={800} stroke={accent} strokeWidth={1.5} opacity={0.28}>
+              <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="5s" repeatCount="indefinite"/>
+            </line>
+            <line x1={0} y1={0} x2={0} y2={800} stroke={accent} strokeWidth={7} opacity={0.05}>
+              <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="5s" repeatCount="indefinite"/>
+            </line>
+          </g>
+          <g transform={`translate(${rx+rw},${ry+rh})`}>
+            <line x1={0} y1={0} x2={0} y2={-800} stroke={maroon} strokeWidth={1.5} opacity={0.25}>
+              <animateTransform attributeName="transform" type="rotate" from="180" to="-180" dur="7s" repeatCount="indefinite"/>
+            </line>
+            <line x1={0} y1={0} x2={0} y2={-800} stroke={maroon} strokeWidth={7} opacity={0.05}>
+              <animateTransform attributeName="transform" type="rotate" from="180" to="-180" dur="7s" repeatCount="indefinite"/>
+            </line>
+          </g>
+        </g>
+
+        <g clipPath="url(#hiw-clip)" filter="url(#hiw-scan)">
+          <rect x={rx} y={ry} width={rw} height={2} fill="url(#hiw-scanline)">
+            <animate attributeName="y" from={ry} to={ry+rh} dur="3.5s" repeatCount="indefinite"/>
+          </rect>
+          <rect x={rx} y={ry-26} width={rw} height={26} fill="url(#hiw-scanline)" opacity={0.09}>
+            <animate attributeName="y" from={ry-26} to={ry+rh} dur="3.5s" repeatCount="indefinite"/>
+          </rect>
+        </g>
+
+        <g clipPath="url(#hiw-clip)">
+          <circle r={6} fill="#FFFFFF" opacity={0.95} filter="url(#hiw-glow)">
+            <animateMotion dur="14s" repeatCount="indefinite" path={personPath}/>
+          </circle>
+          <circle r={3.5} fill="rgba(255,255,255,0.35)">
+            <animateMotion dur="14s" repeatCount="indefinite" begin="0.4s" path={personPath}/>
+          </circle>
+          <circle r={1.8} fill="rgba(255,255,255,0.15)">
+            <animateMotion dur="14s" repeatCount="indefinite" begin="0.8s" path={personPath}/>
+          </circle>
+        </g>
+
+        <rect x={rx} y={ry} width={rw} height={rh} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth={1}/>
+        <line x1={345} y1={ry} x2={345} y2={200} stroke="rgba(255,255,255,0.08)" strokeWidth={1}/>
+        <line x1={345} y1={200} x2={rx+rw} y2={200} stroke="rgba(255,255,255,0.08)" strokeWidth={1}/>
+
+        <text x={195} y={208} textAnchor="middle" fontFamily="monospace" fontSize={9} fill="rgba(255,255,255,0.12)" letterSpacing={4}>BEDROOM</text>
+        <text x={402} y={133} textAnchor="middle" fontFamily="monospace" fontSize={8} fill="rgba(255,255,255,0.1)" letterSpacing={3}>BATH</text>
+
+        {pktPaths.map((path, i) => (
+          <circle key={`pkt${i}`} r={2.5} fill={pktColors[i]} opacity={0.9}>
+            <animateMotion dur={`${2.2 + i*0.3}s`} begin={`${i*0.6}s`} repeatCount="indefinite" path={path}/>
+          </circle>
+        ))}
+
+        <g opacity={0.72} filter="url(#hiw-glow)">
+          <rect x={228} y={3} width={64} height={20} rx={3} fill="rgba(79,156,249,0.1)" stroke={accent} strokeWidth={0.8}/>
+          <text x={260} y={16.5} textAnchor="middle" fontFamily="monospace" fontSize={7} fill={accent} letterSpacing={1.5}>AWS · AI</text>
+        </g>
+
+        {sNodes.map((s) => (
+          <g key={s.id}>
+            {[0,1,2].map(j => (
+              <circle key={j} cx={s.cx} cy={s.cy} r={5} fill="none" stroke={maroon} strokeWidth={1.5}>
+                <animate attributeName="r" from="5" to="65" dur="3s" begin={`${j}s`} repeatCount="indefinite"/>
+                <animate attributeName="opacity" from="0.7" to="0" dur="3s" begin={`${j}s`} repeatCount="indefinite"/>
+                <animate attributeName="stroke-width" from="2" to="0.3" dur="3s" begin={`${j}s`} repeatCount="indefinite"/>
+              </circle>
+            ))}
+            <circle cx={s.cx} cy={s.cy} r={5} fill={maroon} opacity={0.9} filter="url(#hiw-glow)"/>
+            <circle cx={s.cx} cy={s.cy} r={2.2} fill="#FFFFFF" opacity={0.95}/>
+            <polyline
+              points={`${s.cx + (s.id==='B'||s.id==='D' ? -14 : 14)},${s.cy} ${s.cx},${s.cy} ${s.cx},${s.cy + (s.id==='C'||s.id==='D' ? -14 : 14)}`}
+              fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={1.2}
+            />
+            <text x={s.lx} y={s.ly} textAnchor={s.anchor} fontFamily="monospace" fontSize={7.5} fill="rgba(255,255,255,0.32)" letterSpacing={1.5}>
+              {`SENSOR ${s.id}`}
+            </text>
+          </g>
+        ))}
+
+        <g transform="translate(446,387)">
+          <circle r={3} fill={green}>
+            <animate attributeName="opacity" values="1;0.25;1" dur="1.5s" repeatCount="indefinite"/>
+          </circle>
+          <text x={9} y={4} fontFamily="monospace" fontSize={8} fill={green} letterSpacing={2}>LIVE</text>
+        </g>
+
+        <text x={62} y={388} fontFamily="monospace" fontSize={7.5} fill="rgba(255,255,255,0.18)" letterSpacing={1.5}>
+          COVERAGE: 100% · BEDROOM + BATH · PATENT PENDING
+        </text>
+      </svg>
+      <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.22)', margin: 0, textAlign: 'center' }}>
+        Fig. 8 — Sensor coverage · Patent pending · UMN OTC
+      </p>
+    </div>
+  );
+}
+
 /* ── Page ────────────────────────────────────────────────────────────────────── */
 export default function CarlsonPage() {
   return (
@@ -194,34 +358,7 @@ export default function CarlsonPage() {
                 ))}
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-              <div style={{ position: 'relative', overflow: 'hidden', border: `1px solid ${C.line}`, background: '#f5f6f8', width: '100%' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/figure8.png" alt="Isometric room diagram" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                <svg viewBox="0 0 752 1376" preserveAspectRatio="xMidYMid meet" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', display: 'block' }}>
-                  {([
-                    { cx: 175, cy: 62,   delay: 0.0, dur: 2.8 },
-                    { cx: 113, cy: 338,  delay: 0.6, dur: 2.4 },
-                    { cx: 525, cy: 398,  delay: 1.1, dur: 2.6 },
-                    { cx: 575, cy: 505,  delay: 0.4, dur: 2.5 },
-                    { cx: 638, cy: 714,  delay: 0.9, dur: 2.7 },
-                    { cx: 87,  cy: 1006, delay: 1.4, dur: 2.3 },
-                    { cx: 384, cy: 1192, delay: 0.7, dur: 2.6 },
-                  ] as Array<{ cx: number; cy: number; delay: number; dur: number }>).map((s, si) =>
-                    [0, 1, 2].map(j => (
-                      <circle key={`echo-${si}-${j}`} cx={s.cx} cy={s.cy} r={12} fill="none" stroke="#4F9CF9" strokeWidth={2.5}>
-                        <animate attributeName="r" from="12" to="130" dur={`${s.dur}s`} begin={`${(s.delay + j * s.dur / 3).toFixed(2)}s`} repeatCount="indefinite" />
-                        <animate attributeName="opacity" from="0.8" to="0" dur={`${s.dur}s`} begin={`${(s.delay + j * s.dur / 3).toFixed(2)}s`} repeatCount="indefinite" />
-                        <animate attributeName="stroke-width" from="3" to="0.4" dur={`${s.dur}s`} begin={`${(s.delay + j * s.dur / 3).toFixed(2)}s`} repeatCount="indefinite" />
-                      </circle>
-                    ))
-                  )}
-                </svg>
-              </div>
-              <p style={{ fontFamily: C.mono, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.14em', color: C.text4, margin: 0, textAlign: 'center' }}>
-                Fig. 8 — Sensor coverage · Patent pending · UMN OTC
-              </p>
-            </div>
+              <HowItWorksDiagram />
           </div>
         </div>
       </section>
