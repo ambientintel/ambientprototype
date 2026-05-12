@@ -85,7 +85,7 @@ export default function CarlsonPage() {
         .c-s { animation: fade-up 0.85s 0.4s ease both; }
         .c-p { animation: fade-up 0.85s 0.55s ease both; }
         .c-chip:hover { border-color:rgba(255,255,255,0.26)!important; color:rgba(240,241,242,0.88)!important; }
-        .c-primary:hover { background:#5d0012!important; }
+        .c-primary:hover { background:#5c0013!important; }
         .c-ghost:hover { border-color:rgba(255,255,255,0.24)!important; color:${C.text}!important; }
         .c-nav-link:hover { color:rgba(240,241,242,0.88)!important; }
         @media(max-width:960px){
@@ -109,7 +109,7 @@ export default function CarlsonPage() {
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <span style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4 }}>Founder&apos;s Day 2026</span>
-          <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', borderRadius: 2, background: C.maroon, color: '#fff', fontSize: 12, fontWeight: 500, textDecoration: 'none', letterSpacing: '0.02em', transition: 'background 0.15s' }}>
+          <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 20px', borderRadius: 6, background: C.maroon, color: '#fff', fontSize: 13, fontWeight: 500, textDecoration: 'none', letterSpacing: '0.01em', transition: 'background 0.15s' }}>
             Connect
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -121,7 +121,7 @@ export default function CarlsonPage() {
         <FlowGlowBg />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(8,8,8,0.52) 0%,rgba(7,9,14,0.08) 35%,rgba(7,9,14,0.08) 65%,rgba(8,8,8,0.90) 100%)', pointerEvents: 'none', zIndex: 1 }} />
         <div className="c-hero" style={{ position: 'relative', zIndex: 2, maxWidth: 1280, margin: '0 auto', padding: '148px 56px 120px', width: '100%' }}>
-          <p className="c-e" style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.24em', color: C.gold, margin: '0 0 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <p className="c-e" style={{ fontFamily: C.mono, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.gold, margin: '0 0 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: C.gold, animation: 'pulse-gold 2s ease-out infinite', flexShrink: 0 }} />
             Carlson School of Management &middot; University of Minnesota
           </p>
@@ -456,11 +456,11 @@ export default function CarlsonPage() {
             </p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start' }}>
-            <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: C.maroon, color: '#fff', borderRadius: 2, padding: '16px 36px', fontSize: 15, fontWeight: 500, textDecoration: 'none', transition: 'background 0.15s', letterSpacing: '0.01em' }}>
+            <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: C.maroon, color: '#fff', borderRadius: 6, padding: '16px 36px', fontSize: 15, fontWeight: 500, textDecoration: 'none', transition: 'background 0.15s', letterSpacing: '0.01em' }}>
               Get in Touch
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
-            <a href="https://www.ellamemory.com/" target="_blank" rel="noopener noreferrer" className="c-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, border: `1px solid ${C.lineStrg}`, color: C.text2, borderRadius: 2, padding: '16px 36px', fontSize: 15, fontWeight: 500, textDecoration: 'none', transition: 'border-color 0.15s, color 0.15s' }}>
+            <a href="https://www.ellamemory.com/" target="_blank" rel="noopener noreferrer" className="c-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, border: `1px solid ${C.lineStrg}`, color: C.text2, borderRadius: 6, padding: '16px 36px', fontSize: 15, fontWeight: 500, textDecoration: 'none', transition: 'border-color 0.15s, color 0.15s' }}>
               Explore Ella Memory
             </a>
           </div>
