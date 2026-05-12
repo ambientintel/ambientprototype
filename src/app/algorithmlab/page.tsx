@@ -267,6 +267,63 @@ function interpCadence(c: number) { return c === 0 ? { text: 'No walking', c: C.
 function interpStepCV(cv: number) { return cv === 0 ? { text: 'No data', c: C.text3 } : cv < 2 ? { text: 'Very regular', c: C.sage } : cv < 4 ? { text: 'Normal variability', c: C.amber } : cv < 6 ? { text: 'Borderline', c: C.coral } : { text: 'Elevated — caution', c: C.red }; }
 function interpMET(met: number) { return met < 1.6 ? { text: 'Sedentary', c: C.purple } : met < 3.0 ? { text: 'Light activity', c: C.accent } : met < 6.0 ? { text: 'Moderate', c: C.sage } : { text: 'Vigorous', c: C.gold }; }
 
+// ── Fall detection synthetic data ─────────────────────────────
+const FALL_RNG = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+function generateFallScenario(type: 'fall' | 'sit' | 'bend' | 'recovery'): { t: number; h: number }[] {
+  const total = 100;
+  const nr = (s: number, a: number) => (FALL_RNG(s) - 0.5) * a;
+  return Array.from({ length: total }, (_, i) => {
+    const t = Math.round(i / 10 * 10) / 10;
+    let h: number;
+    if (type === 'fall') {
+      if (i < 30) h = 1.70 + nr(i, 0.02);
+      else if (i < 35) h = 1.70 - (i - 30) * 0.28 + nr(i, 0.02);
+      else h = 0.30 + nr(i, 0.02);
+    } else if (type === 'sit') {
+      if (i < 20) h = 1.70 + nr(i, 0.015);
+      else if (i < 60) h = 1.70 - (i - 20) * 0.02 + nr(i, 0.015);
+      else h = 0.90 + nr(i, 0.015);
+    } else if (type === 'bend') {
+      if (i < 20) h = 1.70 + nr(i, 0.015);
+      else if (i < 25) h = 1.70 - (i - 20) * 0.08 + nr(i, 0.015);
+      else if (i < 35) h = 1.30 + nr(i, 0.015);
+      else if (i < 40) h = 1.30 + (i - 35) * 0.08 + nr(i, 0.015);
+      else h = 1.70 + nr(i, 0.015);
+    } else {
+      if (i < 20) h = 1.70 + nr(i, 0.02);
+      else if (i < 25) h = 1.70 - (i - 20) * 0.28 + nr(i, 0.02);
+      else if (i < 55) h = 0.30 + nr(i, 0.02);
+      else if (i < 65) h = 0.30 + (i - 55) * 0.14 + nr(i, 0.02);
+      else h = 1.70 + nr(i * 2, 0.02);
+    }
+    return { t, h: Math.max(0.08, Math.round(h * 1000) / 1000) };
+  });
+}
+function runFallDetector(
+  series: { t: number; h: number }[],
+  theta: number, winSec: number, fps = 10
+): { t: number; h: number; reference: number; threshold: number; fallen: boolean; event: boolean }[] {
+  const bufLen = Math.max(2, Math.round(winSec * fps));
+  const buf = Array(bufLen).fill(-5.0);
+  let idx = 0, fallenLast = false;
+  return series.map(({ t, h }) => {
+    buf[idx % bufLen] = h;
+    const ref = buf[(idx + 1) % bufLen];
+    const fallen = ref > 0 && h < theta * ref;
+    const event = fallen && !fallenLast;
+    fallenLast = fallen;
+    idx++;
+    return { t, h, reference: ref <= 0 ? 0 : Math.round(ref * 1000) / 1000, threshold: ref > 0 ? Math.max(0, Math.round(theta * ref * 1000) / 1000) : 0, fallen, event };
+  });
+}
+type FallScenarioKey = 'fall' | 'sit' | 'bend' | 'recovery';
+const FALL_SCENARIO_DATA: Record<FallScenarioKey, { t: number; h: number }[]> = {
+  fall:     generateFallScenario('fall'),
+  sit:      generateFallScenario('sit'),
+  bend:     generateFallScenario('bend'),
+  recovery: generateFallScenario('recovery'),
+};
+
 // ── Complexity Suite algorithms ────────────────────────────────
 
 // 1 · Cyclomatic Complexity — movement graph branching
@@ -857,7 +914,8 @@ type LongitudinalAlgoId = 'timeline' | 'correlation' | 'health_calendar' | 'risk
 type RadarAlgoId    = 'radar_signal' | 'height_trace' | 'point_density';
 type GaitAlgoId     = 'step_detection' | 'gait_speed' | 'cadence' | 'gait_variability';
 type METAlgoId      = 'activity_class' | 'met_timeline' | 'energy_expenditure' | 'intensity_zones';
-type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId | SleepAlgoId | SedentaryAlgoId | AutonomicAlgoId | MetabolicAlgoId | LongitudinalAlgoId | RadarAlgoId | GaitAlgoId | METAlgoId;
+type FallAlgoId     = 'fall_detector' | 'fall_confidence' | 'fall_scenarios' | 'fall_calibration';
+type AlgoId = SignalAlgoId | ComplexAlgoId | ActivityAlgoId | PredictiveAlgoId | SleepAlgoId | SedentaryAlgoId | AutonomicAlgoId | MetabolicAlgoId | LongitudinalAlgoId | RadarAlgoId | GaitAlgoId | METAlgoId | FallAlgoId;
 const isComplex     = (a: AlgoId): a is ComplexAlgoId     =>
   ['cc','dfa','sample_entropy','perm_entropy','hurst','fingerprint'].includes(a);
 const isActivity    = (a: AlgoId): a is ActivityAlgoId    =>
@@ -877,6 +935,7 @@ const isLongitudinal = (a: AlgoId): a is LongitudinalAlgoId =>
 const isRadar    = (a: AlgoId): a is RadarAlgoId    => ['radar_signal','height_trace','point_density'].includes(a);
 const isGait     = (a: AlgoId): a is GaitAlgoId     => ['step_detection','gait_speed','cadence','gait_variability'].includes(a);
 const isMET      = (a: AlgoId): a is METAlgoId      => ['activity_class','met_timeline','energy_expenditure','intensity_zones'].includes(a);
+const isFall     = (a: AlgoId): a is FallAlgoId     => ['fall_detector','fall_confidence','fall_scenarios','fall_calibration'].includes(a);
 
 const SIGNAL_ALGOS: { id: SignalAlgoId; label: string; color: string }[] = [
   { id: 'moving_avg',  label: 'Moving Average',        color: C.sage   },
@@ -954,6 +1013,12 @@ const MET_ALGOS: { id: METAlgoId; label: string; color: string; sub: string }[] 
   { id: 'energy_expenditure', label: 'Energy Expenditure',   color: C.gold,   sub: 'kcal · daily projection · 70 kg' },
   { id: 'intensity_zones',    label: 'Intensity Zones',      color: C.purple, sub: 'Sedentary · light · moderate · vigorous' },
 ];
+const FALL_ALGOS: { id: FallAlgoId; label: string; color: string; sub: string }[] = [
+  { id: 'fall_detector',    label: 'Sliding Window',        color: C.red,    sub: 'Height buffer · threshold detection' },
+  { id: 'fall_confidence',  label: 'Confidence Formula',    color: C.coral,  sub: 'Normalised depth · [0.5, 1.0] mapping' },
+  { id: 'fall_scenarios',   label: 'Scenario Library',      color: C.amber,  sub: 'True fall · sit · bend · recovery' },
+  { id: 'fall_calibration', label: 'Threshold Calibration', color: C.gold,   sub: 'θ sensitivity · false positive rate' },
+];
 
 // ── Ambient Index taxonomy map ────────────────────────────────
 const ALGO_INDEX_MAP: Partial<Record<AlgoId, { name: string; short: string; color: string }>> = {
@@ -983,6 +1048,10 @@ const ALGO_INDEX_MAP: Partial<Record<AlgoId, { name: string; short: string; colo
   gait_speed:          { name: 'AmbientGaitIndex',      short: 'Gait',      color: C.accent },
   cadence:             { name: 'AmbientGaitIndex',      short: 'Gait',      color: C.accent },
   gait_variability:    { name: 'AmbientGaitIndex',      short: 'Gait',      color: C.accent },
+  fall_detector:       { name: 'AmbientFallDetection',  short: 'Fall',      color: C.red    },
+  fall_confidence:     { name: 'AmbientFallDetection',  short: 'Fall',      color: C.red    },
+  fall_scenarios:      { name: 'AmbientFallDetection',  short: 'Fall',      color: C.red    },
+  fall_calibration:    { name: 'AmbientFallDetection',  short: 'Fall',      color: C.red    },
 };
 
 // ── Interpretation helpers ────────────────────────────────────
@@ -1148,6 +1217,13 @@ export default function AlgorithmLabPage() {
   const [radarFrames, setRadarFrames] = useState<RadarFrame[]>(RADAR_FRAMES);
   const [radarUploaded, setRadarUploaded] = useState(false);
   const radarInputRef = useRef<HTMLInputElement>(null);
+
+  // Fall detection state
+  const [fallTheta, setFallTheta]         = useState(0.6);
+  const [fallWinSec, setFallWinSec]       = useState(1.5);
+  const [fallScenario, setFallScenario]   = useState<FallScenarioKey>('fall');
+  const [fallRefH, setFallRefH]           = useState(1.70);
+  const [fallCurrH, setFallCurrH]         = useState(0.30);
 
   const raw = useMemo(() => RAW.slice(0, visPoints), [visPoints]);
   const p2  = (v: number) => v.toFixed(2);
@@ -1345,6 +1421,21 @@ export default function AlgorithmLabPage() {
   const inRadar        = isRadar(algo);
   const inGait         = isGait(algo);
   const inMET          = isMET(algo);
+  const inFall         = isFall(algo);
+  const fallDetectorData = useMemo(() => runFallDetector(FALL_SCENARIO_DATA[fallScenario], fallTheta, fallWinSec), [fallScenario, fallTheta, fallWinSec]);
+  const fallConfCurve    = useMemo(() => Array.from({ length: 101 }, (_, i) => {
+    const curr = (1 - i / 100) * fallRefH;
+    const nd = Math.max(0, 1 - curr / (fallTheta * fallRefH));
+    const conf = Math.min(1.0, 0.5 + 0.5 * nd);
+    return { curr: Math.round(curr * 1000) / 1000, confidence: Math.round(conf * 1000) / 1000, threshold: i / 100 >= (1 - fallTheta) };
+  }), [fallTheta, fallRefH]);
+  const fallCalibData  = useMemo(() => Array.from({ length: 13 }, (_, i) => {
+    const theta = Math.round((0.3 + i * 0.05) * 100) / 100;
+    const truePos  = runFallDetector(FALL_SCENARIO_DATA['fall'],     theta, fallWinSec).filter(d => d.event).length;
+    const sitFires  = runFallDetector(FALL_SCENARIO_DATA['sit'],     theta, fallWinSec).filter(d => d.event).length;
+    const bendFires = runFallDetector(FALL_SCENARIO_DATA['bend'],    theta, fallWinSec).filter(d => d.event).length;
+    return { theta, truePos, sitFires, bendFires, fp: sitFires + bendFires };
+  }), [fallWinSec]);
   const radarSeries    = useMemo(() => radarHeightSeries(radarFrames), [radarFrames]);
   const radarEpochData = useMemo(() => radarEpochs(radarFrames), [radarFrames]);
   const metEpochData   = useMemo(() => radarMETEpochs(radarFrames), [radarFrames]);
@@ -1463,6 +1554,17 @@ export default function AlgorithmLabPage() {
           ))}
         </nav>
 
+        <nav className="nav-section">
+          <div className="nav-label" style={{ color: C.text3 }}>Fall Detection</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.red, padding: '0 8px', marginBottom: 6, marginTop: -6, letterSpacing: '0.04em' }}>AmbientFallDetection</div>
+          {FALL_ALGOS.map(a => (
+            <button key={a.id} className={`nav-item${algo === a.id ? ' active' : ''}`} onClick={() => setAlgo(a.id)} style={{ color: algo === a.id ? a.color : undefined }}>
+              <svg className="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="8" cy="8" r="1.5" fill={algo === a.id ? a.color : 'currentColor'}/></svg>
+              <span style={{ flex: 1, textAlign: 'left' }}>{a.label}</span>
+            </button>
+          ))}
+        </nav>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px 6px', margin: '4px 0 0' }}>
           <div style={{ flex: 1, height: 1, background: C.line }} />
           <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, letterSpacing: '0.12em', textTransform: 'uppercase', userSelect: 'none' }}>archive</span>
@@ -1502,7 +1604,7 @@ export default function AlgorithmLabPage() {
         <header className="topbar" style={{ marginBottom: 32 }}>
           <div>
             <div className="crumb">
-              Ambient Intelligence · {currentAlgoIndex ? currentAlgoIndex.name : inRadar ? 'Radar · Height Signal · Phase Timeline · Point Density' : inMET ? 'METs & Energy · Activity Classes · MET Timeline · Energy · Intensity Zones' : inAutonomic ? 'Autonomic · LF/HF · Poincaré · Stress · 24h' : inLongitudinal ? 'Longitudinal · Timeline · Correlation · Calendar' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}
+              Ambient Intelligence · {currentAlgoIndex ? currentAlgoIndex.name : inFall ? 'Fall Detection · Sliding Window · Confidence · Scenarios · Calibration' : inRadar ? 'Radar · Height Signal · Phase Timeline · Point Density' : inMET ? 'METs & Energy · Activity Classes · MET Timeline · Energy · Intensity Zones' : inAutonomic ? 'Autonomic · LF/HF · Poincaré · Stress · 24h' : inLongitudinal ? 'Longitudinal · Timeline · Correlation · Calendar' : inComplex ? 'Complexity Suite · CC · DFA · Entropy · Hurst' : 'Signal Processing'}
             </div>
             <h1 className="page-title">Algorithm <em>Lab</em></h1>
             {currentAlgoIndex && (
@@ -1602,6 +1704,13 @@ export default function AlgorithmLabPage() {
             { label: 'CUSUM Alert',  value: cusumResult.detectedAt !== null ? `t=${cusumResult.detectedAt}` : 'None', color: cusumResult.detectedAt !== null ? C.red : C.sage },
             { label: 'Mean',         value: mn(raw).toFixed(2),                    color: C.text2  },
             { label: 'Std Dev',      value: sd(raw).toFixed(2),                    color: C.text2  },
+          ] : inFall ? [
+            { label: 'Default θ',    value: '0.6',              color: C.red   },
+            { label: 'Window',       value: '1.5 s',            color: C.text2 },
+            { label: 'Buffer',       value: '27 frames',        color: C.amber },
+            { label: '1.7→0.3m',     value: '0.853 conf',       color: C.red   },
+            { label: 'Algorithm',    value: 'sliding-window',   color: C.text3 },
+            { label: 'Frame Rate',   value: '18.18 Hz',         color: C.text3 },
           ] : inActivity ? [
             { label: 'Epochs',       value: '288',                                           color: C.accent },
             { label: 'ASTP',         value: fragResult.astp.toString(),                      color: interpASTP(fragResult.astp).c },
@@ -3887,10 +3996,222 @@ export default function AlgorithmLabPage() {
             })()}
           </>}
 
+          {inFall && <>
+
+            {/* ── fall_detector ── */}
+            {algo === 'fall_detector' && (() => {
+              const events = fallDetectorData.filter(d => d.event);
+              const lastEvent = events[events.length - 1];
+              return (
+                <>
+                  <div className="ctrl-panel" style={{ marginBottom: 20 }}>
+                    <div className="ctrl-group">
+                      <div className="ctrl-group-label">Scenario</div>
+                      {(['fall','sit','bend','recovery'] as FallScenarioKey[]).map(s => (
+                        <button key={s} onClick={() => setFallScenario(s)} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '4px 12px', borderRadius: 6, cursor: 'pointer', background: fallScenario === s ? `${C.red}22` : C.s2, border: `1px solid ${fallScenario === s ? C.red : C.line}`, color: fallScenario === s ? C.red : C.text3, marginRight: 6 }}>{s}</button>
+                      ))}
+                    </div>
+                    <div className="ctrl-group">
+                      <SliderRow label="Threshold θ" min={0.3} max={0.9} step={0.05} value={fallTheta} fmt={v => v.toFixed(2)} onChange={setFallTheta} />
+                      <SliderRow label="Window (s)" min={0.5} max={5.0} step={0.5} value={fallWinSec} fmt={v => `${v}s`} onChange={setFallWinSec} />
+                    </div>
+                  </div>
+                  <ChartCard title="Sliding Window Fall Detector" sub={`θ = ${fallTheta} · window = ${fallWinSec}s · ${Math.round(fallWinSec * 10)} frames · scenario: ${fallScenario}`} badge={events.length ? `${events.length} fall event${events.length > 1 ? 's' : ''}` : 'no events'} badgeColor={events.length ? C.red : C.sage} full>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <ComposedChart data={fallDetectorData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                        <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                        <XAxis dataKey="t" tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                        <YAxis domain={[0, 2]} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={36} tickFormatter={(v: number) => `${v}m`} />
+                        <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${v}m`] as [string]} labelFormatter={(l: unknown) => `t = ${l}s`} />
+                        {fallDetectorData.filter(d => d.fallen).map((d, i, arr) => {
+                          if (i === 0 || !arr[i-1].fallen) return <ReferenceArea key={d.t} x1={d.t} x2={d.t + 0.1} fill={`${C.red}18`} />;
+                          return null;
+                        })}
+                        <Area type="monotone" dataKey="threshold" stroke="none" fill={`${C.red}0A`} name="Threshold zone" />
+                        <Line type="monotone" dataKey="reference" stroke={C.text3} strokeWidth={1.5} dot={false} strokeDasharray="4 3" name="Reference h(t-W)" />
+                        <Line type="monotone" dataKey="threshold" stroke={C.amber} strokeWidth={1.5} dot={false} strokeDasharray="6 3" name={`θ × reference (${fallTheta}×)`} />
+                        <Line type="monotone" dataKey="h" stroke={C.accent} strokeWidth={2.5} dot={false} name="Height h(t)" />
+                        {events.map(d => <ReferenceLine key={d.t} x={d.t} stroke={C.red} strokeWidth={2} label={{ value: '⚡', position: 'top', fill: C.red, fontSize: 14 }} />)}
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 16 }}>
+                      {[
+                        { label: 'Events', value: events.length.toString(), desc: 'edge-triggered' },
+                        { label: 'Fall time', value: lastEvent ? `t = ${lastEvent.t}s` : '—', desc: 'first fall onset' },
+                        { label: 'Min height', value: `${Math.min(...fallDetectorData.map(d => d.h)).toFixed(2)}m`, desc: 'during scenario' },
+                        { label: 'Frames fallen', value: fallDetectorData.filter(d => d.fallen).length.toString(), desc: `of ${fallDetectorData.length}` },
+                      ].map(m => (
+                        <div key={m.label} style={{ padding: '12px 16px', background: C.s2, borderRadius: 8 }}>
+                          <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 26, color: C.text, marginBottom: 2 }}>{m.value}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{m.label}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, marginTop: 4 }}>{m.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </ChartCard>
+                  <ChartCard title="Buffer State" sub="Height of the reference slot (oldest in the rolling window) vs. current height" badge="warmup guard active" badgeColor={C.text4}>
+                    <ResponsiveContainer width="100%" height={160}>
+                      <ComposedChart data={fallDetectorData.slice(0, 30)} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                        <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                        <XAxis dataKey="t" tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} />
+                        <YAxis domain={[0, 2]} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={36} />
+                        <Tooltip contentStyle={TT_STYLE} />
+                        <Line type="monotone" dataKey="h" stroke={C.accent} strokeWidth={2} dot={false} name="h(t) current" />
+                        <Line type="monotone" dataKey="reference" stroke={C.text3} strokeWidth={1.5} dot={false} strokeDasharray="4 3" name="h(t−W) reference" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 14, lineHeight: 1.8 }}>
+                      The reference slot is the oldest value in the {Math.round(fallWinSec * 10)}-frame buffer. Until the buffer fills ({fallWinSec}s of real data), the reference is the sentinel (−5 m) — making the threshold −{(fallTheta * 5).toFixed(1)} m. Since no real height is that low, falls cannot fire during warmup.
+                    </div>
+                  </ChartCard>
+                </>
+              );
+            })()}
+
+            {/* ── fall_confidence ── */}
+            {algo === 'fall_confidence' && (() => {
+              const thetaThreshH = fallTheta * fallRefH;
+              const nd = Math.max(0, 1 - fallCurrH / thetaThreshH);
+              const conf = Math.min(1.0, Math.max(0.5, 0.5 + 0.5 * nd));
+              const interpConf = (c: number) => c >= 0.95 ? { text: 'Very high', c: C.red } : c >= 0.85 ? { text: 'High', c: C.coral } : c >= 0.70 ? { text: 'Moderate-high', c: C.amber } : { text: 'Minimum', c: C.text3 };
+              const ci = interpConf(conf);
+              return (
+                <>
+                  <div className="ctrl-panel" style={{ marginBottom: 20 }}>
+                    <div className="ctrl-group">
+                      <SliderRow label="Reference height (m)" min={0.5} max={2.2} step={0.05} value={fallRefH} fmt={v => `${v.toFixed(2)}m`} onChange={setFallRefH} />
+                      <SliderRow label="Current height (m)"   min={0.05} max={1.9} step={0.05} value={fallCurrH} fmt={v => `${v.toFixed(2)}m`} onChange={v => setFallCurrH(Math.min(v, fallRefH - 0.05))} />
+                      <SliderRow label="Threshold θ"          min={0.3} max={0.9} step={0.05} value={fallTheta} fmt={v => v.toFixed(2)} onChange={setFallTheta} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 20 }}>
+                    <MetricBadge label="Confidence" value={conf.toFixed(3)} interp={ci} />
+                    <MetricBadge label="Normalised depth" value={nd.toFixed(3)} unit="↓" interp={nd >= 0.8 ? { text: 'Near floor', c: C.red } : nd >= 0.5 ? { text: 'Clear fall', c: C.coral } : nd > 0 ? { text: 'Above floor', c: C.amber } : { text: 'At threshold', c: C.text3 }} />
+                    <MetricBadge label="Drop" value={`${fallRefH.toFixed(2)}→${fallCurrH.toFixed(2)}`} unit="m" interp={{ text: `θ × ref = ${thetaThreshH.toFixed(2)}m`, c: fallCurrH < thetaThreshH ? C.red : C.text3 }} />
+                  </div>
+                  <ChartCard title="Confidence Curve" sub={`confidence = 0.5 + 0.5 × clamp(1 − h_curr / (θ × h_ref), 0, 1)  ·  θ = ${fallTheta} · h_ref = ${fallRefH}m`} full>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <ComposedChart data={fallConfCurve} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                        <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                        <XAxis dataKey="curr" tickFormatter={(v: number) => `${v}m`} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} label={{ value: 'Current height h(t)', position: 'insideBottom', offset: -4, fill: C.text3, fontFamily: 'var(--mono)', fontSize: 10 }} />
+                        <YAxis domain={[0.45, 1.05]} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={44} />
+                        <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [`${v}`, 'confidence'] as [string,string]} labelFormatter={(l: unknown) => `h = ${l}m`} />
+                        <ReferenceArea x1={fallTheta * fallRefH} x2={fallRefH} fill={`${C.text4}18`} label={{ value: 'no-fall zone', position: 'center', fill: C.text4, fontFamily: 'var(--mono)', fontSize: 9 }} />
+                        <ReferenceLine x={fallTheta * fallRefH} stroke={C.amber} strokeDasharray="5 3" label={{ value: `θ×ref = ${thetaThreshH.toFixed(2)}m`, position: 'top', fill: C.amber, fontFamily: 'var(--mono)', fontSize: 9 }} />
+                        <ReferenceLine x={fallCurrH} stroke={C.red} strokeWidth={2} label={{ value: `curr = ${fallCurrH.toFixed(2)}m → ${conf.toFixed(3)}`, position: 'top', fill: C.red, fontFamily: 'var(--mono)', fontSize: 9 }} />
+                        <ReferenceLine y={0.5} stroke={C.line} strokeDasharray="4 3" />
+                        <Line type="monotone" dataKey="confidence" stroke={C.coral} strokeWidth={2.5} dot={false} name="Confidence" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 16 }}>
+                      {[
+                        { h: fallTheta * fallRefH, label: 'At threshold', desc: `conf = 0.500` },
+                        { h: fallRefH * fallTheta * 0.6, label: 'Midway fall', desc: `conf ≈ ${(0.5 + 0.5 * (1 - (fallRefH * fallTheta * 0.6) / (fallTheta * fallRefH))).toFixed(3)}` },
+                        { h: 0.30, label: '0.30 m (floor)', desc: `conf = ${Math.min(1, Math.max(0.5, 0.5 + 0.5 * Math.max(0, 1 - 0.30 / (fallTheta * fallRefH)))).toFixed(3)}` },
+                        { h: 0.05, label: '0.05 m (flat)', desc: `conf = ${Math.min(1, Math.max(0.5, 0.5 + 0.5 * Math.max(0, 1 - 0.05 / (fallTheta * fallRefH)))).toFixed(3)}` },
+                      ].map(m => (
+                        <div key={m.label} style={{ padding: '12px 16px', background: C.s2, borderRadius: 8 }}>
+                          <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 22, color: C.text, marginBottom: 2 }}>{m.h.toFixed(2)}m</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{m.label}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, marginTop: 4 }}>{m.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </ChartCard>
+                </>
+              );
+            })()}
+
+            {/* ── fall_scenarios ── */}
+            {algo === 'fall_scenarios' && (() => {
+              const scenarios: { key: FallScenarioKey; label: string; desc: string; expect: string }[] = [
+                { key: 'fall',     label: 'True Fall',    desc: '1.70 m → 0.30 m in 0.5 s', expect: 'fires' },
+                { key: 'sit',      label: 'Slow Sit',     desc: '1.70 m → 0.90 m over 4 s', expect: 'fires (known limitation)' },
+                { key: 'bend',     label: 'Bending',      desc: '1.70 m → 1.30 m brief dip', expect: 'no fire' },
+                { key: 'recovery', label: 'Fall + Recovery', desc: '1.70→0.30 m, recover to 1.70 m', expect: 'fires once, then resets' },
+              ];
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  {scenarios.map(sc => {
+                    const data = runFallDetector(FALL_SCENARIO_DATA[sc.key], fallTheta, fallWinSec);
+                    const evts = data.filter(d => d.event);
+                    const fired = evts.length > 0;
+                    const isLP = sc.expect.includes('no fire');
+                    return (
+                      <ChartCard key={sc.key} title={sc.label} sub={sc.desc} badge={fired ? `${evts.length} event${evts.length > 1 ? 's' : ''}` : 'no events'} badgeColor={isLP ? (fired ? C.amber : C.sage) : (fired ? C.red : C.text3)}>
+                        <ResponsiveContainer width="100%" height={160}>
+                          <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+                            <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                            <XAxis dataKey="t" tickFormatter={(v: number) => `${v}s`} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text3 }} tickLine={false} axisLine={false} />
+                            <YAxis domain={[0, 2]} tick={{ fontFamily: 'var(--mono)', fontSize: 9, fill: C.text3 }} tickLine={false} axisLine={false} width={30} />
+                            <Tooltip contentStyle={TT_STYLE} />
+                            <Line type="monotone" dataKey="threshold" stroke={C.amber} strokeWidth={1} dot={false} strokeDasharray="4 2" name="θ×ref" />
+                            <Line type="monotone" dataKey="h" stroke={C.accent} strokeWidth={2} dot={false} name="height" />
+                            {evts.map(d => <ReferenceLine key={d.t} x={d.t} stroke={C.red} strokeWidth={1.5} />)}
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{sc.expect}</span>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '3px 10px', borderRadius: 999, background: isLP ? (fired ? `${C.amber}20` : `${C.sage}20`) : (fired ? `${C.red}20` : `${C.text4}14`), color: isLP ? (fired ? C.amber : C.sage) : (fired ? C.red : C.text4) }}>
+                            {fired ? `⚡ fired at t=${evts[0].t}s` : '— silent —'}
+                          </span>
+                        </div>
+                      </ChartCard>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* ── fall_calibration ── */}
+            {algo === 'fall_calibration' && (() => {
+              const currTheta = fallTheta;
+              const currRow = fallCalibData.find(d => Math.abs(d.theta - currTheta) < 0.001) ?? fallCalibData[6];
+              return (
+                <>
+                  <div className="ctrl-panel" style={{ marginBottom: 20 }}>
+                    <div className="ctrl-group">
+                      <SliderRow label="Threshold θ" min={0.3} max={0.9} step={0.05} value={fallTheta} fmt={v => v.toFixed(2)} onChange={setFallTheta} />
+                      <SliderRow label="Window (s)"  min={0.5} max={5.0} step={0.5}  value={fallWinSec} fmt={v => `${v}s`} onChange={setFallWinSec} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 20 }}>
+                    <MetricBadge label="True positives (fall)" value={currRow?.truePos.toString() ?? '—'} interp={currRow?.truePos ? { text: 'Fall detected', c: C.red } : { text: 'Missed', c: C.text3 }} />
+                    <MetricBadge label="Sit fires (FP)" value={currRow?.sitFires.toString() ?? '—'} interp={currRow?.sitFires ? { text: 'Slow sit triggers', c: C.amber } : { text: 'Silent', c: C.sage }} />
+                    <MetricBadge label="Bend fires (FP)" value={currRow?.bendFires.toString() ?? '—'} interp={currRow?.bendFires ? { text: 'Bend triggers', c: C.coral } : { text: 'Silent', c: C.sage }} />
+                  </div>
+                  <ChartCard title="Sensitivity vs θ" sub={`True positives (fall scenario) vs. false positives (sit + bend) · window = ${fallWinSec}s`} badge={`θ = ${fallTheta}`} badgeColor={C.red} full>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <ComposedChart data={fallCalibData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                        <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
+                        <XAxis dataKey="theta" tickFormatter={(v: number) => v.toFixed(2)} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} label={{ value: 'threshold θ', position: 'insideBottom', offset: -4, fill: C.text3, fontFamily: 'var(--mono)', fontSize: 10 }} />
+                        <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={28} />
+                        <Tooltip contentStyle={TT_STYLE} />
+                        <ReferenceLine x={fallTheta} stroke={C.red} strokeDasharray="5 3" label={{ value: `θ = ${fallTheta}`, position: 'top', fill: C.red, fontFamily: 'var(--mono)', fontSize: 9 }} />
+                        <Bar dataKey="truePos" fill={C.red}   fillOpacity={0.8} name="True positives (fall)" radius={[3,3,0,0]} />
+                        <Bar dataKey="sitFires" fill={C.amber} fillOpacity={0.7} name="Sit fires" radius={[3,3,0,0]} />
+                        <Bar dataKey="bendFires" fill={C.coral} fillOpacity={0.6} name="Bend fires" radius={[3,3,0,0]} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, marginTop: 16, lineHeight: 1.8 }}>
+                      <div style={{ color: C.text2, marginBottom: 6 }}>Clinical guidance for θ selection</div>
+                      <div>→ θ = 0.50–0.55 · high sensitivity, but slow sits reliably fire</div>
+                      <div>→ θ = 0.60 (default) · standard balance; slow sits to a low chair may fire</div>
+                      <div>→ θ = 0.70–0.75 · lower false positive rate; rapid falls still detected</div>
+                      <div>→ θ ≥ 0.80 · very strict; may miss partial falls or falls from seated position</div>
+                      <div style={{ marginTop: 8, color: C.text4 }}>Slow-sit false positives are a known limitation of the current algorithm (no velocity gate). See <em>docs/fall-algorithm.md</em> for the full specification and known limitations.</div>
+                    </div>
+                  </ChartCard>
+                </>
+              );
+            })()}
+
+          </>}
+
         </div>
 
         <div className="agent-note" style={{ marginTop: 48 }}>
-          — Ambient Intelligence · algorithm lab · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · ASTP · SATP · IS · IV · RA · M10/L5 · AGRU · SHAP · fall risk · sleep architecture · SII · HRV · recovery · chronotype · sedentary behavior · breaks/hour · LF/HF · Poincaré · stress index · CGM · TIR · AGP · CV% · MAGE · longitudinal · correlation matrix · health calendar · risk evolution · radar point cloud · height signal · gait speed · step detection · cadence · step-time variability · TUG · METs · energy expenditure · intensity zones · Ainsworth Compendium —
+          — Ambient Intelligence · algorithm lab · cyclomatic complexity · DFA · sample entropy · permutation entropy · Hurst · ASTP · SATP · IS · IV · RA · M10/L5 · AGRU · SHAP · fall risk · fall detection · sliding-window detector · fall confidence · normalised depth · threshold calibration · AmbientFallDetection · sleep architecture · SII · HRV · recovery · chronotype · sedentary behavior · breaks/hour · LF/HF · Poincaré · stress index · CGM · TIR · AGP · CV% · MAGE · longitudinal · correlation matrix · health calendar · risk evolution · radar point cloud · height signal · gait speed · step detection · cadence · step-time variability · TUG · METs · energy expenditure · intensity zones · Ainsworth Compendium —
         </div>
       </main>
     </div>
