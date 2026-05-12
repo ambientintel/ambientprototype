@@ -435,75 +435,59 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
   },
   {
     id: 'build', phase: '10', title: 'EAS Build', status: 'warning', tag: 'Distribution', time: '~20–40 min per build',
-    summary: 'eas.json committed with corrected preview profile (distribution: internal). App icons done. iOS blocked on Apple Developer org (D-U-N-S pending). Android unblocked — complete Firebase FCM setup, then: eas build --platform android --profile preview.',
+    summary: 'eas.json done (distribution: internal). App icons done. Android unblocked — 3 steps: Firebase project → google-services.json → run setup script → eas build android. iOS blocked on D-U-N-S / Apple org account.',
     sections: [
       {
-        heading: 'EAS setup',
+        heading: 'Android build — do now (no Apple account needed)',
         commands: [
-          { label: 'install EAS CLI', code: 'npm install -g eas-cli\neas login\neas init   # links to Expo project, sets projectId in app.json' },
-          { label: 'eas.json', code: `{
-  "cli": { "version": ">= 12.0.0" },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal",
-      "ios": { "simulator": false }
-    },
-    "production": {
-      "ios": { "buildConfiguration": "Release" },
-      "android": { "buildType": "apk" }
-    }
-  },
-  "submit": {
-    "production": {
-      "ios": { "appleId": "dev@ambientintel.co", "ascAppId": "XXXXXXXXXX" }
-    }
-  }
-}` },
+          { label: '1 · Create Firebase project + register Android app', code: '# console.firebase.google.com\n# Add project → name: Ambient Intelligence\n# Register Android app → package: com.ambientintel.ellamemory\n# Download google-services.json → place in ~/ambientmobile/' },
+          { label: '2 · Configure AWS push + Lambda env var', code: '# After placing google-services.json:\ncd ~/ambientmobile\n\n# Get Server key from Firebase Console → Project Settings → Cloud Messaging\n./scripts/setup_android_push.sh <firebase-server-key>\n\n# The script creates the SNS GCM Platform Application\n# and updates GCM_PLATFORM_APP_ARN in the ambient-dev-api Lambda' },
+          { label: '3 · Commit google-services.json and build', code: 'git add google-services.json\ngit commit -m "Add google-services.json for Android FCM"\n\n# Trigger Android EAS build (~20 min)\neas build --platform android --profile preview' },
         ],
-        warnings: ['EAS Build runs on Expo\'s cloud infrastructure. The first iOS build requires provisioning — run `eas credentials` to generate certificates and profiles automatically. Do not create them manually in the Apple Developer portal first.'],
+        warnings: [
+          'google-services.json must be committed — EAS Build reads it from the repo. The Web API key inside is restricted to com.ambientintel.ellamemory and safe to commit to the private repo.',
+          'The backend GCM payload now includes notification + priority:high so nurses receive a lock-screen alert even when the app is killed. Without this, data-only FCM messages are silenced on most Android devices.',
+        ],
       },
       {
-        heading: 'Trigger a build',
+        heading: 'iOS build — blocked on Apple Developer org',
+        body: 'D-U-N-S applied. Once the Apple Developer Organization account is active (2–5 business days from D-U-N-S): create APNs Auth Key → run setup_ios_push.sh → eas credentials → eas build --platform ios --profile preview.',
         commands: [
-          { label: 'iOS preview build', code: 'eas build --platform ios --profile preview' },
-          { label: 'Android preview build', code: 'eas build --platform android --profile preview' },
-          { label: 'both platforms', code: 'eas build --platform all --profile preview' },
+          { label: 'iOS build (run after Apple account)', code: 'eas credentials  # provisions signing certificate + provisioning profile\neas build --platform ios --profile preview' },
         ],
         artifacts: [
-          { file: 'eas.json', role: 'EAS build profiles — development, preview, production', size: '' },
-          { file: 'app.json', role: 'Expo config — bundleIdentifier (iOS), package (Android), EAS projectId', size: '' },
+          { file: 'eas.json', role: 'EAS build profiles — development / preview (internal APK+IPA) / production', size: '' },
+          { file: 'app.json', role: 'Expo config — bundle ID, EAS project, googleServicesFile, APNS entitlements', size: '' },
+          { file: 'scripts/setup_android_push.sh', role: 'Creates SNS GCM Platform Application + updates Lambda env var', size: '' },
+          { file: 'docs/android-fcm-setup.md', role: 'Step-by-step Android FCM setup guide', size: '' },
         ],
       },
     ],
   },
   {
     id: 'distribute', phase: '11', title: 'Distribution', status: 'pending', tag: 'Distribution', time: '~1 hr setup',
-    summary: 'iOS via TestFlight (study coordinator sends invitations). Android via Firebase App Distribution (internal testing track). No public App Store or Play Store release in Phase I.',
+    summary: 'Android: download APK from EAS dashboard → share download link with Android nurses (they install via "unknown sources"). iOS: TestFlight (study coordinator invitations). No public App Store or Play Store release in Phase I.',
     sections: [
       {
-        heading: 'iOS — TestFlight',
+        heading: 'Android — direct APK (Phase I simplest path)',
         commands: [
-          { label: 'submit to App Store Connect (TestFlight)', code: 'eas submit --platform ios --profile production\n# Uses appleId + ascAppId from eas.json submit config' },
-          { label: 'add internal testers via App Store Connect', code: '# Open App Store Connect → TestFlight → Internal Testing\n# Add nurse UDIDs or invite via email\n# OR: use study coordinator\'s Apple account to manage invitations' },
+          { label: 'download APK and share', code: '# After eas build --platform android --profile preview:\n# 1. Open https://expo.dev → your project → Builds\n# 2. Click the completed build → Download APK\n# 3. Share the EAS download URL with Android nurses directly\n#    They open the link on their Android device and tap Install\n#    (Must allow "Install from unknown sources" once in Settings)' },
         ],
-        body: 'All study participants (nurses at Mount Olivet Careview Home) must be added as TestFlight internal testers before installation. The study coordinator manages the invite list. External TestFlight is not needed for Phase I.',
         warnings: [
-          'TestFlight builds expire after 90 days. Schedule a rebuild at the start of Phase I and again at the 80-day mark if the study runs longer.',
-          'The App Store Connect app record must have a privacy policy URL before TestFlight can be enabled — use the Ambient Intelligence privacy policy URL. No App Store listing is required for internal testing only.',
+          'EAS download links are authenticated — nurses need the link sent to them. Links expire after 30 days; regenerate with a new build if needed.',
+          'Android devices must allow installation from unknown sources. This is a one-time setting per device. Coordinate with the study coordinator or IT team.',
         ],
       },
       {
-        heading: 'Android — Firebase App Distribution',
+        heading: 'iOS — TestFlight',
         commands: [
-          { label: 'install Firebase CLI and distribute', code: 'npm install -g firebase-tools\nfirebase login\n\n# After EAS Android build completes:\neas build --platform android --profile production\n\n# Download the .apk from EAS, then distribute:\nfirebase appdistribution:distribute app-release.apk \\\n  --app $FIREBASE_APP_ID \\\n  --groups "phase1-nurses" \\\n  --release-notes "Ambient Phase I build"' },
+          { label: 'create App Store Connect record (once)', code: '# appstoreconnect.apple.com → My Apps → + → New App\n# Platform: iOS, Name: Ella, Bundle ID: com.ambientintel.ellamemory\n# Copy the Apple ID number (10-digit) → fill ascAppId in eas.json' },
+          { label: 'submit to TestFlight', code: 'eas submit --platform ios --profile production\n# Uses appleId + ascAppId from eas.json submit config' },
+          { label: 'invite internal testers', code: '# App Store Connect → TestFlight → Internal Testing\n# Add nurse email addresses (they receive an email invite)\n# No UDID registration needed for internal testers' },
         ],
         warnings: [
-          'Add nurse Android device email addresses to the "phase1-nurses" Firebase App Distribution group before the first distribute call.',
-          'Android devices must have unknown sources installation enabled (or be enrolled in MDM) to install from Firebase App Distribution. Instruct nurses or the IT team accordingly.',
+          'TestFlight builds expire after 90 days. Schedule a rebuild at the 80-day mark if the study runs longer than that.',
+          'Privacy policy URL is required before TestFlight can be activated — ellamemory.com/privacy is live and ready.',
         ],
       },
     ],
