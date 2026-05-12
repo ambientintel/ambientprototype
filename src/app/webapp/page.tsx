@@ -539,7 +539,7 @@ const APP_SPECS = [
   { label: 'Runtime',   value: 'Next.js 16',     sub: 'React 19 · App Router · Turbopack' },
   { label: 'Auth',      value: 'WorkOS',         sub: 'AuthKit SSO · PKCE · HttpOnly cookie' },
   { label: 'Workspace', value: 'pnpm 9',         sub: 'Monorepo · apps/web + packages/ui' },
-  { label: 'Pilot',     value: '10 Rooms',       sub: 'MOH 301–310 · fall detection' },
+  { label: 'Pilot',     value: '12 Rooms',       sub: 'MOH 301–312 · fall detection' },
   { label: 'Compliance', value: 'HIPAA §164.514', sub: 'Safe Harbor de-identification' },
 ];
 
@@ -550,7 +550,7 @@ const CHECKLIST_ITEMS = [
   'WorkOS application created and REDIRECT_URI set',
   'AuthKit SSO flow working (sign in / sign out)',
   'De-identification keyring implemented (AES-GCM)',
-  'Pilot ID map created (PILOT-0001 to PILOT-0010)',
+  'Pilot ID map created (PILOT-0001 to PILOT-0012)',
   'Dashboard overview renders with room grid + alerts',
   'Floor map heatmap functional',
   'Room detail: Ella narrative loads',
@@ -573,7 +573,7 @@ const OPEN_DECISIONS = [
   'Keyring UX: per-shift AES-GCM unlock vs persistent browser credential storage (WebAuthn PRF) — security vs usability tradeoff for pilot nurses',
   'Push reliability: Web Push (desktop browsers) vs native mobile push via ambientmobile (APNs/FCM) — decide primary alert channel for pilot nurses',
   'Analytics persistence: client-side session state vs server-side aggregation for shift summary and weekly trend reports',
-  'Floor map: static MOH 301–310 room layout vs dynamic room configuration loaded from ambientcloud room registry',
+  'Floor map: static MOH 301–312 room layout vs dynamic room configuration loaded from ambientcloud room registry',
 ];
 
 // ── Page component ─────────────────────────────────────────────────────────────
