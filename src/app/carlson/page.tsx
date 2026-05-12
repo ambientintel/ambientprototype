@@ -25,147 +25,71 @@ const C = {
   sans:       'var(--sans, -apple-system, sans-serif)',
 };
 
-/* ── FlowGlow hero background (from Background Lab) ─────────────────────────── */
+/* ── Pendulum Wave full-page background ──────────────────────────────────────── */
 type Cfg = Record<string, number>;
 
-function FlowGlowBg() {
+function PendulumWaveBg() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cfgRef = useRef<Cfg>({
-    cornerRadius: 0,
-    speed:        0.22,
-    blobSize:     0.66,
-    intensity:    0.71,
-    strokeWidth:  10.5,
-    padding:      25,
+    count: 19,
+    speed: 0.1,
+    amplitude: 0.43,
+    trailLength: 0.92,
+    hue: 192,
+    spread: 2.45,
   });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
-    let animId: number;
-    let flowT = 0, borderAngle = 0, lastTs = performance.now();
-
-    const COLORS: [number, number, number][] = [
-      [188,130,243],[245,185,234],[141,159,255],[255,103,120],[255,186,113],[198,134,255],
-    ];
-    const BLOBS = [
-      { fx: 0.31, fy: 0.47, px: 0,              py: Math.PI * 0.50 },
-      { fx: 0.53, fy: 0.29, px: Math.PI,        py: Math.PI * 1.20 },
-      { fx: 0.41, fy: 0.67, px: Math.PI * 0.70, py: 0              },
-      { fx: 0.23, fy: 0.53, px: Math.PI * 1.50, py: Math.PI * 0.80 },
-      { fx: 0.59, fy: 0.37, px: Math.PI * 0.30, py: Math.PI * 1.70 },
-      { fx: 0.43, fy: 0.61, px: Math.PI * 1.10, py: Math.PI * 0.30 },
-    ];
-
-    const BASE_HEX = ['#BC82F3','#F5B9EA','#8D9FFF','#FF6778','#FFBA71','#C686FF'];
-    let curC = [...BASE_HEX], tgtC = [...BASE_HEX], lerpT = 1.0, nextSwap = 0.45;
-
-    const hexToRgb = (h: string): [number, number, number] => {
-      const v = parseInt(h.replace('#', ''), 16);
-      return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
-    };
-    const lerpHex = (a: string, b: string, t: number) => {
-      const [ar,ag,ab] = hexToRgb(a), [br,bg,bb] = hexToRgb(b);
-      return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
-    };
-
-    const resize = () => {
-      const r = canvas.getBoundingClientRect();
-      canvas.width  = r.width  || window.innerWidth;
-      canvas.height = r.height || window.innerHeight;
-    };
-
-    const rrectPath = (x: number, y: number, w: number, h: number, r: number) => {
-      r = Math.max(0, Math.min(r, w / 2, h / 2));
-      ctx.beginPath();
-      ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
-      ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
-      ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
-      ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
-      ctx.closePath();
-    };
-
-    type CC = CanvasRenderingContext2D & { createConicGradient: (a: number, x: number, y: number) => CanvasGradient };
-
-    const draw = (ts: number) => {
-      const dt = Math.min((ts - lastTs) / 1000, 0.05);
-      lastTs = ts;
-      const cfg = cfgRef.current;
-      const cw = canvas.width, ch = canvas.height;
-      const cx = cw / 2, cy = ch / 2;
-      const sc = Math.min(cw, ch);
-
-      flowT       += cfg.speed * dt;
-      borderAngle += 0.4 * dt;
-      lerpT = Math.min(1, lerpT + dt / 0.55);
-      nextSwap -= dt;
-      if (nextSwap <= 0 && lerpT >= 1) {
-        nextSwap = 0.4 + Math.random() * 0.15;
-        curC = [...tgtC]; lerpT = 0;
-        tgtC = [...BASE_HEX].sort(() => Math.random() - 0.5);
-      }
-      const borderCols = curC.map((a, i) => lerpHex(a, tgtC[i], lerpT));
-
-      ctx.clearRect(0, 0, cw, ch);
-      ctx.fillStyle = '#080810';
-      ctx.fillRect(0, 0, cw, ch);
-
-      const pad = cfg.padding, sw = cfg.strokeWidth, gi = cfg.intensity;
-      const rx = pad, ry = pad, rw = cw - pad * 2, rh = ch - pad * 2;
-      const cr = cfg.cornerRadius, blobR = sc * cfg.blobSize;
-
-      ctx.save();
-      rrectPath(rx, ry, rw, rh, cr);
-      ctx.clip();
-      ctx.globalCompositeOperation = 'screen';
-      BLOBS.forEach((blob, i) => {
-        const [rr,gg,bb] = COLORS[i];
-        const bx = cx + rw * 0.40 * Math.sin(flowT * blob.fx + blob.px);
-        const by = cy + rh * 0.40 * Math.cos(flowT * blob.fy + blob.py);
-        const grad = ctx.createRadialGradient(bx, by, 0, bx, by, blobR);
-        grad.addColorStop(0,    `rgba(${rr},${gg},${bb},${gi * 0.82})`);
-        grad.addColorStop(0.42, `rgba(${rr},${gg},${bb},${gi * 0.36})`);
-        grad.addColorStop(1,    `rgba(${rr},${gg},${bb},0)`);
-        ctx.beginPath(); ctx.arc(bx, by, blobR, 0, Math.PI * 2);
-        ctx.fillStyle = grad; ctx.fill();
-      });
-      ctx.restore();
-
-      const makeBorderGrad = () => {
-        const g = (ctx as CC).createConicGradient(borderAngle - Math.PI / 2, cx, cy);
-        borderCols.forEach((col, i) => g.addColorStop(i / borderCols.length, col));
-        g.addColorStop(1, borderCols[0]);
-        return g;
+    const create = function create(e: HTMLCanvasElement, t: () => Cfg) {
+      let a=e.getContext("2d")!,l: number,i=0,n: {freq:number,trail:number[][]}[]=[],r=-1;
+      const o=(c: number)=>{n=Array.from({length:c},(_,idx)=>({freq:2+.18*idx,trail:[]}));r=c;};
+      const s=()=>{let b=e.getBoundingClientRect();e.width=b.width;e.height=b.height;n.forEach(p=>p.trail=[]);};
+      const h=()=>{
+        let cfg=t(),d=e.width,m=e.height,c=Math.floor(cfg.count);
+        c!==r&&o(c);
+        i+=.007*cfg.speed;
+        a.fillStyle=`rgba(8,10,14,${.04+(1-cfg.trailLength)*.6})`;
+        a.fillRect(0,0,d,m);
+        let p=.12*m,g=m*cfg.amplitude,u=d/(c+1),b=Math.round(300*cfg.trailLength+30);
+        a.beginPath();
+        n.forEach((nd,t2)=>{
+          let freq=nd.freq*cfg.spread,nx=(t2+1)*u,ny=.55*m+g*Math.sin(freq*i);
+          t2===0?a.moveTo(nx,ny):a.lineTo(nx,ny);
+        });
+        a.strokeStyle=`hsla(${cfg.hue},70%,65%,0.18)`;a.lineWidth=1;a.stroke();
+        n.forEach((nd,t2)=>{
+          let freq=nd.freq*cfg.spread,nx=(t2+1)*u,ny=.55*m+g*Math.sin(freq*i),hue2=(cfg.hue+120/c*t2)%360;
+          nd.trail.push([nx,ny]);nd.trail.length>b&&nd.trail.shift();
+          a.beginPath();a.moveTo(nx,p);a.lineTo(nx,ny);
+          a.strokeStyle=`hsla(${hue2},50%,55%,0.15)`;a.lineWidth=.6;a.stroke();
+          if(nd.trail.length>1){
+            a.beginPath();
+            nd.trail.forEach(([tx,ty],li)=>li===0?a.moveTo(tx,ty):a.lineTo(tx,ty));
+            a.strokeStyle=`hsla(${hue2},75%,65%,0.4)`;a.lineWidth=1;a.stroke();
+          }
+          let gr=a.createRadialGradient(nx,ny,0,nx,ny,6);
+          gr.addColorStop(0,`hsla(${hue2},85%,85%,0.95)`);gr.addColorStop(1,"rgba(0,0,0,0)");
+          a.beginPath();a.arc(nx,ny,6,0,2*Math.PI);a.fillStyle=gr;a.fill();
+          a.beginPath();a.arc(nx,p,1.5,0,2*Math.PI);
+          a.fillStyle=`hsla(${hue2},60%,60%,0.4)`;a.fill();
+        });
+        a.beginPath();a.moveTo(.5*u,p);a.lineTo(u*(c+.5),p);
+        a.strokeStyle="rgba(255,255,255,0.06)";a.lineWidth=1;a.stroke();
+        l=requestAnimationFrame(h);
       };
-      const drawBorder = (lw: number, blur: number, alpha: number) => {
-        ctx.save();
-        if (blur > 0) ctx.filter = `blur(${blur}px)`;
-        ctx.globalAlpha = alpha;
-        ctx.strokeStyle = makeBorderGrad();
-        ctx.lineWidth = lw; ctx.lineCap = 'round';
-        rrectPath(rx, ry, rw, rh, cr); ctx.stroke();
-        ctx.restore();
-      };
-      drawBorder(sw * 4.5, 26 * gi, 0.30 * gi);
-      drawBorder(sw * 2.8, 14 * gi, 0.50 * gi);
-      drawBorder(sw * 1.6,  5 * gi, 0.72 * gi);
-      drawBorder(sw,         0,     1.0);
-
-      animId = requestAnimationFrame(draw);
+      s();o(Math.floor(t().count));h();
+      const ro=new ResizeObserver(()=>s());ro.observe(e);
+      return ()=>{cancelAnimationFrame(l);ro.disconnect();};
     };
-
-    resize();
-    animId = requestAnimationFrame(draw);
-    const ro = new ResizeObserver(() => resize());
-    ro.observe(canvas);
-    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+    return create(canvas, () => cfgRef.current);
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', display: 'block' }}
+      style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
     />
   );
 }
@@ -199,8 +123,10 @@ function StatCell({ value, label, color = C.text }: { value: string; label: stri
 /* ── Page ────────────────────────────────────────────────────────────────────── */
 export default function CarlsonPage() {
   return (
-    <div style={{ background: C.bg, color: C.text, fontFamily: C.sans, minHeight: '100vh' }}>
+    <div style={{ position: 'relative', zIndex: 1, color: C.text, fontFamily: C.sans, minHeight: '100vh' }}>
+      <PendulumWaveBg />
       <style dangerouslySetInnerHTML={{ __html: `
+        body { background: ${C.bg}; }
         @keyframes pulse-gold {
           0%, 100% { box-shadow: 0 0 0 0 rgba(240,180,41,0.5); }
           60%       { box-shadow: 0 0 0 7px rgba(240,180,41,0); }
@@ -289,8 +215,7 @@ export default function CarlsonPage() {
       </nav>
 
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', minHeight: 680, display: 'flex', alignItems: 'center', overflow: 'hidden', background: '#080810' }}>
-        <FlowGlowBg />
+      <section style={{ position: 'relative', minHeight: 680, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
 
         {/* Text legibility veil — dark at top and bottom, clear in center */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,8,16,0.62) 0%, rgba(8,8,16,0.18) 28%, rgba(8,8,16,0.18) 68%, rgba(8,8,16,0.62) 100%)', pointerEvents: 'none' }} />
