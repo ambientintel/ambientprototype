@@ -561,6 +561,7 @@ export default function EngineeringPage() {
               </h1>
             </div>
             <div style={{ display:"flex", alignItems:"stretch", gap:8 }}>
+              {syncStatus !== "idle" && <SyncPulse status={syncStatus} />}
               <NavCard href="/firmware"        label="Firmware"   color="#00B4D8" lsKey="ambient-fw-checklist-v2"          total={20} defaultDone={9}  serverPct={subProgress['firmware']} />
               <NavCard href="/ee"              label="EE"         color="#2563EB" lsKey="ambient-ee-checklist-v1"          total={22} defaultDone={13} serverPct={subProgress['ee']} />
               <NavCard href="/cloudengineering" label="Cloud Eng" color="#38BDF8" lsKey="ambient-cloud-checklist-v2"       total={22} defaultDone={16} serverPct={subProgress['cloud']} />
@@ -568,14 +569,6 @@ export default function EngineeringPage() {
               <NavCard href="/mobileapp"       label="Mobile App" color="#FB923C" lsKey="ambient-mobileapp-checklist-v1"  total={23} defaultDone={5}  serverPct={subProgress['mobileapp']} />
               <NavCard href="/mechanical"      label="Mechanical" color="#34D399" lsKey="ambient-mechanical-checklist-v1" total={22} defaultDone={5}  serverPct={subProgress['mechanical']} />
               <div style={{ width:1, background:"var(--line)", flexShrink:0, marginLeft:4, alignSelf:"stretch" }}/>
-              {syncStatus !== "idle" && (
-                <span style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.08em", color: syncStatus === "error" ? "#FF6B6B" : syncStatus === "conflict" ? "#FFC940" : "#3DCC91", display:"flex", alignItems:"center", gap:5 }}>
-                  {syncStatus === "saving"   && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940", animation:"pulse 1s infinite" }}/> Saving…</>}
-                  {syncStatus === "saved"    && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#3DCC91" }}/> Synced</>}
-                  {syncStatus === "error"    && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FF6B6B" }}/> Save error</>}
-                  {syncStatus === "conflict" && <><span style={{ width:6, height:6, borderRadius:"50%", background:"#FFC940" }}/> Conflict — retrying</>}
-                </span>
-              )}
               <CreateIssueBtn onClick={() => setShowCreate(true)} />
             </div>
           </div>
@@ -1794,6 +1787,140 @@ function NavCard({ href, label, color, lsKey, total, defaultDone, serverPct }: {
         </div>
       </div>
     </Link>
+  );
+}
+
+// ── SyncPulse ─────────────────────────────────────────────────────────────
+// Orbital spark animation — replaces the plain dot+text sync indicator.
+// Mounts only when status !== "idle"; unmounts (and stops the RAF) on idle.
+function SyncPulse({ status }: { status: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const statusRef = useRef(status);
+  useEffect(() => { statusRef.current = status; }, [status]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    let raf: number;
+    let angle = 0;
+    let tick = 0;
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width  = rect.width  || 44;
+      canvas.height = rect.height || 44;
+    };
+
+    const frame = (ts: number) => {
+      const s = statusRef.current;
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const color = s === "saved" ? "#3DCC91" : s === "error" ? "#FF6B6B" : "#FFC940";
+      const cx = w / 2, cy = h / 2;
+      const speed = s === "saving" ? 0.045 : s === "saved" ? 0.018 : s === "error" ? 0.055 : 0.030;
+      const jitter = s === "error" && tick % 5 === 0 ? (Math.random() - 0.5) * 0.45 : 0;
+      angle += speed + jitter;
+      tick++;
+
+      // Outer ring
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+      ctx.strokeStyle = color + "22";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Inner dashed ring (counter-rotates slowly)
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(-angle * 0.28);
+      ctx.beginPath();
+      ctx.arc(0, 0, 6, 0, Math.PI * 2);
+      ctx.strokeStyle = color + "44";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Spark trail on outer ring
+      const TRAIL = 12;
+      for (let i = TRAIL; i >= 1; i--) {
+        const a = angle - i * 0.09;
+        const tx = cx + 12 * Math.cos(a), ty = cy + 12 * Math.sin(a);
+        const alpha = ((TRAIL - i + 1) / TRAIL) * 0.65;
+        const r = 1.6 * ((TRAIL - i + 1) / TRAIL);
+        ctx.beginPath();
+        ctx.arc(tx, ty, r, 0, Math.PI * 2);
+        ctx.fillStyle = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
+        ctx.fill();
+      }
+
+      // Conflict: second spark on opposite side
+      if (s === "conflict") {
+        for (let i = TRAIL; i >= 1; i--) {
+          const a = angle + Math.PI - i * 0.09;
+          const tx = cx + 12 * Math.cos(a), ty = cy + 12 * Math.sin(a);
+          const alpha = ((TRAIL - i + 1) / TRAIL) * 0.65;
+          const r = 1.6 * ((TRAIL - i + 1) / TRAIL);
+          ctx.beginPath();
+          ctx.arc(tx, ty, r, 0, Math.PI * 2);
+          ctx.fillStyle = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
+          ctx.fill();
+        }
+      }
+
+      // Main spark head
+      const sx = cx + 12 * Math.cos(angle), sy = cy + 12 * Math.sin(angle);
+      ctx.beginPath(); ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 9;
+      ctx.fill(); ctx.shadowBlur = 0;
+
+      if (s === "conflict") {
+        const sx2 = cx + 12 * Math.cos(angle + Math.PI), sy2 = cy + 12 * Math.sin(angle + Math.PI);
+        ctx.beginPath(); ctx.arc(sx2, sy2, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 9;
+        ctx.fill(); ctx.shadowBlur = 0;
+      }
+
+      // Center dot with pulse
+      const pulse = 0.88 + 0.12 * Math.sin(ts * 0.005);
+      ctx.beginPath(); ctx.arc(cx, cy, 2.8 * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.shadowColor = color;
+      ctx.shadowBlur = s === "saved" ? 10 * pulse : 4;
+      ctx.fill(); ctx.shadowBlur = 0;
+
+      // Saved: expanding bloom ring
+      if (s === "saved") {
+        const bloom = (ts % 1400) / 1400;
+        ctx.beginPath(); ctx.arc(cx, cy, 12 + bloom * 10, 0, Math.PI * 2);
+        ctx.strokeStyle = color + Math.round((1 - bloom) * 100).toString(16).padStart(2, "0");
+        ctx.lineWidth = 1.5; ctx.stroke();
+      }
+
+      raf = requestAnimationFrame(frame);
+    };
+
+    resize();
+    const obs = new ResizeObserver(resize);
+    obs.observe(canvas);
+    raf = requestAnimationFrame(frame);
+    return () => { cancelAnimationFrame(raf); obs.disconnect(); };
+  }, []);
+
+  const color = status === "saved" ? "#3DCC91" : status === "error" ? "#FF6B6B" : "#FFC940";
+  const label = status === "saving" ? "Saving…" : status === "saved" ? "Synced" : status === "error" ? "Error" : "Conflict";
+
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:5, alignSelf:"stretch", flexShrink:0, paddingRight:2 }}>
+      <div style={{ width:42, alignSelf:"stretch", position:"relative", flexShrink:0 }}>
+        <canvas ref={canvasRef} style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}/>
+      </div>
+      <span style={{ fontFamily:"var(--mono)", fontSize:9, textTransform:"uppercase" as const, letterSpacing:"0.1em", color, whiteSpace:"nowrap" as const }}>
+        {label}
+      </span>
+    </div>
   );
 }
 
