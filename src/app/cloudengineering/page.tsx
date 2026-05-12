@@ -77,8 +77,8 @@ const STEPS: Step[] = [
         table: {
           cols: ['Service / Stack', 'Path', 'CDK Stack', 'Tests'],
           rows: [
-            ['admin-cli',    'services/admin-cli/',              '—',                      '61 pass'],
-            ['api',          'services/api/',                    'Ambient-{env}-Api',       '19 pass'],
+            ['admin-cli',    'services/admin-cli/',              '—',                      '71 pass'],
+            ['api',          'services/api/',                    'Ambient-{env}-Api',       '22 pass'],
             ['athena',       'services/athena/',                 'Ambient-{env}-Athena',    'n/a'],
             ['cloudtrail',   'services/cloudtrail/',             'Ambient-{env}-CloudTrail','n/a'],
             ['ella',         'services/ella/',                   'Ambient-{env}-Ella',      '11 pass'],
@@ -157,8 +157,8 @@ const STEPS: Step[] = [
       {
         heading: 'Repository structure',
         commands: [
-          { label: 'clone and inspect layout', code: 'git clone https://github.com/ambientintel/ambientcloud\ncd ambientcloud\n\n# Application code — one directory per service\nls services/\n# → admin-cli/  api/  athena/  cloudtrail/  ella/  reconciler/  telemetry/  url-minter/\n\n# Unified CDK app — single entry point for all stacks\nls infra/\n# → app.py  stacks/  ambient_constructs/  config/  cdk.json  requirements.txt\n\nls infra/stacks/\n# → kms_stack.py  storage_stack.py  data_stack.py  telemetry_stack.py\n# → url_minter_stack.py  athena_stack.py  ella_stack.py  api_stack.py\n# → cloudtrail_stack.py  observability_stack.py' },
-          { label: 'set up CDK environment', code: 'npm install -g aws-cdk\n\ncd infra\npython3 -m venv .venv && source .venv/bin/activate\npip install -r requirements.txt\n\n# List all stacks\ncdk ls --context environment=dev --context tenant_id=PILOT-TENANT-001\n# Expected: Ambient-dev-Kms, Ambient-dev-Storage, Ambient-dev-Data,\n#   Ambient-dev-Telemetry, Ambient-dev-UrlMinter, Ambient-dev-Athena,\n#   Ambient-dev-Ella, Ambient-dev-Api, Ambient-dev-CloudTrail, Ambient-dev-Observability' },
+          { label: 'clone and inspect layout', code: 'git clone https://github.com/ambientintel/ambientcloud\ncd ambientcloud\n\n# Application code — one directory per service\nls services/\n# → admin-cli/  api/  athena/  cloudtrail/  ella/  reconciler/  telemetry/  url-minter/\n\n# Unified CDK app — single entry point for all stacks\nls infra/\n# → app.py  stacks/  ambient_constructs/  config/  cdk.json  requirements.txt\n\nls infra/stacks/\n# → kms_stack.py  storage_stack.py  data_stack.py  telemetry_stack.py\n# → url_minter_stack.py  athena_stack.py  ella_stack.py  api_stack.py\n# → cloudtrail_stack.py  observability_stack.py  dashboard_stack.py' },
+          { label: 'set up CDK environment', code: 'npm install -g aws-cdk\n\ncd infra\npython3 -m venv .venv && source .venv/bin/activate\npip install -r requirements.txt\n\n# List all stacks\ncdk ls --context environment=dev --context tenant_id=PILOT-TENANT-001\n# Expected: Ambient-dev-Kms, Ambient-dev-Storage, Ambient-dev-Data,\n#   Ambient-dev-Telemetry, Ambient-dev-UrlMinter, Ambient-dev-Athena,\n#   Ambient-dev-Ella, Ambient-dev-Api, Ambient-dev-CloudTrail, Ambient-dev-Observability, Ambient-dev-Dashboard' },
           { label: 'synth + diff before first deploy', code: 'cd infra\n\n# Synthesize CloudFormation templates (validates all CDK code)\ncdk synth --all \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001 \\\n  --context facility_ids=\'["FAC-PILOT-001"]\'\n\n# Preview changes against deployed stacks\ncdk diff --all --context environment=dev --context tenant_id=PILOT-TENANT-001' },
         ],
       },
@@ -177,6 +177,7 @@ const STEPS: Step[] = [
             ['3',   'Ambient-{env}-Api',            'Cognito UserPool (CfnOutputs: UserPoolId, UserPoolClientId), HTTP API (ApiEndpointUrl), FastAPI Lambda, facility-scoped authorizer'],
             ['3',   'Ambient-{env}-CloudTrail',     'Multi-region trail · DDB + S3 data events · 7-year Glacier retention'],
             ['opt', 'Ambient-{env}-Observability',  'CloudWatch Metric Stream → central account · scalar only · no PHI'],
+            ['opt', 'Ambient-{env}-Dashboard',      'CloudWatch operator dashboard · 5 Lambda graphs (invocations/errors/duration) · Ella DLQ depth · TelemetryDivergence metric · API concurrent executions'],
           ],
         },
       },
@@ -463,12 +464,25 @@ const STEPS: Step[] = [
         ],
       },
       {
+        heading: 'CORS configuration',
+        body: 'HTTP API CORS is configured in ApiStack. allow_methods includes PATCH to support user update operations from the nurse dashboard.',
+        table: {
+          cols: ['CORS setting', 'Value', 'Notes'],
+          rows: [
+            ['allow_origins',  '[nurse-dashboard origin]',              'Facility dashboard domain — not wildcard'],
+            ['allow_methods',  'GET, POST, PATCH, OPTIONS',             'PATCH added for /users/{id} and future mutation endpoints'],
+            ['allow_headers',  'Authorization, Content-Type',           'JWT + JSON body'],
+            ['max_age',        '300',                                    'Preflight cache 5 min'],
+          ],
+        },
+      },
+      {
         heading: 'API endpoint inventory',
         table: {
           cols: ['Endpoint', 'Scope', 'Notes'],
           rows: [
             ['GET /alerts',              'facilityIds claim',  'Paginated alert list — latest first'],
-            ['GET /alerts/{eventId}',    'facilityIds claim',  'Alert detail with enrichment'],
+            ['GET /alerts/{eventId}',    'facilityIds claim',  'Single alert lookup by eventId — uses eventId-index GSI with facility-scope check; used for push-notification deep-links'],
             ['GET /daily-updates',       'facilityIds claim',  'Latest Ella narratives per subject'],
             ['GET /daily-updates/{id}',  'facilityIds claim',  'Single narrative + metadata'],
             ['GET /devices',             'facilityIds claim',  'Device roster — status, last seen'],
@@ -483,6 +497,16 @@ const STEPS: Step[] = [
         },
       },
       {
+        heading: 'Cognito user lifecycle commands (admin-cli)',
+        body: 'User lifecycle management via admin-cli uses Cognito admin APIs scoped to the tenant UserPool. AMBIENT_USER_POOL_ID must be set from the ApiStack output.',
+        commands: [
+          { label: 'list users (paginated, optional facility filter)', code: '# List all users in the pool (paginated)\nambientcloud-admin list-users\n\n# Filter by facility\nambientcloud-admin list-users --facility-id FAC-PILOT-001\n\n# Calls: cognito-idp admin_list_users with facility filter via list_users AttributesToGet' },
+          { label: 'reset a user password', code: '# Sends a temporary password to the user email — user must change on next login\nambientcloud-admin reset-password \\\n  --username nurse@facility.org\n\n# Calls: cognito-idp admin_reset_user_password\n# User receives a Cognito-generated temporary password via email' },
+          { label: 'disable a user', code: '# Prevents the user from signing in (does NOT delete the account)\nambientcloud-admin disable-user \\\n  --username nurse@facility.org\n\n# Calls: cognito-idp admin_disable_user\n# Existing sessions remain valid until token expiry (~1 hour)' },
+          { label: 'enable a user', code: '# Re-enables a previously disabled user account\nambientcloud-admin enable-user \\\n  --username nurse@facility.org\n\n# Calls: cognito-idp admin_enable_user' },
+        ],
+      },
+      {
         heading: 'Row-level facility scoping',
         body: 'Every database read includes WHERE facilityId IN :caller_facility_ids applied in the application layer. This is data-model enforcement — not IAM-level scoping. The custom:facilityIds Cognito claim is extracted from the JWT and applied on every handler.',
         warnings: [
@@ -494,7 +518,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'integration-tests', phase: '11', title: 'Integration Tests', status: 'done', tag: 'Validate', time: '~1 hr',
-    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 136 unit tests passing across 6 services (admin-cli 61, url-minter 28, api 19, telemetry 15, ella 11, reconciler 2) + 9 integration tests. Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
+    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 151 unit tests passing across 6 services (admin-cli 71, url-minter 28, api 22, telemetry 15, ella 11, reconciler 2) + 9 integration tests. Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
     sections: [
       {
         heading: 'Run integration tests',
@@ -529,7 +553,7 @@ cd services/telemetry && pip install -e ".[dev]" -q && cd -
 cd services/url-minter && pip install -e ".[dev]" -q && cd -
 
 pytest services/ -v
-# Expected: 136 passed (admin-cli 61, url-minter 28, api 19, telemetry 15, ella 11, reconciler 2)` },
+# Expected: 151 passed (admin-cli 71, url-minter 28, api 22, telemetry 15, ella 11, reconciler 2)` },
           { label: 'run integration suite (requires AWS)', code: `# Full suite — the telemetry test waits 6 min for Firehose buffer
 pytest tests/integration -m integration -v
 
@@ -562,9 +586,9 @@ AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
         table: {
           cols: ['Service', 'Tests', 'Key scenarios covered'],
           rows: [
-            ['admin-cli',   '61 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard, telemetry migration (promote/demote), Cognito user provisioning, SNS alert subscriptions'],
+            ['admin-cli',   '71 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard, telemetry migration (promote/demote), Cognito user provisioning, SNS alert subscriptions, list-users pagination, reset-password, disable-user, enable-user'],
             ['url-minter',  '28 pass', 'Presigned URL issuance, subject= S3 key path, SigV4 validation, rate limiting'],
-            ['api',         '19 pass', 'Facility scoping, cross-facility auth denial, alert pagination, subject detail, on-demand narrative'],
+            ['api',         '22 pass', 'Facility scoping, cross-facility auth denial, alert pagination, single alert by eventId (GSI lookup), subject detail, on-demand narrative'],
             ['ella',        '11 pass', 'Athena query construction, Bedrock invoke, de-id system prompt adherence, DLQ retry'],
             ['telemetry',   '15 pass', 'Fall event enrichment, DDB write, SNS publish with facility filter, synthetic event injection'],
             ['reconciler',  '2 pass',  'Athena row-count delta per facility, TelemetryDivergence metric emission, alarm threshold 0.1%'],
@@ -601,8 +625,8 @@ AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
       {
         heading: 'Production readiness checklist',
         checklist: [
-          'All CDK stacks deployed: Kms, Storage, Data, Telemetry, UrlMinter, Athena, Ella, Api, CloudTrail',
-          '75/75 unit tests passing; integration test suite green against production tenant',
+          'All CDK stacks deployed: Kms, Storage, Data, Telemetry, UrlMinter, Athena, Ella, Api, CloudTrail, Dashboard',
+          '151 unit tests passing; integration test suite green against production tenant',
           'CloudTrail data events enabled on devices, alerts, and daily-updates DDB tables',
           'CloudTrail data events enabled on ambient-<tenant>-parquet S3 bucket',
           'CloudTrail retention: 7-year Glacier Deep Archive per HIPAA §164.316(b)(2)(i)',
@@ -624,7 +648,7 @@ AMBIENT_E2E_FIREHOSE_WAIT_S=60 pytest tests/integration -m integration -v` },
       {
         heading: 'Commit production sign-off',
         commands: [
-          { label: 'tag the production release', code: '# Tag the exact commit deployed to production\ngit tag -a v1.0.0-prod \\\n  -m "Production release — IRB pilot cohort. All CDK stacks deployed, 75 tests passing."\ngit push origin v1.0.0-prod\n\n# Record in deployment-status.md\ncat >> docs/deployment-status.md << EOF\n\n## Production Release\n- Date: $(date -u +%Y-%m-%d)\n- Tag: v1.0.0-prod\n- Tenant: <tenant-id>\n- CDK stacks: all 10 deployed\n- Tests: 75/75 passing\n- IRB protocol: active\nEOF\ngit commit -am "docs: record production release v1.0.0-prod"\ngit push' },
+          { label: 'tag the production release', code: '# Tag the exact commit deployed to production\ngit tag -a v1.0.0-prod \\\n  -m "Production release — IRB pilot cohort. All CDK stacks deployed, 151 tests passing."\ngit push origin v1.0.0-prod\n\n# Record in deployment-status.md\ncat >> docs/deployment-status.md << EOF\n\n## Production Release\n- Date: $(date -u +%Y-%m-%d)\n- Tag: v1.0.0-prod\n- Tenant: <tenant-id>\n- CDK stacks: all 11 deployed\n- Tests: 151 passing\n- IRB protocol: active\nEOF\ngit commit -am "docs: record production release v1.0.0-prod"\ngit push' },
         ],
         artifacts: [
           { file: 'docs/deployment-status.md', role: 'Service inventory, merge history, and production release record.' },
@@ -670,7 +694,7 @@ const CHECKLIST_ITEMS = [
   'Ella Lambda deployed — narrative de-id verified (20+ subjects)',
   'FastAPI Lambda deployed — 12 endpoints smoke-tested',
   'Cognito MFA enabled for all users',
-  'Unit tests: 75/75 passing (admin-cli 28, api 19, telemetry 15, ella 11, reconciler 2)',
+  'Unit tests: 151 passing (admin-cli 71, url-minter 28, api 22, telemetry 15, ella 11, reconciler 2)',
   'Production runbooks dry-run complete',
 ];
 
