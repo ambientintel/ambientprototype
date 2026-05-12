@@ -397,8 +397,8 @@ export default function EngineeringPage() {
 
   const s: Record<string, React.CSSProperties> = {
     page:       { display:"flex", minHeight:"100vh", background:"var(--bg)", color:"var(--text)", fontFamily:"var(--sans)" },
-    sidebar:    { width:224, flexShrink:0, background:"#1d1d1f", borderRight:"1px solid var(--line)", padding:"28px 22px 32px", display:"flex", flexDirection:"column", gap:32, position:"sticky", top:0, height:"100vh", overflowY:"auto" },
-    main:       { flex:1, display:"flex", flexDirection:"column", minWidth:0, background:"#1A1F2B" },
+    sidebar:    { width:224, flexShrink:0, background:"var(--surface-1)", borderRight:"1px solid var(--line)", padding:"28px 22px 32px", display:"flex", flexDirection:"column", gap:32, position:"sticky", top:0, height:"100vh", overflowY:"auto" },
+    main:       { flex:1, display:"flex", flexDirection:"column", minWidth:0, background:"var(--bg)" },
     topbar:     { borderBottom:"1px solid var(--line)", padding:"20px 32px 0", display:"flex", flexDirection:"column", gap:12 },
     topbarRow:  { display:"flex", alignItems:"center", gap:12, justifyContent:"space-between" },
     content:    { flex:1, padding:"24px 32px 48px", overflowX:"auto" },
@@ -411,7 +411,7 @@ export default function EngineeringPage() {
     badge:      { fontFamily:"var(--mono)", fontSize:9, fontWeight:600, letterSpacing:"0.08em", textTransform:"uppercase" as const, padding:"3px 7px", borderRadius:4, background:"var(--surface-2)" },
     avatar:     { width:22, height:22, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)", fontSize:10, fontWeight:700, flexShrink:0 },
     pts:        { fontFamily:"var(--mono)", fontSize:10, color:"var(--text-3)", background:"var(--surface-2)", padding:"2px 7px", borderRadius:4 },
-    filterBar:  { display:"flex", alignItems:"center", gap:10, padding:"14px 32px", background:"#1E2328", borderBottom:"1px solid var(--line)", flexWrap:"wrap" as const },
+    filterBar:  { display:"flex", alignItems:"center", gap:10, padding:"14px 32px", background:"var(--surface-1)", borderBottom:"1px solid var(--line)", flexWrap:"wrap" as const },
     input:      { background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"7px 12px", fontSize:13, color:"var(--text)", fontFamily:"var(--sans)", outline:"none", width:220 },
     select:     { background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:6, padding:"6px 10px", fontSize:12, color:"var(--text-2)", fontFamily:"var(--mono)", outline:"none", cursor:"pointer" },
     btn:        { display:"inline-flex", alignItems:"center", gap:7, padding:"7px 14px", borderRadius:6, border:"1px solid var(--line)", fontSize:13, fontFamily:"var(--sans)", cursor:"pointer", background:"var(--surface-2)", color:"var(--text-2)", transition:"background 0.15s, border-color 0.15s" },
@@ -509,7 +509,7 @@ export default function EngineeringPage() {
             { label:"Backlog",  icon:<><rect x="2.5" y="3" width="11" height="1.5" rx=".75"/><rect x="2.5" y="6.5" width="11" height="1.5" rx=".75"/><rect x="2.5" y="10" width="11" height="1.5" rx=".75"/></>, v:"backlog" as const },
             { label:"People",   icon:<><circle cx="5" cy="5.5" r="2.5"/><circle cx="11" cy="5.5" r="2.5"/><path d="M1 13c0-2.2 1.8-4 4-4s4 1.8 4 4M7 13c0-2.2 1.8-4 4-4s4 1.8 4 4" strokeLinecap="round"/></>, v:"people" as const },
           ].map(({ label, icon, v }) => (
-            <div key={label} style={{ ...s.navItem, background: view === v ? "var(--surface-2)" : "transparent", color: view === v ? "var(--text)" : "var(--text-2)" }} onClick={() => setView(v)}>
+            <div key={label} style={{ ...s.navItem, background: view === v ? "rgba(45,114,210,0.13)" : "transparent", color: view === v ? "var(--text)" : "var(--text-2)", boxShadow: view === v ? "inset 2px 0 0 var(--accent)" : "none" }} onClick={() => setView(v)}>
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">{icon}</svg>
               {label}
             </div>
