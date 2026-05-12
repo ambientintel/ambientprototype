@@ -27,7 +27,7 @@ const SERVICES = [
   { id: 'data',         tag: 'Database',   label: 'Data',            path: 'infra/stacks/data_stack.py',    tests: null, desc: 'Three DynamoDB tables (PAY_PER_REQUEST + PITR): devices (facility-index GSI), alerts (subject_date PK + facility-time GSI), daily-updates (subjectId PK, 90-day TTL). All encrypted with tenant CMK.', tf: true, lambdaFn: null },
   { id: 'observability',tag: 'Monitoring', label: 'Observability',   path: 'infra/stacks/observability_stack.py', tests: null, desc: 'CloudWatch Metric Streams to central account — scalar metrics only (AmbientIntelligence/Telemetry, Lambda, ApiGateway, DynamoDB, Athena). No PHI crosses the boundary. Optional stack.', tf: true,  lambdaFn: null },
   { id: 'reconciler',  tag: 'Ops',        label: 'Reconciler',      path: 'services/reconciler/',   tests: 2,    desc: 'EventBridge 15-min cron compares device-path vs Firehose Athena row counts per facility — emits TelemetryDivergence metric, alarms at >0.1%.', tf: true, lambdaFn: 'ambient-dev-reconciler' },
-  { id: 'dashboard',   tag: 'Monitoring', label: 'Dashboard',       path: 'infra/stacks/dashboard_stack.py', tests: null, desc: 'CloudWatch operator dashboard — Lambda invocations/errors/duration for all 5 functions, Ella DLQ depth, TelemetryDivergence metric, API concurrent executions.', tf: true, lambdaFn: null },
+  { id: 'dashboard',   tag: 'Monitoring', label: 'Dashboard',       path: 'infra/stacks/dashboard_stack.py', tests: null, desc: 'CloudWatch operator dashboard (Ambient-{env}-Dashboard stack). AlarmStatusWidget row at top shows 8 operator alarms (alerts-enricher errors/throttles, Ella DLQ depth/errors, API errors/P99 latency, TelemetryDivergence >10 over 3×15 min, IoT rule failures). Alarm SNS topic: ambient-{env}-operator-alarms (CfnOutput: AlarmTopicArn). Widgets: Lambda invocations/errors/duration for all 5 functions, Ella DLQ depth, TelemetryDivergence metric, API concurrent executions.', tf: true, lambdaFn: null },
 ];
 
 const PATHS = [
@@ -2205,9 +2205,51 @@ export default function CloudPage() {
         {tab === 'pipeline' && (
           <>
             <div style={{ marginBottom: 24 }}>
-              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · .github/workflows/</p>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · .github/workflows/cdk-deploy.yml</p>
               <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>CI/CD Pipeline</h1>
             </div>
+
+            {/* 5-job workflow diagram */}
+            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '18px 20px', marginBottom: 20 }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-4)', marginBottom: 14 }}>cdk-deploy.yml · 5-job workflow</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                {[
+                  { label: 'unit-tests',   note: 'all services',        color: '#3fb950' },
+                  { label: '→', note: null, color: 'var(--text-4)' },
+                  { label: 'cdk-diff',     note: 'PRs only',            color: '#79c0ff' },
+                  { label: '→', note: null, color: 'var(--text-4)' },
+                  { label: 'deploy-dev',   note: 'merge to main',       color: '#3fb950' },
+                  { label: '→', note: null, color: 'var(--text-4)' },
+                  { label: 'smoke-dev',    note: 'post-deploy auto',    color: '#3fb950' },
+                  { label: '→', note: null, color: 'var(--text-4)' },
+                  { label: 'deploy-prod',  note: 'manual gate',         color: '#d29922' },
+                ].map((step, i) =>
+                  step.note === null
+                    ? <span key={i} style={{ color: step.color, fontSize: 14, flexShrink: 0 }}>{step.label}</span>
+                    : (
+                      <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, background: 'var(--surface-2)', border: `1px solid var(--line)`, borderRadius: 5, padding: '5px 11px', flexShrink: 0 }}>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: step.color, fontWeight: 500 }}>{step.label}</span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-4)' }}>{step.note}</span>
+                      </div>
+                    )
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {[
+                  { job: 'unit-tests',  desc: 'pytest across all services — must pass before any deploy job runs' },
+                  { job: 'cdk-diff',    desc: 'runs on PRs only — posts CloudFormation changeset summary as a PR comment' },
+                  { job: 'deploy-dev',  desc: 'cdk deploy --all (dev context) on every merge to main; deploys all 11 CDK stacks in dependency order' },
+                  { job: 'smoke-dev',   desc: 'post-deploy smoke tests run automatically after deploy-dev; validates /health endpoint, fall-alert round-trip, and Ella DLQ depth before marking the deploy complete' },
+                  { job: 'deploy-prod', desc: 'manual approval gate — environment protection rule requires explicit sign-off before prod deploy' },
+                ].map(({ job, desc }) => (
+                  <div key={job} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)', minWidth: 110, flexShrink: 0 }}>{job}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.5 }}>{desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
               {[
                 { label: 'Passing',  value: Object.values(PIPELINE).filter(p => p.deploy.status === 'success').length, color: '#3fb950' },
@@ -2347,6 +2389,35 @@ export default function CloudPage() {
               <p style={{ fontFamily: 'var(--mono)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-4)', margin: '0 0 6px' }}>ambientcloud · CloudWatch · last 1h</p>
               <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 400, fontSize: 26, margin: 0, letterSpacing: '-0.02em' }}>Service Health</h1>
             </div>
+
+            {/* Operator alarm status widget */}
+            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '16px 20px', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-4)' }}>AlarmStatusWidget · Ambient-dev-Dashboard · SNS: ambient-dev-operator-alarms</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 8 }}>
+                {[
+                  { name: 'alerts-enricher-errors',    label: 'Alerts Enricher Errors',   status: 'ok'  as const },
+                  { name: 'alerts-enricher-throttles', label: 'Alerts Enricher Throttles', status: 'ok'  as const },
+                  { name: 'ella-dlq-depth',            label: 'Ella DLQ Depth',            status: 'ok'  as const },
+                  { name: 'ella-errors',               label: 'Ella Errors',               status: 'ok'  as const },
+                  { name: 'api-errors',                label: 'API Errors',                status: 'ok'  as const },
+                  { name: 'api-p99-latency',           label: 'API P99 Latency',           status: 'ok'  as const },
+                  { name: 'telemetry-divergence',      label: 'TelemetryDivergence >10 (3×15m)', status: 'ok' as const },
+                  { name: 'iot-rule-failures',         label: 'IoT Rule Failures',         status: 'ok'  as const },
+                ].map(alarm => (
+                  <div key={alarm.name} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 6, padding: '7px 12px' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3fb950', flexShrink: 0, display: 'inline-block', boxShadow: '0 0 4px #3fb95066' }} />
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-2)' }}>{alarm.label}</span>
+                    <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 9.5, color: '#3fb950' }}>OK</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 10, fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-4)' }}>
+                CfnOutput <span style={{ color: '#79c0ff' }}>AlarmTopicArn</span> → ambient-{'{env}'}-operator-alarms · stack: Ambient-{'{env}'}-Dashboard
+              </div>
+            </div>
+
             <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
               {[
                 { label: 'Healthy',  value: Object.values(HEALTH).filter(h => h.status === 'healthy').length,  color: '#3fb950' },
