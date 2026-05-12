@@ -725,7 +725,9 @@ export default function EngineeringPage() {
                             );
                           })}
                           <button onClick={handleAdd}
-                            style={{ flexShrink:0, width:26, borderRadius:4, border:"1px solid var(--line)", background:"var(--accent)", color:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(188,130,243,0.7)"; e.currentTarget.style.background = "rgba(188,130,243,0.18)"; e.currentTarget.style.boxShadow = "0 0 12px rgba(188,130,243,0.4), 0 0 0 1px rgba(188,130,243,0.15)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(188,130,243,0.35)"; e.currentTarget.style.background = "rgba(188,130,243,0.08)"; e.currentTarget.style.boxShadow = "none"; }}
+                            style={{ flexShrink:0, width:26, borderRadius:4, border:"1px solid rgba(188,130,243,0.35)", background:"rgba(188,130,243,0.08)", color:"rgba(188,130,243,0.9)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"border-color 0.2s, background 0.2s, box-shadow 0.2s" }}>
                             <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M8 3v10M3 8h10" strokeLinecap="round"/></svg>
                           </button>
                         </div>
