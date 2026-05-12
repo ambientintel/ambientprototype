@@ -1107,18 +1107,61 @@ class ObservabilityStack(Stack):
                     "AWS/Athena",                      # scan bytes, query latency
                 ]])
 
-        # Document the manual cross-account trust step as a CfnOutput
-        CfnOutput(self, "CrossAccountTrustNote",
-            value=(f"Grant account {observability_account} Firehose resource policy "
-                   f"allowing firehose:PutRecord from account {self.account}"),
-            description="Manual step: add cross-account trust to observability Firehose")`,
+        # Firehose has no resource-based policies. Tenant-side IAM grant above is sufficient.
+        # Deploy ObservabilityCentralStack once in the obs account to create the stream.
+        CfnOutput(self, "ObsSetupNote",
+            value=(f"Deploy ObservabilityCentralStack in account {observability_account} once "
+                   f"(--context deploy_obs_central=true), then pass its FirehoseArn output "
+                   f"as --context observability_firehose_arn=<arn> to this deploy."),
+            description="One-time setup — see infra/stacks/observability_central_stack.py")
+
+# ── ObservabilityCentralStack ─────────────────────────────────────────────────
+# infra/stacks/observability_central_stack.py
+# Deploy ONCE into the central observability account:
+#   cdk deploy Ambient-obs-ObsCentral --context deploy_obs_central=true
+from aws_cdk import CfnOutput, Duration, RemovalPolicy, Stack
+from aws_cdk import aws_iam as iam, aws_kinesisfirehose as firehose, aws_s3 as s3
+
+class ObservabilityCentralStack(Stack):
+    def __init__(self, scope, id, **kwargs):
+        super().__init__(scope, id, **kwargs)
+
+        self.metrics_bucket = s3.Bucket(self, "MetricsBucket",
+            bucket_name=f"ambient-obs-metrics-{self.account}",
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True, removal_policy=RemovalPolicy.RETAIN,
+            lifecycle_rules=[s3.LifecycleRule(id="expire", expiration=Duration.days(90))])
+
+        firehose_role = iam.Role(self, "FirehoseRole",
+            role_name="ambient-obs-firehose-delivery",
+            assumed_by=iam.ServicePrincipal("firehose.amazonaws.com"))
+        self.metrics_bucket.grant_read_write(firehose_role)
+
+        self.ingest_stream = firehose.CfnDeliveryStream(self, "IngestStream",
+            delivery_stream_name="ambient-tenant-ingest",
+            delivery_stream_type="DirectPut",
+            s3_destination_configuration=firehose.CfnDeliveryStream
+                .S3DestinationConfigurationProperty(
+                bucket_arn=self.metrics_bucket.bucket_arn,
+                role_arn=firehose_role.role_arn,
+                prefix="metrics/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/",
+                error_output_prefix="errors/",
+                buffering_hints=firehose.CfnDeliveryStream.BufferingHintsProperty(
+                    interval_in_seconds=300, size_in_m_bs=128),
+                compression_format="GZIP"))
+        self.ingest_stream.node.add_dependency(firehose_role)
+
+        CfnOutput(self, "FirehoseArn",      # → pass as observability_firehose_arn context
+            value=self.ingest_stream.attr_arn,
+            export_name="ambient-obs-ingest-firehose-arn")
+        CfnOutput(self, "MetricsBucketName",
+            value=self.metrics_bucket.bucket_name)`,
     'cdk.json':
 `{
   "app": "python3 app.py",
   "context": {
     "environment": "dev",
     "tenant_id": "PILOT-TENANT-001",
-    "enable_observability": "false",
     "observability_account": "CENTRAL_ACCOUNT_ID"
   }
 }`,
@@ -1126,7 +1169,6 @@ class ObservabilityStack(Stack):
 `{
   "environment": "dev",
   "tenant_id": "PILOT-TENANT-001",
-  "enable_observability": "false",
   "observability_account": "CENTRAL_ACCOUNT_ID",
   "account": "DEV_ACCOUNT_ID",
   "region": "us-east-1"
@@ -1135,8 +1177,8 @@ class ObservabilityStack(Stack):
 `{
   "environment": "prod",
   "tenant_id": "PILOT-TENANT-001",
-  "enable_observability": "true",
   "observability_account": "CENTRAL_ACCOUNT_ID",
+  "observability_firehose_arn": "arn:aws:firehose:us-east-1:CENTRAL_ACCOUNT_ID:deliverystream/ambient-tenant-ingest",
   "account": "PROD_ACCOUNT_ID",
   "region": "us-east-1"
 }`,
