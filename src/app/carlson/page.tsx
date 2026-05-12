@@ -275,190 +275,198 @@ function HowItWorksDiagram() {
 
 function TechDiagram() {
   const maroon = '#7A0019', gold = '#F0B429', accent = '#4F9CF9', green = '#3DCC91';
-  const nNodes: Array<[number, number]> = [
-    [280,162],[330,180],[338,226],[308,262],[252,262],[224,226],[232,180],
+  const barBottom = 295;
+  const bars = [
+    { x: 22,  h: '28;52;38;44;60;42;28', dur: '3.1s' },
+    { x: 34,  h: '44;28;56;34;48;26;44', dur: '2.8s' },
+    { x: 46,  h: '60;44;32;58;36;52;60', dur: '3.4s' },
+    { x: 58,  h: '36;60;48;28;52;40;36', dur: '2.6s' },
+    { x: 70,  h: '52;36;60;44;30;56;52', dur: '3.8s' },
+    { x: 82,  h: '40;52;28;60;44;32;40', dur: '3.0s' },
+    { x: 94,  h: '56;40;44;32;60;48;56', dur: '2.9s' },
+    { x: 106, h: '32;56;52;48;40;60;32', dur: '3.5s' },
+  ].map(b => ({
+    ...b,
+    yv: b.h.split(';').map((v: string) => barBottom - +v).join(';'),
+  }));
+  const rooms: Array<[number, number, boolean]> = [
+    [22, 395, false], [54, 395, false], [86, 395, false],
+    [22, 429, true],  [54, 429, false], [86, 429, false],
   ];
   return (
-    <svg viewBox="0 0 560 460" style={{ width: '100%', height: 'auto', display: 'block' }}>
+    <svg viewBox="0 0 440 506" style={{ width: '100%', height: 'auto', display: 'block' }}>
       <defs>
-        <filter id="td-glow" x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur stdDeviation="7" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
         <filter id="td-glow-sm" x="-120%" y="-120%" width="340%" height="340%">
           <feGaussianBlur stdDeviation="2.5" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
-        <pattern id="td-dots" width="36" height="36" patternUnits="userSpaceOnUse">
-          <circle cx="18" cy="18" r="0.8" fill="rgba(255,255,255,0.055)"/>
+        <pattern id="td-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.028)" strokeWidth="0.5"/>
         </pattern>
-        <linearGradient id="td-p1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="#7A0019" stopOpacity="0.7"/>
-          <stop offset="100%" stopColor="#F0B429" stopOpacity="0.7"/>
+        <clipPath id="td-v1"><rect x="14" y="14"  width="114" height="118"/></clipPath>
+        <clipPath id="td-v2"><rect x="14" y="194" width="114" height="118"/></clipPath>
+        <clipPath id="td-v3"><rect x="14" y="374" width="114" height="118"/></clipPath>
+        <linearGradient id="td-c1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#7A0019" stopOpacity="0.9"/>
+          <stop offset="100%" stopColor="#F0B429" stopOpacity="0.9"/>
         </linearGradient>
-        <linearGradient id="td-p2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="#F0B429" stopOpacity="0.7"/>
-          <stop offset="100%" stopColor="#4F9CF9" stopOpacity="0.7"/>
+        <linearGradient id="td-c2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#F0B429" stopOpacity="0.9"/>
+          <stop offset="100%" stopColor="#4F9CF9" stopOpacity="0.9"/>
         </linearGradient>
-        <radialGradient id="td-z1" cx="16%" cy="26%" r="38%" gradientUnits="objectBoundingBox">
-          <stop offset="0%"   stopColor="#7A0019" stopOpacity="0.14"/>
-          <stop offset="100%" stopColor="#7A0019" stopOpacity="0"/>
-        </radialGradient>
-        <radialGradient id="td-z2" cx="50%" cy="46%" r="36%" gradientUnits="objectBoundingBox">
-          <stop offset="0%"   stopColor="#F0B429" stopOpacity="0.07"/>
-          <stop offset="100%" stopColor="#F0B429" stopOpacity="0"/>
-        </radialGradient>
-        <radialGradient id="td-z3" cx="84%" cy="70%" r="36%" gradientUnits="objectBoundingBox">
-          <stop offset="0%"   stopColor="#4F9CF9" stopOpacity="0.1"/>
-          <stop offset="100%" stopColor="#4F9CF9" stopOpacity="0"/>
-        </radialGradient>
-        <clipPath id="td-rc">
-          <circle cx="90" cy="118" r="62"/>
-        </clipPath>
       </defs>
 
-      {/* Background */}
-      <rect width="560" height="460" fill="#080808"/>
-      <rect width="560" height="460" fill="url(#td-dots)"/>
-      <rect width="560" height="460" fill="url(#td-z1)"/>
-      <rect width="560" height="460" fill="url(#td-z2)"/>
-      <rect width="560" height="460" fill="url(#td-z3)"/>
+      {/* BG */}
+      <rect width="440" height="506" fill="#080808"/>
+      <rect width="440" height="506" fill="url(#td-grid)"/>
 
-      {/* Glowing path corridors */}
-      <path d="M 90 118 Q 178 178 280 212" fill="none" stroke="url(#td-p1)" strokeWidth="8" opacity="0.09" filter="url(#td-glow-sm)"/>
-      <path d="M 280 212 Q 382 212 470 320" fill="none" stroke="url(#td-p2)" strokeWidth="8" opacity="0.09" filter="url(#td-glow-sm)"/>
+      {/* ══ PANEL 1 · AMBIENT SENSORS ══ */}
+      <rect x="14" y="14" width="412" height="118" fill="#0C0C0C" stroke={maroon} strokeWidth="0.7" strokeOpacity="0.45"/>
+      <rect x="14" y="14" width="114" height="118" fill="rgba(122,0,25,0.07)"/>
+      <line x1="128" y1="14" x2="128" y2="132" stroke={maroon} strokeWidth="0.5" opacity="0.35"/>
 
-      {/* Connection paths */}
-      <path d="M 90 118 Q 178 178 280 212" fill="none" stroke="url(#td-p1)" strokeWidth="1.3" strokeDasharray="5,7"/>
-      <path d="M 280 212 Q 382 212 470 320" fill="none" stroke="url(#td-p2)" strokeWidth="1.3" strokeDasharray="5,7"/>
-      <text x="182" y="140" textAnchor="middle" fontFamily="monospace" fontSize="7" fill="rgba(255,255,255,0.18)" letterSpacing="1.4">POINT CLOUD · 847 pts/s</text>
-      <text x="378" y="226" textAnchor="middle" fontFamily="monospace" fontSize="7" fill="rgba(255,255,255,0.18)" letterSpacing="1.4">AI INSIGHTS</text>
-
-      {/* ── NODE 1: AMBIENT SENSORS ── */}
-      <g clipPath="url(#td-rc)">
+      {/* Radar viz */}
+      <g clipPath="url(#td-v1)">
         {([0,1,2] as number[]).map(j => (
-          <circle key={j} cx="90" cy="118" r="20" fill="none" stroke={maroon} strokeWidth="1.5">
-            <animate attributeName="r" from="20" to="62" dur="3.4s" begin={`${j * 1.13}s`} repeatCount="indefinite"/>
-            <animate attributeName="opacity" from="0.75" to="0" dur="3.4s" begin={`${j * 1.13}s`} repeatCount="indefinite"/>
+          <circle key={j} cx="71" cy="71" r="18" fill="none" stroke={maroon} strokeWidth="1.2">
+            <animate attributeName="r"       from="18" to="60" dur="3.2s" begin={`${j * 1.07}s`} repeatCount="indefinite"/>
+            <animate attributeName="opacity" from="0.7" to="0"  dur="3.2s" begin={`${j * 1.07}s`} repeatCount="indefinite"/>
           </circle>
         ))}
-        <line x1="90" y1="118" x2="152" y2="118" stroke={maroon} strokeWidth="1.2" opacity="0.55">
-          <animateTransform attributeName="transform" type="rotate" from="0 90 118" to="360 90 118" dur="5s" repeatCount="indefinite"/>
+        <circle cx="71" cy="71" r="26" fill="none" stroke="rgba(122,0,25,0.16)" strokeWidth="0.6" strokeDasharray="3,4"/>
+        <circle cx="71" cy="71" r="46" fill="none" stroke="rgba(122,0,25,0.10)" strokeWidth="0.6" strokeDasharray="3,4"/>
+        <line x1="71" y1="71" x2="71" y2="14" stroke={maroon} strokeWidth="1" opacity="0.5">
+          <animateTransform attributeName="transform" type="rotate" from="0 71 71" to="360 71 71" dur="4s" repeatCount="indefinite"/>
         </line>
       </g>
-      {([[-32,-32],[32,-32],[-32,32],[32,32]] as Array<[number,number]>).map(([dx,dy],i) => (
-        <g key={i}>
-          <line x1="90" y1="118" x2={90+dx} y2={118+dy} stroke="rgba(122,0,25,0.24)" strokeWidth="0.7" strokeDasharray="2,3"/>
-          <circle cx={90+dx} cy={118+dy} r="3.5" fill={maroon} opacity="0.9" filter="url(#td-glow-sm)"/>
-          <circle cx={90+dx} cy={118+dy} r="1.6" fill="#fff" opacity="0.85"/>
-        </g>
-      ))}
-      <g filter="url(#td-glow)">
-        <circle cx="90" cy="118" r="22" fill="rgba(122,0,25,0.18)" stroke={maroon} strokeWidth="2"/>
-        <circle cx="90" cy="118" r="13" fill="rgba(122,0,25,0.3)"/>
-        <circle cx="90" cy="118" r="6"  fill={maroon} opacity="0.95"/>
-        <circle cx="90" cy="118" r="2.8" fill="#fff" opacity="0.9"/>
-      </g>
-      <circle r="2" fill={maroon} filter="url(#td-glow-sm)">
-        <animateMotion dur="3.8s" repeatCount="indefinite" path="M 56 118 A 34 34 0 1 1 124 118 A 34 34 0 1 1 56 118"/>
-      </circle>
-      <polyline points="22,160 30,154 36,166 44,147 52,158 60,151 68,163 74,150 82,156 90,144 98,160 106,152 114,162 122,148 132,157 140,152 152,158 160,149"
+      <circle cx="71" cy="71" r="3.2" fill={maroon} filter="url(#td-glow-sm)"/>
+      <circle cx="71" cy="71" r="1.4" fill="#fff" opacity="0.9"/>
+      {/* Waveform strip at bottom of viz area */}
+      <line x1="14" y1="114" x2="128" y2="114" stroke="rgba(122,0,25,0.18)" strokeWidth="0.5"/>
+      <polyline points="18,122 24,117 30,126 37,113 44,121 51,116 58,124 65,115 72,120 79,111 86,122 93,116 100,124 107,113 114,119 121,115 126,120"
         fill="none" stroke={maroon} strokeWidth="0.9" opacity="0.55" strokeLinecap="round"/>
-      <text x="90" y="184" textAnchor="middle" fontFamily="monospace" fontSize="8" fill="rgba(255,255,255,0.55)" letterSpacing="1.4">AMBIENT SENSORS</text>
-      <text x="90" y="196" textAnchor="middle" fontFamily="monospace" fontSize="7" fill="rgba(122,0,25,0.8)" letterSpacing="1.2">60 GHz FMCW</text>
 
-      {/* ── NODE 2: CLOUD AI (neural hub) ── */}
-      {nNodes.map(([nx, ny], i) => (
-        <g key={i}>
-          <line x1="280" y1="212" x2={nx} y2={ny} stroke="rgba(240,180,41,0.13)" strokeWidth="0.9"/>
-          <circle cx={nx} cy={ny} r="3" fill="rgba(240,180,41,0.16)" stroke={gold} strokeWidth="0.8"/>
-          <circle r="1.4" fill={gold} opacity="0.75">
-            <animateMotion dur={`${1.8 + i * 0.28}s`} begin={`${-(i * 0.38)}s`} repeatCount="indefinite"
-              path={`M 280 212 L ${nx} ${ny}`}/>
-            <animate attributeName="opacity" values="0;0.85;0" keyTimes="0;0.5;1"
-              dur={`${1.8 + i * 0.28}s`} begin={`${-(i * 0.38)}s`} repeatCount="indefinite"/>
-          </circle>
-        </g>
-      ))}
-      <line x1="280" y1="56"  x2="280" y2="145" stroke="rgba(240,180,41,0.13)" strokeWidth="0.9" strokeDasharray="3,6"/>
-      <line x1="280" y1="279" x2="280" y2="390" stroke="rgba(240,180,41,0.13)" strokeWidth="0.9" strokeDasharray="3,6"/>
-      <g filter="url(#td-glow)">
-        <circle cx="280" cy="212" r="30" fill="rgba(240,180,41,0.09)" stroke={gold} strokeWidth="2"/>
-        <circle cx="280" cy="212" r="19" fill="rgba(240,180,41,0.17)"/>
-        <circle cx="280" cy="212" r="9"  fill={gold} opacity="0.88"/>
-        <circle cx="280" cy="212" r="4"  fill="#fff" opacity="0.9"/>
-      </g>
-      <circle r="2.2" fill={gold} filter="url(#td-glow-sm)">
-        <animateMotion dur="4.2s" repeatCount="indefinite" path="M 238 212 A 42 42 0 1 1 322 212 A 42 42 0 1 1 238 212"/>
+      {/* Panel 1 text */}
+      <text x="140" y="34" fontFamily="monospace" fontSize="7"   fill="rgba(255,255,255,0.28)" letterSpacing="2">01 · SENSING</text>
+      <text x="140" y="54" fontFamily="monospace" fontSize="14"  fill="rgba(255,255,255,0.92)" letterSpacing="0.5" fontWeight="600">AMBIENT SENSORS</text>
+      <text x="140" y="68" fontFamily="monospace" fontSize="7.5" fill="rgba(122,0,25,0.9)"     letterSpacing="1.5">IWR6843AOP · 60 GHz FMCW</text>
+      <line x1="140" y1="78" x2="420" y2="78" stroke="rgba(255,255,255,0.055)" strokeWidth="0.6"/>
+      <text x="140" y="92" fontFamily="monospace" fontSize="6.5" fill="rgba(255,255,255,0.28)" letterSpacing="1">OUTPUT RATE</text>
+      <text x="140" y="107" fontFamily="monospace" fontSize="12" fill="rgba(255,255,255,0.78)" letterSpacing="0.5">847 pts/s</text>
+      <text x="258" y="92" fontFamily="monospace" fontSize="6.5" fill="rgba(255,255,255,0.28)" letterSpacing="1">RESOLUTION</text>
+      <text x="258" y="107" fontFamily="monospace" fontSize="12" fill="rgba(255,255,255,0.78)" letterSpacing="0.5">0.3 m</text>
+      <text x="358" y="92" fontFamily="monospace" fontSize="6.5" fill="rgba(255,255,255,0.28)" letterSpacing="1">STATUS</text>
+      <circle cx="360" cy="104" r="3" fill={green}>
+        <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/>
       </circle>
-      <circle r="1.5" fill="rgba(240,180,41,0.6)">
-        <animateMotion dur="2.8s" begin="-1.1s" repeatCount="indefinite" path="M 252 212 A 28 28 0 1 0 308 212 A 28 28 0 1 0 252 212"/>
-      </circle>
-      <text x="280" y="275" textAnchor="middle" fontFamily="monospace" fontSize="8.5" fill="rgba(255,255,255,0.55)" letterSpacing="1.4">CLOUD AI</text>
-      <text x="280" y="287" textAnchor="middle" fontFamily="monospace" fontSize="7" fill="rgba(240,180,41,0.65)" letterSpacing="1.2">AWS BEDROCK</text>
+      <text x="368" y="108" fontFamily="monospace" fontSize="9" fill={green} letterSpacing="1.5">ACTIVE</text>
 
-      {/* ── NODE 3: ELLA AI ── */}
-      {([0,1] as number[]).map(j => (
-        <circle key={j} cx="470" cy="320" r="22" fill="none" stroke={accent} strokeWidth="1.2">
-          <animate attributeName="r" from="22" to="62" dur={`${2.6 + j * 1.1}s`} begin={`${j * 1.5}s`} repeatCount="indefinite"/>
-          <animate attributeName="opacity" from="0.6" to="0" dur={`${2.6 + j * 1.1}s`} begin={`${j * 1.5}s`} repeatCount="indefinite"/>
-        </circle>
-      ))}
-      <g filter="url(#td-glow)">
-        <circle cx="470" cy="320" r="22" fill="rgba(79,156,249,0.12)" stroke={accent} strokeWidth="2"/>
-        <circle cx="470" cy="320" r="13" fill="rgba(79,156,249,0.22)"/>
-        <circle cx="470" cy="320" r="6"  fill={accent} opacity="0.9"/>
-        <circle cx="470" cy="320" r="2.8" fill="#fff" opacity="0.9"/>
-      </g>
-      <circle r="2" fill={accent} filter="url(#td-glow-sm)">
-        <animateMotion dur="5.2s" begin="-2.2s" repeatCount="indefinite" path="M 428 320 A 42 42 0 1 1 512 320 A 42 42 0 1 1 428 320"/>
-      </circle>
-      <text x="470" y="350" textAnchor="middle" fontFamily="monospace" fontSize="8.5" fill="rgba(255,255,255,0.55)" letterSpacing="1.4">ELLA AI</text>
-      <text x="470" y="362" textAnchor="middle" fontFamily="monospace" fontSize="7"   fill="rgba(79,156,249,0.72)" letterSpacing="1.2">NURSE ASSISTANT</text>
-      {/* Dashboard card */}
-      <rect x="384" y="370" width="152" height="68" rx="3" fill="rgba(79,156,249,0.05)" stroke="rgba(79,156,249,0.2)" strokeWidth="0.8"/>
-      <rect x="384" y="370" width="152" height="16" rx="3" fill="rgba(79,156,249,0.08)"/>
-      <text x="393"  y="382" fontFamily="monospace" fontSize="7"   fill="rgba(79,156,249,0.68)" letterSpacing="0.8">ELLA AI · ROOM 204</text>
-      <circle cx="528" cy="378" r="3" fill="#FF6680">
-        <animate attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite"/>
-      </circle>
-      <line x1="384" y1="386" x2="536" y2="386" stroke="rgba(79,156,249,0.13)" strokeWidth="0.7"/>
-      <text x="393" y="399" fontFamily="monospace" fontSize="7.5" fill="rgba(255,255,255,0.72)">ALERT · FALL RISK ELEVATED</text>
-      <text x="393" y="412" fontFamily="monospace" fontSize="7"   fill="rgba(255,255,255,0.36)">Gait deviation: 23%</text>
-      <text x="393" y="425" fontFamily="monospace" fontSize="7"   fill="rgba(255,255,255,0.36)">Confidence: 0.89  ·  14:32:07</text>
-      <rect x="393" y="432" width="116" height="3.5" rx="1.5" fill="rgba(255,255,255,0.07)"/>
-      <rect x="393" y="432" width="103" height="3.5" rx="1.5" fill={accent} opacity="0.55"/>
-
-      {/* ── Data packets: Sensor → Cloud ── */}
+      {/* ── Connector 1 ── */}
+      <line x1="71" y1="132" x2="71" y2="194" stroke="url(#td-c1)" strokeWidth="0.8" strokeDasharray="3,5"/>
       {([0,1,2] as number[]).map(i => (
         <circle key={i} r={2.6 - i * 0.4} fill={i < 2 ? maroon : gold} filter="url(#td-glow-sm)">
-          <animateMotion dur="2.6s" begin={`${-i * 0.87}s`} repeatCount="indefinite"
-            path="M 90 118 Q 178 178 280 212"/>
-          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.92;1"
-            dur="2.6s" begin={`${-i * 0.87}s`} repeatCount="indefinite"/>
+          <animateMotion dur="1.4s" begin={`${-i * 0.47}s`} repeatCount="indefinite" path="M 71 132 L 71 194"/>
+          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" dur="1.4s" begin={`${-i * 0.47}s`} repeatCount="indefinite"/>
         </circle>
       ))}
-      {/* ── Data packets: Cloud → Ella ── */}
+      <text x="82" y="167" fontFamily="monospace" fontSize="6.5" fill="rgba(255,255,255,0.15)" letterSpacing="1.2">POINT CLOUD STREAM</text>
+
+      {/* ══ PANEL 2 · CLOUD AI ══ */}
+      <rect x="14" y="194" width="412" height="118" fill="#0C0C0C" stroke={gold} strokeWidth="0.7" strokeOpacity="0.45"/>
+      <rect x="14" y="194" width="114" height="118" fill="rgba(240,180,41,0.05)"/>
+      <line x1="128" y1="194" x2="128" y2="312" stroke={gold} strokeWidth="0.5" opacity="0.35"/>
+
+      {/* Inference bars viz */}
+      <text x="22" y="207" fontFamily="monospace" fontSize="6" fill="rgba(240,180,41,0.35)" letterSpacing="1">INFERENCE ENGINE</text>
+      <g clipPath="url(#td-v2)">
+        {bars.map((b, i) => (
+          <g key={i}>
+            <rect x={b.x} y={223} width="8" height={72} rx="1" fill="rgba(240,180,41,0.07)"/>
+            <rect x={b.x} y={barBottom} width="8" height="0" rx="1" fill={gold} opacity="0.6">
+              <animate attributeName="height" values={b.h}  dur={b.dur} repeatCount="indefinite"/>
+              <animate attributeName="y"      values={b.yv} dur={b.dur} repeatCount="indefinite"/>
+            </rect>
+          </g>
+        ))}
+        {/* Flow dots across bottom */}
+        <line x1="14" y1="298" x2="128" y2="298" stroke="rgba(240,180,41,0.15)" strokeWidth="0.5"/>
+        <circle r="1.8" fill={gold} opacity="0.65">
+          <animateMotion dur="2.1s" repeatCount="indefinite" path="M 18 305 L 122 305"/>
+          <animate attributeName="opacity" values="0;0.75;0" keyTimes="0;0.5;1" dur="2.1s" repeatCount="indefinite"/>
+        </circle>
+        <circle r="1.8" fill={gold} opacity="0.65">
+          <animateMotion dur="2.1s" begin="-1.05s" repeatCount="indefinite" path="M 18 305 L 122 305"/>
+          <animate attributeName="opacity" values="0;0.75;0" keyTimes="0;0.5;1" dur="2.1s" begin="-1.05s" repeatCount="indefinite"/>
+        </circle>
+      </g>
+
+      {/* Panel 2 text */}
+      <text x="140" y="214" fontFamily="monospace" fontSize="7"   fill="rgba(255,255,255,0.28)" letterSpacing="2">02 · PROCESSING</text>
+      <text x="140" y="234" fontFamily="monospace" fontSize="14"  fill="rgba(255,255,255,0.92)" letterSpacing="0.5" fontWeight="600">CLOUD AI</text>
+      <text x="140" y="248" fontFamily="monospace" fontSize="7.5" fill="rgba(240,180,41,0.9)"   letterSpacing="1.5">AWS BEDROCK · FOUNDATION MODEL</text>
+      <line x1="140" y1="258" x2="420" y2="258" stroke="rgba(255,255,255,0.055)" strokeWidth="0.6"/>
+      <text x="140" y="272" fontFamily="monospace" fontSize="6.5" fill="rgba(255,255,255,0.28)" letterSpacing="1">LATENCY</text>
+      <text x="140" y="287" fontFamily="monospace" fontSize="12" fill="rgba(255,255,255,0.78)" letterSpacing="0.5">{'< 80 ms'}</text>
+      <text x="258" y="272" fontFamily="monospace" fontSize="6.5" fill="rgba(255,255,255,0.28)" letterSpacing="1">THROUGHPUT</text>
+      <text x="258" y="287" fontFamily="monospace" fontSize="12" fill="rgba(255,255,255,0.78)" letterSpacing="0.5">12 MB/s</text>
+      <text x="358" y="272" fontFamily="monospace" fontSize="6.5" fill="rgba(255,255,255,0.28)" letterSpacing="1">STATUS</text>
+      <g>
+        <animate attributeName="opacity" values="1;0.25;1" dur="1.8s" repeatCount="indefinite"/>
+        <text x="358" y="290" fontFamily="monospace" fontSize="9" fill={gold} letterSpacing="1">INFERENCING</text>
+      </g>
+
+      {/* ── Connector 2 ── */}
+      <line x1="71" y1="312" x2="71" y2="374" stroke="url(#td-c2)" strokeWidth="0.8" strokeDasharray="3,5"/>
       {([0,1,2] as number[]).map(i => (
         <circle key={i} r={2.6 - i * 0.4} fill={i < 2 ? gold : accent} filter="url(#td-glow-sm)">
-          <animateMotion dur="2.2s" begin={`${-i * 0.73}s`} repeatCount="indefinite"
-            path="M 280 212 Q 382 212 470 320"/>
-          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.92;1"
-            dur="2.2s" begin={`${-i * 0.73}s`} repeatCount="indefinite"/>
+          <animateMotion dur="1.4s" begin={`${-i * 0.47}s`} repeatCount="indefinite" path="M 71 312 L 71 374"/>
+          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" dur="1.4s" begin={`${-i * 0.47}s`} repeatCount="indefinite"/>
         </circle>
       ))}
+      <text x="82" y="347" fontFamily="monospace" fontSize="6.5" fill="rgba(255,255,255,0.15)" letterSpacing="1.2">AI INSIGHT STREAM</text>
 
-      {/* ── Readout strip + corners ── */}
-      <line x1="12" y1="442" x2="548" y2="442" stroke="rgba(255,255,255,0.07)" strokeWidth="0.7"/>
-      <text x="18"  y="455" fontFamily="monospace" fontSize="7.5" fill="rgba(255,255,255,0.13)" letterSpacing="1.5">AMBIENT INTELLIGENCE · DATA PIPELINE</text>
-      <circle cx="536" cy="451" r="3.2" fill={green}>
-        <animate attributeName="opacity" values="1;0.15;1" dur="1.4s" repeatCount="indefinite"/>
+      {/* ══ PANEL 3 · ELLA AI ══ */}
+      <rect x="14" y="374" width="412" height="118" fill="#0C0C0C" stroke={accent} strokeWidth="0.7" strokeOpacity="0.45"/>
+      <rect x="14" y="374" width="114" height="118" fill="rgba(79,156,249,0.05)"/>
+      <line x1="128" y1="374" x2="128" y2="492" stroke={accent} strokeWidth="0.5" opacity="0.35"/>
+
+      {/* Room monitor grid in viz area */}
+      <text x="22" y="387" fontFamily="monospace" fontSize="6" fill="rgba(79,156,249,0.35)" letterSpacing="1">RESIDENT MONITOR</text>
+      {rooms.map(([rx, ry, alert], i) => (
+        <g key={i}>
+          <rect x={rx} y={ry} width="26" height="28" rx="1"
+            fill={alert ? 'rgba(122,0,25,0.22)' : 'rgba(79,156,249,0.05)'}
+            stroke={alert ? maroon : 'rgba(79,156,249,0.18)'} strokeWidth="0.8"/>
+          <text x={rx+3} y={ry+10} fontFamily="monospace" fontSize="5.5" fill="rgba(255,255,255,0.32)">{`RM ${201+i}`}</text>
+          {alert
+            ? <circle cx={rx+13} cy={ry+20} r="3" fill="#FF6680"><animate attributeName="opacity" values="1;0.15;1" dur="1s" repeatCount="indefinite"/></circle>
+            : <circle cx={rx+13} cy={ry+20} r="2.5" fill={green} opacity="0.55"/>
+          }
+        </g>
+      ))}
+      <line x1="14" y1="466" x2="128" y2="466" stroke="rgba(79,156,249,0.15)" strokeWidth="0.5"/>
+      <text x="22" y="480" fontFamily="monospace" fontSize="6.5" fill="rgba(79,156,249,0.38)" letterSpacing="0.8">6 RESIDENTS · 1 ALERT</text>
+
+      {/* Panel 3 text */}
+      <text x="140" y="394" fontFamily="monospace" fontSize="7"   fill="rgba(255,255,255,0.28)" letterSpacing="2">03 · DELIVERY</text>
+      <text x="140" y="414" fontFamily="monospace" fontSize="14"  fill="rgba(255,255,255,0.92)" letterSpacing="0.5" fontWeight="600">ELLA AI</text>
+      <text x="140" y="428" fontFamily="monospace" fontSize="7.5" fill="rgba(79,156,249,0.9)"   letterSpacing="1.5">NURSE ASSISTANT · HIPAA COMPLIANT</text>
+      <line x1="140" y1="438" x2="420" y2="438" stroke="rgba(255,255,255,0.055)" strokeWidth="0.6"/>
+      <text x="140" y="452" fontFamily="monospace" fontSize="6.5" fill="rgba(255,255,255,0.28)" letterSpacing="1">ACTIVE ALERT</text>
+      <text x="140" y="466" fontFamily="monospace" fontSize="11"  fill="#FF6680" letterSpacing="0.5">FALL RISK · ROOM 204</text>
+      <text x="140" y="480" fontFamily="monospace" fontSize="7"   fill="rgba(255,255,255,0.32)">Gait deviation 23% · Confidence 0.89 · 14:32:07</text>
+      {/* LIVE badge */}
+      <rect x="356" y="446" width="66" height="20" rx="1" fill="rgba(79,156,249,0.07)" stroke={accent} strokeWidth="0.6" strokeOpacity="0.4"/>
+      <circle cx="367" cy="456" r="2.8" fill={green}>
+        <animate attributeName="opacity" values="1;0.15;1" dur="1.6s" repeatCount="indefinite"/>
       </circle>
-      <text x="528" y="455" textAnchor="end" fontFamily="monospace" fontSize="7.5" fill={green} letterSpacing="2">LIVE</text>
-      <polyline points="10,22 10,10 22,10"    fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2"/>
-      <polyline points="538,10 550,10 550,22"  fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2"/>
-      <polyline points="10,450 10,462 22,462"  fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2"/>
-      <polyline points="538,462 550,462 550,450" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2"/>
+      <text x="375" y="460" fontFamily="monospace" fontSize="8" fill={green} letterSpacing="1.5">LIVE</text>
+
+      {/* Corner brackets */}
+      <polyline points="6,22 6,6 22,6"     fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.1"/>
+      <polyline points="418,6 434,6 434,22"  fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.1"/>
+      <polyline points="6,484 6,500 22,500"  fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.1"/>
+      <polyline points="418,500 434,500 434,484" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.1"/>
     </svg>
   );
 }
