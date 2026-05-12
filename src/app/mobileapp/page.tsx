@@ -435,8 +435,8 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
     ],
   },
   {
-    id: 'build', phase: '10', title: 'EAS Build', status: 'warning', tag: 'Distribution', time: '~20–40 min per build',
-    summary: 'EAS iOS build queued (second attempt) with Admin ASC API key U4BSUK3SZ8. Associated Domains capability (applinks:ellamemory.com) enabled in Apple Developer portal. Push notifications use raw APNS tokens via AWS SNS directly — Expo push service not required, no APNs key needed in EAS credentials. Awaiting build result.',
+    id: 'build', phase: '10', title: 'EAS Build', status: 'done', tag: 'Distribution', time: '~20–40 min per build',
+    summary: 'iOS IPA build finished (build 36dbf33f, May 12 2026, 10m 19s total). Profile: preview · SDK 54.0.0 · v1.0.0 (1). Admin ASC API key U4BSUK3SZ8 used to bypass Apple -20209 lock. Associated Domains enabled. IPA available for 13 days via EAS OTA install link. Next: submit to TestFlight or distribute install link to pilot nurses.',
     sections: [
       {
         heading: 'Android build — do now (no Apple account needed)',

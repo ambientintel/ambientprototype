@@ -82,7 +82,7 @@ const DOMAINS = [
     checklistTotal: 23,
     checklistDefault: 17,
     stepsTotal: 12,
-    stepsDone: 10,
+    stepsDone: 11,
     phases: [
       { label: 'Environment',  done: 3, total: 3 },
       { label: 'Development',  done: 3, total: 3 },
@@ -95,8 +95,8 @@ const DOMAINS = [
       { k: 'Push',      v: 'APNS+FCM' },
       { k: 'Build',     v: 'EAS' },
     ],
-    description: 'Nurse fall alert app. Cognito SRP auth + SecureStore session. Alert list, detail, acknowledge, false-positive flag all done. APNs Auth Key registered (W9YM2HUCU3), SNS APNS platform app active (ella-apns-sandbox). EAS iOS build queued with Admin ASC API key — Associated Domains enabled, devices registered.',
-    currentStep: '10 · EAS Build (queued)',
+    description: 'Nurse fall alert app. Cognito SRP auth + SecureStore session. Alert list, detail, acknowledge, false-positive flag all done. EAS iOS IPA build finished (May 12 2026, build 36dbf33f). Ready to distribute via TestFlight or OTA install link.',
+    currentStep: '11 · Distribution',
     freezeKey: 'ambient-mobileapp-frozen-v1',
     freezeLabel: 'Phase I Lock',
   },
@@ -224,7 +224,7 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Open DHF and begin 21 CFR 820 design history documentation', owner: 'QA' },
   ],
   mobileapp: [
-    { task: 'Await EAS iOS build result — if successful, distribute via OTA install link or submit to TestFlight', owner: 'Mobile' },
+    { task: 'Distribute iOS IPA: send EAS OTA install link to pilot nurses (13-day window, build 36dbf33f)', owner: 'Mobile' },
     { task: 'Set up Firebase project → google-services.json → setup_android_push.sh → eas build --platform android', owner: 'Mobile+DevOps' },
     { task: 'Distribute to nurses: TestFlight invitations (iOS) + APK download link (Android)', owner: 'Mobile' },
     { task: 'Switch Lambda APNS_PLATFORM_APP_ARN from ella-apns-sandbox to ella-apns-prod before App Store submission', owner: 'DevOps' },
@@ -265,8 +265,8 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Place BOM order at DigiKey — confirm IWR6843AOP + OSD62x-PM lead times',
   ],
   mobileapp: [
-    'Await EAS iOS build result → distribute via TestFlight / OTA install link to pilot nurses',
-    'Set up Firebase + Android FCM build in parallel while iOS build completes',
+    'Distribute iOS IPA to pilot nurses: send EAS OTA install link (13-day window) or submit to TestFlight',
+    'Set up Firebase + Android FCM build: google-services.json → setup_android_push.sh → eas build android',
   ],
   cloudengineering: [
     'Production sign-off: runbooks dry-run + CloudTrail data event verification (step 12)',
