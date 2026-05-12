@@ -80,7 +80,7 @@ const DOMAINS = [
     repo: 'ambientintel/ambientapp',
     lsKey: 'ambient-mobileapp-checklist-v1',
     checklistTotal: 23,
-    checklistDefault: 16,
+    checklistDefault: 17,
     stepsTotal: 12,
     stepsDone: 10,
     phases: [
@@ -173,7 +173,7 @@ const DOMAINS = [
     repo: 'ambientintel/ambientweb',
     lsKey: 'ambient-webapp-checklist-v1',
     checklistTotal: 20,
-    checklistDefault: 13,
+    checklistDefault: 16,
     stepsTotal: 13,
     stepsDone: 11,
     phases: [
@@ -231,11 +231,11 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve Apple Developer account -20209 lock via Apple Support for future direct portal access', owner: 'Mobile' },
   ],
   cloudengineering: [
-    { task: 'cdk deploy Ambient-dev-Iot to create ambient-device-policy in IoT Core (new IotStack)', owner: 'Cloud' },
-    { task: 'Run integration test suite — FakeDevice end-to-end, 75 unit tests green against real AWS (step 11)', owner: 'Cloud+Security' },
-    { task: 'Verify dual-write reconciler — TelemetryDivergence alarm, promote FAC-PILOT-001 to parquet_only', owner: 'Cloud' },
-    { task: 'Upgrade Ella from Sonnet 4.5 → 4.6 — evaluate de-id prompt fidelity on 20 test narratives first', owner: 'Cloud+AI' },
     { task: 'Production sign-off checklist — runbooks dry-run, CloudTrail data event verification (step 12)', owner: 'Cloud+Security' },
+    { task: 'Verify dual-write reconciler — TelemetryDivergence alarm, promote FAC-PILOT-001 to parquet_only', owner: 'Cloud' },
+    { task: 'Cognito MFA enrollment for all pilot nurse and admin accounts', owner: 'Cloud' },
+    { task: 'SNS subscription verification — confirm all facility staff subscribed for fall-alert delivery', owner: 'Cloud' },
+    { task: 'Smoke test suite run against dev tenant post-deploy (pytest -m smoke)', owner: 'Cloud+Security' },
   ],
   mechanical: [
     { task: 'Complete PCB layout in Altium — route controlled-impedance traces, run DRC to zero errors', owner: 'Layout' },
@@ -269,7 +269,7 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Set up Firebase + Android FCM build in parallel while iOS build completes',
   ],
   cloudengineering: [
-    'Run integration test suite — FakeDevice lifecycle, 75 unit tests green, verify all 5 data paths against real AWS',
+    'Production sign-off: runbooks dry-run + CloudTrail data event verification (step 12)',
     'Promote FAC-PILOT-001 to parquet_only after reconciler shows 0% divergence over 24h',
   ],
   mechanical: [
@@ -288,7 +288,6 @@ const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text
   { domain: 'Mechanical',        urgency: 'high',   text: 'PoE+ vs barrel jack — affects power routing, BOM cost, and enclosure cutout geometry.' },
   { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk if Gerbers not submitted by end of sprint.' },
   { domain: 'Firmware',          urgency: 'high',   text: 'Mender vs SWUpdate for OTA — Mender adds ~8 MB to rootfs; SWUpdate is lighter but less managed.' },
-  { domain: 'Cloud Engineering', urgency: 'medium', text: 'Sonnet 4.6 upgrade for Ella — evaluate de-id system prompt fidelity before flipping model ID in EllaStack.' },
   { domain: 'Cloud Engineering', urgency: 'low',    text: 'Firehose retirement timeline — 90-day window after all facilities reach parquet_only; not yet contractually nailed down.' },
   { domain: 'Web App',           urgency: 'medium', text: 'Ella narrative poll interval — 30 s vs WebSocket for real-time nurse alert delivery.' },
   { domain: 'Firmware',          urgency: 'low',    text: 'Kernel version pin: 6.1 LTS vs 6.6 LTS — both supported by TI SDK 11, no urgency.' },

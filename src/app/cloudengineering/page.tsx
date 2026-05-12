@@ -879,7 +879,7 @@ const CHECKLIST_ITEMS = [
   'Production runbooks dry-run complete',
 ];
 
-const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 17, 18]);
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 17, 18, 20, 21, 22]);
 
 const OPEN_DECISIONS = [
   'Multi-region per tenant — currently single-region us-east-1; tenants with residency requirements force this decision',

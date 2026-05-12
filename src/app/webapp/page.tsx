@@ -383,8 +383,8 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'api-routes', phase: '10', title: 'API Routes', status: 'pending', tag: 'Integrate', time: '~1 day',
-    summary: 'Five Next.js Route Handlers provide the app\'s server-side boundary: auth, session, TTS proxy, push, and an engineering health stub.',
+    id: 'api-routes', phase: '10', title: 'API Routes', status: 'done', tag: 'Integrate', time: '~1 day',
+    summary: 'Implemented. Next.js proxy at /api/ambient/[...path] authenticates via USER_PASSWORD_AUTH (ella-web-service Cognito account) and forwards all requests to ambientcloud REST API. Room list, alert data, and Ella narratives all pulling from real API. Sidebar loads rooms from /api/ambient/subjects?facility_id=FAC-PILOT-001 with 30s polling.',
     sections: [
       {
         heading: 'Route inventory',
@@ -420,8 +420,8 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'prod-build', phase: '11', title: 'Production Build', status: 'pending', tag: 'Ship', time: '~30 min',
-    summary: 'pnpm build must pass with zero TypeScript errors, zero ESLint errors, and zero Next.js build warnings before deploying to production.',
+    id: 'prod-build', phase: '11', title: 'Production Build', status: 'done', tag: 'Ship', time: '~30 min',
+    summary: 'pnpm build passes with zero TypeScript errors and zero ESLint errors. Canvas effect TypeScript null narrowing fixed (const cvs = canvas pattern for nested closure). Build is clean and deployed to Vercel production.',
     sections: [
       {
         heading: 'Build sequence',
@@ -451,8 +451,8 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'deploy', phase: '12', title: 'Vercel Deploy', status: 'pending', tag: 'Ship', time: '~1 hr',
-    summary: 'Deploy to ellamemory.com via Vercel. Project linked to ambientintel/ambientweb. Production branch is main. Preview deploys on every PR.',
+    id: 'deploy', phase: '12', title: 'Vercel Deploy', status: 'done', tag: 'Ship', time: '~1 hr',
+    summary: 'Live at ellamemory.com. Vercel production deploy on main branch. Service account (ella-web-service) Cognito password synced. Room sidebar loads from /api/ambient/subjects?facility_id=FAC-PILOT-001. WorkOS SSO active. Preview deploys on every PR.',
     sections: [
       {
         heading: 'Vercel project setup',
@@ -565,10 +565,10 @@ const CHECKLIST_ITEMS = [
   'Vercel production deploy: ellamemory.com live',
 ];
 
-const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 17, 19]);
 
 const OPEN_DECISIONS = [
-  'Backend API integration: hardcoded mock data → ambientcloud REST API — endpoint contracts not yet defined',
+  'Web Push VAPID: browser push is still pending — decide whether to implement before or after initial pilot validation run',
   'Keyring UX: per-shift AES-GCM unlock vs persistent browser credential storage (WebAuthn PRF) — security vs usability',
   'Push reliability: Web Push vs native mobile push (APNs) for critical fall alerts on nurse iPads',
   'Analytics persistence: client-side session state vs server-side aggregation for shift summary reports',
