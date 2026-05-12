@@ -78,7 +78,7 @@ const STEPS: Step[] = [
           cols: ['Service / Stack', 'Path', 'CDK Stack', 'Tests'],
           rows: [
             ['admin-cli',    'services/admin-cli/',              '—',                      '71 pass'],
-            ['api',          'services/api/',                    'Ambient-{env}-Api',       '32 pass'],
+            ['api',          'services/api/',                    'Ambient-{env}-Api',       '37 pass'],
             ['athena',       'services/athena/',                 'Ambient-{env}-Athena',    'n/a'],
             ['cloudtrail',   'services/cloudtrail/',             'Ambient-{env}-CloudTrail','n/a'],
             ['ella',         'services/ella/',                   'Ambient-{env}-Ella',      '11 pass'],
@@ -567,7 +567,7 @@ curl -H "Authorization: Bearer $TOKEN" \\
   },
   {
     id: 'integration-tests', phase: '11', title: 'Integration Tests', status: 'done', tag: 'Validate', time: '~1 hr',
-    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 161 unit tests passing across 6 services (admin-cli 71, url-minter 28, api 32, telemetry 15, ella 11, reconciler 2) + 9 integration tests + 9 smoke tests (live AWS, pytest -m smoke). Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
+    summary: 'End-to-end test harness with FakeDevice drives the full stack against real AWS. 166 unit tests passing across 6 services (admin-cli 71, url-minter 28, api 37, telemetry 15, ella 11, reconciler 2) + 9 integration tests + 9 smoke tests (live AWS, pytest -m smoke). Nightly CI workflow wired in .github/workflows/integration-tests.yml.',
     sections: [
       {
         heading: 'Run integration tests',
@@ -602,7 +602,7 @@ cd services/telemetry && pip install -e ".[dev]" -q && cd -
 cd services/url-minter && pip install -e ".[dev]" -q && cd -
 
 pytest services/ -v
-# Expected: 161 passed (admin-cli 71, url-minter 28, api 32, telemetry 15, ella 11, reconciler 2)` },
+# Expected: 166 passed (admin-cli 71, url-minter 28, api 37, telemetry 15, ella 11, reconciler 2)` },
           { label: 'run integration suite (requires AWS)', code: `# Full suite — the telemetry test waits 6 min for Firehose buffer
 pytest tests/integration -m integration -v
 
@@ -654,7 +654,7 @@ pytest -m smoke -v
           rows: [
             ['admin-cli',   '71 pass', 'Provisioning format validation, cert lifecycle, decommission, forbidden-attribute guard, telemetry migration (promote/demote), Cognito user provisioning, SNS alert subscriptions, list-users pagination, reset-password, disable-user, enable-user'],
             ['url-minter',  '28 pass', 'Presigned URL issuance, subject= S3 key path, SigV4 validation, rate limiting'],
-            ['api',         '32 pass', 'Facility scoping, cross-facility auth denial, alert pagination (AlertPage + next_token), single alert by eventId (GSI lookup), subject detail, on-demand narrative, admin user management (list/reset-password/disable/enable)'],
+            ['api',         '37 pass', 'Facility scoping, cross-facility auth denial, alert pagination (AlertPage + next_token), single alert by eventId (GSI lookup), subject detail, on-demand narrative, admin user management (list/reset-password/disable/enable), admin metrics, PATCH device (DDB + IoT shadow)'],
             ['ella',        '11 pass', 'Athena query construction, Bedrock invoke, de-id system prompt adherence, DLQ retry'],
             ['telemetry',   '15 pass', 'Fall event enrichment, DDB write, SNS publish with facility filter, synthetic event injection'],
             ['reconciler',  '2 pass',  'Athena row-count delta per facility, TelemetryDivergence metric emission, alarm threshold 0.1%'],
@@ -714,7 +714,7 @@ pytest -m smoke -v
         heading: 'Production readiness checklist',
         checklist: [
           'All CDK stacks deployed: Kms, Storage, Data, Telemetry, UrlMinter, Athena, Ella, Api, CloudTrail, Dashboard',
-          '161 unit tests passing; 9 integration tests green; 9 smoke tests passing against dev tenant',
+          '166 unit tests passing; 9 integration tests green; 9 smoke tests passing against dev tenant',
           'CloudTrail data events enabled on devices, alerts, and daily-updates DDB tables',
           'CloudTrail data events enabled on ambient-<tenant>-parquet S3 bucket',
           'CloudTrail retention: 7-year Glacier Deep Archive per HIPAA §164.316(b)(2)(i)',
@@ -736,7 +736,7 @@ pytest -m smoke -v
       {
         heading: 'Commit production sign-off',
         commands: [
-          { label: 'tag the production release', code: '# Tag the exact commit deployed to production\ngit tag -a v1.0.0-prod \\\n  -m "Production release — IRB pilot cohort. All CDK stacks deployed, 161 unit + 9 integration + 9 smoke tests passing."\ngit push origin v1.0.0-prod\n\n# Record in deployment-status.md\ncat >> docs/deployment-status.md << EOF\n\n## Production Release\n- Date: $(date -u +%Y-%m-%d)\n- Tag: v1.0.0-prod\n- Tenant: <tenant-id>\n- CDK stacks: all 11 deployed\n- Tests: 161 unit + 9 integration + 9 smoke passing\n- IRB protocol: active\nEOF\ngit commit -am "docs: record production release v1.0.0-prod"\ngit push' },
+          { label: 'tag the production release', code: '# Tag the exact commit deployed to production\ngit tag -a v1.0.0-prod \\\n  -m "Production release — IRB pilot cohort. All CDK stacks deployed, 166 unit + 9 integration + 9 smoke tests passing."\ngit push origin v1.0.0-prod\n\n# Record in deployment-status.md\ncat >> docs/deployment-status.md << EOF\n\n## Production Release\n- Date: $(date -u +%Y-%m-%d)\n- Tag: v1.0.0-prod\n- Tenant: <tenant-id>\n- CDK stacks: all 11 deployed\n- Tests: 166 unit + 9 integration + 9 smoke passing\n- IRB protocol: active\nEOF\ngit commit -am "docs: record production release v1.0.0-prod"\ngit push' },
         ],
         artifacts: [
           { file: 'docs/deployment-status.md', role: 'Service inventory, merge history, and production release record.' },
@@ -782,7 +782,7 @@ const CHECKLIST_ITEMS = [
   'Ella Lambda deployed — narrative de-id verified (20+ subjects)',
   'FastAPI Lambda deployed — 16 endpoints smoke-tested',
   'Cognito MFA enabled for all users',
-  'Unit tests: 161 passing (admin-cli 71, url-minter 28, api 32, telemetry 15, ella 11, reconciler 2)',
+  'Unit tests: 161 passing (admin-cli 71, url-minter 28, api 37, telemetry 15, ella 11, reconciler 2)',
   'Smoke tests: 9 passing (pytest -m smoke) — alert pagination, admin user API, active feed teardown verified',
   'Production runbooks dry-run complete',
 ];
