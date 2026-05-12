@@ -188,7 +188,7 @@ const DOMAINS = [
       { k: 'Workspace', v: 'pnpm 9' },
       { k: 'Pilot',    v: '12 Rooms' },
     ],
-    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, floor map, Ella narrative, 2-step ACK + false-positive flag. Web push wired: VAPID + sw.js + bell toggle. TTS speak button with stop/timer. Device management: admin status view, IoT shadow, inline PATCH, filter chips, provision runbook. CSV export in reports.',
+    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, floor map (Ella freshness), Ella narrative, 2-step ACK + false-positive flag. Web push + in-page audio alert (first-load guarded). TTS speak button. Prev/next room navigation. Device management: admin status view, IoT shadow, inline PATCH, filter chips. CSV export in reports. Analytics: all static sections labeled estimated.',
     currentStep: '10 · Pilot Validation',
     freezeKey: 'ambient-webapp-frozen-v1',
     freezeLabel: 'Deployment Lock',

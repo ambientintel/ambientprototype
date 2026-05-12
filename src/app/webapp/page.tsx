@@ -571,7 +571,7 @@ const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
 const OPEN_DECISIONS = [
   'Web Push storage: set VERCEL_TOKEN in Vercel project env vars to activate Edge Config subscription persistence (ecfg_wsm…) — push fires in-session today but subscriptions not persisted across restarts',
   'Keyring UX: per-shift AES-GCM unlock vs persistent browser credential storage (WebAuthn PRF) — security vs usability tradeoff for pilot nurses',
-  'Push reliability: Web Push (desktop browsers) vs native mobile push via ambientmobile (APNs/FCM) — decide primary alert channel for pilot nurses',
+  'Push reliability: Web Push + in-page audio (desktop browsers) vs native mobile push via ambientmobile (APNs/FCM) — decide primary alert channel for pilot nurses',
   'Analytics persistence: client-side session state vs server-side aggregation for shift summary and weekly trend reports',
   'Floor map: static MOH 301–312 room layout vs dynamic room configuration loaded from ambientcloud room registry',
 ];
