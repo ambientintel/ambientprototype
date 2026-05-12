@@ -177,7 +177,7 @@ const STEPS: Step[] = [
             ['3',   'Ambient-{env}-Api',            'Cognito UserPool (CfnOutputs: UserPoolId, UserPoolClientId), HTTP API (ApiEndpointUrl), FastAPI Lambda, facility-scoped authorizer'],
             ['3',   'Ambient-{env}-CloudTrail',     'Multi-region trail · DDB + S3 data events · 7-year Glacier retention'],
             ['opt', 'Ambient-{env}-Observability',  'CloudWatch Metric Stream → central account · scalar only · no PHI'],
-            ['opt', 'Ambient-{env}-Dashboard',      'CloudWatch operator dashboard · 5 Lambda graphs (invocations/errors/duration) · Ella DLQ depth · TelemetryDivergence metric · API concurrent executions'],
+            ['opt', 'Ambient-{env}-Dashboard',      'CloudWatch operator dashboard · AlarmStatusWidget (8 alarms) · 5 Lambda graphs (invocations/errors/duration) · Ella DLQ depth · TelemetryDivergence metric · API concurrent executions · SNS alarm topic (AlarmTopicArn)'],
           ],
         },
       },
@@ -195,7 +195,17 @@ const STEPS: Step[] = [
       },
       {
         heading: 'CI/CD — GitHub Actions OIDC (no stored keys)',
-        body: 'The deploy workflow uses GitHub OIDC short-lived tokens to assume the deployer IAM role. On push to main: cdk diff → cdk deploy --all. Manual dispatch supports dev/staging/prod with an optional diff-only mode.',
+        body: 'cdk-deploy.yml is a 5-job CD pipeline using GitHub OIDC short-lived tokens. Trigger matrix: push to main (path-filtered) runs unit-tests → deploy-dev → smoke-dev; pull_request runs unit-tests + cdk-diff (no deploy); workflow_dispatch with environment=prod and deploy_prod_confirm=CONFIRM runs the full pipeline through deploy-prod gated by GitHub Environment protection rules.',
+        table: {
+          cols: ['Job', 'Trigger', 'What it does'],
+          rows: [
+            ['unit-tests',   'push, PR, dispatch',    'pytest across all 6 services — no AWS needed. PYTHONPATH covers url-minter/telemetry/reconciler; admin-cli/api/ella installed via pip install -e. Gate for all downstream jobs.'],
+            ['cdk-diff',     'PR only (needs unit-tests)', 'cdk diff --all --context environment=dev → writes output to $GITHUB_STEP_SUMMARY. Non-blocking (exits 0 on diff errors).'],
+            ['deploy-dev',   'push to main or dispatch (needs unit-tests)', 'Uses environment: dev for audit trail. cdk deploy --all --require-approval never. Uploads cdk-outputs-dev.json as artifact (30-day retention).'],
+            ['smoke-dev',    'needs deploy-dev',       'Resolves all AMBIENT_* env vars from stack outputs (same pattern as smoke-tests.yml). Runs pytest tests/smoke -m smoke -v --tb=short.'],
+            ['deploy-prod',  'dispatch only (needs smoke-dev)', 'Runs only when workflow_dispatch sets environment=prod AND deploy_prod_confirm=CONFIRM. Uses environment: production (GitHub Environment protection rules + required reviewers). Uses AWS_PROD_DEPLOY_ROLE_ARN + AWS_PROD_ACCOUNT_ID repo variables.'],
+          ],
+        },
         commands: [
           { label: 'deploy all stacks (manual)', code: 'cd infra\ncdk deploy --all \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001 \\\n  --context facility_ids=\'["FAC-PILOT-001"]\'' },
           { label: 'deploy a single stack', code: 'cd infra\ncdk deploy Ambient-dev-Telemetry \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001' },
@@ -203,11 +213,35 @@ const STEPS: Step[] = [
         artifacts: [
           { file: 'infra/app.py', role: 'CDK app entry point — instantiates all 10 stacks in dependency order with context-driven tenant configuration.' },
           { file: 'infra/stacks/telemetry_stack.py', role: 'Most complex stack: SNS, fall-alert Lambda, IoT rules, Firehose + Glue (JQ dynamic partitioning + Parquet/ZSTD), Reconciler Lambda.' },
-          { file: '.github/workflows/cdk-deploy.yml', role: 'OIDC-authenticated diff + deploy workflow. No stored AWS access keys.' },
+          { file: '.github/workflows/cdk-deploy.yml', role: '5-job OIDC-authenticated CD pipeline: unit-tests → (cdk-diff on PR | deploy-dev on push) → smoke-dev → deploy-prod (dispatch + CONFIRM gate). No stored AWS access keys.' },
         ],
         warnings: [
           'CDK bootstrap must run once per account/region before first deploy: cdk bootstrap aws://<account>/<region>. Creates CDKToolkit stack with the S3 staging bucket used by the deployer.',
           'All per-service Terraform infra/ directories have been removed in the CDK migration. Do not reintroduce Terraform — add new infrastructure as a Stack in infra/stacks/ and wire it into infra/app.py.',
+          'Required repo variables (Settings → Variables): AWS_PROD_DEPLOY_ROLE_ARN (prod deployer role) and AWS_PROD_ACCOUNT_ID (prod AWS account ID). Required GitHub Environments (Settings → Environments): dev (no protection rules, auto-deploys) and production (add required reviewers to gate prod deploys).',
+        ],
+      },
+      {
+        heading: 'CloudWatch Operator Alarms (dashboard_stack.py)',
+        body: 'dashboard_stack.py provisions an SNS topic (ambient-{env}-operator-alarms, exported as AlarmTopicArn from Ambient-{env}-Dashboard) and 8 CloudWatch alarms. AWS-managed SSE only — CloudWatch Alarms cannot publish to CMK-encrypted SNS topics. An AlarmStatusWidget row showing all 8 alarms is prepended to the operator dashboard.',
+        table: {
+          cols: ['Alarm name', 'Metric', 'Threshold', 'Periods'],
+          rows: [
+            ['ambient-{env}-alerts-errors',       'alerts-enricher Lambda Errors',                               '≥1',       '1×1 min'],
+            ['ambient-{env}-alerts-throttles',    'alerts-enricher Throttles',                                   '≥5',       '2×5 min'],
+            ['ambient-{env}-ella-dlq-depth',      'Ella DLQ ApproximateNumberOfMessagesVisible',                 '≥1',       '1×1 min'],
+            ['ambient-{env}-ella-errors',         'Ella Lambda Errors',                                          '≥1',       '2×5 min'],
+            ['ambient-{env}-api-errors',          'API Lambda Errors',                                           '≥1',       '2×1 min'],
+            ['ambient-{env}-api-p99-latency',     'API Duration p99',                                            '>2000 ms', '3×5 min'],
+            ['ambient-{env}-telemetry-divergence','AmbientIntelligence/TelemetryDivergence',                     '>10',      '3×15 min'],
+            ['ambient-{env}-iot-rule-failures',   'AWS/IoT RuleActionFailure (RuleName=ambient_dev_fall_alerts)','≥1',       '1×1 min'],
+          ],
+        },
+        commands: [
+          { label: 'subscribe ops email to alarm topic', code: 'aws sns subscribe \\\n  --topic-arn $(aws cloudformation describe-stacks \\\n    --stack-name Ambient-dev-Dashboard \\\n    --query "Stacks[0].Outputs[?OutputKey==\'AlarmTopicArn\'].OutputValue" \\\n    --output text) \\\n  --protocol email \\\n  --notification-endpoint ops@example.com' },
+        ],
+        warnings: [
+          'The alarm SNS topic uses AWS-managed SSE (not the tenant CMK). CloudWatch Alarms cannot publish to CMK-encrypted SNS topics — this is an AWS service limitation. The topic carries no PHI (alarm names only), so AWS-managed encryption is acceptable here.',
         ],
       },
     ],
