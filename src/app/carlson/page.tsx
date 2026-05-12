@@ -237,71 +237,49 @@ export default function CarlsonPage() {
         <span style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 15, letterSpacing: '-0.005em' }}>
           Ambient <em style={{ fontStyle: 'italic', color: C.text2, fontWeight: 300 }}>Intelligence</em>
         </span>
-        {/* ── NAV MOTION GRAPHIC ── signal timeline strip */}
-        <div className="carlson-nav-meta" style={{ lineHeight: 0 }}>
-          <svg viewBox="0 0 480 26" width="480" height="26" style={{ display: 'block', overflow: 'visible' }}>
-            <defs>
-              <filter id="nav-gf" x="-120%" y="-120%" width="340%" height="340%">
-                <feGaussianBlur stdDeviation="1.8" result="b"/>
-                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-            </defs>
+        {/* ── NAV MOTION GRAPHIC ── scrolling waveform, no text */}
+        <div className="carlson-nav-meta" style={{
+          lineHeight: 0,
+          WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, white 10%, white 90%, transparent 100%)',
+          maskImage:       'linear-gradient(90deg, transparent 0%, white 10%, white 90%, transparent 100%)',
+        }}>
+          <svg viewBox="0 0 360 16" width="360" height="16" style={{ display: 'block', overflow: 'hidden' }}>
 
-            {/* backbone */}
-            <line x1="0" y1="22" x2="480" y2="22" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
-            {/* tick marks */}
-            {Array.from({ length: 25 }, (_, i) => (
-              <line key={i} x1={i * 20} y1="19" x2={i * 20} y2="25"
-                stroke="rgba(255,255,255,0.07)" strokeWidth="0.6"/>
-            ))}
+            {/* faint zero-line */}
+            <line x1="0" y1="8" x2="360" y2="8" stroke="rgba(255,255,255,0.06)" strokeWidth="0.8"/>
 
-            {/* separator node 1 — gold — at x=160 */}
-            <circle cx="160" cy="22" r="2.2" fill="#F0B429" filter="url(#nav-gf)"/>
-            <circle cx="160" cy="22" r="2.2" fill="none" stroke="#F0B429" strokeWidth="1">
-              <animate attributeName="r"       from="2.2" to="11" dur="2.6s" begin="0s"   repeatCount="indefinite"/>
-              <animate attributeName="opacity" from="0.85" to="0"  dur="2.6s" begin="0s"   repeatCount="indefinite"/>
+            {/* carrier wave — period 90, amplitude 6, maroon, slow */}
+            <g>
+              <animateTransform attributeName="transform" type="translate"
+                from="0,0" to="-90,0" dur="2.2s" repeatCount="indefinite" calcMode="linear"/>
+              <path fill="none" stroke="rgba(122,0,25,0.30)" strokeWidth="1.4"
+                d="M -90,8 C -75,2 -60,2 -45,8 C -30,14 -15,14 0,8 C 15,2 30,2 45,8 C 60,14 75,14 90,8 C 105,2 120,2 135,8 C 150,14 165,14 180,8 C 195,2 210,2 225,8 C 240,14 255,14 270,8 C 285,2 300,2 315,8 C 330,14 345,14 360,8 C 375,2 390,2 405,8 C 420,14 435,14 450,8"/>
+            </g>
+
+            {/* data wave — period 60, amplitude 7, accent blue, faster */}
+            <g>
+              <animateTransform attributeName="transform" type="translate"
+                from="0,0" to="-60,0" dur="0.85s" repeatCount="indefinite" calcMode="linear"/>
+              <path fill="none" stroke="rgba(79,156,249,0.52)" strokeWidth="1.1"
+                d="M -60,8 C -50,1 -40,1 -30,8 C -20,15 -10,15 0,8 C 10,1 20,1 30,8 C 40,15 50,15 60,8 C 70,1 80,1 90,8 C 100,15 110,15 120,8 C 130,1 140,1 150,8 C 160,15 170,15 180,8 C 190,1 200,1 210,8 C 220,15 230,15 240,8 C 250,1 260,1 270,8 C 280,15 290,15 300,8 C 310,1 320,1 330,8 C 340,15 350,15 360,8 C 370,1 380,1 390,8 C 400,15 410,15 420,8"/>
+            </g>
+
+            {/* gold dot — glow halo riding the data wave */}
+            <circle r="5" fill="rgba(240,180,41,0.20)">
+              <animateMotion dur="4.5s" repeatCount="indefinite" calcMode="spline"
+                keyTimes="0;1" keySplines="0.42 0 0.58 1"
+                path="M 0,8 C 10,1 20,1 30,8 C 40,15 50,15 60,8 C 70,1 80,1 90,8 C 100,15 110,15 120,8 C 130,1 140,1 150,8 C 160,15 170,15 180,8 C 190,1 200,1 210,8 C 220,15 230,15 240,8 C 250,1 260,1 270,8 C 280,15 290,15 300,8 C 310,1 320,1 330,8 C 340,15 350,15 360,8"/>
+              <animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.07;0.91;1" dur="4.5s" repeatCount="indefinite"/>
             </circle>
 
-            {/* separator node 2 — accent — at x=320 */}
-            <circle cx="320" cy="22" r="2.2" fill="#4F9CF9" filter="url(#nav-gf)"/>
-            <circle cx="320" cy="22" r="2.2" fill="none" stroke="#4F9CF9" strokeWidth="1">
-              <animate attributeName="r"       from="2.2" to="11" dur="2.6s" begin="1.2s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" from="0.85" to="0"  dur="2.6s" begin="1.2s" repeatCount="indefinite"/>
+            {/* gold dot — core */}
+            <circle r="2.2" fill="#F0B429">
+              <animateMotion dur="4.5s" repeatCount="indefinite" calcMode="spline"
+                keyTimes="0;1" keySplines="0.42 0 0.58 1"
+                path="M 0,8 C 10,1 20,1 30,8 C 40,15 50,15 60,8 C 70,1 80,1 90,8 C 100,15 110,15 120,8 C 130,1 140,1 150,8 C 160,15 170,15 180,8 C 190,1 200,1 210,8 C 220,15 230,15 240,8 C 250,1 260,1 270,8 C 280,15 290,15 300,8 C 310,1 320,1 330,8 C 340,15 350,15 360,8"/>
+              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.07;0.91;1" dur="4.5s" repeatCount="indefinite"/>
             </circle>
 
-            {/* traveling glow halo */}
-            <circle r="6" fill="rgba(240,180,41,0.14)" filter="url(#nav-gf)">
-              <animateMotion dur="6s" repeatCount="indefinite" calcMode="spline"
-                keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"
-                path="M 0,22 L 480,22 L 0,22"/>
-              <animate attributeName="opacity" values="0;0.8;0.8;0" keyTimes="0;0.06;0.94;1" dur="6s" repeatCount="indefinite"/>
-              <animate attributeName="fill"    values="rgba(240,180,41,0.14);rgba(240,180,41,0.14);rgba(79,156,249,0.14);rgba(79,156,249,0.14);rgba(240,180,41,0.14)"
-                keyTimes="0;0.3;0.36;0.68;1" dur="6s" repeatCount="indefinite"/>
-            </circle>
-
-            {/* traveling core spark */}
-            <circle r="2.5" fill="#F0B429" filter="url(#nav-gf)">
-              <animateMotion dur="6s" repeatCount="indefinite" calcMode="spline"
-                keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"
-                path="M 0,22 L 480,22 L 0,22"/>
-              <animate attributeName="opacity" values="0;1;1;0"    keyTimes="0;0.06;0.94;1" dur="6s" repeatCount="indefinite"/>
-              <animate attributeName="fill"    values="#F0B429;#F0B429;#4F9CF9;#4F9CF9;#F0B429"
-                keyTimes="0;0.3;0.36;0.68;1" dur="6s" repeatCount="indefinite"/>
-            </circle>
-
-            {/* text labels */}
-            <text x="80"  y="13" textAnchor="middle"
-              style={{ fill: 'rgba(246,247,248,0.42)', fontSize: '9px', fontFamily: 'var(--mono, monospace)', letterSpacing: '0.13em' }}>
-              CARLSON FOUNDER&apos;S DAY
-            </text>
-            <text x="240" y="13" textAnchor="middle"
-              style={{ fill: 'rgba(246,247,248,0.42)', fontSize: '9px', fontFamily: 'var(--mono, monospace)', letterSpacing: '0.13em' }}>
-              MAY 13, 2026
-            </text>
-            <text x="400" y="13" textAnchor="middle"
-              style={{ fill: 'rgba(246,247,248,0.42)', fontSize: '9px', fontFamily: 'var(--mono, monospace)', letterSpacing: '0.13em' }}>
-              TOASTER INNOVATION HUB
-            </text>
           </svg>
         </div>
         <a href="mailto:bribradley@gmail.com" className="carlson-btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', borderRadius: 999, background: C.maroon, color: '#fff', fontSize: 12, fontWeight: 500, textDecoration: 'none', letterSpacing: '0.01em', transition: 'background 0.15s' }}>
