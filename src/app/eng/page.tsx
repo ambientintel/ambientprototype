@@ -173,14 +173,14 @@ const DOMAINS = [
     repo: 'ambientintel/ambientweb',
     lsKey: 'ambient-webapp-checklist-v1',
     checklistTotal: 20,
-    checklistDefault: 17,
+    checklistDefault: 18,
     stepsTotal: 13,
-    stepsDone: 12,
+    stepsDone: 13,
     phases: [
       { label: 'Setup',     done: 4, total: 4 },
       { label: 'Build',     done: 4, total: 4 },
       { label: 'Integrate', done: 2, total: 2 },
-      { label: 'Ship',      done: 2, total: 3 },
+      { label: 'Ship',      done: 3, total: 3 },
     ],
     specs: [
       { k: 'Runtime',  v: 'Next.js 16' },
@@ -188,7 +188,7 @@ const DOMAINS = [
       { k: 'Workspace', v: 'pnpm 9' },
       { k: 'Pilot',    v: '10 Rooms' },
     ],
-    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, floor map, Ella narrative, 2-step ACK. Web push wired: VAPID + sw.js + bell toggle + new-alert detection.',
+    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, floor map, Ella narrative, 2-step ACK. Web push wired: VAPID + sw.js + bell toggle + new-alert detection. Device management page: admin status view, IoT shadow, inline PATCH, provision runbook.',
     currentStep: '10 · Pilot Validation',
     freezeKey: 'ambient-webapp-frozen-v1',
     freezeLabel: 'Deployment Lock',
@@ -246,9 +246,9 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
   ],
   webapp: [
     { task: 'Set VERCEL_TOKEN in ambientweb project to activate push subscription storage (Edge Config ambient-push ecfg_wsm…)', owner: 'FE+DevOps' },
-    { task: 'Build device management page — coordinator view: device status, last-seen, provision runbook', owner: 'FE' },
     { task: 'Run pilot validation: nurse auth, Ella narrative, fall alert ACK, web push delivery across MOH 301–310', owner: 'Product+FE' },
-    { task: 'Seed real room assignments from pilot coordinator once MOH device-to-room mapping is confirmed', owner: 'Product+FE' },
+    { task: 'Seed real room assignments from pilot coordinator — use Devices page PATCH to assign roomId + zone per device', owner: 'Product+FE' },
+    { task: 'Verify device management page with admin Cognito account — confirm GET /admin/devices + PATCH /admin/devices/{id} respond 200', owner: 'FE+Cloud' },
     { task: 'Monitor /api/ambient proxy for 502s — keep AMBIENT_WEB_SVC_PASSWORD in sync with Cognito', owner: 'DevOps' },
   ],
 };
@@ -278,7 +278,7 @@ const SPRINT_FOCUS: Record<string, string[]> = {
   ],
   webapp: [
     'Set VERCEL_TOKEN env var to activate push subscription storage and confirm push delivery end-to-end',
-    'Build device management page for study coordinator — device status + provision runbook (step 10)',
+    'Verify Devices page with admin Cognito account — GET /admin/devices + PATCH /admin/devices/{id}',
   ],
 };
 
