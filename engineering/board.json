@@ -25,7 +25,7 @@
       "assigneeInitial": "B",
       "assigneeColor": "#22D3EE",
       "labels": [],
-      "column": "todo",
+      "column": "inprogress",
       "description": "",
       "created": "May 1",
       "updated": "May 1"
