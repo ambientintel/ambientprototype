@@ -566,14 +566,14 @@ const CHECKLIST_ITEMS = [
   'Vercel production deploy: ellamemory.com live',
 ];
 
-const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 17, 19]);
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19]);
 
 const OPEN_DECISIONS = [
-  'Web Push VAPID: browser push is still pending — decide whether to implement before or after initial pilot validation run',
-  'Keyring UX: per-shift AES-GCM unlock vs persistent browser credential storage (WebAuthn PRF) — security vs usability',
-  'Push reliability: Web Push vs native mobile push (APNs) for critical fall alerts on nurse iPads',
-  'Analytics persistence: client-side session state vs server-side aggregation for shift summary reports',
-  'Floor map: static room layout vs dynamic configuration loaded from ambientcloud room registry',
+  'Web Push storage: set VERCEL_TOKEN in Vercel project env vars to activate Edge Config subscription persistence (ecfg_wsm…) — push fires in-session today but subscriptions not persisted across restarts',
+  'Keyring UX: per-shift AES-GCM unlock vs persistent browser credential storage (WebAuthn PRF) — security vs usability tradeoff for pilot nurses',
+  'Push reliability: Web Push (desktop browsers) vs native mobile push via ambientmobile (APNs/FCM) — decide primary alert channel for pilot nurses',
+  'Analytics persistence: client-side session state vs server-side aggregation for shift summary and weekly trend reports',
+  'Floor map: static MOH 301–310 room layout vs dynamic room configuration loaded from ambientcloud room registry',
 ];
 
 // ── Page component ─────────────────────────────────────────────────────────────

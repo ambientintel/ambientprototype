@@ -466,29 +466,42 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
     ],
   },
   {
-    id: 'distribute', phase: '11', title: 'Distribution', status: 'pending', tag: 'Distribution', time: '~1 hr setup',
-    summary: 'Android: download APK from EAS dashboard → share download link with Android nurses (they install via "unknown sources"). iOS: TestFlight (study coordinator invitations). No public App Store or Play Store release in Phase I.',
+    id: 'distribute', phase: '11', title: 'Distribution', status: 'warning', tag: 'Distribution', time: '~1 hr setup',
+    summary: 'iOS IPA build 36dbf33f ready (May 12 2026, 13-day OTA window). Two paths: (A) send EAS OTA install link directly to pilot nurses — fastest, no App Store needed; or (B) submit to TestFlight for internal testing track. Android build blocked on Firebase google-services.json. Privacy policy live at ellamemory.com/privacy.',
     sections: [
       {
-        heading: 'Android — direct APK (Phase I simplest path)',
+        heading: 'iOS path A — EAS OTA install link (fastest, active now)',
         commands: [
-          { label: 'download APK and share', code: '# After eas build --platform android --profile preview:\n# 1. Open https://expo.dev → your project → Builds\n# 2. Click the completed build → Download APK\n# 3. Share the EAS download URL with Android nurses directly\n#    They open the link on their Android device and tap Install\n#    (Must allow "Install from unknown sources" once in Settings)' },
+          { label: 'get OTA install link from EAS dashboard', code: '# expo.dev → Ella project → Builds → build 36dbf33f\n# Click "Install" → copy the install URL\n# Send to iOS nurses: they open the link on device → tap Install\n# Requires device to have Expo Go OR accept unsigned profile\n# ⚠ 13-day window from May 12 — expires ~May 25 2026' },
+          { label: 'rebuild to extend window (if expired)', code: 'eas build --platform ios --profile preview\n# Creates a fresh build with new 13-day window\n# Build ~20 min · uses Admin ASC API key U4BSUK3SZ8 (bypass Apple -20209 lock)' },
         ],
         warnings: [
-          'EAS download links are authenticated — nurses need the link sent to them. Links expire after 30 days; regenerate with a new build if needed.',
-          'Android devices must allow installation from unknown sources. This is a one-time setting per device. Coordinate with the study coordinator or IT team.',
+          'EAS preview builds expire after 13 days. If nurses haven't installed by May 25, rebuild with eas build --platform ios --profile preview.',
+          'Nurses must trust the enterprise profile on device: Settings → General → VPN & Device Management → Trust.',
         ],
       },
       {
-        heading: 'iOS — TestFlight',
+        heading: 'iOS path B — TestFlight (recommended for >2-week study)',
         commands: [
           { label: 'create App Store Connect record (once)', code: '# appstoreconnect.apple.com → My Apps → + → New App\n# Platform: iOS, Name: Ella, Bundle ID: com.ambientintel.ellamemory\n# Copy the Apple ID number (10-digit) → fill ascAppId in eas.json' },
-          { label: 'submit to TestFlight', code: 'eas submit --platform ios --profile production\n# Uses appleId + ascAppId from eas.json submit config' },
-          { label: 'invite internal testers', code: '# App Store Connect → TestFlight → Internal Testing\n# Add nurse email addresses (they receive an email invite)\n# No UDID registration needed for internal testers' },
+          { label: 'submit to TestFlight', code: 'eas submit --platform ios --profile production\n# Uses appleId + ascAppId from eas.json submit config\n# Requires privacy policy URL → ellamemory.com/privacy ✅' },
+          { label: 'invite internal testers', code: '# App Store Connect → TestFlight → Internal Testing\n# Add nurse email addresses (they receive an email invite)\n# No UDID registration needed for internal testers\n# 90-day expiry — rebuild at 80-day mark if study extends' },
         ],
         warnings: [
-          'TestFlight builds expire after 90 days. Schedule a rebuild at the 80-day mark if the study runs longer than that.',
-          'Privacy policy URL is required before TestFlight can be activated — ellamemory.com/privacy is live and ready.',
+          'TestFlight requires Apple review approval for first submission (usually same-day for internal testers).',
+          'Switch Lambda APNS_PLATFORM_APP_ARN from ella-apns-sandbox to ella-apns-prod before production TestFlight submission.',
+        ],
+      },
+      {
+        heading: 'Android — blocked on Firebase setup',
+        commands: [
+          { label: '1 · Create Firebase project + download config', code: '# console.firebase.google.com → Add project: Ambient Intelligence\n# Register Android app → package: com.ambientintel.ellamemory\n# Download google-services.json → place in ~/ambientmobile/' },
+          { label: '2 · Run setup script + build', code: 'cd ~/ambientmobile\n./scripts/setup_android_push.sh <firebase-server-key>\n\ngit add google-services.json\ngit commit -m "Add google-services.json for Android FCM"\neas build --platform android --profile preview' },
+          { label: '3 · Share APK download link', code: '# expo.dev → Ella project → Builds → Android build\n# Download APK → share URL with Android nurses\n# Nurses: allow "Install from unknown sources" once in Settings → Special App Access' },
+        ],
+        warnings: [
+          'google-services.json is safe to commit to the private repo (Android restricted API key bound to com.ambientintel.ellamemory only).',
+          'EAS APK download links expire after 30 days. Regenerate with a new build as needed.',
         ],
       },
     ],

@@ -173,7 +173,7 @@ const DOMAINS = [
     repo: 'ambientintel/ambientweb',
     lsKey: 'ambient-webapp-checklist-v1',
     checklistTotal: 20,
-    checklistDefault: 18,
+    checklistDefault: 19,
     stepsTotal: 13,
     stepsDone: 13,
     phases: [
