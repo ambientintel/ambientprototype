@@ -355,8 +355,8 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'web-push', phase: '09', title: 'Web Push', status: 'pending', tag: 'Integrate', time: '~1 day',
-    summary: 'Browser push notifications for fall alerts using the Web Push API. VAPID keys generated once per deployment. Service worker handles push events and displays fall alert notifications.',
+    id: 'web-push', phase: '09', title: 'Web Push', status: 'warning', tag: 'Integrate', time: '~1 day',
+    summary: 'VAPID keys generated and deployed to Vercel. sw.js live at /public/sw.js. Bell toggle in overview header. New-alert detection on 30s poll fires /api/push/send. Subscribe/send routes live. Blocked on VERCEL_TOKEN: Edge Config ambient-push ecfg_wsm… needs a Vercel personal access token to persist subscriptions across sessions.',
     sections: [
       {
         heading: 'Generate VAPID keys',
@@ -384,21 +384,22 @@ const STEPS: Step[] = [
   },
   {
     id: 'api-routes', phase: '10', title: 'API Routes', status: 'done', tag: 'Integrate', time: '~1 day',
-    summary: 'Implemented. Next.js proxy at /api/ambient/[...path] authenticates via USER_PASSWORD_AUTH (ella-web-service Cognito account) and forwards all requests to ambientcloud REST API. Room list, alert data, and Ella narratives all pulling from real API. Sidebar loads rooms from /api/ambient/subjects?facility_id=FAC-PILOT-001 with 30s polling.',
+    summary: 'Implemented. Next.js catch-all proxy at /api/ambient/[...path] (GET/POST/PATCH) authenticates via USER_PASSWORD_AUTH (ella-web service Cognito account, custom:role=admin) and forwards to ambientcloud REST API. All dashboard pages now connected to live data. Health check endpoint at /api/health.',
     sections: [
       {
         heading: 'Route inventory',
         table: {
           cols: ['Route', 'Method', 'Auth required', 'Purpose'],
           rows: [
-            ['/api/auth/signin',      'GET',  'No',  'Redirects to WorkOS SSO login'],
-            ['/api/auth/callback',    'GET',  'No',  'OAuth callback — sets session cookie'],
-            ['/api/auth/signout',     'GET',  'Yes', 'Clears cookie, redirects to WorkOS logout'],
-            ['/api/auth/me',          'GET',  'No',  'Returns session user JSON or 401'],
-            ['/api/speak',            'POST', 'Yes', 'Proxies text to OpenAI TTS, returns audio/mpeg'],
-            ['/api/push/subscribe',   'POST', 'Yes', 'Upserts browser push subscription'],
-            ['/api/push/send',        'POST', 'No (webhook secret)', 'Sends push to all subscribers — called by ambientcloud'],
-            ['/api/engineering',      'GET',  'Yes', 'Health stub — reserved for ambientcloud integration'],
+            ['/api/auth/signin',         'GET',   'No',  'Redirects to WorkOS SSO login'],
+            ['/api/auth/callback',       'GET',   'No',  'OAuth callback — sets session cookie'],
+            ['/api/auth/signout',        'GET',   'Yes', 'Clears cookie, redirects to WorkOS logout'],
+            ['/api/auth/me',             'GET',   'No',  'Returns session user JSON or 401'],
+            ['/api/speak',               'POST',  'Yes', 'Proxies text to OpenAI TTS, returns audio/mpeg'],
+            ['/api/push/subscribe',      'POST/DELETE', 'Yes', 'Upserts/removes browser push subscription in Edge Config'],
+            ['/api/push/send',           'POST',  'Internal', 'Fans out push to all subscribers — called by overview poll'],
+            ['/api/ambient/[...path]',   'GET/POST/PATCH', 'service-account JWT', 'Full proxy to ambientcloud REST API'],
+            ['/api/health',              'GET',   'No',  'Checks VAPID, VERCEL_TOKEN, Edge Config, service auth'],
           ],
         },
       },
