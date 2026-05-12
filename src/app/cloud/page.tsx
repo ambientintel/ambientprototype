@@ -15,8 +15,8 @@ const CDK_FILES: CdkFile[] = ['stack.py', 'cdk.json', 'dev.context.json', 'prod.
 
 const SERVICES = [
   { id: 'ella',       tag: 'AI · Bedrock', label: 'Ella',            path: 'services/ella/',        tests: 11,   desc: 'Twice-daily Claude Sonnet narrative per subject via Bedrock — de-identified summaries stored in DynamoDB for clinical staff.', tf: true,  lambdaFn: 'ambient-dev-ella' },
-  { id: 'api',        tag: 'REST API',     label: 'Nurse/Admin API', path: 'services/api/',         tests: 37,   desc: 'FastAPI + Cognito JWT with row-level facility scoping. 18 endpoints serving staff web and mobile clients — includes alert pagination (AlertPage with limit/next_token), admin user management routes (GET /admin/users, reset/disable/enable), GET /admin/metrics, PATCH /admin/devices/{id} (DDB + IoT shadow), and CORS PATCH support.', tf: true,  lambdaFn: 'ambient-dev-api' },
-  { id: 'telemetry',  tag: 'Streaming',    label: 'Telemetry',       path: 'services/telemetry/',   tests: 15,   desc: 'Fall-alert Lambda → SNS for sub-2s staff notification; per-minute aggregates → Firehose → Parquet on S3.', tf: true,  lambdaFn: 'ambient-dev-alerts-enricher' },
+  { id: 'api',        tag: 'REST API',     label: 'Nurse/Admin API', path: 'services/api/',         tests: 37,   desc: 'FastAPI + Cognito JWT with row-level facility scoping. 18 endpoints serving staff web and mobile clients — includes alert pagination (AlertPage with limit/next_token), admin user management routes (GET /admin/users, reset/disable/enable), GET /admin/metrics, PATCH /admin/devices/{id} (DDB + IoT shadow), and CORS PATCH support. Cognito Advanced Security ENFORCED — adaptive authentication and compromised credential detection active.', tf: true,  lambdaFn: 'ambient-dev-api' },
+  { id: 'telemetry',  tag: 'Streaming',    label: 'Telemetry',       path: 'services/telemetry/',   tests: 15,   desc: 'Fall-alert Lambda → SNS for sub-2s staff notification; per-minute aggregates → Firehose → Parquet on S3. X-Ray active tracing enabled on alerts-enricher Lambda. Reserved concurrency 50 — dedicated capacity for the fall-alert critical path.', tf: true,  lambdaFn: 'ambient-dev-alerts-enricher' },
   { id: 'admin-cli',  tag: 'CLI',          label: 'Admin CLI',       path: 'services/admin-cli/',   tests: 71,   desc: 'Operator CLI for device provisioning — mints tenant X.509 certs, per-facility migration (promote/demote), Cognito user lifecycle (create-nurse, create-admin, list-users, reset-password, disable-user, enable-user), and SNS alert subscriptions.', tf: false, lambdaFn: null },
   { id: 'url-minter', tag: 'Upload',       label: 'URL Minter',      path: 'services/url-minter/',  tests: null, desc: 'Presigned S3 upload URLs for device Parquet batches — eliminates MQTT overhead for analytic cold-path data.', tf: true,  lambdaFn: 'ambient-dev-url-minter' },
   { id: 'athena',     tag: 'Analytics',    label: 'Athena',          path: 'services/athena/',      tests: null, desc: 'Glue table and partition projection for raw radar frames on the cold path — queryable without ETL.', tf: true,  lambdaFn: null },
@@ -24,10 +24,10 @@ const SERVICES = [
   { id: 'iot-core',     tag: 'IoT',        label: 'IoT Core',        path: 'infra/stacks/',           tests: null, desc: 'IoT rules (fall-enricher + legacy Firehose) in TelemetryStack; role alias + device mTLS policy in UrlMinterStack. No standalone CDK stack.', tf: true,  lambdaFn: null },
   { id: 'kms',          tag: 'Security',   label: 'KMS',             path: 'infra/stacks/kms_stack.py',  tests: null, desc: 'Tenant CMK — 4 keys (data, s3, sns, sqs) with auto-rotation and RemovalPolicy.RETAIN. Scoped key policies for each consumer.', tf: true,  lambdaFn: null },
   { id: 'storage',      tag: 'Storage',    label: 'Storage',         path: 'infra/stacks/storage_stack.py', tests: null, desc: 'Four S3 buckets: Parquet data (raw frames + Firehose telemetry), Athena results (30-day expiry), IoT error DLQ, and CloudTrail audit (HIPAA 7-yr retain). All PHI-adjacent use SSE-KMS.', tf: true, lambdaFn: null },
-  { id: 'data',         tag: 'Database',   label: 'Data',            path: 'infra/stacks/data_stack.py',    tests: null, desc: 'Three DynamoDB tables (PAY_PER_REQUEST + PITR): devices (facility-index GSI), alerts (subject_date PK + facility-time GSI), daily-updates (subjectId PK, 90-day TTL). All encrypted with tenant CMK.', tf: true, lambdaFn: null },
+  { id: 'data',         tag: 'Database',   label: 'Data',            path: 'infra/stacks/data_stack.py',    tests: null, desc: 'Three DynamoDB tables (PAY_PER_REQUEST + PITR): devices (facility-index GSI), alerts (subject_date PK + facility-time GSI), daily-updates (subjectId PK, 90-day TTL). Both alerts and daily-updates tables now have DynamoDB TTL enabled (ttl attribute) — 7-year HIPAA retention on alerts; handler writes ttl on every record. All encrypted with tenant CMK.', tf: true, lambdaFn: null },
   { id: 'observability',tag: 'Monitoring', label: 'Observability',   path: 'infra/stacks/observability_stack.py', tests: null, desc: 'CloudWatch Metric Streams to central account — scalar metrics only (AmbientIntelligence/Telemetry, Lambda, ApiGateway, DynamoDB, Athena). No PHI crosses the boundary. Optional stack.', tf: true,  lambdaFn: null },
   { id: 'reconciler',  tag: 'Ops',        label: 'Reconciler',      path: 'services/reconciler/',   tests: 2,    desc: 'EventBridge 15-min cron compares device-path vs Firehose Athena row counts per facility — emits TelemetryDivergence metric, alarms at >0.1%.', tf: true, lambdaFn: 'ambient-dev-reconciler' },
-  { id: 'dashboard',   tag: 'Monitoring', label: 'Dashboard',       path: 'infra/stacks/dashboard_stack.py', tests: null, desc: 'CloudWatch operator dashboard (Ambient-{env}-Dashboard stack). AlarmStatusWidget row at top shows 8 operator alarms (alerts-enricher errors/throttles, Ella DLQ depth/errors, API errors/P99 latency, TelemetryDivergence >10 over 3×15 min, IoT rule failures). Alarm SNS topic: ambient-{env}-operator-alarms (CfnOutput: AlarmTopicArn). Widgets: Lambda invocations/errors/duration for all 5 functions, Ella DLQ depth, TelemetryDivergence metric, API concurrent executions.', tf: true, lambdaFn: null },
+  { id: 'dashboard',   tag: 'Monitoring', label: 'Dashboard',       path: 'infra/stacks/dashboard_stack.py', tests: null, desc: 'CloudWatch operator dashboard (Ambient-{env}-Dashboard stack). AlarmStatusWidget row at top shows 8 operator alarms (alerts-enricher errors/throttles, Ella DLQ depth/errors, API errors/P99 latency, TelemetryDivergence >10 over 3×15 min, IoT rule failures). Alarm SNS topic: ambient-{env}-operator-alarms (CfnOutput: AlarmTopicArn). Widgets: Lambda invocations/errors/duration for all 5 functions, Ella DLQ depth, TelemetryDivergence metric, API concurrent executions. AWS Budgets: $100/month limit — 80% actual and 100% forecasted thresholds both route to the operator alarm SNS topic.', tf: true, lambdaFn: null },
 ];
 
 const PATHS = [
@@ -73,14 +73,14 @@ const PIPELINE: Record<string, {
   kms:           { synth: { status: 'success', age: '~3h ago', duration: '0m 14s', sha: '96d8019' }, deploy: { status: 'success', age: '~3h ago', duration: '0m 47s', sha: '96d8019' }, env: 'dev' },
   storage:       { synth: { status: 'success', age: '~3h ago', duration: '0m 11s', sha: '96d8019' }, deploy: { status: 'success', age: '~3h ago', duration: '0m 38s', sha: '96d8019' }, env: 'dev' },
   data:          { synth: { status: 'success', age: '~3h ago', duration: '0m 13s', sha: '96d8019' }, deploy: { status: 'success', age: '~3h ago', duration: '0m 44s', sha: '96d8019' }, env: 'dev' },
-  'url-minter':  { synth: { status: 'success', age: '~1h ago', duration: '0m 18s', sha: '51d16d2' }, deploy: { status: 'success', age: '~1h ago', duration: '0m 55s', sha: '51d16d2' }, env: 'dev' },
-  telemetry:     { synth: { status: 'success', age: '~2h ago', duration: '0m 31s', sha: '51e6de5' }, deploy: { status: 'success', age: '~2h ago', duration: '2m 11s', sha: '51e6de5' }, env: 'dev' },
+  'url-minter':  { synth: { status: 'success', age: '~1h ago', duration: '0m 18s', sha: '522c338' }, deploy: { status: 'success', age: '~1h ago', duration: '0m 55s', sha: '522c338' }, env: 'dev' },
+  telemetry:     { synth: { status: 'success', age: '~1h ago', duration: '0m 31s', sha: '522c338' }, deploy: { status: 'success', age: '~1h ago', duration: '2m 11s', sha: '522c338' }, env: 'dev' },
   athena:        { synth: { status: 'success', age: '~2h ago', duration: '0m 22s', sha: '8c79e98' }, deploy: { status: 'success', age: '~2h ago', duration: '1m 44s', sha: '8c79e98' }, env: 'dev' },
-  ella:          { synth: { status: 'success', age: '~1h ago', duration: '0m 29s', sha: '51e6de5' }, deploy: { status: 'success', age: '~1h ago', duration: '2m 04s', sha: '51e6de5' }, env: 'dev' },
-  api:           { synth: { status: 'success', age: '~1h ago', duration: '0m 24s', sha: '51e6de5' }, deploy: { status: 'success', age: '~1h ago', duration: '1m 47s', sha: '51e6de5' }, env: 'dev' },
+  ella:          { synth: { status: 'success', age: '~1h ago', duration: '0m 29s', sha: '522c338' }, deploy: { status: 'success', age: '~1h ago', duration: '2m 04s', sha: '522c338' }, env: 'dev' },
+  api:           { synth: { status: 'success', age: '~1h ago', duration: '0m 24s', sha: '522c338' }, deploy: { status: 'success', age: '~1h ago', duration: '1m 47s', sha: '522c338' }, env: 'dev' },
   cloudtrail:    { synth: { status: 'success', age: '~2h ago', duration: '0m 19s', sha: '8c79e98' }, deploy: { status: 'success', age: '~2h ago', duration: '1m 01s', sha: '8c79e98' }, env: 'dev' },
   observability: { synth: { status: 'skipped', age: '—',       duration: '—',      sha: '51d16d2' }, deploy: { status: 'skipped',  age: '—',        duration: '—',      sha: '51d16d2' }, env: 'dev' },
-  dashboard:     { synth: { status: 'success', age: '~1h ago', duration: '0m 09s', sha: '6d554bf' }, deploy: { status: 'success', age: '~1h ago', duration: '0m 31s', sha: '6d554bf' }, env: 'dev' },
+  dashboard:     { synth: { status: 'success', age: '~1h ago', duration: '0m 09s', sha: '522c338' }, deploy: { status: 'success', age: '~1h ago', duration: '0m 31s', sha: '522c338' }, env: 'dev' },
 };
 
 const HEALTH: Record<string, {
@@ -1998,7 +1998,7 @@ export default function CloudPage() {
           </div>
           <div>
             <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Architecture</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--text-2)' }}>v4 · 2026-05-10</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, color: 'var(--text-2)' }}>v4 · 2026-05-12</div>
           </div>
           <div>
             <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Data handling</div>
@@ -2244,6 +2244,25 @@ export default function CloudPage() {
                 ].map(({ job, desc }) => (
                   <div key={job} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)', minWidth: 110, flexShrink: 0 }}>{job}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.5 }}>{desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent hardening sprint */}
+            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 18px', marginBottom: 20 }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-4)', marginBottom: 10 }}>Latest merge · 522c338 · pilot hardening sprint</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {[
+                  { tag: 'telemetry · api · ella · url-minter · reconciler', desc: 'X-Ray active tracing enabled on all 5 Lambdas' },
+                  { tag: 'telemetry',  desc: 'alerts-enricher reserved concurrency = 50 — dedicated capacity for the fall-alert critical path' },
+                  { tag: 'data',       desc: 'DynamoDB TTL enabled on alerts table (ttl attr, 7-year HIPAA); handler writes ttl on every alert' },
+                  { tag: 'api',        desc: 'Cognito Advanced Security ENFORCED — adaptive auth + compromised credential detection' },
+                  { tag: 'dashboard',  desc: 'AWS Budgets $100/month — 80% actual + 100% forecasted → operator alarm SNS topic' },
+                ].map(({ tag, desc }) => (
+                  <div key={tag} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', background: 'var(--accent-soft)', borderRadius: 3, padding: '1px 6px', flexShrink: 0 }}>{tag}</span>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.5 }}>{desc}</span>
                   </div>
                 ))}
