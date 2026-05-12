@@ -57,7 +57,7 @@ const PIPELINE_PHASES = [
 const STEPS: Step[] = [
   {
     id: 'repo', phase: '01', title: 'Repository Setup', status: 'done', tag: 'Environment', time: '< 5 min',
-    summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. Core screens implemented: LoginScreen, AlertListScreen, AlertDetailScreen. Auth, push, alerts, EAS build, and CI all complete. ~75% complete toward TestFlight launch.',
+    summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. Core screens implemented: LoginScreen, AlertListScreen, AlertDetailScreen. Auth, push, alerts, EAS build, CI, and app icons all complete. ~80% complete toward TestFlight launch.',
     sections: [
       {
         heading: 'Clone and install',
@@ -105,7 +105,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'env', phase: '02', title: 'Environment Variables', status: 'done', tag: 'Environment', time: '~10 min',
-    summary: 'Copy .env.example to .env. Cognito pool and client ID from ambientcloud Terraform outputs. All values are non-PHI infrastructure references.',
+    summary: 'Copy .env.example to .env. Cognito pool and client ID from ambientcloud CDK outputs. Cognito client verified: generate_secret=False, USER_SRP_AUTH enabled, 30-day refresh tokens. All values are non-PHI infrastructure references.',
     sections: [
       {
         heading: 'Required variables',
@@ -435,7 +435,7 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
   },
   {
     id: 'build', phase: '10', title: 'EAS Build', status: 'warning', tag: 'Distribution', time: '~20–40 min per build',
-    summary: 'eas.json committed with development / preview / production profiles and TestFlight submit config. Next step: run eas login, eas credentials (iOS), then eas build --platform ios --profile preview to trigger the first build.',
+    summary: 'eas.json committed. App icons generated (1024×1024 navy/blue-E design). Blocked on Apple Developer org account (D-U-N-S pending). Once D-U-N-S resolves: enroll org → create APNS key → eas credentials → eas build --platform ios --profile preview.',
     sections: [
       {
         heading: 'EAS setup',
