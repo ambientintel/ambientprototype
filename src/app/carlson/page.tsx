@@ -362,19 +362,6 @@ export default function CarlsonPage() {
           <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: 1.36, letterSpacing: '-0.018em', color: C.text, margin: '0 0 64px' }}>
             Two-thirds of memory care incidents happen at night — unwitnessed, in the minutes between rounds. We built a system that is always present without ever being intrusive.
           </p>
-          <div className="c-stat-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderTop: `1px solid ${C.line}`, paddingTop: 56 }}>
-            {[
-              { n: '60 GHz',  label: 'Radar frequency'              },
-              { n: '<50 ms',  label: 'Detection latency'            },
-              { n: '100%',    label: 'Camera-free'                  },
-              { n: '0',       label: 'Resident interactions needed' },
-            ].map((s, i) => (
-              <div key={s.n} style={{ paddingRight: 32, borderRight: i < 3 ? `1px solid ${C.line}` : 'none', paddingLeft: i > 0 ? 32 : 0 }}>
-                <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(44px, 5.5vw, 72px)', lineHeight: 1, letterSpacing: '-0.03em', margin: '0 0 12px', color: C.text }}>{s.n}</p>
-                <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4, margin: 0 }}>{s.label}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
