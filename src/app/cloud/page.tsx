@@ -1727,7 +1727,7 @@ function ArchDiagram() {
           <Arr />
           <Node label="SQS fanout" sub="DLQ on 3× failure" type="narrative" />
           <Arr />
-          <Node label="Bedrock" sub="Claude Sonnet 4.5 · HIPAA eligible" type="narrative" />
+          <Node label="Bedrock" sub="Claude Sonnet 4.6 · HIPAA eligible" type="narrative" />
           <Arr />
           <Node label="DynamoDB" sub="daily-updates · 90-day TTL" type="narrative" />
         </Row>

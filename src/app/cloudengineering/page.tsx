@@ -94,7 +94,7 @@ const STEPS: Step[] = [
       {
         heading: 'Architecture documents',
         artifacts: [
-          { file: 'docs/architecture-v4.md', role: 'Authoritative architecture v4 — five paths, account-per-tenant, dual-write state, KMS, Sonnet 4.5.' },
+          { file: 'docs/architecture-v4.md', role: 'Authoritative architecture v4 — five paths, account-per-tenant, dual-write state, KMS, Sonnet 4.6.' },
           { file: 'docs/architecture-v4.mmd', role: 'Canonical Mermaid diagram. Render at https://mermaid.live.' },
           { file: 'docs/tenancy.md', role: 'Multi-tenant account-per-tenant isolation model. One AWS account per organization.' },
           { file: 'docs/device-cloud-contract.md', role: 'Authoritative device ↔ cloud wire format, v0.2. IRB framing, research data handling.' },
@@ -145,7 +145,7 @@ const STEPS: Step[] = [
       {
         warnings: [
           'The self-review worksheet Layer 2 grep caught every IRB violation in the initial PR merge train. Without it, at least one PR would have merged with patientId still present. Run it every time.',
-          'Ella Lambda system prompt includes explicit forbidden-attribute instructions. Before upgrading the Bedrock model (e.g., Sonnet 4.5 → 4.6), re-evaluate the system prompt against the new model to confirm de-identification behavior is preserved.',
+          'Ella Lambda system prompt includes explicit forbidden-attribute instructions. Before upgrading the Bedrock model (currently Sonnet 4.6), re-evaluate the system prompt against the new model to confirm de-identification behavior is preserved.',
         ],
       },
     ],
