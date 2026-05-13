@@ -622,11 +622,61 @@ export default function CarlsonPage() {
       </section>
 
 
-      {/* ── 02: TECHNOLOGY ───────────────────────────────────────────────────── */}
+      {/* ── 03: OPPORTUNITY ──────────────────────────────────────────────────── */}
       <Rule />
       <section className="c-sec" style={{ background: C.surf1, padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <SectionMeta n="03" label="Technology" />
+          <SectionMeta n="03" label="Opportunity" />
+          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start', marginBottom: 80 }}>
+            <div>
+              <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(22px, 2.6vw, 34px)', lineHeight: 1.52, letterSpacing: '-0.012em', color: C.text, margin: 0 }}>
+                Dementia is the fastest-growing cause of death in the developed world. The care infrastructure hasn&apos;t kept up — and the workforce shortage makes it impossible to close the gap with people alone.
+              </p>
+            </div>
+            <div>
+              <p style={{ fontFamily: C.sans, fontSize: 16, lineHeight: 1.72, color: C.text2, margin: '0 0 32px' }}>
+                Memory care facilities carry an enormous monitoring burden with shrinking staff ratios. The opportunity is not incremental — it&apos;s foundational. Ambient Intelligence replaces reactive care rounds with continuous, passive intelligence.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: `1px solid ${C.lineStrg}` }}>
+                {[
+                  { label: 'Growing at', value: '7.9% CAGR', note: 'remote patient monitoring in elder care' },
+                  { label: 'US facilities', value: '28,900+', note: 'licensed memory care units nationwide' },
+                  { label: 'By 2050', value: '13M', note: 'Americans projected to have Alzheimer\'s' },
+                ].map((row, i) => (
+                  <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '16px 20px', borderTop: i > 0 ? `1px solid ${C.line}` : 'none' }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.18em', color: C.text4, textTransform: 'uppercase', flexShrink: 0, width: 72 }}>{row.label}</span>
+                    <span style={{ fontFamily: C.serif, fontSize: 22, fontWeight: 300, color: C.text, letterSpacing: '-0.02em', flexShrink: 0, width: 110 }}>{row.value}</span>
+                    <span style={{ fontFamily: C.sans, fontSize: 13, color: C.text3, lineHeight: 1.4 }}>{row.note}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* TAM / SAM stat bar */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, border: `1px solid ${C.lineStrg}` }} className="c-two">
+            {[
+              { label: 'TAM', sublabel: 'Total Addressable Market', value: '$38B', desc: 'Global eldercare monitoring & analytics market' },
+              { label: 'SAM', sublabel: 'Serviceable Addressable Market', value: '$4.2B', desc: 'US memory care facilities — sensor monitoring & AI analytics' },
+            ].map((item, i) => (
+              <div key={item.label} style={{ padding: '40px 48px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
+                  <span style={{ fontFamily: C.mono, fontSize: 10, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase', opacity: 0.9 }}>{item.label}</span>
+                  <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', color: C.text4, textTransform: 'uppercase' }}>{item.sublabel}</span>
+                </div>
+                <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(44px, 5.5vw, 72px)', lineHeight: 1, letterSpacing: '-0.04em', color: C.text, margin: '0 0 16px' }}>{item.value}</p>
+                <p style={{ fontFamily: C.sans, fontSize: 14, color: C.text2, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 04: TECHNOLOGY ───────────────────────────────────────────────────── */}
+      <Rule />
+      <section className="c-sec" style={{ padding: '128px 80px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <SectionMeta n="04" label="Technology" />
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }}>
             <div>
               <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 60px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
@@ -651,7 +701,7 @@ export default function CarlsonPage() {
       <Rule />
       <section className="c-sec" style={{ padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <SectionMeta n="04" label="Flagship Product" />
+          <SectionMeta n="05" label="Flagship Product" />
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
 
             {/* FlowGlow card — left */}
@@ -694,7 +744,7 @@ export default function CarlsonPage() {
       <Rule />
       <section className="c-sec" style={{ background: C.surf1, padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <SectionMeta n="05" label="Minnesota Roots" />
+          <SectionMeta n="06" label="Minnesota Roots" />
           <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(40px, 4.5vw, 60px)', lineHeight: 1.08, letterSpacing: '-0.028em', margin: '0 0 32px', maxWidth: 640 }}>
             Built in Minnesota.<br/>
             <em style={{ fontStyle: 'italic', color: C.text2 }}>For Minnesota care.</em>
