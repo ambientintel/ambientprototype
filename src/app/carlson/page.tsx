@@ -690,19 +690,19 @@ export default function CarlsonPage() {
           <div className="c-three" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, border: `1px solid ${C.line}` }}>
             {[
               {
-                label: 'University of Minnesota', color: C.maroon,
+                label: 'University of Minnesota', color: 'rgba(255,255,255,0.7)',
                 title: 'Office of Discovery & Translation',
                 desc:  'UMN OTC is supporting our PCT patent filing and commercialization pathway. We are preparing for a Q3 2025 IRB submission for our Minneapolis pilot study.',
                 tags:  ['PCT Patent', 'IRB Pending', 'Commercialization'],
               },
               {
-                label: 'Accelerator', color: C.gold,
+                label: 'Accelerator', color: 'rgba(255,255,255,0.7)',
                 title: 'gener8tor Portfolio',
                 desc:  'Backed by gener8tor — the nationally recognized accelerator that connects founders to capital, mentors, and enterprise partners across the Midwest.',
                 tags:  ['gener8tor', 'Accelerator', 'Midwest Network'],
               },
               {
-                label: 'Pilot Site', color: C.green,
+                label: 'Pilot Site', color: 'rgba(255,255,255,0.7)',
                 title: 'Minneapolis Summer 2026',
                 desc:  'Targeting 1–2 skilled nursing facilities in Minnesota for an observational pilot study. Real care environments. Real outcomes. IRB-guided and HIPAA-compliant.',
                 tags:  ['Minneapolis', 'Summer 2026', 'SNF Pilot'],
