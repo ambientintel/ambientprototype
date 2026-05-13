@@ -658,7 +658,7 @@ export default function CarlsonPage() {
             Built in Minnesota.<br/>
             <em style={{ fontStyle: 'italic', color: C.text2 }}>For Minnesota care.</em>
           </h2>
-          <p style={{ fontFamily: C.sans, fontSize: 16, lineHeight: 1.72, color: C.text2, margin: '0 0 64px', maxWidth: 720 }}>
+          <p style={{ fontFamily: C.sans, fontSize: 'clamp(18px, 2vw, 24px)', lineHeight: 1.66, color: C.text2, margin: '0 0 64px' }}>
             The Minnesota Partnership for Biotechnology and Medical Genomics is a unique collaborative venture among the Mayo Clinic, University of Minnesota, and State of Minnesota. The Partnership seeks to position Minnesota as a world leader in biotechnology and medical genomics applications that will result in important new medical discoveries, thereby improving health care for patients and supporting the development of new business and jobs in Minnesota.
           </p>
           <div className="c-three" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, border: `1px solid ${C.line}` }}>
