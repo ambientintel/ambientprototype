@@ -443,27 +443,41 @@ export default function CarlsonPage() {
         .c-primary:hover { background:#5c0013!important; }
         .c-ghost:hover { border-color:rgba(255,255,255,0.24)!important; color:${C.text}!important; }
         .c-nav-link:hover { color:rgba(240,241,242,0.88)!important; }
+        @media(max-width:1100px){
+          .c-two { gap:56px!important; }
+          .c-pull { padding:72px 48px!important; }
+          .c-cta  { padding:88px 48px!important; }
+        }
         @media(max-width:960px){
-          .c-two { grid-template-columns:1fr!important; }
+          .c-two { grid-template-columns:1fr!important; gap:48px!important; }
           .c-three { grid-template-columns:1fr 1fr!important; }
           .c-hero { padding:108px 36px 84px!important; }
           .c-sec { padding:80px 36px!important; }
+          .c-pull { padding:64px 36px!important; }
+          .c-cta  { padding:80px 36px!important; }
           .c-stat-row { grid-template-columns:1fr 1fr!important; }
+          .c-nav { padding:0 36px!important; }
+          .c-nav-label { display:none!important; }
         }
         @media(max-width:600px){
+          .c-two { gap:36px!important; }
           .c-three { grid-template-columns:1fr!important; }
-          .c-sec { padding:64px 24px!important; }
-          .c-stat-row { grid-template-columns:1fr 1fr!important; }
+          .c-sec { padding:56px 20px!important; }
+          .c-pull { padding:52px 20px!important; }
+          .c-cta  { padding:64px 20px!important; }
+          .c-nav { padding:0 20px!important; }
+          .c-mn-card { border-left:none!important; border-top:1px solid rgba(255,255,255,0.08); }
+          .c-mn-card:first-child { border-top:none!important; }
         }
       ` }} />
 
       {/* ── NAV ─────────────────────────────────────────────────────────────── */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 80px', background: 'rgba(8,8,8,0.90)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.line}` }}>
+      <nav className="c-nav" style={{ position: 'sticky', top: 0, zIndex: 50, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 80px', background: 'rgba(8,8,8,0.90)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.line}` }}>
         <span style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 15, letterSpacing: '-0.01em' }}>
           Ambient <em style={{ fontStyle: 'italic', color: C.text2 }}>Intelligence</em>
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-          <span style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4 }}>Founder&apos;s Day 2026</span>
+          <span className="c-nav-label" style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4 }}>Founder&apos;s Day 2026</span>
           <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 20px', borderRadius: 6, background: C.maroon, color: '#fff', fontSize: 13, fontWeight: 500, textDecoration: 'none', letterSpacing: '0.01em', transition: 'background 0.15s' }}>
             Connect
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -484,7 +498,7 @@ export default function CarlsonPage() {
             Founder&apos;s Day{' '}
             <em style={{ fontStyle: 'italic', color: C.text2 }}>2026</em>
           </h1>
-          <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px', maxWidth: 700 }}>
+          <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px', maxWidth: 600 }}>
             24/7 contactless and noninvasive monitoring engineered for memory care.
           </p>
           <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -499,7 +513,7 @@ export default function CarlsonPage() {
 
       {/* ── PULL QUOTE ───────────────────────────────────────────────────────── */}
       <Rule />
-      <section style={{ background: C.bg2, padding: '96px 56px' }}>
+      <section className="c-pull" style={{ background: C.bg2, padding: '96px 56px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="01" label="The Problem" />
           <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: 1.36, letterSpacing: '-0.018em', color: C.text, margin: '0 0 64px' }}>
@@ -679,7 +693,7 @@ export default function CarlsonPage() {
                 tags:  ['Minneapolis', 'Summer 2026', 'SNF Pilot'],
               },
             ].map((card, i) => (
-              <div key={card.title} style={{ padding: '36px 32px 32px', borderLeft: i > 0 ? `1px solid ${C.line}` : 'none' }}>
+              <div key={card.title} className="c-mn-card" style={{ padding: '36px 32px 32px', borderLeft: i > 0 ? `1px solid ${C.line}` : 'none' }}>
                 <div style={{ width: 24, height: 2, background: card.color, marginBottom: 24, opacity: 0.7 }} />
                 <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: card.color, margin: '0 0 14px', opacity: 0.85 }}>{card.label}</p>
                 <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 21, letterSpacing: '-0.012em', margin: '0 0 16px', lineHeight: 1.28, color: C.text }}>{card.title}</p>
@@ -695,7 +709,7 @@ export default function CarlsonPage() {
 
       {/* ── CTA ─────────────────────────────────────────────────────────────────── */}
       <Rule />
-      <section style={{ background: C.bg2, padding: '120px 80px' }}>
+      <section className="c-cta" style={{ background: C.bg2, padding: '120px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }} className="c-two">
           <div>
             <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.22em', color: C.text4, margin: '0 0 24px' }}>May 13 · Toaster Innovation Hub</p>
