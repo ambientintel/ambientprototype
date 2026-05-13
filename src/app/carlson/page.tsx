@@ -534,12 +534,9 @@ export default function CarlsonPage() {
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <span className="c-nav-label" style={{ fontFamily: C.mono, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text2 }}>Founder&apos;s Day 2026</span>
-          <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em' }}>
-            <BtnCanvas />
-            <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-              Connect
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </span>
+          <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary c-nav-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em' }}>
+            Connect
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
       </nav>
@@ -799,14 +796,11 @@ export default function CarlsonPage() {
             </h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start' }}>
-            <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '13px 32px', fontSize: 15, textDecoration: 'none', letterSpacing: '0.01em' }}>
-              <BtnCanvas />
-              <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                Get in Touch
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-              </span>
+            <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary c-nav-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '13px 32px', fontSize: 15, textDecoration: 'none', letterSpacing: '0.01em' }}>
+              Get in Touch
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
-            <a href="https://www.ellamemory.com/" target="_blank" rel="noopener noreferrer" className="c-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '13px 32px', fontSize: 15, textDecoration: 'none', transition: 'background 0.15s, border-color 0.15s, color 0.15s' }}>
+            <a href="https://www.ellamemory.com/" target="_blank" rel="noopener noreferrer" className="c-primary c-nav-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '13px 32px', fontSize: 15, textDecoration: 'none', letterSpacing: '0.01em' }}>
               Explore Ella Memory
             </a>
           </div>
