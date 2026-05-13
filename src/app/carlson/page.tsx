@@ -513,7 +513,6 @@ export default function CarlsonPage() {
           .c-cta  { padding:80px 36px!important; }
           .c-stat-row { grid-template-columns:1fr 1fr!important; }
           .c-nav { padding:0 36px!important; }
-          .c-nav-label { display:none!important; }
         }
         @media(max-width:600px){
           .c-two { gap:36px!important; }
