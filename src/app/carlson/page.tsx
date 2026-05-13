@@ -509,7 +509,7 @@ export default function CarlsonPage() {
             {[
               { label: 'DATE',  value: 'Wed, May 13, 2026' },
               { label: 'TIME',  value: '4:30 – 7:00 PM' },
-              { label: 'VENUE', value: 'Walter Library · Toaster Hub' },
+              { label: 'VENUE', value: 'Bakken Medical Devices Center' },
             ].map((item, i) => (
               <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '12px 24px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
                 <span style={{ fontFamily: C.mono, fontSize: 8, letterSpacing: '0.18em', color: C.text4, textTransform: 'uppercase' }}>{item.label}</span>
