@@ -613,50 +613,9 @@ export default function CarlsonPage() {
           <SectionMeta n="04" label="Flagship Product" />
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
 
-            {/* Dashboard card — left */}
-            <div style={{ position: 'relative', border: `1px solid rgba(255,255,255,0.6)`, overflow: 'hidden' }}>
+            {/* FlowGlow card — left */}
+            <div style={{ position: 'relative', border: `1px solid rgba(255,255,255,0.6)`, overflow: 'hidden', minHeight: 480 }}>
               <CardFlowGlowBg />
-              <div style={{ padding: '13px 20px', borderBottom: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.text3 }}>Ella AI · Live Dashboard</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.green }}>
-                  <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: C.green, animation: 'pulse-green 2s ease-out infinite' }} />
-                  Active
-                </span>
-              </div>
-              <div style={{ padding: '16px 20px 12px', borderBottom: `1px solid ${C.line}` }}>
-                <p style={{ fontFamily: C.mono, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: C.text4, margin: '0 0 8px' }}>Resident Activity · 24h</p>
-                <svg viewBox="0 0 400 60" preserveAspectRatio="none" style={{ width: '100%', height: 60, display: 'block' }}>
-                  <defs>
-                    <linearGradient id="ella-grad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4F9CF9" stopOpacity="0.28"/>
-                      <stop offset="100%" stopColor="#4F9CF9" stopOpacity="0"/>
-                    </linearGradient>
-                  </defs>
-                  <polygon points="0,60 28,42 56,36 84,28 112,22 140,32 168,18 196,24 224,30 252,16 280,26 308,20 336,32 364,24 392,14 400,18 400,60" fill="url(#ella-grad)"/>
-                  <polyline points="28,42 56,36 84,28 112,22 140,32 168,18 196,24 224,30 252,16 280,26 308,20 336,32 364,24 392,14" fill="none" stroke="#4F9CF9" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="252" cy="16" r="3.5" fill="#FF6680" stroke="transparent" strokeWidth="1.5"/>
-                </svg>
-              </div>
-              {[
-                { room: '114A', name: 'M. Johansson', status: 'Elevated', color: '#FF6680' },
-                { room: '116B', name: 'R. Chen',      status: 'Normal',   color: C.green   },
-                { room: '118A', name: 'E. Okonkwo',   status: 'Normal',   color: C.green   },
-              ].map(r => (
-                <div key={r.room} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 20px', borderBottom: `1px solid ${C.line}` }}>
-                  <span style={{ fontFamily: C.mono, fontSize: 10, color: C.text3, width: 30 }}>{r.room}</span>
-                  <span style={{ fontFamily: C.serif, fontSize: 14, fontWeight: 400, flex: 1 }}>{r.name}</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: r.color }}>
-                    <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: r.color }} />
-                    {r.status}
-                  </span>
-                </div>
-              ))}
-              <div style={{ padding: '18px 20px', borderLeft: `2px solid ${C.accent}` }}>
-                <p style={{ fontFamily: C.mono, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: C.accent, margin: '0 0 12px' }}>Ella AI · Room 114A Summary</p>
-                <p style={{ fontFamily: C.serif, fontSize: 13.5, lineHeight: 1.66, color: C.text2, margin: 0, fontStyle: 'italic' }}>
-                  &ldquo;Mrs. Johansson showed increased nighttime movement between 2:00 and 4:00 AM. No fall events detected. Recommend checking in this morning.&rdquo;
-                </p>
-              </div>
             </div>
 
             {/* Text — right */}
