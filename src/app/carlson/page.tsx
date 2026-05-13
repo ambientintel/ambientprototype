@@ -544,7 +544,7 @@ export default function CarlsonPage() {
                 {[
                   { text: 'Sensors mount in corners — out of sight, out of mind',    color: C.accent  },
                   { text: 'Full coverage including bathroom and transition zones',     color: C.gold    },
-                  { text: 'Detects falls, posture changes, gait, and sleep patterns', color: C.green   },
+                  { text: 'Detects falls and movement patterns', color: C.green   },
                   { text: 'No wearable, no camera, no resident interaction required', color: C.maroon  },
                 ].map((item, i) => (
                   <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 0, borderTop: `1px solid ${C.line}`, padding: '18px 0' }}>
