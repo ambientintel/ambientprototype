@@ -597,7 +597,7 @@ export default function CarlsonPage() {
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
 
             {/* Dashboard card — left */}
-            <div style={{ background: C.surf1, border: `1px solid ${C.lineStrg}`, overflow: 'hidden' }}>
+            <div style={{ background: C.surf1, border: `2px solid rgba(255,255,255,0.28)`, overflow: 'hidden' }}>
               <div style={{ padding: '13px 20px', borderBottom: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.text3 }}>Ella AI · Live Dashboard</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.green }}>
