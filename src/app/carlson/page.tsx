@@ -443,7 +443,7 @@ export default function CarlsonPage() {
         .c-primary:hover { background:#5c0013!important; }
         .c-ghost:hover { border-color:rgba(255,255,255,0.24)!important; color:${C.text}!important; }
         .c-nav-link:hover { color:rgba(240,241,242,0.88)!important; }
-        .c-hero-section { height:100vh; height:100dvh; }
+        .c-hero-section { height:82vh; height:82dvh; }
         @media(min-width:961px) and (max-width:1100px){
           .c-hero { padding:88px 56px 72px!important; }
         }
