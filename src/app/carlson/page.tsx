@@ -627,7 +627,7 @@ export default function CarlsonPage() {
       <section className="c-sec" style={{ background: C.surf1, padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="03" label="Opportunity" />
-          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(20px, 2.2vw, 28px)', lineHeight: 1.6, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.72)', margin: '0 0 56px', maxWidth: 680 }}>
+          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(22px, 2.6vw, 36px)', lineHeight: 1.52, letterSpacing: '-0.015em', color: 'rgba(255,255,255,0.72)', margin: '0 0 56px' }}>
             Dementia is the fastest-growing cause of death in the developed world. The care infrastructure hasn&apos;t kept up and the workforce shortage makes it impossible to close the gap with people alone.
           </p>
 
