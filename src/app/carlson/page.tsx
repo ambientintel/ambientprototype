@@ -275,137 +275,126 @@ function HowItWorksDiagram() {
 
 function TechDiagram() {
   const W = (o: number) => `rgba(255,255,255,${o})`;
+  // Radar center cx=72, cy=100; viz zone y=26..174
   const blips: Array<[number, number, string]> = [
-    [93, 46, '-0.4s'], [50, 84, '-1.1s'], [97, 76, '-2.2s'],
+    [93, 70, '-0.4s'], [50, 110, '-1.1s'], [100, 98, '-2.2s'],
   ];
-  const inY:  number[] = [38, 53, 68, 83];
-  const hidY: number[] = [45, 65, 85];
-  const outY: number[] = [51, 79];
+  const inY:  number[] = [54, 72, 90, 108];
+  const hidY: number[] = [62, 90, 118];
+  const outY: number[] = [72, 110];
   const dots = [
-    { p: 'M 165 53 L 218 45', b: '0s'     },
-    { p: 'M 165 83 L 218 85', b: '-0.32s' },
-    { p: 'M 165 38 L 218 65', b: '-0.56s' },
-    { p: 'M 218 45 L 271 51', b: '-0.14s' },
-    { p: 'M 218 85 L 271 79', b: '-0.44s' },
-    { p: 'M 165 68 L 218 45', b: '-0.68s' },
-    { p: 'M 165 53 L 218 85', b: '-0.88s' },
-    { p: 'M 218 65 L 271 51', b: '-0.22s' },
+    { p: 'M 165 72 L 218 62',  b: '0s'     },
+    { p: 'M 165 108 L 218 118',b: '-0.32s' },
+    { p: 'M 165 54 L 218 90',  b: '-0.56s' },
+    { p: 'M 218 62 L 271 72',  b: '-0.14s' },
+    { p: 'M 218 118 L 271 110',b: '-0.44s' },
+    { p: 'M 165 90 L 218 62',  b: '-0.68s' },
+    { p: 'M 165 72 L 218 118', b: '-0.88s' },
+    { p: 'M 218 90 L 271 72',  b: '-0.22s' },
   ];
   const ecg = (bx: number) =>
-    `${bx},62 ${bx+12},62 ${bx+15},67 ${bx+19},36 ${bx+23},74 ${bx+27},62 ${bx+33},56 ${bx+39},50 ${bx+45},56 ${bx+50},62 ${bx+64},62`;
+    `${bx},86 ${bx+12},86 ${bx+15},93 ${bx+19},54 ${bx+23},104 ${bx+27},86 ${bx+33},78 ${bx+39},70 ${bx+45},78 ${bx+50},86 ${bx+64},86`;
   const resp = (bx: number) =>
-    `${bx},96 ${bx+10},86 ${bx+20},80 ${bx+30},86 ${bx+40},96 ${bx+50},106 ${bx+60},112 ${bx+70},106 ${bx+80},96`;
+    `${bx},138 ${bx+10},126 ${bx+20},118 ${bx+30},126 ${bx+40},138 ${bx+50},150 ${bx+60},158 ${bx+70},150 ${bx+80},138`;
   return (
-    <svg viewBox="0 0 440 248" style={{ width: '100%', height: 'auto', display: 'block' }}>
+    <svg viewBox="0 0 440 320" style={{ width: '100%', height: 'auto', display: 'block' }}>
       <defs>
-        <clipPath id="tc-v1"><rect x="6"   y="26" width="132" height="104"/></clipPath>
-        <clipPath id="tc-v2"><rect x="152" y="26" width="132" height="104"/></clipPath>
-        <clipPath id="tc-v3"><rect x="298" y="26" width="132" height="104"/></clipPath>
+        <clipPath id="tc-v1"><rect x="6"   y="26" width="132" height="148"/></clipPath>
+        <clipPath id="tc-v2"><rect x="152" y="26" width="132" height="148"/></clipPath>
+        <clipPath id="tc-v3"><rect x="298" y="26" width="132" height="148"/></clipPath>
       </defs>
-      <rect width="440" height="248" fill="#080808"/>
+      <rect width="440" height="320" fill="#080808"/>
 
-      {/* ── Card 1 · AMBIENT SENSORS — radar sweep trail + blips ── */}
-      <rect x="6"   y="8" width="132" height="232" fill="#131313" stroke={W(0.14)} strokeWidth="0.8" rx="2"/>
+      {/* ── Card 1 · AMBIENT SENSORS ── */}
+      <rect x="6"   y="8" width="132" height="304" fill="#131313" stroke={W(0.14)} strokeWidth="0.8" rx="2"/>
       <rect x="6"   y="8" width="132" height="2"   fill={W(0.45)}/>
       <text x="14"  y="22" fontFamily="monospace" fontSize="7" fill={W(0.3)} letterSpacing="2">01</text>
       <g clipPath="url(#tc-v1)">
-        {/* Range rings */}
-        <circle cx="72" cy="78" r="16" fill="none" stroke={W(0.14)} strokeDasharray="2,3" strokeWidth="0.8"/>
-        <circle cx="72" cy="78" r="30" fill="none" stroke={W(0.10)} strokeDasharray="2,3" strokeWidth="0.8"/>
-        <circle cx="72" cy="78" r="44" fill="none" stroke={W(0.07)} strokeDasharray="2,3" strokeWidth="0.7"/>
-        {/* Crosshair */}
-        <line x1="28" y1="78" x2="116" y2="78" stroke={W(0.07)} strokeWidth="0.5"/>
-        <line x1="72" y1="34" x2="72"  y2="122" stroke={W(0.07)} strokeWidth="0.5"/>
-        {/* Sweep group with trail */}
+        <circle cx="72" cy="100" r="20" fill="none" stroke={W(0.14)} strokeDasharray="2,3" strokeWidth="0.8"/>
+        <circle cx="72" cy="100" r="38" fill="none" stroke={W(0.10)} strokeDasharray="2,3" strokeWidth="0.8"/>
+        <circle cx="72" cy="100" r="56" fill="none" stroke={W(0.07)} strokeDasharray="2,3" strokeWidth="0.7"/>
+        <line x1="16" y1="100" x2="128" y2="100" stroke={W(0.07)} strokeWidth="0.5"/>
+        <line x1="72" y1="44"  x2="72"  y2="156" stroke={W(0.07)} strokeWidth="0.5"/>
         <g>
-          <animateTransform attributeName="transform" type="rotate" from="0 72 78" to="360 72 78" dur="3.5s" repeatCount="indefinite"/>
-          <path d="M 72 78 L 72 34 A 44 44 0 0 0 43 46 Z" fill={W(0.09)}/>
-          <line x1="72" y1="78" x2="72" y2="34" stroke={W(0.14)}  strokeWidth="1"   transform="rotate(-40 72 78)"/>
-          <line x1="72" y1="78" x2="72" y2="34" stroke={W(0.26)}  strokeWidth="1.2" transform="rotate(-22 72 78)"/>
-          <line x1="72" y1="78" x2="72" y2="34" stroke={W(0.48)}  strokeWidth="1.4" transform="rotate(-10 72 78)"/>
-          <line x1="72" y1="78" x2="72" y2="34" stroke={W(0.88)}  strokeWidth="1.6"/>
+          <animateTransform attributeName="transform" type="rotate" from="0 72 100" to="360 72 100" dur="3.5s" repeatCount="indefinite"/>
+          <path d="M 72 100 L 72 44 A 56 56 0 0 0 38 62 Z" fill={W(0.09)}/>
+          <line x1="72" y1="100" x2="72" y2="44" stroke={W(0.14)} strokeWidth="1"   transform="rotate(-40 72 100)"/>
+          <line x1="72" y1="100" x2="72" y2="44" stroke={W(0.28)} strokeWidth="1.2" transform="rotate(-22 72 100)"/>
+          <line x1="72" y1="100" x2="72" y2="44" stroke={W(0.52)} strokeWidth="1.4" transform="rotate(-10 72 100)"/>
+          <line x1="72" y1="100" x2="72" y2="44" stroke={W(0.90)} strokeWidth="1.6"/>
         </g>
-        {/* Center dot */}
-        <circle cx="72" cy="78" r="3" fill={W(0.9)}/>
-        <circle cx="72" cy="78" r="1.2" fill="#131313"/>
-        {/* Detection blips */}
+        <circle cx="72" cy="100" r="3.5" fill={W(0.92)}/>
+        <circle cx="72" cy="100" r="1.4" fill="#131313"/>
         {blips.map(([bx, by, begin], i) => (
           <g key={i}>
-            <circle cx={bx} cy={by} r="3" fill={W(0.88)}>
-              <animate attributeName="opacity" values="0;0;0.88;0.45;0;0" keyTimes="0;0.04;0.10;0.28;0.45;1" dur="3.5s" begin={begin} repeatCount="indefinite"/>
+            <circle cx={bx} cy={by} r="3.5" fill={W(0.90)}>
+              <animate attributeName="opacity" values="0;0;0.90;0.45;0;0" keyTimes="0;0.04;0.10;0.28;0.45;1" dur="3.5s" begin={begin} repeatCount="indefinite"/>
             </circle>
-            <circle cx={bx} cy={by} r="3" fill="none" stroke={W(0.65)} strokeWidth="1">
+            <circle cx={bx} cy={by} r="3.5" fill="none" stroke={W(0.65)} strokeWidth="1">
               <animate attributeName="opacity" values="0;0;0.65;0;0;0"  keyTimes="0;0.04;0.14;0.38;0.55;1" dur="3.5s" begin={begin} repeatCount="indefinite"/>
-              <animate attributeName="r"       values="3;3;6;12;12;3"   keyTimes="0;0.04;0.14;0.38;0.55;1" dur="3.5s" begin={begin} repeatCount="indefinite"/>
+              <animate attributeName="r"       values="3.5;3.5;7;14;14;3.5" keyTimes="0;0.04;0.14;0.38;0.55;1" dur="3.5s" begin={begin} repeatCount="indefinite"/>
             </circle>
           </g>
         ))}
       </g>
-      <line x1="6"  y1="132" x2="138" y2="132" stroke={W(0.10)} strokeWidth="0.6"/>
-      <text x="14"  y="148" fontFamily="monospace" fontSize="9"   fill={W(0.92)} letterSpacing="1"   fontWeight="600">AMBIENT SENSORS</text>
-      <text x="14"  y="161" fontFamily="monospace" fontSize="6.5" fill={W(0.48)} letterSpacing="0.8">60 GHz FMCW</text>
-      <text x="14"  y="172" fontFamily="monospace" fontSize="6"   fill={W(0.32)} letterSpacing="0.5">IWR6843AOP</text>
-      <line x1="14" y1="183" x2="130" y2="183" stroke={W(0.08)} strokeWidth="0.5"/>
-      <circle cx="16" cy="195" r="2.5" fill={W(0.72)}>
+      <line x1="6"  y1="178" x2="138" y2="178" stroke={W(0.10)} strokeWidth="0.6"/>
+      <text x="14"  y="196" fontFamily="monospace" fontSize="9"   fill={W(0.92)} letterSpacing="1"   fontWeight="600">AMBIENT SENSORS</text>
+      <text x="14"  y="210" fontFamily="monospace" fontSize="6.5" fill={W(0.48)} letterSpacing="0.8">60 GHz FMCW</text>
+      <text x="14"  y="222" fontFamily="monospace" fontSize="6"   fill={W(0.32)} letterSpacing="0.5">IWR6843AOP</text>
+      <line x1="14" y1="234" x2="130" y2="234" stroke={W(0.08)} strokeWidth="0.5"/>
+      <circle cx="16" cy="248" r="2.5" fill={W(0.72)}>
         <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/>
       </circle>
-      <text x="24"  y="198" fontFamily="monospace" fontSize="6.5" fill={W(0.45)} letterSpacing="1">ACTIVE</text>
+      <text x="24"  y="251" fontFamily="monospace" fontSize="6.5" fill={W(0.45)} letterSpacing="1">ACTIVE</text>
 
-      {/* ── Card 2 · CLOUD AI — neural network ── */}
-      <rect x="152" y="8" width="132" height="232" fill="#131313" stroke={W(0.14)} strokeWidth="0.8" rx="2"/>
+      {/* ── Card 2 · CLOUD AI ── */}
+      <rect x="152" y="8" width="132" height="304" fill="#131313" stroke={W(0.14)} strokeWidth="0.8" rx="2"/>
       <rect x="152" y="8" width="132" height="2"   fill={W(0.45)}/>
       <text x="160" y="22" fontFamily="monospace" fontSize="7" fill={W(0.3)} letterSpacing="2">02</text>
       <g clipPath="url(#tc-v2)">
-        {/* Connections — brighter */}
         {inY.flatMap(iy => hidY.map(hy => (
           <line key={`ih${iy}${hy}`} x1="165" y1={iy} x2="218" y2={hy} stroke={W(0.18)} strokeWidth="0.7"/>
         )))}
         {hidY.flatMap(hy => outY.map(oy => (
           <line key={`ho${hy}${oy}`} x1="218" y1={hy} x2="271" y2={oy} stroke={W(0.18)} strokeWidth="0.7"/>
         )))}
-        {/* Nodes — much larger and brighter */}
         {inY.map(iy  => <circle key={iy}  cx="165" cy={iy}  r="5"   fill={W(0.10)} stroke={W(0.55)} strokeWidth="1.2"/>)}
         {hidY.map(hy => <circle key={hy}  cx="218" cy={hy}  r="6"   fill={W(0.14)} stroke={W(0.65)} strokeWidth="1.4"/>)}
-        {outY.map(oy => <circle key={oy}  cx="271" cy={oy}  r="7"   fill={W(0.18)} stroke={W(0.78)} strokeWidth="1.6"/>)}
-        {/* Traveling data dots — bigger */}
+        {outY.map(oy => <circle key={oy}  cx="271" cy={oy}  r="7.5" fill={W(0.18)} stroke={W(0.80)} strokeWidth="1.6"/>)}
         {dots.map((d, i) => (
-          <circle key={i} r="2.8" fill={W(0.95)}>
+          <circle key={i} r="3" fill={W(0.95)}>
             <animateMotion dur="0.9s" begin={d.b} repeatCount="indefinite" path={d.p}/>
             <animate attributeName="opacity" values="0;0.95;0.95;0" keyTimes="0;0.12;0.88;1" dur="0.9s" begin={d.b} repeatCount="indefinite"/>
           </circle>
         ))}
       </g>
-      <line x1="152" y1="132" x2="284" y2="132" stroke={W(0.10)} strokeWidth="0.6"/>
-      <text x="160" y="148" fontFamily="monospace" fontSize="9"   fill={W(0.92)} letterSpacing="1"   fontWeight="600">CLOUD AI</text>
-      <text x="160" y="161" fontFamily="monospace" fontSize="6.5" fill={W(0.48)} letterSpacing="0.8">AWS BEDROCK</text>
-      <text x="160" y="172" fontFamily="monospace" fontSize="6"   fill={W(0.32)} letterSpacing="0.5">FOUNDATION MODEL</text>
-      <line x1="160" y1="183" x2="276" y2="183" stroke={W(0.08)} strokeWidth="0.5"/>
+      <line x1="152" y1="178" x2="284" y2="178" stroke={W(0.10)} strokeWidth="0.6"/>
+      <text x="160" y="196" fontFamily="monospace" fontSize="9"   fill={W(0.92)} letterSpacing="1"   fontWeight="600">CLOUD AI</text>
+      <text x="160" y="210" fontFamily="monospace" fontSize="6.5" fill={W(0.48)} letterSpacing="0.8">AWS BEDROCK</text>
+      <text x="160" y="222" fontFamily="monospace" fontSize="6"   fill={W(0.32)} letterSpacing="0.5">FOUNDATION MODEL</text>
+      <line x1="160" y1="234" x2="276" y2="234" stroke={W(0.08)} strokeWidth="0.5"/>
       <g>
         <animate attributeName="opacity" values="1;0.18;1" dur="1.8s" repeatCount="indefinite"/>
-        <circle cx="162" cy="195" r="2.5" fill={W(0.65)}/>
-        <text x="170" y="198" fontFamily="monospace" fontSize="6.5" fill={W(0.45)} letterSpacing="1">INFERENCING</text>
+        <circle cx="162" cy="248" r="2.5" fill={W(0.65)}/>
+        <text x="170" y="251" fontFamily="monospace" fontSize="6.5" fill={W(0.45)} letterSpacing="1">INFERENCING</text>
       </g>
 
-      {/* ── Card 3 · ELLA AI — dual waveform ECG + respiration ── */}
-      <rect x="298" y="8" width="132" height="232" fill="#131313" stroke={W(0.14)} strokeWidth="0.8" rx="2"/>
+      {/* ── Card 3 · ELLA AI ── */}
+      <rect x="298" y="8" width="132" height="304" fill="#131313" stroke={W(0.14)} strokeWidth="0.8" rx="2"/>
       <rect x="298" y="8" width="132" height="2"   fill={W(0.45)}/>
       <text x="306" y="22" fontFamily="monospace" fontSize="7" fill={W(0.3)} letterSpacing="2">03</text>
       <g clipPath="url(#tc-v3)">
-        {/* Grid lines */}
-        <line x1="298" y1="78" x2="430" y2="78" stroke={W(0.10)} strokeWidth="0.6"/>
-        <line x1="298" y1="62" x2="430" y2="62" stroke={W(0.05)} strokeWidth="0.4"/>
-        <line x1="298" y1="96" x2="430" y2="96" stroke={W(0.05)} strokeWidth="0.4"/>
-        {/* Labels */}
-        <text x="427" y="33" textAnchor="end" fontFamily="monospace" fontSize="6" fill={W(0.38)} letterSpacing="1">ECG</text>
-        <text x="427" y="88" textAnchor="end" fontFamily="monospace" fontSize="6" fill={W(0.28)} letterSpacing="1">RESP</text>
-        {/* Scrolling ECG — bright */}
+        <line x1="298" y1="100" x2="430" y2="100" stroke={W(0.10)} strokeWidth="0.6"/>
+        <line x1="298" y1="86"  x2="430" y2="86"  stroke={W(0.05)} strokeWidth="0.4"/>
+        <line x1="298" y1="138" x2="430" y2="138" stroke={W(0.05)} strokeWidth="0.4"/>
+        <text x="427" y="40"  textAnchor="end" fontFamily="monospace" fontSize="6" fill={W(0.38)} letterSpacing="1">ECG</text>
+        <text x="427" y="120" textAnchor="end" fontFamily="monospace" fontSize="6" fill={W(0.28)} letterSpacing="1">RESP</text>
         <g>
           <animateTransform attributeName="transform" type="translate" from="0 0" to="-64 0" dur="2s" repeatCount="indefinite"/>
           {([234,298,362,426,490] as number[]).map(bx => (
             <polyline key={bx} points={ecg(bx)} fill="none" stroke={W(0.82)} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
           ))}
         </g>
-        {/* Scrolling RESP — visible */}
         <g>
           <animateTransform attributeName="transform" type="translate" from="0 0" to="-80 0" dur="3.2s" repeatCount="indefinite"/>
           {([218,298,378,458,538] as number[]).map(bx => (
@@ -413,15 +402,15 @@ function TechDiagram() {
           ))}
         </g>
       </g>
-      <line x1="298" y1="132" x2="430" y2="132" stroke={W(0.10)} strokeWidth="0.6"/>
-      <text x="306" y="148" fontFamily="monospace" fontSize="9"   fill={W(0.92)} letterSpacing="1"   fontWeight="600">ELLA AI</text>
-      <text x="306" y="161" fontFamily="monospace" fontSize="6.5" fill={W(0.48)} letterSpacing="0.8">NURSE ASSISTANT</text>
-      <text x="306" y="172" fontFamily="monospace" fontSize="6"   fill={W(0.32)} letterSpacing="0.5">HIPAA COMPLIANT</text>
-      <line x1="306" y1="183" x2="422" y2="183" stroke={W(0.08)} strokeWidth="0.5"/>
-      <circle cx="308" cy="195" r="2.5" fill={W(0.82)}>
+      <line x1="298" y1="178" x2="430" y2="178" stroke={W(0.10)} strokeWidth="0.6"/>
+      <text x="306" y="196" fontFamily="monospace" fontSize="9"   fill={W(0.92)} letterSpacing="1"   fontWeight="600">ELLA AI</text>
+      <text x="306" y="210" fontFamily="monospace" fontSize="6.5" fill={W(0.48)} letterSpacing="0.8">NURSE ASSISTANT</text>
+      <text x="306" y="222" fontFamily="monospace" fontSize="6"   fill={W(0.32)} letterSpacing="0.5">HIPAA COMPLIANT</text>
+      <line x1="306" y1="234" x2="422" y2="234" stroke={W(0.08)} strokeWidth="0.5"/>
+      <circle cx="308" cy="248" r="2.5" fill={W(0.82)}>
         <animate attributeName="opacity" values="1;0.12;1" dur="1.2s" repeatCount="indefinite"/>
       </circle>
-      <text x="316" y="198" fontFamily="monospace" fontSize="6.5" fill={W(0.55)} letterSpacing="1">ALERT · ROOM 204</text>
+      <text x="316" y="251" fontFamily="monospace" fontSize="6.5" fill={W(0.55)} letterSpacing="1">ALERT · ROOM 204</text>
     </svg>
   );
 }
