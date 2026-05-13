@@ -538,7 +538,7 @@ export default function CarlsonPage() {
                 <em style={{ fontStyle: 'italic', color: C.text2 }}>We never interfere.</em>
               </h2>
               <p style={{ fontSize: 18, lineHeight: 1.76, color: C.text2, margin: '0 0 40px' }}>
-                Small sensors mount unobtrusively in the room and continuously map motion through space — covering the bedroom and bathroom without cameras, wearables, or any interaction from residents or staff.
+                Ambient sensors are installed in the room and continuously map motion through space without cameras, wearables, or any interaction from residents or staff.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {[
