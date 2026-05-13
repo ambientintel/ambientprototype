@@ -4700,6 +4700,149 @@ const flowGlowBg: BgDef = {
   },
 };
 
+const flowGlowMonoBg: BgDef = {
+  id: 'flowglowmono',
+  label: 'Flow Glow Mono',
+  description: 'Flow Glow in black, white, and gray — the same morphing Lissajous blobs and glowing border, stripped to monochrome',
+  defaults: { cornerRadius: 56, speed: 0.15, blobSize: 0.58, intensity: 0.88, strokeWidth: 7, padding: 32 },
+  sliders: [
+    { key: 'cornerRadius', label: 'Corner radius', min: 0,   max: 160, step: 1    },
+    { key: 'speed',        label: 'Flow speed',    min: 0,   max: 1.0, step: 0.01 },
+    { key: 'blobSize',     label: 'Blob size',     min: 0.1, max: 1.2, step: 0.01 },
+    { key: 'intensity',    label: 'Intensity',     min: 0,   max: 1.0, step: 0.01 },
+    { key: 'strokeWidth',  label: 'Stroke width',  min: 1,   max: 40,  step: 0.5  },
+    { key: 'padding',      label: 'Inset',         min: 0,   max: 200, step: 1    },
+  ],
+  create(canvas, getCfg) {
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let flowT = 0;
+    let borderAngle = 0;
+    let lastTs = performance.now();
+
+    // Monochrome grayscale tuples — varying luminance so blobs layer distinctly
+    const COLORS: [number,number,number][] = [
+      [255,255,255],[210,210,210],[170,170,170],[240,240,240],[185,185,185],[225,225,225],
+    ];
+
+    const BLOBS = [
+      { fx: 0.31, fy: 0.47, px: 0,            py: Math.PI * 0.50 },
+      { fx: 0.53, fy: 0.29, px: Math.PI,      py: Math.PI * 1.20 },
+      { fx: 0.41, fy: 0.67, px: Math.PI * 0.7,py: 0              },
+      { fx: 0.23, fy: 0.53, px: Math.PI * 1.5,py: Math.PI * 0.80 },
+      { fx: 0.59, fy: 0.37, px: Math.PI * 0.3,py: Math.PI * 1.70 },
+      { fx: 0.43, fy: 0.61, px: Math.PI * 1.1,py: Math.PI * 0.30 },
+    ];
+
+    const BASE_HEX = ['#ffffff','#d0d0d0','#aaaaaa','#888888','#cccccc','#f0f0f0'];
+    let curC = [...BASE_HEX], tgtC = [...BASE_HEX], lerpT = 1.0, nextSwap = 0.45;
+
+    const hexToRgb = (h: string): [number,number,number] => {
+      const v = parseInt(h.replace('#',''), 16);
+      return [(v>>16)&255,(v>>8)&255,v&255];
+    };
+    const lerpHex = (a: string, b: string, t: number) => {
+      const [ar,ag,ab]=hexToRgb(a),[br,bg,bb]=hexToRgb(b);
+      return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+    };
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect();
+      canvas.width = r.width || window.innerWidth;
+      canvas.height = r.height || window.innerHeight;
+    };
+
+    const rrectPath = (x: number, y: number, w: number, h: number, r: number) => {
+      r = Math.max(0, Math.min(r, w/2, h/2));
+      ctx.beginPath();
+      ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+      ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+      ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+      ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+      ctx.closePath();
+    };
+
+    type CC = CanvasRenderingContext2D & { createConicGradient:(a:number,x:number,y:number)=>CanvasGradient };
+
+    const draw = (ts: number) => {
+      const dt = Math.min((ts - lastTs) / 1000, 0.05);
+      lastTs = ts;
+      const c = getCfg();
+      const cw = canvas.width, ch = canvas.height;
+      const cx = cw/2, cy = ch/2;
+      const sc = Math.min(cw, ch);
+
+      flowT      += c.speed * dt;
+      borderAngle += 0.4 * dt;
+
+      lerpT = Math.min(1, lerpT + dt / 0.55);
+      nextSwap -= dt;
+      if (nextSwap <= 0 && lerpT >= 1) {
+        nextSwap = 0.4 + Math.random() * 0.15;
+        curC = [...tgtC]; lerpT = 0;
+        tgtC = [...BASE_HEX].sort(() => Math.random() - 0.5);
+      }
+      const borderCols = curC.map((a, i) => lerpHex(a, tgtC[i], lerpT));
+
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, cw, ch);
+
+      const pad = c.padding, sw = c.strokeWidth, gi = c.intensity;
+      const rx = pad, ry = pad, rw = cw - pad*2, rh = ch - pad*2;
+      const cr = c.cornerRadius;
+      const blobR = sc * c.blobSize;
+
+      ctx.save();
+      rrectPath(rx, ry, rw, rh, cr);
+      ctx.clip();
+      ctx.globalCompositeOperation = 'screen';
+
+      BLOBS.forEach((blob, i) => {
+        const [rr,gg,bb] = COLORS[i];
+        const bx = cx + (rw * 0.40) * Math.sin(flowT * blob.fx + blob.px);
+        const by = cy + (rh * 0.40) * Math.cos(flowT * blob.fy + blob.py);
+        const grad = ctx.createRadialGradient(bx, by, 0, bx, by, blobR);
+        grad.addColorStop(0,    `rgba(${rr},${gg},${bb},${gi * 0.82})`);
+        grad.addColorStop(0.42, `rgba(${rr},${gg},${bb},${gi * 0.36})`);
+        grad.addColorStop(1,    `rgba(${rr},${gg},${bb},0)`);
+        ctx.beginPath(); ctx.arc(bx, by, blobR, 0, Math.PI*2);
+        ctx.fillStyle = grad; ctx.fill();
+      });
+
+      ctx.restore();
+
+      const makeBorderGrad = () => {
+        const g = (ctx as CC).createConicGradient(borderAngle - Math.PI/2, cx, cy);
+        borderCols.forEach((col, i) => g.addColorStop(i / borderCols.length, col));
+        g.addColorStop(1, borderCols[0]);
+        return g;
+      };
+      const drawBorder = (lw: number, blur: number, alpha: number) => {
+        ctx.save();
+        if (blur > 0) ctx.filter = `blur(${blur}px)`;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = makeBorderGrad();
+        ctx.lineWidth = lw; ctx.lineCap = 'round';
+        rrectPath(rx, ry, rw, rh, cr); ctx.stroke();
+        ctx.restore();
+      };
+
+      drawBorder(sw*4.5, 26*gi, 0.30*gi);
+      drawBorder(sw*2.8, 14*gi, 0.50*gi);
+      drawBorder(sw*1.6,  5*gi, 0.72*gi);
+      drawBorder(sw,       0,   1.0);
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    resize();
+    animId = requestAnimationFrame(draw);
+    const ro = new ResizeObserver(() => resize()); ro.observe(canvas);
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  },
+};
+
 // ─── mathematical series 2 ────────────────────────────────────────────────────
 
 const phyllotaxisBg: BgDef = {
@@ -5692,7 +5835,7 @@ const BACKGROUNDS: BgDef[] = [
   langtonBg, isingBg, lightningBg, burningShipBg, bzReactionBg,
   marbleBg, waterSimBg, cycloidBg, supernovaBg, moireBg,
   gravityLensBg, eulerSpiralBg, kaleidoscopeBg, terrainBg, ribbonsBg,
-  appleGlowBg, ambientGlowBg, axiGlowBg, deepGlowBg, flowGlowBg,
+  appleGlowBg, ambientGlowBg, axiGlowBg, deepGlowBg, flowGlowBg, flowGlowMonoBg,
   phyllotaxisBg, ulamBg, chladniBg, apollonianBg, polytopeBg,
   superformulaBg, deJongBg, geodesicBg, hyperboloidBg, aizawaBg,
   limaconBg, standingWaveBg, complexMapBg, epitrochoidBg, billiardBg,
@@ -5700,7 +5843,7 @@ const BACKGROUNDS: BgDef[] = [
 ];
 
 const CATEGORIES: { id: string; label: string; color: string; ids: string[] }[] = [
-  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','ambientglow','axiglow','deepglow','flowglow','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
+  { id: 'visual',   label: 'Visual',   color: '#a78bfa', ids: ['appleglow','ambientglow','axiglow','deepglow','flowglow','flowglowmono','aurora','starfield','gradientmesh','matrix','bokeh','plasma','neongrid','galaxy','lightning','marble','supernova','kaleidoscope','terrain','ribbons'] },
   { id: 'physics',  label: 'Physics',  color: '#34d399', ids: ['particles','ripple','pendulum','doublependulum','fluid','boids','nbody','sand','watersim','gravitylens'] },
   { id: 'math',     label: 'Math',     color: '#60a5fa', ids: ['topographic','lissajous','fourier','spirograph','waveinterference','wireframe','harmonograph','torusknot','cymatics','cycloid','moire','eulerspiral','phyllotaxis','ulam','chladni','apollonian','polytope','superformula','geodesic','hyperboloid','limacon','standingwave','complexmap','epitrochoid','billiard','circlepack','lemniscate','trochoid','wavelet','penrose'] },
   { id: 'networks', label: 'Networks', color: '#fb923c', ids: ['sparknetwork','orbital','flowfield','voronoi','magneticfield','curlnoise','domainwarp'] },
@@ -5752,6 +5895,7 @@ export default function BackgroundLab() {
   const [presets, setPresets] = React.useState<Record<string, Preset[]>>(() => loadPresets());
   const [savingPreset, setSavingPreset] = React.useState(false);
   const [presetName, setPresetName] = React.useState('');
+  const [searchQuery, setSearchQuery] = React.useState('');
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const cfgRef = React.useRef<Cfg>(configs[activeId]);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -5948,68 +6092,143 @@ ${cfgLines}
           <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', marginBottom: 3 }}>
             Background Lab
           </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)' }}>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', marginBottom: 10 }}>
             {BACKGROUNDS.findIndex(b => b.id === activeId) + 1} / {BACKGROUNDS.length}
+          </div>
+          {/* Search */}
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
+              fontSize: 11, color: 'rgba(255,255,255,0.25)', pointerEvents: 'none', lineHeight: 1,
+            }}>⌕</span>
+            <input
+              type="text"
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '6px 26px 6px 24px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 6, outline: 'none',
+                fontSize: 11, color: 'rgba(255,255,255,0.7)',
+                caretColor: '#7ab4f8',
+              }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} style={{
+                position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                fontSize: 12, color: 'rgba(255,255,255,0.3)', lineHeight: 1, padding: 0,
+              }}>×</button>
+            )}
           </div>
         </div>
 
         {/* Scrollable category list */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0 16px', scrollbarWidth: 'none' }}>
-          {CATEGORIES.map(cat => {
-            const catBgs = cat.ids
-              .map(id => BACKGROUNDS.find(b => b.id === id))
-              .filter((b): b is BgDef => b !== undefined);
-            if (catBgs.length === 0) return null;
-            return (
-              <div key={cat.id}>
-                <div style={{
-                  padding: '10px 14px 5px',
-                  fontSize: 9, letterSpacing: 2.5, textTransform: 'uppercase',
-                  color: cat.color, opacity: 0.75,
-                }}>
-                  {cat.label}
+          {searchQuery.trim() ? (
+            // Flat filtered results
+            (() => {
+              const q = searchQuery.trim().toLowerCase();
+              const hits = BACKGROUNDS.filter(b => b.label.toLowerCase().includes(q) || b.id.includes(q));
+              if (hits.length === 0) return (
+                <div style={{ padding: '16px 14px', fontSize: 11, color: 'rgba(255,255,255,0.25)', textAlign: 'center' }}>
+                  No results
                 </div>
-                {catBgs.map(bg => (
-                  <div key={bg.id}>
-                    <button onClick={() => setActiveId(bg.id)} style={{
-                      display: 'block', width: '100%', padding: '6px 14px 6px 16px',
-                      background: activeId === bg.id ? 'rgba(45,114,210,0.12)' : 'transparent',
-                      border: 'none',
-                      borderLeft: activeId === bg.id ? '2px solid #3b82f6' : '2px solid transparent',
-                      cursor: 'pointer', textAlign: 'left',
-                      fontSize: 12,
-                      color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.4)',
-                      fontWeight: activeId === bg.id ? 500 : 400,
-                      transition: 'all 0.1s',
-                    }}>
-                      {bg.label}
-                    </button>
-                    {(presets[bg.id] ?? []).map((preset, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', paddingLeft: 22, paddingRight: 6 }}>
-                        <button onClick={() => loadPreset(bg.id, idx)} style={{
-                          flex: 1, padding: '3px 4px 3px 0', background: 'transparent',
-                          border: 'none', cursor: 'pointer', textAlign: 'left',
-                          fontSize: 11, color: 'rgba(255,255,255,0.28)',
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                          · {preset.name}
-                        </button>
-                        <button onClick={() => deletePreset(bg.id, idx)} style={{
-                          padding: '2px 5px', background: 'transparent', border: 'none',
-                          cursor: 'pointer', color: 'rgba(255,255,255,0.18)', fontSize: 11, flexShrink: 0,
-                        }}>×</button>
-                      </div>
-                    ))}
+              );
+              return hits.map(bg => (
+                <div key={bg.id}>
+                  <button onClick={() => setActiveId(bg.id)} style={{
+                    display: 'block', width: '100%', padding: '6px 14px 6px 16px',
+                    background: activeId === bg.id ? 'rgba(45,114,210,0.12)' : 'transparent',
+                    border: 'none',
+                    borderLeft: activeId === bg.id ? '2px solid #3b82f6' : '2px solid transparent',
+                    cursor: 'pointer', textAlign: 'left',
+                    fontSize: 12,
+                    color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.4)',
+                    fontWeight: activeId === bg.id ? 500 : 400,
+                    transition: 'all 0.1s',
+                  }}>
+                    {bg.label}
+                  </button>
+                </div>
+              ));
+            })()
+          ) : (
+            // Normal category view
+            CATEGORIES.map(cat => {
+              const catBgs = cat.ids
+                .map(id => BACKGROUNDS.find(b => b.id === id))
+                .filter((b): b is BgDef => b !== undefined);
+              if (catBgs.length === 0) return null;
+              return (
+                <div key={cat.id}>
+                  <div style={{
+                    padding: '10px 14px 5px',
+                    fontSize: 9, letterSpacing: 2.5, textTransform: 'uppercase',
+                    color: cat.color, opacity: 0.75,
+                  }}>
+                    {cat.label}
                   </div>
-                ))}
-              </div>
-            );
-          })}
+                  {catBgs.map(bg => (
+                    <div key={bg.id}>
+                      <button onClick={() => setActiveId(bg.id)} style={{
+                        display: 'block', width: '100%', padding: '6px 14px 6px 16px',
+                        background: activeId === bg.id ? 'rgba(45,114,210,0.12)' : 'transparent',
+                        border: 'none',
+                        borderLeft: activeId === bg.id ? '2px solid #3b82f6' : '2px solid transparent',
+                        cursor: 'pointer', textAlign: 'left',
+                        fontSize: 12,
+                        color: activeId === bg.id ? '#7ab4f8' : 'rgba(255,255,255,0.4)',
+                        fontWeight: activeId === bg.id ? 500 : 400,
+                        transition: 'all 0.1s',
+                      }}>
+                        {bg.label}
+                      </button>
+                      {(presets[bg.id] ?? []).map((preset, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', paddingLeft: 22, paddingRight: 6 }}>
+                          <button onClick={() => loadPreset(bg.id, idx)} style={{
+                            flex: 1, padding: '3px 4px 3px 0', background: 'transparent',
+                            border: 'none', cursor: 'pointer', textAlign: 'left',
+                            fontSize: 11, color: 'rgba(255,255,255,0.28)',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            · {preset.name}
+                          </button>
+                          <button onClick={() => deletePreset(bg.id, idx)} style={{
+                            padding: '2px 5px', background: 'transparent', border: 'none',
+                            cursor: 'pointer', color: 'rgba(255,255,255,0.18)', fontSize: 11, flexShrink: 0,
+                          }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>}
 
       {/* ← → arrows */}
       {!uiHidden && ['left','right'].map(dir => (
+        <button key={dir} onClick={() => setActiveId(prev => {
+          const i = BACKGROUNDS.findIndex(b => b.id === prev);
+          return BACKGROUNDS[dir === 'right' ? (i+1)%BACKGROUNDS.length : (i-1+BACKGROUNDS.length)%BACKGROUNDS.length].id;
+        })} style={{
+          position: 'fixed', top: '50%', [dir]: 16, transform: 'translateY(-50%)',
+          zIndex: 150, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 8, width: 32, height: 48, cursor: 'pointer', color: 'rgba(255,255,255,0.4)',
+          fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {dir === 'left' ? '‹' : '›'}
+        </button>
+      ))}
+
+      {/* ← → arrows */}
+      {['left','right'].map(dir => (
         <button key={dir} onClick={() => setActiveId(prev => {
           const i = BACKGROUNDS.findIndex(b => b.id === prev);
           return BACKGROUNDS[dir === 'right' ? (i+1)%BACKGROUNDS.length : (i-1+BACKGROUNDS.length)%BACKGROUNDS.length].id;
