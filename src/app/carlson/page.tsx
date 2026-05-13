@@ -710,9 +710,9 @@ export default function CarlsonPage() {
             ].map((card, i) => (
               <div key={card.title} className="c-mn-card" style={{ padding: '36px 32px 32px', borderLeft: i > 0 ? `1px solid ${C.line}` : 'none' }}>
                 <div style={{ width: 24, height: 2, background: card.color, marginBottom: 24, opacity: 0.7 }} />
-                <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: card.color, margin: '0 0 14px', opacity: 0.85 }}>{card.label}</p>
-                <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 21, letterSpacing: '-0.012em', margin: '0 0 16px', lineHeight: 1.28, color: C.text }}>{card.title}</p>
-                <p style={{ fontSize: 13.5, lineHeight: 1.72, color: C.text2, margin: '0 0 24px' }}>{card.desc}</p>
+                <p style={{ fontFamily: C.mono, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.16em', color: card.color, margin: '0 0 14px', opacity: 0.85 }}>{card.label}</p>
+                <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 28, letterSpacing: '-0.012em', margin: '0 0 16px', lineHeight: 1.28, color: C.text }}>{card.title}</p>
+                <p style={{ fontSize: 17, lineHeight: 1.72, color: C.text2, margin: '0 0 24px' }}>{card.desc}</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {card.tags.map(t => <Tag key={t} color={card.color} bg={`${card.color}15`}>{t}</Tag>)}
                 </div>
