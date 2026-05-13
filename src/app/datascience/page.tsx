@@ -756,7 +756,7 @@ export default function DataSciencePage() {
           </ChartCard>
 
           {/* 8 · Pie Chart */}
-          <ChartCard title="Pie Chart" sub="Current room status distribution · 10 rooms"
+          <ChartCard title="Pie Chart" sub="Current room status distribution · 12 rooms"
             sliders={[
               { label:'Inner radius (donut)', min:0, max:70, step:1, value:pieInner,   onChange:setPieInner   },
               { label:'Padding angle',        min:0, max:10, step:1, value:piePad,     onChange:setPiePad     },

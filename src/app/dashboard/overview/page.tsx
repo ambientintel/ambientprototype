@@ -236,7 +236,7 @@ export default function OverviewPage() {
           <div>
             <div className="section-head">
               <h2 className="section-title">Room Status</h2>
-              <div className="section-meta">All 10 rooms</div>
+              <div className="section-meta">All 12 rooms</div>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:10 }}>
               {FLOOR_ROOMS.map(r => {
