@@ -609,8 +609,8 @@ export default function CarlsonPage() {
                   { text: 'Detects falls and movement patterns', color: C.green   },
                   { text: 'No wearable, no camera, no resident interaction required', color: C.maroon  },
                 ].map((item, i) => (
-                  <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 0, borderTop: `1px solid ${C.line}`, padding: '18px 0' }}>
-                    <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', color: item.color, marginRight: 20, marginTop: 3, flexShrink: 0, paddingRight: 20, borderRight: `1px solid ${C.line}` }}>0{i+1}</span>
+                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 16, borderTop: `1px solid ${C.line}`, padding: '16px 0' }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 11, letterSpacing: '0.10em', color: '#fff', background: item.color, padding: '4px 11px', borderRadius: 3, flexShrink: 0 }}>0{i+1}</span>
                     <span style={{ fontSize: 16, color: C.text2, lineHeight: 1.58 }}>{item.text}</span>
                   </div>
                 ))}
