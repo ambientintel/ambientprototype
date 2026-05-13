@@ -634,9 +634,7 @@ export default function CarlsonPage() {
               </p>
             </div>
             <div>
-              <p style={{ fontFamily: C.sans, fontSize: 16, lineHeight: 1.72, color: C.text2, margin: '0 0 32px' }}>
-                Memory care facilities carry an enormous monitoring burden with shrinking staff ratios. The opportunity is not incremental — it&apos;s foundational. Ambient Intelligence replaces reactive care rounds with continuous, passive intelligence.
-              </p>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: `1px solid ${C.lineStrg}` }}>
                 {[
                   { label: 'Growing at', value: '7.9% CAGR', note: 'remote patient monitoring in elder care' },
