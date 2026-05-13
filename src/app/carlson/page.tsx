@@ -496,7 +496,7 @@ export default function CarlsonPage() {
         <div className="c-hero" style={{ position: 'relative', zIndex: 2, maxWidth: 1280, margin: '0 auto', padding: '148px 56px 120px', width: '100%' }}>
           <p className="c-e" style={{ fontFamily: C.mono, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.gold, margin: '0 0 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: C.gold, animation: 'pulse-gold 2s ease-out infinite', flexShrink: 0 }} />
-            Carlson School of Management &middot; University of Minnesota
+            Carlson School of Management &middot; Office of Technology Commercialization &middot; University of Minnesota
           </p>
           <h1 className="c-h" style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(58px, 8vw, 108px)', lineHeight: 1.0, letterSpacing: '-0.04em', margin: '0 0 32px', maxWidth: 900 }}>
             Founder&apos;s Day{' '}
