@@ -508,7 +508,7 @@ export default function CarlsonPage() {
           <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 0, border: `1px solid ${C.lineStrg}`, background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(8px)', width: 'fit-content' }}>
             {[
               { label: 'R&D',   value: 'Office of Discovery and Translation' },
-              { label: 'VENUE', value: 'Bakken Medical Devices Center' },
+              { label: 'ENDURE', value: 'Bakken Medical Devices Center' },
             ].map((item, i) => (
               <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '14px 28px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
                 <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.20em', color: C.gold, textTransform: 'uppercase', opacity: 0.85 }}>{item.label}</span>
