@@ -488,7 +488,7 @@ export default function CarlsonPage() {
             24/7 contactless and noninvasive monitoring engineered for memory care.
           </p>
           <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {['Wed, May 13, 2026', '4:30 – 7:00 PM', 'Walter Library · Toaster Hub', 'Free Admission'].map(chip => (
+            {['Wed, May 13, 2026', '4:30 – 7:00 PM', 'Walter Library · Toaster Hub'].map(chip => (
               <span key={chip} className="c-chip" style={{ display: 'inline-flex', alignItems: 'center', padding: '9px 18px', borderRadius: 2, border: `1px solid ${C.lineStrg}`, background: 'rgba(255,255,255,0.04)', fontFamily: C.mono, fontSize: 11, color: C.text2, letterSpacing: '0.06em', cursor: 'default', transition: 'border-color 0.15s, color 0.15s' }}>
                 {chip}
               </span>
