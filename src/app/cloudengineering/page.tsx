@@ -828,8 +828,11 @@ pytest -m smoke -v
           'alerts table DynamoDB TTL enabled (attr: ttl, 7-year HIPAA retention) — both alerts and daily-updates tables now have data lifecycle policy',
           'Cognito Advanced Security ENFORCED on UserPool — adaptive auth, compromised credential detection, account takeover protection active',
           'AWS Budget $100/month provisioned — 80% ACTUAL + 100% FORECASTED alerts route to operator alarm SNS topic',
-          'Runbooks dry-run: device-offline, fall-alert-missed, api-5xx, cost-spike',
+          'Runbooks dry-run: device-offline, fall-alert-missed, api-5xx, cost-spike, web-push-delivery',
           'IRB data request runbook reviewed with PI / medical lead',
+          'VERCEL_TOKEN set in ambientweb project — /api/health shows pushStorage.ok = true',
+          'APNS SNS Platform Application set to ella-apns-prod (not sandbox) before App Store submission',
+          'Pilot nurse devices seeded in Devices page — roomId + zone assigned for all 12 subjects',
         ],
       },
       {
@@ -839,7 +842,7 @@ pytest -m smoke -v
         ],
         artifacts: [
           { file: 'docs/deployment-status.md', role: 'Service inventory, merge history, and production release record.' },
-          { file: 'docs/runbooks/', role: '11 incident-response runbooks — API 5xx, auth, cost spike, device offline, escalation, false/missed fall alerts, IRB data request, narrative broken, telemetry gap.' },
+          { file: 'docs/runbooks/', role: '12 incident-response runbooks — API 5xx, auth, cost spike, device offline, escalation, false/missed fall alerts, IRB data request, narrative broken, telemetry gap, web push delivery.' },
         ],
         warnings: [
           'Production Freeze does not mean code freeze — it means all services are running and the IRB pilot cohort can begin. Feature work and bug fixes continue on main. Only emergency infra changes require the full sign-off checklist.',
