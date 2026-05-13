@@ -505,14 +505,14 @@ export default function CarlsonPage() {
           <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px' }}>
             24/7 contactless and noninvasive monitoring<br/>engineered for memory care.
           </p>
-          <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 0, border: `1px solid ${C.lineStrg}`, background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(8px)', width: 'fit-content' }}>
+          <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {[
-              { label: 'R&D',   value: 'Office of Discovery and Translation' },
-              { label: 'ENDURE', value: 'Bakken Medical Devices Center' },
-            ].map((item, i) => (
-              <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '14px 28px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
-                <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.20em', color: C.gold, textTransform: 'uppercase', opacity: 0.85 }}>{item.label}</span>
-                <span style={{ fontFamily: C.mono, fontSize: 14, color: 'rgba(255,255,255,0.90)', letterSpacing: '0.03em' }}>{item.value}</span>
+              { label: 'R&D',    value: 'Office of Discovery and Translation', accent: C.gold },
+              { label: 'ENDURE', value: 'Bakken Medical Devices Center',       accent: C.accent },
+            ].map((item) => (
+              <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '16px 24px', borderTop: `2px solid ${item.accent}`, background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', minWidth: 220 }}>
+                <span style={{ fontFamily: C.mono, fontSize: 10, letterSpacing: '0.22em', color: item.accent, textTransform: 'uppercase', fontWeight: 600 }}>{item.label}</span>
+                <span style={{ fontFamily: C.sans, fontSize: 15, color: C.text, letterSpacing: '-0.01em', fontWeight: 400, lineHeight: 1.3 }}>{item.value}</span>
               </div>
             ))}
           </div>
