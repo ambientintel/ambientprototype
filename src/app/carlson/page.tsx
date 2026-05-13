@@ -614,8 +614,10 @@ export default function CarlsonPage() {
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
 
             {/* FlowGlow card — left */}
-            <div style={{ position: 'relative', overflow: 'hidden', aspectRatio: '3/4' }}>
-              <CardFlowGlowBg />
+            <div style={{ width: '75%' }}>
+              <div style={{ position: 'relative', overflow: 'hidden', aspectRatio: '3/4' }}>
+                <CardFlowGlowBg />
+              </div>
             </div>
 
             {/* Text — right */}
