@@ -604,14 +604,14 @@ export default function CarlsonPage() {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {[
-                  { text: 'Sensors mount in corners — out of sight, out of mind',    color: C.accent  },
-                  { text: 'Full coverage including bathroom and transition zones',     color: C.gold    },
-                  { text: 'Detects falls and movement patterns', color: C.green   },
-                  { text: 'No wearable, no camera, no resident interaction required', color: C.maroon  },
-                ].map((item, i) => (
-                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 16, borderTop: `1px solid ${C.line}`, padding: '16px 0' }}>
-                    <span style={{ fontFamily: C.mono, fontSize: 11, letterSpacing: '0.10em', color: '#fff', background: item.color, padding: '4px 11px', borderRadius: 3, flexShrink: 0 }}>0{i+1}</span>
-                    <span style={{ fontSize: 16, color: C.text2, lineHeight: 1.58 }}>{item.text}</span>
+                  'Sensors mount in corners — out of sight, out of mind',
+                  'Full coverage including bathroom and transition zones',
+                  'Detects falls and movement patterns',
+                  'No wearable, no camera, no resident interaction required',
+                ].map((text, i) => (
+                  <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 16, borderTop: `1px solid ${C.line}`, padding: '16px 0' }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 11, letterSpacing: '0.10em', color: '#fff', background: 'rgba(255,255,255,0.18)', padding: '4px 11px', borderRadius: 3, flexShrink: 0 }}>0{i+1}</span>
+                    <span style={{ fontSize: 16, color: C.text2, lineHeight: 1.58 }}>{text}</span>
                   </div>
                 ))}
               </div>
@@ -718,8 +718,8 @@ export default function CarlsonPage() {
                   { text: 'Prioritized alert queue with anomaly detection',      color: C.gold   },
                   { text: 'Behavioral trend analysis — days, weeks, months',     color: C.green  },
                 ].map((item, i) => (
-                  <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 0, borderTop: `1px solid ${C.line}`, padding: '17px 0' }}>
-                    <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', color: item.color, marginRight: 20, marginTop: 3, flexShrink: 0, paddingRight: 20, borderRight: `1px solid ${C.line}` }}>0{i+1}</span>
+                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 16, borderTop: `1px solid ${C.line}`, padding: '16px 0' }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 11, letterSpacing: '0.10em', color: '#fff', background: 'rgba(255,255,255,0.18)', padding: '4px 11px', borderRadius: 3, flexShrink: 0 }}>0{i+1}</span>
                     <span style={{ fontSize: 16, color: C.text2, lineHeight: 1.58 }}>{item.text}</span>
                   </div>
                 ))}
