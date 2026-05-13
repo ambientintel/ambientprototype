@@ -275,19 +275,24 @@ function HowItWorksDiagram() {
 
 function TechDiagram() {
   const W = (o: number) => `rgba(255,255,255,${o})`;
-  const barBottom = 110;
-  const barsData = [
-    { x: 190, h: '15;40;26;48;20;36;15', dur: '2.9s' },
-    { x: 202, h: '40;15;48;20;42;18;40', dur: '3.3s' },
-    { x: 214, h: '48;32;15;42;22;48;48', dur: '2.7s' },
-    { x: 226, h: '24;48;40;15;46;26;24', dur: '3.6s' },
-    { x: 238, h: '42;22;34;48;15;40;42', dur: '2.5s' },
-  ].map(b => ({
-    ...b,
-    yv: b.h.split(';').map((v: string) => barBottom - +v).join(';'),
-  }));
-  const ecg = (bx: number) =>
-    `${bx},69 ${bx+16},69 ${bx+19},73 ${bx+23},44 ${bx+27},79 ${bx+31},69 ${bx+36},64 ${bx+42},59 ${bx+48},64 ${bx+53},69 ${bx+64},69`;
+  const blips: Array<[number, number, string]> = [
+    [90, 48, '-0.4s'], [52, 82, '-1.1s'], [94, 78, '-2.2s'],
+  ];
+  const inY:  number[] = [40, 53, 67, 80];
+  const hidY: number[] = [47, 67, 87];
+  const outY: number[] = [53, 83];
+  const dots = [
+    { p: 'M 165 53 L 218 47', b: '0s'     },
+    { p: 'M 165 80 L 218 87', b: '-0.32s' },
+    { p: 'M 165 40 L 218 67', b: '-0.56s' },
+    { p: 'M 218 47 L 271 53', b: '-0.14s' },
+    { p: 'M 218 87 L 271 83', b: '-0.44s' },
+    { p: 'M 165 67 L 218 47', b: '-0.68s' },
+  ];
+  const ecg  = (bx: number) =>
+    `${bx},47 ${bx+14},47 ${bx+17},51 ${bx+21},29 ${bx+25},57 ${bx+29},47 ${bx+34},43 ${bx+40},39 ${bx+46},43 ${bx+50},47 ${bx+64},47`;
+  const resp = (bx: number) =>
+    `${bx},91 ${bx+10},83 ${bx+20},79 ${bx+30},83 ${bx+40},91 ${bx+50},99 ${bx+60},103 ${bx+70},99 ${bx+80},91`;
   return (
     <svg viewBox="0 0 440 232" style={{ width: '100%', height: 'auto', display: 'block' }}>
       <defs>
@@ -297,24 +302,39 @@ function TechDiagram() {
       </defs>
       <rect width="440" height="232" fill="#080808"/>
 
-      {/* ── Card 1 · AMBIENT SENSORS ── */}
+      {/* ── Card 1 · AMBIENT SENSORS — radar with sweep trail + blips ── */}
       <rect x="6"   y="8" width="132" height="216" fill="#151515" stroke={W(0.11)} strokeWidth="0.8" rx="2"/>
       <rect x="6"   y="8" width="132" height="2"   fill={W(0.3)}/>
       <text x="14"  y="22" fontFamily="monospace" fontSize="7" fill={W(0.24)} letterSpacing="2">01</text>
       <g clipPath="url(#tc-v1)">
-        <circle cx="72" cy="69" r="24" fill="none" stroke={W(0.07)} strokeDasharray="2,3" strokeWidth="0.7"/>
-        <circle cx="72" cy="69" r="38" fill="none" stroke={W(0.04)} strokeDasharray="2,3" strokeWidth="0.7"/>
-        {([0,1] as number[]).map(j => (
-          <circle key={j} cx="72" cy="69" r="10" fill="none" stroke={W(0.42)} strokeWidth="1.1">
-            <animate attributeName="r"       from="10" to="44" dur="2.6s" begin={`${j*1.3}s`} repeatCount="indefinite"/>
-            <animate attributeName="opacity" from="0.42" to="0" dur="2.6s" begin={`${j*1.3}s`} repeatCount="indefinite"/>
-          </circle>
+        <circle cx="72" cy="69" r="14" fill="none" stroke={W(0.07)} strokeDasharray="2,3" strokeWidth="0.6"/>
+        <circle cx="72" cy="69" r="28" fill="none" stroke={W(0.05)} strokeDasharray="2,3" strokeWidth="0.6"/>
+        <circle cx="72" cy="69" r="42" fill="none" stroke={W(0.04)} strokeDasharray="2,3" strokeWidth="0.6"/>
+        <line x1="30" y1="69" x2="114" y2="69" stroke={W(0.04)} strokeWidth="0.4"/>
+        <line x1="72" y1="27" x2="72"  y2="111" stroke={W(0.04)} strokeWidth="0.4"/>
+        {/* Sweep with fading trail */}
+        <g>
+          <animateTransform attributeName="transform" type="rotate" from="0 72 69" to="360 72 69" dur="4s" repeatCount="indefinite"/>
+          <path d="M 72 69 L 72 27 A 42 42 0 0 0 45 37 Z" fill={W(0.04)}/>
+          <line x1="72" y1="69" x2="72" y2="27" stroke={W(0.09)}  strokeWidth="0.8" transform="rotate(-38 72 69)"/>
+          <line x1="72" y1="69" x2="72" y2="27" stroke={W(0.17)}  strokeWidth="0.9" transform="rotate(-20 72 69)"/>
+          <line x1="72" y1="69" x2="72" y2="27" stroke={W(0.28)}  strokeWidth="1"   transform="rotate(-8  72 69)"/>
+          <line x1="72" y1="69" x2="72" y2="27" stroke={W(0.55)}  strokeWidth="1.1"/>
+        </g>
+        <circle cx="72" cy="69" r="2.5" fill={W(0.88)}/>
+        <circle cx="72" cy="69" r="1"   fill="#151515"/>
+        {/* Detection blips */}
+        {blips.map(([bx, by, begin], i) => (
+          <g key={i}>
+            <circle cx={bx} cy={by} r="2" fill={W(0.75)}>
+              <animate attributeName="opacity" values="0;0;0.75;0.3;0;0" keyTimes="0;0.04;0.1;0.25;0.4;1" dur="4s" begin={begin} repeatCount="indefinite"/>
+            </circle>
+            <circle cx={bx} cy={by} r="2" fill="none" stroke={W(0.5)} strokeWidth="0.7">
+              <animate attributeName="opacity" values="0;0;0.45;0;0;0"  keyTimes="0;0.04;0.12;0.32;0.5;1" dur="4s" begin={begin} repeatCount="indefinite"/>
+              <animate attributeName="r"       values="2;2;4;8;8;2"     keyTimes="0;0.04;0.12;0.32;0.5;1" dur="4s" begin={begin} repeatCount="indefinite"/>
+            </circle>
+          </g>
         ))}
-        <line x1="72" y1="69" x2="72" y2="28" stroke={W(0.42)} strokeWidth="0.9">
-          <animateTransform attributeName="transform" type="rotate" from="0 72 69" to="360 72 69" dur="3.5s" repeatCount="indefinite"/>
-        </line>
-        <circle cx="72" cy="69" r="2.8" fill={W(0.88)}/>
-        <circle cx="72" cy="69" r="1.1" fill="#151515"/>
       </g>
       <line x1="6"  y1="114" x2="138" y2="114" stroke={W(0.08)} strokeWidth="0.6"/>
       <text x="14"  y="130" fontFamily="monospace" fontSize="9"   fill={W(0.9)}  letterSpacing="1"   fontWeight="600">AMBIENT SENSORS</text>
@@ -326,21 +346,26 @@ function TechDiagram() {
       </circle>
       <text x="23"  y="179" fontFamily="monospace" fontSize="6.5" fill={W(0.4)}  letterSpacing="1">ACTIVE</text>
 
-      {/* ── Card 2 · CLOUD AI ── */}
+      {/* ── Card 2 · CLOUD AI — neural network ── */}
       <rect x="152" y="8" width="132" height="216" fill="#151515" stroke={W(0.11)} strokeWidth="0.8" rx="2"/>
       <rect x="152" y="8" width="132" height="2"   fill={W(0.3)}/>
       <text x="160" y="22" fontFamily="monospace" fontSize="7" fill={W(0.24)} letterSpacing="2">02</text>
       <g clipPath="url(#tc-v2)">
-        {barsData.map((b, i) => (
-          <g key={i}>
-            <rect x={b.x} y={50} width="9" height={60} rx="1" fill={W(0.04)}/>
-            <rect x={b.x} y={barBottom} width="9" height="0" rx="1" fill={W(0.58)}>
-              <animate attributeName="height" values={b.h}  dur={b.dur} repeatCount="indefinite"/>
-              <animate attributeName="y"      values={b.yv} dur={b.dur} repeatCount="indefinite"/>
-            </rect>
-          </g>
+        {inY.flatMap(iy => hidY.map(hy => (
+          <line key={`ih${iy}${hy}`} x1="165" y1={iy} x2="218" y2={hy} stroke={W(0.07)} strokeWidth="0.5"/>
+        )))}
+        {hidY.flatMap(hy => outY.map(oy => (
+          <line key={`ho${hy}${oy}`} x1="218" y1={hy} x2="271" y2={oy} stroke={W(0.07)} strokeWidth="0.5"/>
+        )))}
+        {inY.map(iy  => <circle key={iy}  cx="165" cy={iy}  r="3.5" fill={W(0.07)} stroke={W(0.32)} strokeWidth="0.8"/>)}
+        {hidY.map(hy => <circle key={hy}  cx="218" cy={hy}  r="4"   fill={W(0.09)} stroke={W(0.38)} strokeWidth="0.9"/>)}
+        {outY.map(oy => <circle key={oy}  cx="271" cy={oy}  r="4.5" fill={W(0.11)} stroke={W(0.45)} strokeWidth="1"/>)}
+        {dots.map((d, i) => (
+          <circle key={i} r="1.8" fill={W(0.78)}>
+            <animateMotion dur="0.85s" begin={d.b} repeatCount="indefinite" path={d.p}/>
+            <animate attributeName="opacity" values="0;0.85;0.85;0" keyTimes="0;0.15;0.85;1" dur="0.85s" begin={d.b} repeatCount="indefinite"/>
+          </circle>
         ))}
-        <line x1="152" y1="110" x2="284" y2="110" stroke={W(0.08)} strokeWidth="0.5"/>
       </g>
       <line x1="152" y1="114" x2="284" y2="114" stroke={W(0.08)} strokeWidth="0.6"/>
       <text x="160" y="130" fontFamily="monospace" fontSize="9"   fill={W(0.9)}  letterSpacing="1"   fontWeight="600">CLOUD AI</text>
@@ -350,20 +375,31 @@ function TechDiagram() {
       <g>
         <animate attributeName="opacity" values="1;0.2;1" dur="1.8s" repeatCount="indefinite"/>
         <circle cx="162" cy="176" r="2.2" fill={W(0.58)}/>
-        <text x="169" y="179" fontFamily="monospace" fontSize="6.5" fill={W(0.4)}  letterSpacing="1">INFERENCING</text>
+        <text x="169" y="179" fontFamily="monospace" fontSize="6.5" fill={W(0.4)} letterSpacing="1">INFERENCING</text>
       </g>
 
-      {/* ── Card 3 · ELLA AI ── */}
+      {/* ── Card 3 · ELLA AI — dual waveform (ECG + respiration) ── */}
       <rect x="298" y="8" width="132" height="216" fill="#151515" stroke={W(0.11)} strokeWidth="0.8" rx="2"/>
       <rect x="298" y="8" width="132" height="2"   fill={W(0.3)}/>
       <text x="306" y="22" fontFamily="monospace" fontSize="7" fill={W(0.24)} letterSpacing="2">03</text>
       <g clipPath="url(#tc-v3)">
-        <line x1="298" y1="69" x2="430" y2="69" stroke={W(0.07)} strokeWidth="0.5"/>
+        <line x1="298" y1="69" x2="430" y2="69" stroke={W(0.08)} strokeWidth="0.5"/>
+        <line x1="298" y1="47" x2="430" y2="47" stroke={W(0.04)} strokeWidth="0.4"/>
+        <line x1="298" y1="91" x2="430" y2="91" stroke={W(0.04)} strokeWidth="0.4"/>
+        <text x="427" y="32" textAnchor="end" fontFamily="monospace" fontSize="5.5" fill={W(0.3)}  letterSpacing="1">ECG</text>
+        <text x="427" y="79" textAnchor="end" fontFamily="monospace" fontSize="5.5" fill={W(0.22)} letterSpacing="1">RESP</text>
+        {/* Scrolling ECG */}
         <g>
-          <animateTransform attributeName="transform" type="translate" from="0 0" to="-64 0" dur="2.2s" repeatCount="indefinite"/>
-          {([234, 298, 362, 426, 490] as number[]).map(bx => (
-            <polyline key={bx} points={ecg(bx)}
-              fill="none" stroke={W(0.58)} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <animateTransform attributeName="transform" type="translate" from="0 0" to="-64 0" dur="2s" repeatCount="indefinite"/>
+          {([234,298,362,426,490] as number[]).map(bx => (
+            <polyline key={bx} points={ecg(bx)} fill="none" stroke={W(0.62)} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          ))}
+        </g>
+        {/* Scrolling respiration */}
+        <g>
+          <animateTransform attributeName="transform" type="translate" from="0 0" to="-80 0" dur="3.2s" repeatCount="indefinite"/>
+          {([218,298,378,458,538] as number[]).map(bx => (
+            <polyline key={bx} points={resp(bx)} fill="none" stroke={W(0.38)} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
           ))}
         </g>
       </g>
