@@ -513,6 +513,7 @@ export default function CarlsonPage() {
           .c-cta  { padding:80px 36px!important; }
           .c-stat-row { grid-template-columns:1fr 1fr!important; }
           .c-nav { padding:0 36px!important; }
+          .c-nav-label { display:none!important; }
         }
         @media(max-width:600px){
           .c-two { gap:36px!important; }
@@ -532,10 +533,7 @@ export default function CarlsonPage() {
           Ambient <em style={{ fontStyle: 'italic', color: C.text2 }}>Intelligence</em>
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-          <div className="c-nav-label" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span style={{ fontFamily: C.mono, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text2 }}>Founder&apos;s Day 2026</span>
-            <span style={{ fontFamily: C.serif, fontSize: 12, fontWeight: 300, letterSpacing: '-0.01em', color: C.text3 }}>Ambient <em style={{ fontStyle: 'italic' }}>Intelligence</em></span>
-          </div>
+          <span className="c-nav-label" style={{ fontFamily: C.mono, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text2 }}>Founder&apos;s Day 2026</span>
           <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary c-nav-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em' }}>
             Connect
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -552,10 +550,13 @@ export default function CarlsonPage() {
             <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: C.gold, animation: 'pulse-gold 2s ease-out infinite', flexShrink: 0 }} />
             Carlson School of Management &middot; Office of Technology Commercialization &middot; University of Minnesota
           </p>
-          <h1 className="c-h" style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(58px, 8vw, 108px)', lineHeight: 1.0, letterSpacing: '-0.04em', margin: '0 0 32px', maxWidth: 900 }}>
+          <h1 className="c-h" style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(58px, 8vw, 108px)', lineHeight: 1.0, letterSpacing: '-0.04em', margin: '0 0 16px', maxWidth: 900 }}>
             Founder&apos;s Day{' '}
             <em style={{ fontStyle: 'italic', color: C.text2 }}>2026</em>
           </h1>
+          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(20px, 2.2vw, 28px)', letterSpacing: '-0.02em', color: C.text2, margin: '0 0 32px' }}>
+            Ambient <em style={{ fontStyle: 'italic' }}>Intelligence</em>
+          </p>
           <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px' }}>
             24/7 contactless and noninvasive monitoring<br/>engineered for memory care.
           </p>
