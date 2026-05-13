@@ -129,6 +129,21 @@ const RADAR_FRAMES: RadarFrame[] = (() => {
   });
 })();
 
+// ── Daily AmbientActivityCounts synthetic (14 days) ───────────
+const DAILY_ACTIVITY_SYNTH: { date: string; dow: string; counts: number }[] = (() => {
+  const rng = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+  const dows = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const base = new Date(2025, 1, 1); // Feb 1, 2025
+  return Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(base.getTime() + i * 86400000);
+    const dow = d.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const baseCnt = isWeekend ? 6800 : 17200;
+    const counts = Math.round(Math.max(800, baseCnt + (rng(i * 5 + 13) - 0.5) * 9600));
+    return { date: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }), dow: dows[dow], counts };
+  });
+})();
+
 // ── Signal processing algorithms ──────────────────────────────
 function movingAverage(data: number[], w: number): (number | null)[] {
   return data.map((_, i) => i < w - 1 ? null
@@ -911,7 +926,7 @@ type SedentaryAlgoId   = 'sed_overview' | 'sed_bouts' | 'sed_breaks' | 'sed_inte
 type AutonomicAlgoId   = 'lfhf' | 'poincare_plot' | 'stress_index' | 'autonomic_24h';
 type MetabolicAlgoId   = 'glucose_trace' | 'time_in_range' | 'agp' | 'glucose_variability';
 type LongitudinalAlgoId = 'timeline' | 'correlation' | 'health_calendar' | 'risk_evolution';
-type RadarAlgoId    = 'radar_signal' | 'height_trace' | 'point_density';
+type RadarAlgoId    = 'radar_signal' | 'height_trace' | 'point_density' | 'daily_activity';
 type GaitAlgoId     = 'step_detection' | 'gait_speed' | 'cadence' | 'gait_variability';
 type METAlgoId      = 'activity_class' | 'met_timeline' | 'energy_expenditure' | 'intensity_zones';
 type FallAlgoId     = 'fall_detector' | 'fall_confidence' | 'fall_scenarios' | 'fall_calibration';
@@ -932,7 +947,7 @@ const isMetabolic   = (a: AlgoId): a is MetabolicAlgoId   =>
   ['glucose_trace','time_in_range','agp','glucose_variability'].includes(a);
 const isLongitudinal = (a: AlgoId): a is LongitudinalAlgoId =>
   ['timeline','correlation','health_calendar','risk_evolution'].includes(a);
-const isRadar    = (a: AlgoId): a is RadarAlgoId    => ['radar_signal','height_trace','point_density'].includes(a);
+const isRadar    = (a: AlgoId): a is RadarAlgoId    => ['radar_signal','height_trace','point_density','daily_activity'].includes(a);
 const isGait     = (a: AlgoId): a is GaitAlgoId     => ['step_detection','gait_speed','cadence','gait_variability'].includes(a);
 const isMET      = (a: AlgoId): a is METAlgoId      => ['activity_class','met_timeline','energy_expenditure','intensity_zones'].includes(a);
 const isFall     = (a: AlgoId): a is FallAlgoId     => ['fall_detector','fall_confidence','fall_scenarios','fall_calibration'].includes(a);
@@ -1022,6 +1037,7 @@ const FALL_ALGOS: { id: FallAlgoId; label: string; color: string; sub: string }[
 
 // ── Ambient Index taxonomy map ────────────────────────────────
 const ALGO_INDEX_MAP: Partial<Record<AlgoId, { name: string; short: string; color: string }>> = {
+  daily_activity:      { name: 'AmbientActivityCounts', short: 'Counts',    color: C.sage   },
   radar_signal:        { name: 'AmbientActivityIndex',  short: 'Activity',  color: C.sage   },
   intensity_zones:     { name: 'AmbientActivityIndex',  short: 'Activity',  color: C.sage   },
   fragmentation:       { name: 'AmbientActivityIndex',  short: 'Activity',  color: C.sage   },
@@ -1441,6 +1457,19 @@ export default function AlgorithmLabPage() {
   const metEpochData   = useMemo(() => radarMETEpochs(radarFrames), [radarFrames]);
   const stepData       = useMemo(() => detectSteps(radarFrames), [radarFrames]);
   const gaitStats      = useMemo(() => computeGaitMetrics(radarFrames), [radarFrames]);
+  const dailyActivityData = useMemo(() => {
+    if (!radarUploaded) return DAILY_ACTIVITY_SYNTH;
+    const byDay = new Map<string, { date: string; dow: string; counts: number }>();
+    const dows = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    for (const f of radarFrames) {
+      const d = new Date(f.timestamp * 1000);
+      const key = d.toISOString().slice(0, 10);
+      const label = d.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+      if (!byDay.has(key)) byDay.set(key, { date: label, dow: dows[d.getDay()], counts: 0 });
+      byDay.get(key)!.counts += f.PointsDetected;
+    }
+    return Array.from(byDay.entries()).sort(([a],[b]) => a.localeCompare(b)).map(([,v]) => v);
+  }, [radarFrames, radarUploaded]);
   const currentAlgoIndex = useMemo(() => ALGO_INDEX_MAP[algo] ?? null, [algo]);
 
   const handleRadarUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1500,6 +1529,7 @@ export default function AlgorithmLabPage() {
         <nav className="nav-section">
           <div className="nav-label">Primary</div>
           {([
+            { id: 'daily_activity',  label: 'Daily Activity',   color: C.sage,   idxColor: C.sage,   idxShort: 'Counts'    },
             { id: 'radar_signal',    label: 'Height Signal',    color: C.accent, idxColor: C.sage,   idxShort: 'Activity'  },
             { id: 'intensity_zones', label: 'Intensity Zones',  color: C.purple, idxColor: C.sage,   idxShort: 'Activity'  },
             { id: 'shap_features',   label: 'SHAP Features',    color: C.accent, idxColor: C.red,    idxShort: 'Risk'      },
@@ -1625,7 +1655,9 @@ export default function AlgorithmLabPage() {
         {(inRadar || inGait || inMET) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: '12px 20px', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 10 }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
-              {radarUploaded ? `${radarFrames.length} frames loaded` : 'Demo: synthetic TUG assessment · 60s · 20fps'}
+              {radarUploaded
+                ? (algo === 'daily_activity' ? `${dailyActivityData.length} days · ${radarFrames.length} frames` : `${radarFrames.length} frames loaded`)
+                : (algo === 'daily_activity' ? 'Demo: synthetic 14-day AmbientActivityCounts' : 'Demo: synthetic TUG assessment · 60s · 20fps')}
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
               {radarUploaded && (
@@ -1641,7 +1673,14 @@ export default function AlgorithmLabPage() {
 
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 28 }}>
-          {(inRadar ? [
+          {(inRadar ? algo === 'daily_activity' ? [
+            { label: 'Days',         value: dailyActivityData.length.toString(),  color: C.accent },
+            { label: 'Total Counts', value: dailyActivityData.reduce((a,d) => a + d.counts, 0).toLocaleString(), color: C.sage },
+            { label: 'Mean / Day',   value: Math.round(dailyActivityData.reduce((a,d) => a + d.counts, 0) / Math.max(1, dailyActivityData.length)).toLocaleString(), color: C.text2 },
+            { label: 'Peak Day',     value: dailyActivityData.length ? dailyActivityData.reduce((b,d) => d.counts > b.counts ? d : b).date : '—', color: C.amber },
+            { label: 'Low Day',      value: dailyActivityData.length ? dailyActivityData.reduce((b,d) => d.counts < b.counts ? d : b).date : '—', color: C.purple },
+            { label: 'Data',         value: radarUploaded ? 'uploaded' : 'synthetic', color: radarUploaded ? C.sage : C.amber },
+          ] : [
             { label: 'Frames',       value: radarFrames.length.toLocaleString(),      color: C.accent },
             { label: 'Duration',     value: `${Math.round(radarFrames.length / 20)}s`, color: C.text2 },
             { label: 'Walk 1',       value: `${gaitStats.walkSpeed} m/s`,             color: interpGaitSpeed(gaitStats.walkSpeed).c },
@@ -3663,10 +3702,20 @@ export default function AlgorithmLabPage() {
           </>}
 
           {inRadar && <>
-            <div className="section-header">
-              <div className="section-title">Radar Point Cloud</div>
-              <div className="section-sub">mmWave height trajectory · frame analysis · {radarFrames.length} frames · {Math.round(radarFrames.length / 20)}s</div>
-            </div>
+            {algo === 'daily_activity' ? (
+              <div className="section-header">
+                <div className="section-title">Daily Activity</div>
+                <div className="section-sub">AmbientActivityCounts · summed PointsDetected per day · {dailyActivityData.length} days tracked</div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999, background: `${C.sage}18`, border: `1px solid ${C.sage}40`, color: C.sage, fontFamily: 'var(--mono)', fontSize: 9.5, marginTop: 10, letterSpacing: '0.04em' }}>
+                  AmbientActivityCounts
+                </span>
+              </div>
+            ) : (
+              <div className="section-header">
+                <div className="section-title">Radar Point Cloud</div>
+                <div className="section-sub">mmWave height trajectory · frame analysis · {radarFrames.length} frames · {Math.round(radarFrames.length / 20)}s</div>
+              </div>
+            )}
 
             {algo === 'radar_signal' && (
               <ChartCard title="Height Signal" sub="Frame-by-frame detected height (m) · standing ~1.72m · sitting ~1.05m" badge={radarUploaded ? 'Live data' : 'Synthetic'} badgeColor={radarUploaded ? C.sage : C.amber} full>
@@ -3718,6 +3767,52 @@ export default function AlgorithmLabPage() {
                 </div>
               </ChartCard>
             )}
+
+            {algo === 'daily_activity' && (() => {
+              const total = dailyActivityData.reduce((a, d) => a + d.counts, 0);
+              const mean = total / Math.max(1, dailyActivityData.length);
+              const peak = dailyActivityData.length ? dailyActivityData.reduce((b, d) => d.counts > b.counts ? d : b) : null;
+              const low  = dailyActivityData.length ? dailyActivityData.reduce((b, d) => d.counts < b.counts ? d : b) : null;
+              return (
+                <ChartCard title="AmbientActivityCounts Daily Activity" sub="Sum of PointsDetected per day · higher values indicate more detected motion events" badge={radarUploaded ? 'Live data' : 'Synthetic'} badgeColor={radarUploaded ? C.sage : C.amber} full>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={dailyActivityData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                      <CartesianGrid stroke={C.line} strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} interval={0} />
+                      <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={52} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}`} />
+                      <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [Number(v).toLocaleString(), 'AmbientActivityCounts'] as [string,string]} labelFormatter={(l: unknown) => `${l}`} />
+                      <ReferenceLine y={mean} stroke={C.text3} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: 'avg', fill: C.text4, fontSize: 9, fontFamily: 'var(--mono)', position: 'right' }} />
+                      <Bar dataKey="counts" radius={[4,4,0,0]} name="AmbientActivityCounts">
+                        {dailyActivityData.map((d, i) => (
+                          <Cell key={i} fill={d.counts >= mean * 1.15 ? C.sage : d.counts <= mean * 0.72 ? C.purple : C.accent} fillOpacity={0.78} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 18 }}>
+                    {[
+                      { label: 'Peak Day',  value: peak ? peak.date : '—',   sub: peak ? peak.counts.toLocaleString() : '',  color: C.sage   },
+                      { label: 'Low Day',   value: low  ? low.date  : '—',   sub: low  ? low.counts.toLocaleString()  : '',  color: C.purple },
+                      { label: 'Daily Avg', value: Math.round(mean).toLocaleString(), sub: 'PointsDetected/day', color: C.accent },
+                    ].map(m => (
+                      <div key={m.label} style={{ padding: '12px 16px', background: C.s2, borderRadius: 8 }}>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.10em', marginBottom: 4 }}>{m.label}</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 600, color: m.color, marginBottom: 2 }}>{m.value}</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{m.sub}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, marginTop: 14, flexWrap: 'wrap' }}>
+                    {[{l:'Above avg',c:C.sage},{l:'Typical',c:C.accent},{l:'Below avg',c:C.purple}].map(x => (
+                      <div key={x.l} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{ width: 12, height: 12, borderRadius: 3, background: x.c, opacity: 0.78 }} />
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{x.l}</span>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+              );
+            })()}
 
             {algo === 'point_density' && (
               <ChartCard title="Point Density" sub="Detected radar points per 5-second epoch · higher during walking phases" badge="ambientActivityCount" full>

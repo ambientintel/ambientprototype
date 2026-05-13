@@ -25,7 +25,7 @@ function SparkNetworkBg() {
   return (
     <canvas
       ref={canvasRef}
-      style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }}
+      style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0, mixBlendMode:'screen' }}
     />
   );
 }
@@ -94,17 +94,20 @@ const RESOURCES = [
   { name: 'Federal Grants Portal', tag: 'Funding',         area: 'Finance',     color: '#FFC940', status: 'Planned' as const, desc: 'NIH, NSF, and SBIR opportunity tracking for federal funding roadmap.' },
 ];
 const PRIORITIES = [
-  { n: '01', text: 'Launch Summer Sprint Plan' },
-  { n: '02', text: 'Recruit Firmware Expertise' },
-  { n: '03', text: 'Finalize Isaac FTE Plan' },
-  { n: '04', text: 'Build Ecosystem Infrastructure' },
-  { n: '05', text: 'Federal Funding Outreach' },
+  { n: '01', label: 'Hardware',   text: 'Complete DVT validation — IWR6843AOP + OSD62x-PM PCB' },
+  { n: '02', label: 'Cloud',      text: 'Ship Ella v1 — Claude on Bedrock, HIPAA-validated nurse API' },
+  { n: '03', label: 'Clinical',   text: 'Advance IRB protocols for ambient sensing pilot deployment' },
+  { n: '04', label: 'Team',       text: 'Finalize Isaac FTE transition · Hire Senior Firmware Lead' },
+  { n: '05', label: 'Funding',    text: 'Submit SBIR Phase I aligned to $248K MN grant roadmap' },
+  { n: '06', label: 'Regulatory', text: 'Establish SaMD FDA pathway · Populate Veeva Vault QMS' },
 ];
 const THEMES = [
   { label: 'Derisk Commercialization', color: '#4F9CF9' },
   { label: 'Build Repeatable Systems',  color: '#3DCC91' },
   { label: 'Create Talent Ecosystem',   color: '#A78BFA' },
   { label: 'Develop Future Structure',  color: '#FFC940' },
+  { label: 'Ship Clinical Validation',  color: '#F43F5E' },
+  { label: 'Secure Federal Funding',    color: '#FB923C' },
 ];
 const EXEC_SECTIONS = [
   { n:'01', label:'Inflection Point',    thesis:'Ambient Intelligence stands at an inflection point.',    body:'Converging funding opportunities and accelerating market interest create a narrow window to move from promising research to commercial reality—but only if we act decisively this summer.' },
@@ -468,7 +471,7 @@ function ExecSummary() {
         <div className="org-orb-c" style={{ position:'absolute', left:'55%', top:'20%', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(167,139,250,0.07), transparent 65%)', filter:'blur(90px)' }}/>
       </div>
 
-      <div style={{ position:'relative', zIndex:1, padding:'0 48px' }}>
+      <div style={{ position:'relative', zIndex:1, maxWidth:1300, margin:'0 auto', padding:'0 48px' }}>
         {/* Eyebrow */}
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:28 }}>
           <div style={{ width:2, height:18, background:C.accent, borderRadius:1 }}/>
@@ -753,10 +756,11 @@ export default function OrganizationPage() {
       {/* ── HERO ──────────────────────────────────────────────────── */}
       <section style={{
         position:'relative', overflow:'hidden',
-        padding:'138px 48px 88px', minHeight:'60vh', display:'flex', alignItems:'center',
+        padding:'138px 0 88px', minHeight:'60vh', display:'flex', alignItems:'center',
       }}>
         {/* Background gradient */}
-        <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at 8% 62%, rgba(45,114,210,0.14) 0%, transparent 50%), radial-gradient(ellipse at 90% 20%, rgba(0,180,216,0.10) 0%, transparent 48%), radial-gradient(ellipse at 55% 85%, rgba(167,139,250,0.07) 0%, transparent 45%), ${C.bg}` }}/>
+        <div style={{ position:'absolute', inset:0, background:`#070e1c` }}/>
+        <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(rgba(79,156,249,0.04) 1px, transparent 1px)', backgroundSize:'32px 32px', pointerEvents:'none' }}/>
         {/* Orbs */}
         <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
           <div className="org-orb-a" style={{ position:'absolute', left:-220, top:-100, width:720, height:720, borderRadius:'50%', background:'radial-gradient(circle, rgba(45,114,210,0.15), transparent 65%)', filter:'blur(90px)' }}/>
@@ -766,7 +770,9 @@ export default function OrganizationPage() {
         </div>
 
         {/* Content */}
-        <div style={{ position:'relative', zIndex:2, maxWidth:920 }}>
+        <div style={{ position:'relative', zIndex:2, width:'100%' }}>
+        <div style={{ maxWidth:1300, margin:'0 auto', padding:'0 48px' }}>
+        <div style={{ maxWidth:680 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
             <div style={{ width:2, height:18, background:C.accent, borderRadius:1 }}/>
             <span style={{ fontFamily:'var(--mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'0.14em', color:C.text3 }}>ODAT · Ambient Ecosystem · Summer 2026</span>
@@ -798,55 +804,43 @@ export default function OrganizationPage() {
           </div>
 
           {/* Strategic themes */}
-          <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
             {THEMES.map(t => (
               <span key={t.label} style={{
-                padding:'5px 14px', borderRadius:20,
-                background:`${t.color}14`, border:`1px solid ${t.color}30`,
-                fontSize:11, color:t.color, fontFamily:'var(--mono)', letterSpacing:'0.04em',
+                padding:'9px 18px', borderRadius:8,
+                background:`${t.color}12`,
+                border:`1px solid ${t.color}40`,
+                boxShadow:`0 0 18px ${t.color}10`,
+                fontSize:12, fontWeight:500, color:t.color,
+                fontFamily:'var(--sans)', letterSpacing:'0.01em',
+                cursor:'default',
               }}>{t.label}</span>
             ))}
           </div>
         </div>
+        </div>
+        </div>
       </section>
 
       {/* NEXT CHAPTER */}
-      <section style={{ position:'relative', overflow:'hidden', borderTop:`1px solid ${C.line}`, padding:'88px 48px 96px' }}>
+      <section style={{ position:'relative', overflow:'hidden', borderTop:`1px solid ${C.line}`, padding:'88px 0 96px' }}>
         {/* Dot grid background */}
         <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(rgba(79,156,249,0.07) 1px, transparent 1px)', backgroundSize:'32px 32px', pointerEvents:'none' }}/>
         {/* Gradient vignette over grid */}
         <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at 20% 50%, rgba(0,180,216,0.07) 0%, transparent 55%), radial-gradient(ellipse at 80% 30%, rgba(167,139,250,0.06) 0%, transparent 50%), radial-gradient(ellipse at 60% 80%, rgba(61,204,145,0.05) 0%, transparent 48%), linear-gradient(to bottom, ${C.bg} 0%, ${C.surf1}44 50%, ${C.bg} 100%)`, pointerEvents:'none' }}/>
 
-        <div style={{ position:'relative', zIndex:1, maxWidth:1300, margin:'0 auto' }}>
+        <div style={{ position:'relative', zIndex:1, maxWidth:1300, margin:'0 auto', padding:'0 48px' }}>
 
           {/* Title block */}
-          <div style={{ marginBottom:72, maxWidth:900 }}>
+          <div style={{ marginBottom:72 }}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
               <div style={{ width:2, height:14, background:C.accent, borderRadius:1 }}/>
               <span style={{ fontFamily:'var(--mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.16em', color:C.accent }}>Summer 2026 · Ambient Intelligence</span>
             </div>
-            <h2 style={{ margin:'0 0 24px', fontFamily:'var(--serif)', fontSize:'clamp(32px,4.5vw,62px)', fontWeight:300, lineHeight:1.06, letterSpacing:'-0.03em', color:C.text }}>
-              The Next Chapter<span style={{ color:C.text3 }}>:</span><br/>
-              <em style={{ fontStyle:'italic', color:C.text2 }}>AI Across Device, Cloud,<br/>and Organization</em>
+            <h2 style={{ margin:'0 0 24px', fontFamily:'var(--serif)', fontWeight:300, lineHeight:1.1, letterSpacing:'-0.03em', color:C.text }}>
+              <span style={{ fontSize:'clamp(32px,4.5vw,62px)', display:'block' }}>The Next Chapter<span style={{ color:C.text3 }}>:</span></span>
+              <em style={{ fontStyle:'italic', color:C.text2, fontSize:'clamp(32px,4.5vw,62px)', whiteSpace:'nowrap', display:'block' }}>AI Across Device, Cloud, and Organization</em>
             </h2>
-            <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
-              {[
-                { color:'#00B4D8', tag:'Device',       text:'from custom mmWave firmware validated across four hardware phases,' },
-                { color:'#3DCC91', tag:'Cloud',        text:'to a HIPAA-compliant clinical cloud powered by Claude on Bedrock,' },
-                { color:'#A78BFA', tag:'Organization', text:'to the team, capital, and partnerships needed to bring ambient sensing into healthcare at scale.' },
-              ].map((line, i) => (
-                <div key={line.tag} style={{ display:'grid', gridTemplateColumns:'130px 1fr', gap:20, alignItems:'baseline', padding:'14px 0', borderTop: i===0 ? `1px solid ${C.line}` : 'none', borderBottom:`1px solid ${C.line}` }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <div style={{ width:10, height:2, background:line.color, borderRadius:1, flexShrink:0 }}/>
-                    <span style={{ fontFamily:'var(--mono)', fontSize:13, textTransform:'uppercase', letterSpacing:'0.10em', color:line.color }}>{line.tag}</span>
-                  </div>
-                  <p style={{ margin:0, fontFamily:'var(--serif)', fontSize:22, fontWeight:300, color: i===0 ? C.text : C.text2, lineHeight:1.62, letterSpacing:'0.005em' }}>
-                    {i === 0 && <span style={{ color:C.text3, fontStyle:'italic' }}>Ambient Intelligence is building the complete stack — </span>}
-                    {line.text}
-                  </p>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Three pillars */}
@@ -919,15 +913,6 @@ export default function OrganizationPage() {
                   ))}
                 </div>
 
-                {/* Bullets */}
-                <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:'auto' }}>
-                  {col.items.map((item,i)=>(
-                    <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:9 }}>
-                      <div style={{ width:3, height:3, borderRadius:'50%', background:col.color, marginTop:7, flexShrink:0, opacity:0.7 }}/>
-                      <span style={{ fontFamily:'var(--sans)', fontSize:12.5, color:C.text2, lineHeight:1.6 }}>{item}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             ))}
           </div>
@@ -937,25 +922,97 @@ export default function OrganizationPage() {
       {/* EXEC SUMMARY */}
       <ExecSummary/>
 
+      {/* ELLA SECTION */}
+      <section style={{ position:'relative', overflow:'hidden', borderTop:`1px solid ${C.line}`, padding:'88px 0 96px' }}>
+        <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(rgba(79,156,249,0.07) 1px, transparent 1px)', backgroundSize:'32px 32px', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at 20% 50%, rgba(0,180,216,0.07) 0%, transparent 55%), radial-gradient(ellipse at 80% 30%, rgba(167,139,250,0.06) 0%, transparent 50%), radial-gradient(ellipse at 60% 80%, rgba(61,204,145,0.05) 0%, transparent 48%), linear-gradient(to bottom, ${C.bg} 0%, ${C.surf1}44 50%, ${C.bg} 100%)`, pointerEvents:'none' }}/>
+        <div style={{ position:'relative', zIndex:1, maxWidth:1300, margin:'0 auto', padding:'0 48px' }}>
+          <div style={{ marginBottom:64 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
+              <div style={{ width:2, height:14, background:'#3DCC91', borderRadius:1 }}/>
+              <span style={{ fontFamily:'var(--mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.16em', color:'#3DCC91' }}>Summer 2026 · Ambient Intelligence</span>
+            </div>
+            <h2 style={{ margin:0, fontFamily:'var(--serif)', fontWeight:300, lineHeight:1.1, letterSpacing:'-0.03em', color:C.text }}>
+              <span style={{ fontSize:'clamp(32px,4.5vw,62px)', display:'block' }}>Ella AI Nurse Assistant<span style={{ color:C.text3 }}>,</span></span>
+              <em style={{ fontStyle:'italic', color:C.text2, fontSize:'clamp(32px,4.5vw,62px)', whiteSpace:'nowrap', display:'block' }}>Bringing AI to Memory Care</em>
+            </h2>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2 }}>
+            {[
+              { num:'01', label:'Ambient Sensing', color:'#00B4D8',
+                stat:'IWR6843AOP', statSub:'mmWave · Passive · Non-wearable',
+                headline:'Invisible sensing for residents who can\'t wear devices.',
+                body:'Ella\'s foundation is the IWR6843AOP mmWave radar — detecting falls, motion, and presence without cameras, wearables, or interaction from residents with cognitive impairment.',
+                tags:['IWR6843AOP','60 GHz','AM62x','Passive Detection','Non-wearable'],
+                specs:[{v:'60 GHz',l:'mmWave band'},{v:'Passive',l:'No wearable'},{v:'Edge',l:'On-device AI'}] },
+              { num:'02', label:'Clinical AI', color:'#3DCC91',
+                stat:'Claude', statSub:'on AWS Bedrock · HIPAA-Validated',
+                headline:'A nurse assistant that understands the clinical context.',
+                body:'Ella uses Claude on AWS Bedrock to synthesize resident sensor data, alert history, and care notes into actionable clinical summaries — surfaced through a nurse-facing FastAPI dashboard.',
+                tags:['Claude','AWS Bedrock','FastAPI','Cognito','HIPAA','SNS Alerts'],
+                specs:[{v:'HIPAA',l:'Validated'},{v:'Claude',l:'on Bedrock'},{v:'Real-time',l:'Alert pipeline'}] },
+              { num:'03', label:'Care Setting', color:'#A78BFA',
+                stat:'Memory Care', statSub:'Skilled Nursing · Pilot Ready',
+                headline:'Designed for the highest-acuity care environment.',
+                body:'Memory care and skilled nursing facilities face the highest fall risk, lowest staffing ratios, and least tolerance for missed events. Ella is purpose-built for this population — piloted with IRB approval.',
+                tags:['Memory Care','Skilled Nursing','IRB Approved','Fall Detection','Activity Classification'],
+                specs:[{v:'IRB',l:'Approved'},{v:'Pilot',l:'Ready'},{v:'MOH',l:'Pilot focus'}] },
+            ].map((col, ci) => (
+              <div key={col.label} style={{ background:`linear-gradient(160deg, ${C.surf2}cc, ${C.surf1}cc)`, borderRadius: ci===0?'16px 0 0 16px': ci===2?'0 16px 16px 0':'0', border:`1px solid ${C.line}`, borderLeft: ci>0?'none':undefined, padding:'36px 32px 32px', display:'flex', flexDirection:'column', gap:0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24 }}>
+                  <span style={{ fontFamily:'var(--serif)', fontSize:48, fontWeight:300, color:`${col.color}20`, lineHeight:1, letterSpacing:'-0.04em' }}>{col.num}</span>
+                  <div>
+                    <div style={{ fontFamily:'var(--mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.16em', color:col.color, marginBottom:2 }}>{col.label}</div>
+                    <div style={{ width:28, height:2, background:col.color, borderRadius:1 }}/>
+                  </div>
+                </div>
+                <div style={{ marginBottom:20 }}>
+                  <div style={{ fontFamily:'var(--serif)', fontSize:34, fontWeight:300, color:col.color, lineHeight:1, letterSpacing:'-0.02em', marginBottom:4 }}>{col.stat}</div>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:9.5, textTransform:'uppercase', letterSpacing:'0.12em', color:`${col.color}80` }}>{col.statSub}</div>
+                </div>
+                <div style={{ fontFamily:'var(--serif)', fontSize:17, fontWeight:400, fontStyle:'italic', color:C.text, lineHeight:1.42, marginBottom:14 }}>{col.headline}</div>
+                <p style={{ margin:'0 0 20px', fontFamily:'var(--sans)', fontSize:13, color:C.text2, lineHeight:1.72, fontWeight:300 }}>{col.body}</p>
+                <div style={{ display:'flex', gap:16, marginBottom:20, paddingBottom:20, borderBottom:`1px solid ${C.line}` }}>
+                  {col.specs.map(s=>(
+                    <div key={s.l}>
+                      <div style={{ fontFamily:'var(--serif)', fontSize:18, fontWeight:400, color:col.color, lineHeight:1 }}>{s.v}</div>
+                      <div style={{ fontFamily:'var(--mono)', fontSize:8.5, textTransform:'uppercase', letterSpacing:'0.1em', color:C.text3, marginTop:2 }}>{s.l}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                  {col.tags.map(t=>(
+                    <span key={t} style={{ padding:'3px 9px', borderRadius:6, background:`${col.color}10`, border:`1px solid ${col.color}28`, fontSize:10.5, color:col.color, fontFamily:'var(--mono)', letterSpacing:'0.02em' }}>{t}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* SPRINT STRIP */}
-      <div style={{ borderTop:`1px solid ${C.lineStrg}`,borderBottom:`1px solid ${C.line}`,background:C.surf1,padding:'18px 48px',overflowX:'auto' }}>
-        <div style={{ display:'flex',alignItems:'center',gap:28,minWidth:'max-content' }}>
-          <span style={{ fontFamily:'var(--mono)',fontSize:9.5,textTransform:'uppercase',letterSpacing:'0.15em',color:C.accent,flexShrink:0 }}>Sprint Focus</span>
-          <div style={{ width:1,height:20,background:C.lineStrg,flexShrink:0 }}/>
+      <div style={{ borderTop:`1px solid ${C.lineStrg}`,borderBottom:`1px solid ${C.line}`,background:C.surf1,padding:'16px 48px',overflowX:'auto' }}>
+        <div style={{ display:'flex',alignItems:'center',gap:24,minWidth:'max-content' }}>
+          <div style={{ display:'flex',alignItems:'center',gap:10,flexShrink:0 }}>
+            <div style={{ width:2,height:16,background:C.accent,borderRadius:1 }}/>
+            <span style={{ fontFamily:'var(--mono)',fontSize:9.5,textTransform:'uppercase',letterSpacing:'0.15em',color:C.accent }}>Summer Sprint · 2026</span>
+          </div>
+          <div style={{ width:1,height:24,background:C.lineStrg,flexShrink:0 }}/>
           {PRIORITIES.map((p,i)=>(
             <div key={p.n} style={{ display:'flex',alignItems:'center',gap:10 }}>
-              <span style={{ fontFamily:'var(--serif)',fontSize:20,fontWeight:400,color:C.accent,lineHeight:1 }}>{p.n}</span>
-              <span style={{ fontSize:12.5,color:C.text2,whiteSpace:'nowrap' }}>{p.text}</span>
-              {i < PRIORITIES.length-1 && <div style={{ width:4,height:4,borderRadius:'50%',background:'rgba(79,156,249,0.25)',marginLeft:2 }}/>}
+              <span style={{ fontFamily:'var(--serif)',fontSize:18,fontWeight:400,color:'rgba(79,156,249,0.35)',lineHeight:1 }}>{p.n}</span>
+              <span style={{ fontFamily:'var(--mono)',fontSize:8.5,textTransform:'uppercase',letterSpacing:'0.10em',color:C.accent,background:C.accentS,border:`1px solid rgba(79,156,249,0.18)`,padding:'2px 7px',borderRadius:4,whiteSpace:'nowrap' }}>{p.label}</span>
+              <span style={{ fontFamily:'var(--sans)',fontSize:13,color:C.text2,whiteSpace:'nowrap',fontWeight:300 }}>{p.text}</span>
+              {i < PRIORITIES.length-1 && <div style={{ width:1,height:16,background:C.line,marginLeft:4,flexShrink:0 }}/>}
             </div>
           ))}
         </div>
       </div>
 
       {/* TABS */}
-      <div style={{ position:'relative', overflow:'hidden' }}>
-      <FlowGlowBg/>
-      <div style={{ position:'relative', zIndex:1, maxWidth:1340,margin:'0 auto',padding:'0 48px 80px' }}>
+      <div>
+      <div style={{ maxWidth:1340,margin:'0 auto',padding:'0 48px 80px' }}>
         <div style={{ display:'flex',borderBottom:`1px solid ${C.line}`,marginBottom:40 }}>
           {TABS.map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{ padding:'16px 26px',cursor:'pointer',border:'none',background:'none',fontFamily:'var(--sans)',fontSize:13.5,fontWeight:500,color:tab===t.id?C.text:C.text3,borderBottom:tab===t.id?`2px solid ${C.accent}`:'2px solid transparent',transition:'all 0.15s',display:'flex',alignItems:'center',gap:8 }}>
@@ -971,19 +1028,6 @@ export default function OrganizationPage() {
       </div>
       </div>
 
-      {/* QUOTE */}
-      <div style={{ borderTop:`1px solid ${C.line}`,padding:'64px 48px 80px',display:'flex',justifyContent:'center' }}>
-        <div style={{ maxWidth:680,textAlign:'center' }}>
-          <div style={{ fontFamily:'var(--serif)',fontSize:'clamp(17px,2.4vw,25px)',fontWeight:300,fontStyle:'italic',color:C.text2,lineHeight:1.68,marginBottom:18 }}>
-            "This is an experiment. We will derisk, learn, and build the foundation for something extraordinary."
-          </div>
-          <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:14 }}>
-            <div style={{ height:1,width:36,background:C.lineStrg }}/>
-            <span style={{ fontFamily:'var(--mono)',fontSize:9.5,textTransform:'uppercase',letterSpacing:'0.12em',color:C.text3 }}>Brian Johnson · Strategic Advisor · May 2026</span>
-            <div style={{ height:1,width:36,background:C.lineStrg }}/>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
