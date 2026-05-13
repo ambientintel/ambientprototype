@@ -454,8 +454,34 @@ export default function CarlsonPage() {
         .c-s { animation: fade-up 0.85s 0.4s ease both; }
         .c-p { animation: fade-up 0.85s 0.55s ease both; }
         .c-chip:hover { border-color:rgba(255,255,255,0.26)!important; color:rgba(240,241,242,0.88)!important; }
-        .c-primary { background:#ffffff!important; color:#0d0d0d!important; border-radius:6px!important; border:none!important; font-weight:500!important; }
-        .c-primary:hover { background:#d6d6d6!important; }
+        @keyframes metal-flow {
+          0%   { background-position: 200% center; }
+          100% { background-position: -200% center; }
+        }
+        @keyframes streak {
+          0%   { transform: translateX(-180%) skewX(-18deg); }
+          100% { transform: translateX(480%) skewX(-18deg); }
+        }
+        .c-primary {
+          background: linear-gradient(108deg, #3a3a3a 0%, #888 18%, #f0f0f0 34%, #ffffff 42%, #d8d8d8 52%, #777 68%, #2e2e2e 84%, #888 100%) !important;
+          background-size: 300% 100% !important;
+          animation: metal-flow 2.8s linear infinite !important;
+          color: #0a0a0a !important;
+          border-radius: 6px !important;
+          border: none !important;
+          font-weight: 500 !important;
+          position: relative !important;
+          overflow: hidden !important;
+        }
+        .c-primary::after {
+          content: '';
+          position: absolute;
+          top: 0; bottom: 0;
+          width: 28%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+          animation: streak 2.8s linear infinite;
+        }
+        .c-primary:hover { filter: brightness(1.08) !important; }
         .c-ghost { background:rgba(255,255,255,0.06)!important; border:1px solid rgba(255,255,255,0.18)!important; border-radius:6px!important; color:rgba(255,255,255,0.70)!important; font-weight:500!important; }
         .c-ghost:hover { background:rgba(255,255,255,0.11)!important; border-color:rgba(255,255,255,0.36)!important; color:#fff!important; }
         .c-nav-link:hover { color:rgba(240,241,242,0.88)!important; }
