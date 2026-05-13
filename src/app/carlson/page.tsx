@@ -533,7 +533,7 @@ export default function CarlsonPage() {
           Ambient <em style={{ fontStyle: 'italic', color: C.text2 }}>Intelligence</em>
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-          <span className="c-nav-label" style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4 }}>Founder&apos;s Day 2026</span>
+          <span className="c-nav-label" style={{ fontFamily: C.mono, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text2 }}>Founder&apos;s Day 2026</span>
           <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary c-nav-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em' }}>
             Connect
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
