@@ -683,11 +683,6 @@ export default function CarlsonPage() {
               <p style={{ fontSize: 18, lineHeight: 1.76, color: C.text2, margin: '0 0 40px' }}>
                 Ambient device data flows securely through the cloud, where an AI model translates it into summaries on the nurse dashboard in real time. Nurses see what matters without sifting through raw signals and unnecessary alerts.
               </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                {['IWR6843AOP Radar', 'AWS Kinesis', 'Bedrock AI', 'HIPAA Compliant', 'No Camera', 'No Wearable', 'PCT Patent Filed'].map(tag => (
-                  <Tag key={tag} color={C.text3} bg="rgba(255,255,255,0.04)">{tag}</Tag>
-                ))}
-              </div>
             </div>
             <TechDiagram />
           </div>
