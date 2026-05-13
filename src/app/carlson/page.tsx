@@ -524,7 +524,7 @@ export default function CarlsonPage() {
               { label: 'R&D',    value: 'Office of Discovery and Translation' },
               { label: 'ENDURE', value: 'Bakken Medical Devices Center' },
             ].map((item) => (
-              <div key={item.label} style={{ display: 'flex', alignItems: 'stretch', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.16)' }}>
+              <div key={item.label} style={{ display: 'flex', alignItems: 'stretch', background: 'transparent', border: '1px solid rgba(255,255,255,0.22)' }}>
                 <div style={{ width: 3, background: 'rgba(255,255,255,0.90)', flexShrink: 0 }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '12px 18px' }}>
                   <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.24em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' }}>{item.label}</span>
