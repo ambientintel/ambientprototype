@@ -493,6 +493,8 @@ export default function CarlsonPage() {
         .c-ghost { background:rgba(255,255,255,0.06)!important; border:1px solid rgba(255,255,255,0.18)!important; border-radius:6px!important; color:rgba(255,255,255,0.70)!important; font-weight:500!important; }
         .c-ghost:hover { background:rgba(255,255,255,0.11)!important; border-color:rgba(255,255,255,0.36)!important; color:#fff!important; }
         .c-nav-link:hover { color:rgba(240,241,242,0.88)!important; }
+        .c-nav-btn { background:rgba(255,255,255,0.18)!important; color:#ffffff!important; filter:none!important; }
+        .c-nav-btn:hover { background:rgba(255,255,255,0.28)!important; filter:none!important; }
         .c-hero-section { height:92vh; height:92dvh; }
         @media(min-width:961px) and (max-width:1100px){
           .c-hero { padding:88px 56px 72px!important; }
@@ -532,12 +534,9 @@ export default function CarlsonPage() {
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <span className="c-nav-label" style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4 }}>Founder&apos;s Day 2026</span>
-          <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em' }}>
-            <BtnCanvas />
-            <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-              Connect
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </span>
+          <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary c-nav-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em' }}>
+            Connect
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
       </nav>
