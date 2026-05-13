@@ -505,16 +505,16 @@ export default function CarlsonPage() {
           <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px' }}>
             24/7 contactless and noninvasive monitoring<br/>engineered for memory care.
           </p>
-          <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {[
-              { label: 'R&D',    value: 'Office of Discovery and Translation', accent: C.gold },
-              { label: 'ENDURE', value: 'Bakken Medical Devices Center',       accent: C.accent },
+              { label: 'R&D',    value: 'Office of Discovery and Translation' },
+              { label: 'ENDURE', value: 'Bakken Medical Devices Center' },
             ].map((item) => (
-              <div key={item.label} style={{ display: 'flex', alignItems: 'stretch', gap: 0, background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(16px)', border: `1px solid rgba(255,255,255,0.10)`, boxShadow: `inset 0 0 0 0 transparent, 0 0 18px ${item.accent}18` }}>
-                <div style={{ width: 3, background: item.accent, flexShrink: 0 }} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '14px 20px' }}>
-                  <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.24em', color: item.accent, textTransform: 'uppercase' }}>{item.label}</span>
-                  <span style={{ fontFamily: C.sans, fontSize: 16, color: C.text, letterSpacing: '-0.02em', fontWeight: 400, lineHeight: 1.25, whiteSpace: 'nowrap' }}>{item.value}</span>
+              <div key={item.label} style={{ display: 'flex', alignItems: 'stretch', background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 2px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+                <div style={{ width: 2, background: 'rgba(255,255,255,0.55)', flexShrink: 0 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '13px 20px' }}>
+                  <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.26em', color: 'rgba(255,255,255,0.42)', textTransform: 'uppercase' }}>{item.label}</span>
+                  <span style={{ fontFamily: C.sans, fontSize: 15, color: '#ffffff', letterSpacing: '-0.015em', fontWeight: 500, lineHeight: 1.2, whiteSpace: 'nowrap' }}>{item.value}</span>
                 </div>
               </div>
             ))}
