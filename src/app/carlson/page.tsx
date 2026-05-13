@@ -554,7 +554,9 @@ export default function CarlsonPage() {
             Founder&apos;s Day{' '}
             <em style={{ fontStyle: 'italic', color: C.text2 }}>2026</em>
           </h1>
-          <img src="/ambient-intelligence-wordmark.png" alt="Ambient Intelligence" style={{ display: 'block', height: 'clamp(48px, 7vw, 96px)', width: 'auto', margin: '0 0 32px', opacity: 0.82 }} />
+          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(58px, 8vw, 108px)', lineHeight: 1.0, letterSpacing: '-0.04em', color: C.text2, margin: '0 0 32px' }}>
+            Ambient <em style={{ fontStyle: 'italic' }}>Intelligence</em>
+          </p>
           <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px' }}>
             24/7 contactless and noninvasive monitoring<br/>engineered for memory care.
           </p>
