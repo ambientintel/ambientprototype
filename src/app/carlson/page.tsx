@@ -627,26 +627,24 @@ export default function CarlsonPage() {
       <section className="c-sec" style={{ background: C.surf1, padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="03" label="Opportunity" />
+          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(20px, 2.2vw, 28px)', lineHeight: 1.6, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.72)', margin: '0 0 56px', maxWidth: 680 }}>
+            Dementia is the fastest-growing cause of death in the developed world. The care infrastructure hasn&apos;t kept up and the workforce shortage makes it impossible to close the gap with people alone.
+          </p>
 
-          {/* Lead + 3 context stats side by side */}
-          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '5fr 7fr', gap: 80, alignItems: 'start', marginBottom: 2 }}>
-            <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(20px, 2.2vw, 28px)', lineHeight: 1.6, letterSpacing: '-0.01em', color: C.text2, margin: 0 }}>
-              Dementia is the fastest-growing cause of death in the developed world. The care infrastructure hasn&apos;t kept up and the workforce shortage makes it impossible to close the gap with people alone.
-            </p>
-            <div className="c-three" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', border: `1px solid ${C.lineStrg}` }}>
-              {[
-                { label: 'Growing at',    value: '7.9%',    unit: 'CAGR', note: 'remote patient monitoring in elder care'  },
-                { label: 'US facilities', value: '28,900+', unit: null,   note: 'licensed memory care units nationwide'    },
-                { label: 'By 2050',       value: '13M',     unit: null,   note: 'Americans projected to have Alzheimer\'s' },
-              ].map((row, i) => (
-                <div key={row.label} style={{ padding: '28px 24px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
-                  <span style={{ display: 'block', fontFamily: C.mono, fontSize: 9, letterSpacing: '0.20em', color: C.gold, textTransform: 'uppercase', marginBottom: 10 }}>{row.label}</span>
-                  <span style={{ display: 'block', fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(28px, 3vw, 42px)', letterSpacing: '-0.03em', lineHeight: 1, color: C.text, marginBottom: row.unit ? 2 : 10 }}>{row.value}</span>
-                  {row.unit && <span style={{ display: 'block', fontFamily: C.mono, fontSize: 9, letterSpacing: '0.14em', color: C.text3, textTransform: 'uppercase', marginBottom: 10 }}>{row.unit}</span>}
-                  <span style={{ fontFamily: C.sans, fontSize: 12, color: C.text3, lineHeight: 1.5 }}>{row.note}</span>
-                </div>
-              ))}
-            </div>
+          {/* 3 context stats — full width */}
+          <div className="c-three" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', border: `1px solid ${C.lineStrg}`, marginBottom: 2 }}>
+            {[
+              { label: 'Growing at',    value: '7.9%',    unit: 'CAGR', note: 'remote patient monitoring in elder care'  },
+              { label: 'US facilities', value: '28,900+', unit: null,   note: 'licensed memory care units nationwide'    },
+              { label: 'By 2050',       value: '13M',     unit: null,   note: 'Americans projected to have Alzheimer\'s' },
+            ].map((row, i) => (
+              <div key={row.label} style={{ padding: '36px 44px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
+                <span style={{ display: 'block', fontFamily: C.mono, fontSize: 10, letterSpacing: '0.20em', color: C.gold, textTransform: 'uppercase', marginBottom: 12 }}>{row.label}</span>
+                <span style={{ display: 'block', fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(36px, 4.2vw, 58px)', letterSpacing: '-0.03em', lineHeight: 1, color: C.text, marginBottom: row.unit ? 4 : 14 }}>{row.value}</span>
+                {row.unit && <span style={{ display: 'block', fontFamily: C.mono, fontSize: 10, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.50)', textTransform: 'uppercase', marginBottom: 14 }}>{row.unit}</span>}
+                <span style={{ fontFamily: C.sans, fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{row.note}</span>
+              </div>
+            ))}
           </div>
 
           {/* TAM + SAM — full width, 2 columns */}
@@ -655,15 +653,15 @@ export default function CarlsonPage() {
               { label: 'TAM', sublabel: 'Total Addressable Market',       value: '$38B',  desc: 'Global eldercare monitoring & analytics market',               ratio: null           },
               { label: 'SAM', sublabel: 'Serviceable Addressable Market', value: '$4.2B', desc: 'US memory care facilities — sensor monitoring & AI analytics', ratio: '≈ 11% of TAM' },
             ].map((item, i) => (
-              <div key={item.label} style={{ padding: '48px 48px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
-                <div style={{ marginBottom: 20 }}>
-                  <span style={{ display: 'block', fontFamily: C.mono, fontSize: 11, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</span>
-                  <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', color: C.text4, textTransform: 'uppercase' }}>{item.sublabel}</span>
+              <div key={item.label} style={{ padding: '48px 56px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 20 }}>
+                  <span style={{ fontFamily: C.mono, fontSize: 12, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase' }}>{item.label}</span>
+                  <span style={{ fontFamily: C.sans, fontSize: 13, color: 'rgba(255,255,255,0.50)' }}>{item.sublabel}</span>
                 </div>
                 <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(56px, 7vw, 92px)', lineHeight: 1, letterSpacing: '-0.04em', color: C.text, margin: '0 0 20px' }}>{item.value}</p>
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
-                  <p style={{ fontFamily: C.sans, fontSize: 14, color: C.text3, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
-                  {item.ratio && <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.14em', color: C.gold, textTransform: 'uppercase', opacity: 0.55, flexShrink: 0 }}>{item.ratio}</span>}
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
+                  <p style={{ fontFamily: C.sans, fontSize: 15, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
+                  {item.ratio && <span style={{ fontFamily: C.mono, fontSize: 10, letterSpacing: '0.14em', color: C.gold, textTransform: 'uppercase', opacity: 0.70, flexShrink: 0 }}>{item.ratio}</span>}
                 </div>
               </div>
             ))}
