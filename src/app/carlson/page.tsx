@@ -594,7 +594,7 @@ export default function CarlsonPage() {
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
             <div>
-              <SectionMeta n="02" label="How It Works" />
+              <SectionMeta n="02" label="The Solution" />
               <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 60px)', lineHeight: 1.1, letterSpacing: '-0.026em', margin: '0 0 28px' }}>
                 The resident moves freely.<br/>
                 <em style={{ fontStyle: 'italic', color: C.text2 }}>We never interfere.</em>
