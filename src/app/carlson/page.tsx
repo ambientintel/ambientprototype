@@ -469,7 +469,7 @@ export default function CarlsonPage() {
         .c-chip:hover { border-color:rgba(255,255,255,0.26)!important; color:rgba(240,241,242,0.88)!important; }
         .c-primary {
           background: #000 !important;
-          color: #fff !important;
+          color: #0a0a0a !important;
           border-radius: 6px !important;
           border: none !important;
           font-weight: 500 !important;
