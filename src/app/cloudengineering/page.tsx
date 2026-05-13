@@ -94,7 +94,7 @@ const STEPS: Step[] = [
       {
         heading: 'Architecture documents',
         artifacts: [
-          { file: 'docs/architecture-v4.md', role: 'Authoritative architecture v4 — five paths, account-per-tenant, dual-write state, KMS, Sonnet 4.6.' },
+          { file: 'docs/architecture-v4.md', role: 'Authoritative architecture v4 — five paths, account-per-tenant, dual-write state, KMS, Sonnet 4.' },
           { file: 'docs/architecture-v4.mmd', role: 'Canonical Mermaid diagram. Render at https://mermaid.live.' },
           { file: 'docs/tenancy.md', role: 'Multi-tenant account-per-tenant isolation model. One AWS account per organization.' },
           { file: 'docs/device-cloud-contract.md', role: 'Authoritative device ↔ cloud wire format, v0.2. IRB framing, research data handling.' },
@@ -110,14 +110,14 @@ const STEPS: Step[] = [
   },
   {
     id: 'irb-gov', phase: '02', title: 'IRB & Governance', status: 'done', tag: 'Architect', time: '~1 day',
-    summary: 'Research pilot under IRB-approved protocol. Coded data per HIPAA §164.514(c) — no names, DOBs, MRNs, or demographic detail at any point. Subject ID format PILOT-NNNN enforced by admin-cli and prompt rules.',
+    summary: 'Research pilot under IRB-approved protocol. Coded data per HIPAA §164.514(c) — no names, DOBs, MRNs, or demographic detail at any point. Subject ID format MOCAREV-NNNN enforced by admin-cli and prompt rules.',
     sections: [
       {
         heading: 'Data model rules',
         table: {
           cols: ['Field', 'Rule', 'Enforcement'],
           rows: [
-            ['Subject identifier', 'PILOT-NNNN format only (e.g. PILOT-0042)', 'admin-cli provisioning guard + prompt rule'],
+            ['Subject identifier', 'MOCAREV-NNNN format only (e.g. MOCAREV-0042)', 'admin-cli provisioning guard + prompt rule'],
             ['Facility identifier', 'Opaque UUID — no building name or address', 'Data model; API never returns facility names'],
             ['Names', 'Never stored in DDB, S3, or Shadows', 'admin-cli forbidden-attribute guard'],
             ['DOB / age', 'Never stored anywhere in the pipeline', 'admin-cli + Ella system prompt guard'],
@@ -139,13 +139,13 @@ const STEPS: Step[] = [
         heading: 'IRB governance artifacts',
         artifacts: [
           { file: 'docs/self-review/SELF_REVIEW.md', role: 'PR self-review worksheet v1.3 — three-layer PII grep + Terraform validate + authz check.' },
-          { file: 'services/admin-cli/src/ambientcloud_admin/provisioning.py', role: 'admin-cli provisioning logic with PILOT-NNNN format enforcement and forbidden-attribute guard.' },
+          { file: 'services/admin-cli/src/ambientcloud_admin/provisioning.py', role: 'admin-cli provisioning logic with MOCAREV-NNNN format enforcement and forbidden-attribute guard.' },
         ],
       },
       {
         warnings: [
           'The self-review worksheet Layer 2 grep caught every IRB violation in the initial PR merge train. Without it, at least one PR would have merged with patientId still present. Run it every time.',
-          'Ella Lambda system prompt includes explicit forbidden-attribute instructions. Before upgrading the Bedrock model (currently Sonnet 4.6), re-evaluate the system prompt against the new model to confirm de-identification behavior is preserved.',
+          'Ella Lambda system prompt includes explicit forbidden-attribute instructions. Before upgrading the Bedrock model (currently Sonnet 4), re-evaluate the system prompt against the new model to confirm de-identification behavior is preserved.',
         ],
       },
     ],
@@ -158,8 +158,8 @@ const STEPS: Step[] = [
         heading: 'Repository structure',
         commands: [
           { label: 'clone and inspect layout', code: 'git clone https://github.com/ambientintel/ambientcloud\ncd ambientcloud\n\n# Application code — one directory per service\nls services/\n# → admin-cli/  api/  athena/  cloudtrail/  ella/  reconciler/  telemetry/  url-minter/\n\n# Unified CDK app — single entry point for all stacks\nls infra/\n# → app.py  stacks/  ambient_constructs/  config/  cdk.json  requirements.txt\n\nls infra/stacks/\n# → kms_stack.py  storage_stack.py  data_stack.py  telemetry_stack.py\n# → url_minter_stack.py  athena_stack.py  ella_stack.py  api_stack.py\n# → cloudtrail_stack.py  observability_stack.py  dashboard_stack.py' },
-          { label: 'set up CDK environment', code: 'npm install -g aws-cdk\n\ncd infra\npython3 -m venv .venv && source .venv/bin/activate\npip install -r requirements.txt\n\n# List all stacks\ncdk ls --context environment=dev --context tenant_id=PILOT-TENANT-001\n# Expected: Ambient-dev-Kms, Ambient-dev-Storage, Ambient-dev-Data,\n#   Ambient-dev-Telemetry, Ambient-dev-UrlMinter, Ambient-dev-Athena,\n#   Ambient-dev-Ella, Ambient-dev-Api, Ambient-dev-CloudTrail, Ambient-dev-Observability, Ambient-dev-Dashboard' },
-          { label: 'synth + diff before first deploy', code: 'cd infra\n\n# Synthesize CloudFormation templates (validates all CDK code)\ncdk synth --all \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001 \\\n  --context facility_ids=\'["FAC-PILOT-001"]\'\n\n# Preview changes against deployed stacks\ncdk diff --all --context environment=dev --context tenant_id=PILOT-TENANT-001' },
+          { label: 'set up CDK environment', code: 'npm install -g aws-cdk\n\ncd infra\npython3 -m venv .venv && source .venv/bin/activate\npip install -r requirements.txt\n\n# List all stacks\ncdk ls --context environment=dev --context tenant_id=mocarev\n# Expected: Ambient-dev-Kms, Ambient-dev-Storage, Ambient-dev-Data,\n#   Ambient-dev-Telemetry, Ambient-dev-UrlMinter, Ambient-dev-Athena,\n#   Ambient-dev-Ella, Ambient-dev-Api, Ambient-dev-CloudTrail, Ambient-dev-Observability, Ambient-dev-Dashboard' },
+          { label: 'synth + diff before first deploy', code: 'cd infra\n\n# Synthesize CloudFormation templates (validates all CDK code)\ncdk synth --all \\\n  --context environment=dev \\\n  --context tenant_id=mocarev \\\n  --context facility_ids=\'["FAC-MOCAREV-001"]\'\n\n# Preview changes against deployed stacks\ncdk diff --all --context environment=dev --context tenant_id=mocarev' },
         ],
       },
       {
@@ -208,8 +208,8 @@ const STEPS: Step[] = [
           ],
         },
         commands: [
-          { label: 'deploy all stacks (manual)', code: 'cd infra\ncdk deploy --all \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001 \\\n  --context facility_ids=\'["FAC-PILOT-001"]\'' },
-          { label: 'deploy a single stack', code: 'cd infra\ncdk deploy Ambient-dev-Telemetry \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001' },
+          { label: 'deploy all stacks (manual)', code: 'cd infra\ncdk deploy --all \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=mocarev \\\n  --context facility_ids=\'["FAC-MOCAREV-001"]\'' },
+          { label: 'deploy a single stack', code: 'cd infra\ncdk deploy Ambient-dev-Telemetry \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=mocarev' },
         ],
         artifacts: [
           { file: 'infra/app.py', role: 'CDK app entry point — instantiates all 10 stacks in dependency order with context-driven tenant configuration.' },
@@ -272,7 +272,7 @@ const STEPS: Step[] = [
         heading: 'Apply core infrastructure',
         commands: [
           { label: 'authenticate to AWS', code: 'aws sso login\n# or: export AWS_PROFILE=ambient\n\n# Verify caller identity\naws sts get-caller-identity\n# Expected: {"Account": "<tenant-account-id>", "Arn": "arn:aws:iam::..."}' },
-          { label: 'deploy KMS stack (4 CMKs)', code: 'cd infra\ncdk deploy Ambient-dev-Kms \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify 4 keys created\naws kms list-aliases --query "Aliases[?contains(AliasName,\'ambient\')]"' },
+          { label: 'deploy KMS stack (4 CMKs)', code: 'cd infra\ncdk deploy Ambient-dev-Kms \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=mocarev\n\n# Verify 4 keys created\naws kms list-aliases --query "Aliases[?contains(AliasName,\'ambient\')]"' },
           { label: 'verify KMS key rotation', code: 'KEY_ID=$(aws kms list-aliases \\\n  --query "Aliases[?AliasName==\'alias/ambient-dev-data-key\'].TargetKeyId" \\\n  --output text)\n\naws kms get-key-rotation-status --key-id $KEY_ID\n# Expected: KeyRotationEnabled: true' },
         ],
       },
@@ -327,7 +327,7 @@ const STEPS: Step[] = [
       {
         heading: 'Apply data plane Terraform',
         commands: [
-          { label: 'deploy Storage, Data, and Athena stacks', code: 'cd infra\ncdk deploy Ambient-dev-Storage Ambient-dev-Data Ambient-dev-Athena \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify DynamoDB tables\naws dynamodb list-tables --query "TableNames[?contains(@, \'ambient-dev\')]"\n\n# Verify Glue tables created\naws glue get-tables \\\n  --database-name ambient_dev_raw \\\n  --query "TableList[].Name"' },
+          { label: 'deploy Storage, Data, and Athena stacks', code: 'cd infra\ncdk deploy Ambient-dev-Storage Ambient-dev-Data Ambient-dev-Athena \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=mocarev\n\n# Verify DynamoDB tables\naws dynamodb list-tables --query "TableNames[?contains(@, \'ambient-dev\')]"\n\n# Verify Glue tables created\naws glue get-tables \\\n  --database-name ambient_dev_raw \\\n  --query "TableList[].Name"' },
           { label: 'verify Athena partition projection', code: '# Partition projection is configured in AthenaStack — no Glue crawler needed\naws athena start-query-execution \\\n  --query-string "SELECT COUNT(*) FROM ambient_dev_raw.frames LIMIT 1" \\\n  --work-group ambient-dev-analytics \\\n  --result-configuration OutputLocation=s3://ambient-<slug>-athena-results-<acct>/queries/\n\naws athena get-query-results \\\n  --query-execution-id <execution-id>' },
           { label: 'verify S3 lifecycle rules', code: '# StorageStack configures lifecycle rules in CDK — verify they were applied\naws s3api get-bucket-lifecycle-configuration \\\n  --bucket ambient-<slug>-parquet-<acct>\n# Expect: abort-multipart, tier-raw (raw/ prefix → IA → Glacier → 7yr expiry), tier-telemetry (telemetry/ prefix → same), expire-firehose-errors (telemetry-errors/ 90d)' },
         ],
@@ -335,7 +335,7 @@ const STEPS: Step[] = [
       {
         heading: 'CloudTrail data events',
         commands: [
-          { label: 'deploy CloudTrail stack', code: 'cd infra\ncdk deploy Ambient-dev-CloudTrail \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify data events on sensitive tables\naws cloudtrail get-event-selectors \\\n  --trail-name ambient-dev-trail\n# Must include: DDB tables (devices, alerts, daily-updates) + S3 parquet bucket' },
+          { label: 'deploy CloudTrail stack', code: 'cd infra\ncdk deploy Ambient-dev-CloudTrail \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=mocarev\n\n# Verify data events on sensitive tables\naws cloudtrail get-event-selectors \\\n  --trail-name ambient-dev-trail\n# Must include: DDB tables (devices, alerts, daily-updates) + S3 parquet bucket' },
         ],
         artifacts: [
           { file: 'infra/stacks/athena_stack.py', role: 'Glue database + raw frames table (16 columns, 4 partition keys: date/facility/subject/device) + Athena workgroup. Partition projection — no crawler.' },
@@ -356,7 +356,7 @@ const STEPS: Step[] = [
         heading: 'Fleet provisioning flow',
         body: 'Devices come off the line with a factory bootstrap cert signed by our root CA. At first boot: (1) device hits the control-plane fleet provisioning endpoint, (2) control plane assumes a cross-account role into the tenant account, (3) mints a tenant-specific X.509 cert via AWS IoT fleet provisioning, (4) device receives tenant cert and deletes bootstrap cert. From that point the device talks only to the tenant IoT endpoint.',
         commands: [
-          { label: 'provision a new device via admin-cli', code: '# Requires: AMBIENT_* env vars pointing to the tenant account\npip install -e services/admin-cli\n\nambientcloud-admin provision \\\n  --device-id DEV-0001 \\\n  --facility-id <facility-uuid> \\\n  --subject-id PILOT-0042\n\n# Verifies: PILOT-NNNN format, no PII fields, registers in DDB + IoT' },
+          { label: 'provision a new device via admin-cli', code: '# Requires: AMBIENT_* env vars pointing to the tenant account\npip install -e services/admin-cli\n\nambientcloud-admin provision \\\n  --device-id DEV-0001 \\\n  --facility-id <facility-uuid> \\\n  --subject-id MOCAREV-0042\n\n# Verifies: MOCAREV-NNNN format, no PII fields, registers in DDB + IoT' },
           { label: 'verify device Thing and certificate', code: 'aws iot describe-thing \\\n  --thing-name DEV-0001 \\\n  --region us-east-1\n\n# Should show: thingArn, thingName, attributes (facilityId, subjectId)\n\naws iot list-thing-principals \\\n  --thing-name DEV-0001\n# Should show: exactly one active certificate ARN' },
           { label: 'decommission a device', code: 'ambientcloud-admin decommission \\\n  --device-id DEV-0001\n\n# Revokes cert in IoT Core + marks registry entry as retired\n# A decommissioned device cannot rejoin the fleet' },
         ],
@@ -385,7 +385,7 @@ const STEPS: Step[] = [
           { label: 'verify credentials provider config', code: '# Devices use IoT Core Credentials Provider to get short-lived AWS creds\n# Used for: url-minter calls + S3 PUT for Parquet uploads\n\naws iot describe-role-alias \\\n  --role-alias ambient-device-role \\\n  --region us-east-1\n\n# credentialDurationSeconds: should be 3600 (1 hour max)\n# roleArn: should grant s3:PutObject on raw-device prefix + url-minter invoke' },
         ],
         artifacts: [
-          { file: 'services/admin-cli/src/ambientcloud_admin/provisioning.py', role: 'Provisioning logic: PILOT-NNNN enforcement, DDB registration, IoT cert lifecycle.' },
+          { file: 'services/admin-cli/src/ambientcloud_admin/provisioning.py', role: 'Provisioning logic: MOCAREV-NNNN enforcement, DDB registration, IoT cert lifecycle.' },
           { file: 'services/admin-cli/rooms.example.yaml', role: 'Example facility+room config for batch provisioning via admin-cli.' },
         ],
         warnings: [
@@ -402,9 +402,9 @@ const STEPS: Step[] = [
       {
         heading: 'Deploy fall alert Lambda',
         commands: [
-          { label: 'deploy TelemetryStack', code: 'cd infra\ncdk deploy Ambient-dev-Telemetry \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify Lambda deployed\naws lambda get-function \\\n  --function-name ambient-dev-alerts-enricher\n# State: Active, Runtime: python3.12' },
+          { label: 'deploy TelemetryStack', code: 'cd infra\ncdk deploy Ambient-dev-Telemetry \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=mocarev\n\n# Verify Lambda deployed\naws lambda get-function \\\n  --function-name ambient-dev-alerts-enricher\n# State: Active, Runtime: python3.12' },
           { label: 'verify IoT Rule and Lambda trigger', code: '# Confirm IoT Rule is active\naws iot get-topic-rule \\\n  --rule-name fall-enricher\n# ruleDisabled: false, actions[0].lambda.functionArn: <lambda-arn>\n\n# Confirm Lambda function exists\naws lambda get-function \\\n  --function-name ambient-dev-fall-enricher\n# State: Active, Runtime: python3.12' },
-          { label: 'inject a synthetic fall event to test end-to-end', code: '# Publish directly to the Rules Engine via Basic Ingest\naws iot-data publish \\\n  --topic "\\$aws/rules/fall-enricher/ambient/v1/alerts/fall/test-001" \\\n  --payload \'{"deviceId":"DEV-0001","eventId":"test-001","ts_utc":"2026-05-07T12:00:00Z","confidence":0.92}\' \\\n  --qos 1 \\\n  --region us-east-1\n\n# Verify DDB write:\naws dynamodb get-item \\\n  --table-name ambient-<tenant>-alerts \\\n  --key \'{"subject_date":{"S":"PILOT-0042_2026-05-07"}}\'  ' },
+          { label: 'inject a synthetic fall event to test end-to-end', code: '# Publish directly to the Rules Engine via Basic Ingest\naws iot-data publish \\\n  --topic "\\$aws/rules/fall-enricher/ambient/v1/alerts/fall/test-001" \\\n  --payload \'{"deviceId":"DEV-0001","eventId":"test-001","ts_utc":"2026-05-07T12:00:00Z","confidence":0.92}\' \\\n  --qos 1 \\\n  --region us-east-1\n\n# Verify DDB write:\naws dynamodb get-item \\\n  --table-name ambient-<tenant>-alerts \\\n  --key \'{"subject_date":{"S":"MOCAREV-0042#2026-05-07"}}\'  ' },
         ],
       },
       {
@@ -444,8 +444,8 @@ const STEPS: Step[] = [
         heading: 'Manage fall-alert subscriptions (admin-cli)',
         body: 'Staff subscribe their phone or email to the fall-alerts SNS topic with a per-facility filter policy. The Lambda publishes with MessageAttributes (facilityId, subjectId, eventType, roomId) — subscriptions filter on facilityId. Requires AMBIENT_ALERT_TOPIC_ARN env var (CDK output: Ambient-dev-Telemetry → FallAlertTopicArn).',
         commands: [
-          { label: 'subscribe a nurse phone to alerts for a facility', code: 'export AMBIENT_ALERT_TOPIC_ARN=$(aws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Telemetry \\\n  --query "Stacks[0].Outputs[?OutputKey==\'FallAlertTopicArn\'].OutputValue" \\\n  --output text)\n\n# SMS — nurse must confirm the subscription text\nambientcloud-admin add-subscriber \\\n  --facility-id FAC-PILOT-001 \\\n  --protocol sms \\\n  --endpoint "+15550001234"\n\n# Email\nambientcloud-admin add-subscriber \\\n  --facility-id FAC-PILOT-001 \\\n  --protocol email \\\n  --endpoint "nurse@hospital.com"\n\n# Narrow to specific rooms (unit-specific staff)\nambientcloud-admin add-subscriber \\\n  --facility-id FAC-PILOT-001 \\\n  --protocol sms \\\n  --endpoint "+15550005678" \\\n  --room-id ROOM-201 --room-id ROOM-202' },
-          { label: 'list and remove subscriptions', code: '# List all subscriptions\nambientcloud-admin list-subscribers\n\n# Filter by facility\nambientcloud-admin list-subscribers --facility-id FAC-PILOT-001\n\n# Remove a subscription by ARN\nambientcloud-admin remove-subscriber \\\n  arn:aws:sns:us-east-1:<acct>:ambient-dev-fall-alerts:<uuid>\n# Prompts for confirmation' },
+          { label: 'subscribe a nurse phone to alerts for a facility', code: 'export AMBIENT_ALERT_TOPIC_ARN=$(aws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Telemetry \\\n  --query "Stacks[0].Outputs[?OutputKey==\'FallAlertTopicArn\'].OutputValue" \\\n  --output text)\n\n# SMS — nurse must confirm the subscription text\nambientcloud-admin add-subscriber \\\n  --facility-id FAC-MOCAREV-001 \\\n  --protocol sms \\\n  --endpoint "+15550001234"\n\n# Email\nambientcloud-admin add-subscriber \\\n  --facility-id FAC-MOCAREV-001 \\\n  --protocol email \\\n  --endpoint "nurse@hospital.com"\n\n# Narrow to specific rooms (unit-specific staff)\nambientcloud-admin add-subscriber \\\n  --facility-id FAC-MOCAREV-001 \\\n  --protocol sms \\\n  --endpoint "+15550005678" \\\n  --room-id ROOM-201 --room-id ROOM-202' },
+          { label: 'list and remove subscriptions', code: '# List all subscriptions\nambientcloud-admin list-subscribers\n\n# Filter by facility\nambientcloud-admin list-subscribers --facility-id FAC-MOCAREV-001\n\n# Remove a subscription by ARN\nambientcloud-admin remove-subscriber \\\n  arn:aws:sns:us-east-1:<acct>:ambient-dev-fall-alerts:<uuid>\n# Prompts for confirmation' },
         ],
       },
       {
@@ -463,8 +463,8 @@ const STEPS: Step[] = [
       {
         heading: 'Deploy url-minter Lambda',
         commands: [
-          { label: 'deploy UrlMinterStack', code: 'cd infra\ncdk deploy Ambient-dev-UrlMinter \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify Lambda + Function URL deployed\naws lambda get-function-url-config \\\n  --function-name ambient-dev-url-minter\n# Expected: AuthType: AWS_IAM, FunctionUrl: https://<id>.lambda-url.us-east-1.on.aws/' },
-          { label: 'test presigned URL issuance', code: '# url-minter validates IoT ThingName + Shadow desired state before issuing URL\n# S3 key format: raw/date=YYYY-MM-DD/facility=<id>/subject=PILOT-NNNN/device=DEV-XXXX/batch.parquet\ncurl -X POST \\\n  https://<fn-url>.lambda-url.us-east-1.on.aws/ \\\n  --aws-sigv4 "aws:amz:us-east-1:lambda" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"deviceId":"DEV-0001","sha256":"<hex>","s3Key":"raw/date=2026-05-10/facility=<uuid>/subject=PILOT-0042/device=DEV-0001/batch-001.parquet","contentType":"application/octet-stream"}\'\n# Expected: {"url": "https://s3.amazonaws.com/ambient-<slug>-parquet-<acct>/...", "expiresIn": 300}' },
+          { label: 'deploy UrlMinterStack', code: 'cd infra\ncdk deploy Ambient-dev-UrlMinter \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=mocarev\n\n# Verify Lambda + Function URL deployed\naws lambda get-function-url-config \\\n  --function-name ambient-dev-url-minter\n# Expected: AuthType: AWS_IAM, FunctionUrl: https://<id>.lambda-url.us-east-1.on.aws/' },
+          { label: 'test presigned URL issuance', code: '# url-minter validates IoT ThingName + Shadow desired state before issuing URL\n# S3 key format: raw/date=YYYY-MM-DD/facility=<id>/subject=MOCAREV-NNNN/device=DEV-XXXX/batch.parquet\ncurl -X POST \\\n  https://<fn-url>.lambda-url.us-east-1.on.aws/ \\\n  --aws-sigv4 "aws:amz:us-east-1:lambda" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"deviceId":"DEV-0001","sha256":"<hex>","s3Key":"raw/date=2026-05-10/facility=<uuid>/subject=MOCAREV-0042/device=DEV-0001/batch-001.parquet","contentType":"application/octet-stream"}\'\n# Expected: {"url": "https://s3.amazonaws.com/ambient-<slug>-parquet-<acct>/...", "expiresIn": 300}' },
         ],
       },
       {
@@ -472,8 +472,8 @@ const STEPS: Step[] = [
         body: 'Per-facility telemetry mode config lives in DDB under a FAC#<facilityId> synthetic key. Promote moves a facility to parquet_only; demote rolls back to dual_write (no alarm gate — it is always safe to roll back). Never promote if TelemetryDivergence is ALARM.',
         commands: [
           { label: 'check telemetry migration status (all facilities)', code: 'ambientcloud-admin migration-status\n# Shows: facility / mode / devices / updated_at / alarm\n# Facilities not yet promoted show dual_write\n# TelemetryDivergence alarm state shown in rightmost column' },
-          { label: 'promote a facility to parquet-only', code: '# Gate: TelemetryDivergence alarm must be OK (< 0.1% divergence)\n# Writes FAC# config row to DDB + pushes shadow to every active device\nambientcloud-admin promote --facility-id FAC-PILOT-001\n\n# If the alarm is currently in ALARM state but you need to force:\nambientcloud-admin promote --facility-id FAC-PILOT-001 --force\n# Note: --force should only be used when you understand why the alarm fired' },
-          { label: 'demote a facility (rollback to dual_write)', code: '# Emergency rollback — no alarm gate, succeeds unconditionally\n# Reverts facility config row + pushes dual_write shadow to all active devices\nambientcloud-admin demote --facility-id FAC-PILOT-001\n# Confirm the prompt; command reverts to Firehose dual-write mode' },
+          { label: 'promote a facility to parquet-only', code: '# Gate: TelemetryDivergence alarm must be OK (< 0.1% divergence)\n# Writes FAC# config row to DDB + pushes shadow to every active device\nambientcloud-admin promote --facility-id FAC-MOCAREV-001\n\n# If the alarm is currently in ALARM state but you need to force:\nambientcloud-admin promote --facility-id FAC-MOCAREV-001 --force\n# Note: --force should only be used when you understand why the alarm fired' },
+          { label: 'demote a facility (rollback to dual_write)', code: '# Emergency rollback — no alarm gate, succeeds unconditionally\n# Reverts facility config row + pushes dual_write shadow to all active devices\nambientcloud-admin demote --facility-id FAC-MOCAREV-001\n# Confirm the prompt; command reverts to Firehose dual-write mode' },
         ],
         artifacts: [
           { file: 'docs/device-parquet-sink.md', role: 'Device-side Parquet cold path spec — WAL design, presigned URL flow, dual-write migration, promotion criteria.' },
@@ -488,13 +488,13 @@ const STEPS: Step[] = [
   },
   {
     id: 'narrative', phase: '09', title: 'Narrative Path — Ella + Bedrock', status: 'done', tag: 'Deploy', time: '~1 hr',
-    summary: 'EventBridge cron fires at 07:00 and 19:00 → SQS fanout → Ella Lambda → Bedrock Claude Sonnet 4.6 → DynamoDB daily-updates. Produces de-identified 12h activity summaries for clinical staff.',
+    summary: 'EventBridge cron fires at 12:00 and 00:00 UTC (07:00 + 19:00 CT) → SQS fanout → Ella Lambda → Bedrock Sonnet 4 cross-region inference profile → DynamoDB daily-updates. Athena injected partition projection on device column: device_ids looked up from DDB per-subject before each query. Produces de-identified 12h activity summaries for clinical staff.',
     sections: [
       {
         heading: 'Deploy Ella narrative service',
         commands: [
-          { label: 'deploy EllaStack', code: 'cd infra\ncdk deploy Ambient-dev-Ella \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001 \\\n  --context facility_ids=\'["FAC-PILOT-001"]\'\n\n# Verify EventBridge rules created (2 crons × facilities)\naws events list-rules \\\n  --event-bus-name default \\\n  --name-prefix Ambient-dev-Ella\n# Should show 2 rules per facility: cron(0 12 * * ? *) and cron(0 0 * * ? *)' },
-          { label: 'trigger a test narrative for one subject', code: '# Direct Lambda invoke for a single subject (bypasses SQS fanout)\naws lambda invoke \\\n  --function-name ambient-dev-ella \\\n  --payload \'{"subjectId":"PILOT-0042","facilityId":"<uuid>","window_hours":12}\' \\\n  --cli-binary-format raw-in-base64-out \\\n  /tmp/ella-response.json\n\ncat /tmp/ella-response.json\n# Expected: {"statusCode": 200, "narrative": "...", "subject": "PILOT-0042"}\n# Narrative must NOT contain names, DOBs, MRNs, or demographic detail' },
+          { label: 'deploy EllaStack', code: 'cd infra\ncdk deploy Ambient-dev-Ella \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=mocarev \\\n  --context facility_ids=\'["FAC-MOCAREV-001"]\'\n\n# Verify EventBridge rules created (2 crons × facilities)\naws events list-rules \\\n  --event-bus-name default \\\n  --name-prefix Ambient-dev-Ella\n# Should show 2 rules per facility: cron(0 12 * * ? *) and cron(0 0 * * ? *)' },
+          { label: 'trigger a test narrative for one subject', code: '# Direct Lambda invoke for a single subject (bypasses SQS fanout)\naws lambda invoke \\\n  --function-name ambient-dev-ella \\\n  --payload \'{"mode":"single","facility_id":"FAC-MOCAREV-001","subject_id":"MOCAREV-0042"}\' \\\n  --cli-binary-format raw-in-base64-out \\\n  /tmp/ella-response.json\n\ncat /tmp/ella-response.json\n# Expected: {"status": "generated", "subject_id": "MOCAREV-0042", "narrativeLength": 735}\n# Narrative must NOT contain names, DOBs, MRNs, or demographic detail' },
         ],
       },
       {
@@ -502,12 +502,12 @@ const STEPS: Step[] = [
         table: {
           cols: ['Parameter', 'Value', 'Notes'],
           rows: [
-            ['Model ID',         'anthropic.claude-sonnet-4-6-20260217-v1:0', 'Live since 2026-05-11 — HIPAA-eligible on Bedrock. De-id regression covered by integration test.'],
-            ['Region',           'us-east-1',                                  'Must match tenant account region — no cross-region Bedrock calls'],
+            ['Model ID',         'us.anthropic.claude-sonnet-4-20250514-v1:0', 'Cross-region inference profile — routes to us-east-1/us-east-2/us-west-2. Model access must be approved in all three regions. IAM wildcard: arn:aws:bedrock:*::foundation-model/anthropic.* + inference-profile/us.anthropic.*'],
+            ['Region',           'us-east-1 (deploy)',                         'Inference profile routes to us-east-1, us-east-2, us-west-2 — model access approval required in all three via Bedrock console'],
             ['Max tokens',       '1024',                                        'Sufficient for 12h summary — increase to 2048 if summaries truncate'],
             ['Temperature',      '0.3',                                         'Low temp for clinical consistency — not creative generation'],
             ['System prompt',    'services/ella/src/system_prompt.txt',        'De-identification instructions + forbidden-attribute guard'],
-            ['Upgrade path',     'claude-sonnet-4-6 ✓ live',            'Upgraded 2026-05-11. Integration test test_on_demand_narrative_generation covers de-id regression — any model upgrade must keep this test green.'],
+            ['Upgrade path',     'Sonnet 4 ✓ live (2026-05-11)',      'Upgraded from Sonnet 4.5 → Sonnet 4. Cross-region inference activated. De-id regression test covers any future upgrade.'],
           ],
         },
       },
@@ -521,7 +521,7 @@ const STEPS: Step[] = [
           { file: 'infra/stacks/ella_stack.py', role: 'EllaStack: SQS fanout + DLQ, Ella Lambda, EventBridge crons (cron(0 12 * * ? *) and cron(0 0 * * ? *) UTC = 07:00 + 19:00 CT).' },
         ],
         warnings: [
-          'Sonnet 4.6 is now live (upgraded 2026-05-11). Before any future model upgrade, re-run the de-id integration test (test_on_demand_narrative_generation) and confirm forbidden_patterns are absent. Document the eval as a PR comment.',
+          'Sonnet 4 cross-region inference profile is live (upgraded 2026-05-11). Model access must be approved in us-east-1, us-east-2, and us-west-2 via AWS Bedrock console — Ella SQS fanout will fail in any region without approval. Before any future model upgrade, re-run the de-id integration test and confirm forbidden_patterns are absent.',
           'Ella reads from the Athena telemetry view, which UNIONs both cold paths during dual-write. After all facilities are promoted to parquet_only, the view collapses to telemetry_device. No Ella code changes are needed — but verify Ella narratives remain consistent before and after the view transition.',
         ],
       },
@@ -529,13 +529,13 @@ const STEPS: Step[] = [
   },
   {
     id: 'api-auth', phase: '10', title: 'API & Auth — FastAPI + Cognito', status: 'done', tag: 'Deploy', time: '~2 hrs',
-    summary: 'FastAPI Lambda behind API Gateway HTTP API with Cognito JWT authorizer. Sixteen endpoints with row-level facility scoping. Alert list endpoints return paginated AlertPage responses. Admin user management routes (list/reset-password/disable/enable) backed by Cognito admin APIs. Users provisioned by admin-cli only — no self-signup. Hardening sprint (commit 522c338): Cognito Advanced Security ENFORCED on the UserPool — adaptive authentication, compromised credential detection, and account takeover protection.',
+    summary: 'FastAPI Lambda behind API Gateway HTTP API with Cognito JWT authorizer. Sixteen endpoints with row-level facility scoping. Alert list endpoints return paginated AlertPage responses. Admin user management routes (list/reset-password/disable/enable) backed by Cognito admin APIs. Users provisioned by admin-cli only — no self-signup. Hardening sprint (commit 522c338): Cognito Advanced Security — account on ESSENTIALS tier (ENFORCED tier not available); MFA email-OTP configured; suspicious activity logging enabled.',
     sections: [
       {
         heading: 'Deploy API service',
         commands: [
-          { label: 'deploy ApiStack', code: 'cd infra\ncdk deploy Ambient-dev-Api \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=PILOT-TENANT-001\n\n# Verify API endpoint\naws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Api \\\n  --query "Stacks[0].Outputs[?OutputKey==\'ApiEndpoint\'].OutputValue"\n\n# Verify Lambda\naws lambda get-function \\\n  --function-name ambient-dev-api' },
-          { label: 'provision the first admin user', code: '# Set AMBIENT_USER_POOL_ID from CDK stack output:\nexport AMBIENT_USER_POOL_ID=$(aws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Api \\\n  --query "Stacks[0].Outputs[?OutputKey==\'UserPoolId\'].OutputValue" \\\n  --output text)\n\n# Provision an admin (access to one or more facilities)\nambientcloud-admin create-admin \\\n  --email admin@facility.org \\\n  --facility-id FAC-PILOT-001\n\n# Provision a nurse (single facility, read-only dashboard access)\nambientcloud-admin create-nurse \\\n  --email nurse@facility.org \\\n  --facility-id FAC-PILOT-001\n\n# Verify Cognito attributes:\naws cognito-idp admin-get-user \\\n  --user-pool-id $AMBIENT_USER_POOL_ID \\\n  --username admin@facility.org\n# custom:role: admin, custom:facilityIds: FAC-PILOT-001' },
+          { label: 'deploy ApiStack', code: 'cd infra\ncdk deploy Ambient-dev-Api \\\n  --require-approval never \\\n  --context environment=dev \\\n  --context tenant_id=mocarev\n\n# Verify API endpoint\naws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Api \\\n  --query "Stacks[0].Outputs[?OutputKey==\'ApiEndpoint\'].OutputValue"\n\n# Verify Lambda\naws lambda get-function \\\n  --function-name ambient-dev-api' },
+          { label: 'provision the first admin user', code: '# Set AMBIENT_USER_POOL_ID from CDK stack output:\nexport AMBIENT_USER_POOL_ID=$(aws cloudformation describe-stacks \\\n  --stack-name Ambient-dev-Api \\\n  --query "Stacks[0].Outputs[?OutputKey==\'UserPoolId\'].OutputValue" \\\n  --output text)\n\n# Provision an admin (access to one or more facilities)\nambientcloud-admin create-admin \\\n  --email admin@facility.org \\\n  --facility-id FAC-MOCAREV-001\n\n# Provision a nurse (single facility, read-only dashboard access)\nambientcloud-admin create-nurse \\\n  --email nurse@facility.org \\\n  --facility-id FAC-MOCAREV-001\n\n# Verify Cognito attributes:\naws cognito-idp admin-get-user \\\n  --user-pool-id $AMBIENT_USER_POOL_ID \\\n  --username admin@facility.org\n# custom:role: admin, custom:facilityIds: FAC-MOCAREV-001' },
           { label: 'smoke-test key API endpoints', code: '# Get JWT via Cognito\nTOKEN=$(aws cognito-idp initiate-auth \\\n  --auth-flow USER_PASSWORD_AUTH \\\n  --auth-parameters USERNAME=admin@facility.org,PASSWORD=<pass> \\\n  --client-id <client-id> \\\n  --query "AuthenticationResult.IdToken" --output text)\n\n# List subjects (facility-scoped)\ncurl -H "Authorization: Bearer $TOKEN" \\\n  https://<api-id>.execute-api.us-east-1.amazonaws.com/prod/subjects\n\n# List recent alerts\ncurl -H "Authorization: Bearer $TOKEN" \\\n  https://<api-id>.execute-api.us-east-1.amazonaws.com/prod/alerts?limit=10' },
         ],
       },
@@ -643,7 +643,7 @@ curl -H "Authorization: Bearer $TOKEN" \\
         heading: 'Cognito user lifecycle commands (admin-cli)',
         body: 'User lifecycle management via admin-cli uses Cognito admin APIs scoped to the tenant UserPool. AMBIENT_USER_POOL_ID must be set from the ApiStack output.',
         commands: [
-          { label: 'list users (paginated, optional facility filter)', code: '# List all users in the pool (paginated)\nambientcloud-admin list-users\n\n# Filter by facility\nambientcloud-admin list-users --facility-id FAC-PILOT-001\n\n# Calls: cognito-idp admin_list_users with facility filter via list_users AttributesToGet' },
+          { label: 'list users (paginated, optional facility filter)', code: '# List all users in the pool (paginated)\nambientcloud-admin list-users\n\n# Filter by facility\nambientcloud-admin list-users --facility-id FAC-MOCAREV-001\n\n# Calls: cognito-idp admin_list_users with facility filter via list_users AttributesToGet' },
           { label: 'reset a user password', code: '# Sends a temporary password to the user email — user must change on next login\nambientcloud-admin reset-password \\\n  --username nurse@facility.org\n\n# Calls: cognito-idp admin_reset_user_password\n# User receives a Cognito-generated temporary password via email' },
           { label: 'disable a user', code: '# Prevents the user from signing in (does NOT delete the account)\nambientcloud-admin disable-user \\\n  --username nurse@facility.org\n\n# Calls: cognito-idp admin_disable_user\n# Existing sessions remain valid until token expiry (~1 hour)' },
           { label: 'enable a user', code: '# Re-enables a previously disabled user account\nambientcloud-admin enable-user \\\n  --username nurse@facility.org\n\n# Calls: cognito-idp admin_enable_user' },
@@ -859,14 +859,14 @@ const STACK_SPECS = [
   { label: 'Region',    value: 'us-east-1',        sub: 'AWS · single-region pilot' },
   { label: 'Runtime',   value: 'Python 3.12',       sub: 'Lambda + FastAPI + boto3' },
   { label: 'IaC',       value: 'AWS CDK v2',         sub: 'Python · unified infra/app.py' },
-  { label: 'AI Model',  value: 'Sonnet 4.6',         sub: 'Bedrock · HIPAA-eligible' },
+  { label: 'AI Model',  value: 'Sonnet 4',         sub: 'Bedrock · HIPAA-eligible' },
   { label: 'Standard',  value: 'HIPAA §164.514(c)',  sub: 'Coded data · IRB protocol' },
 ];
 
 const CHECKLIST_ITEMS = [
   'Architecture v4 reviewed and approved',
   'IRB protocol documented — no PII in any data path',
-  'Subject ID format PILOT-NNNN enforced by admin-cli',
+  'Subject ID format MOCAREV-NNNN enforced by admin-cli',
   'Three-layer PII grep passing on all service PRs',
   'Tenant KMS CMK provisioned and aliased',
   'VPC endpoints active: S3, KMS, Secrets Manager, DynamoDB',
@@ -875,7 +875,7 @@ const CHECKLIST_ITEMS = [
   'CloudTrail data events on devices/alerts/daily-updates tables',
   'CloudTrail data events on Parquet S3 bucket',
   'IoT fleet provisioning configured and tested',
-  'admin-cli provisioning: PILOT-NNNN format enforced',
+  'admin-cli provisioning: MOCAREV-NNNN format enforced',
   'Fall alert Lambda deployed — synthetic event test passed',
   'SNS subscriptions verified for all facility staff',
   'url-minter Lambda deployed — presigned URL test passed',

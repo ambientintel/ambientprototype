@@ -212,21 +212,21 @@ const STEPS: Step[] = [
   },
   {
     id: 'deident', phase: '05', title: 'De-identification Keyring', status: 'done', tag: 'Build', time: '~1 day',
-    summary: 'Zero-cloud de-identification boundary: the API only returns coded PILOT-NNNN identifiers. Nurses load an AES-GCM encrypted keyring file at shift start. Name resolution happens in the browser — no PHI leaves the workstation.',
+    summary: 'Zero-cloud de-identification boundary: the API only returns coded MOCAREV-NNNN identifiers. Nurses load an AES-GCM encrypted keyring file at shift start. Name resolution happens in the browser — no PHI leaves the workstation.',
     sections: [
       {
         heading: 'Architecture',
-        body: 'The ambientcloud backend assigns each resident a coded ID (PILOT-0001 through PILOT-0012) and never transmits names over the wire. The nurse\'s workstation holds an encrypted keyring file (keyring.enc) that maps coded IDs to resident names. At shift start, the nurse provides a passphrase; the app derives an AES-GCM key, decrypts the keyring in memory, and hydrates the UI. The passphrase and plaintext keyring are never persisted.',
+        body: 'The ambientcloud backend assigns each resident a coded ID (MOCAREV-0001 through MOCAREV-0030) and never transmits names over the wire. The nurse\'s workstation holds an encrypted keyring file (keyring.enc) that maps coded IDs to resident names. At shift start, the nurse provides a passphrase; the app derives an AES-GCM key, decrypts the keyring in memory, and hydrates the UI. The passphrase and plaintext keyring are never persisted.',
         artifacts: [
           { file: 'apps/web/src/lib/keyring.ts',               role: 'AES-GCM encrypt/decrypt, PBKDF2 key derivation, in-memory identity map.' },
           { file: 'apps/web/src/components/KeyringUnlock.tsx',  role: 'Shift-start modal. Accepts passphrase, decrypts keyring, stores map in React context.' },
-          { file: 'apps/web/src/context/IdentityContext.tsx',   role: 'React context that holds the decrypted PILOT-ID → name map for the session.' },
+          { file: 'apps/web/src/context/IdentityContext.tsx',   role: 'React context that holds the decrypted MOCAREV-ID → name map for the session.' },
         ],
       },
       {
         heading: 'Keyring file format',
         commands: [
-          { label: 'generate a keyring for the pilot', code: '# Run the provisioning script (requires Node 20):\nnode scripts/provision-keyring.mjs \\\n  --passphrase "shift-passphrase-here" \\\n  --map \'{"PILOT-0001":"Room 301 Resident","PILOT-0002":"Room 302 Resident",...}\'\n  --out keyring.enc\n\n# keyring.enc: base64(iv + ciphertext + authTag)\n# Distribute securely — do NOT commit to git' },
+          { label: 'generate a keyring for the pilot', code: '# Run the provisioning script (requires Node 20):\nnode scripts/provision-keyring.mjs \\\n  --passphrase "shift-passphrase-here" \\\n  --map \'{"MOCAREV-0001":"Room 301 Resident","MOCAREV-0002":"Room 302 Resident",...}\'\n  --out keyring.enc\n\n# keyring.enc: base64(iv + ciphertext + authTag)\n# Distribute securely — do NOT commit to git' },
           { label: 'verify decryption', code: 'node scripts/verify-keyring.mjs \\\n  --passphrase "shift-passphrase-here" \\\n  --keyring keyring.enc\n# Prints resolved names to stdout — for verification only' },
         ],
         warnings: [
@@ -453,7 +453,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'deploy', phase: '12', title: 'Vercel Deploy', status: 'done', tag: 'Ship', time: '~1 hr',
-    summary: 'Live at ellamemory.com. Vercel production deploy on main branch. Service account (ella-web-service) Cognito password synced. Room sidebar loads from /api/ambient/subjects?facility_id=FAC-PILOT-001. WorkOS SSO active. Preview deploys on every PR.',
+    summary: 'Live at ellamemory.com. Vercel production deploy on main branch. Service account (ella-web-service) Cognito password synced. Room sidebar loads from /api/ambient/subjects?facility_id=FAC-MOCAREV-001. WorkOS SSO active. Preview deploys on every PR.',
     sections: [
       {
         heading: 'Vercel project setup',
@@ -550,7 +550,7 @@ const CHECKLIST_ITEMS = [
   'WorkOS application created and REDIRECT_URI set',
   'AuthKit SSO flow working (sign in / sign out)',
   'De-identification keyring implemented (AES-GCM)',
-  'Pilot ID map created (PILOT-0001 to PILOT-0012)',
+  'Pilot ID map created (MOCAREV-0001 to MOCAREV-0030)',
   'Dashboard overview renders with room grid + alerts',
   'Floor map heatmap functional',
   'Room detail: Ella narrative loads',

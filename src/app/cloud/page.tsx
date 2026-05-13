@@ -79,14 +79,14 @@ const RUNBOOK_DETAILS: Record<string, RunbookDetail> = {
   'Fall alert — false positive': { severity: 'P3', ttr: '10 min', escalateTo: 'Clinical team', steps: ['Confirm alert in DynamoDB alerts table (subject_id, event_ts)', 'Check radar_raw Parquet data for the frame window', 'Review Device Shadow zone/room assignment — misassignment can cause false alerts', 'Pull Ella narrative for context — does it corroborate the alert?', 'If systematic: adjust IoT Rule SQL filter threshold in telemetry module', 'Document in clinical log with subject_id and timestamp for IRB review'] },
   'Fall alert — missed': { severity: 'P1', ttr: '5 min', escalateTo: 'Clinical on-call + VP Engineering', steps: ['IMMEDIATE: confirm patient wellbeing via nursing staff', 'Check IoT Core message logs for MQTT topic ambient/{device_id}/fall', 'Check fall-enricher Lambda logs — did it receive the event?', 'Verify SNS topic subscription for the facility is active', 'Check DLQ for fall-enricher — did it fail silently?', 'Review TelemetryDivergence metric for device health', 'Escalate to clinical on-call and VP Engineering immediately'] },
   'IRB data request': { severity: 'P3', ttr: '2 days', escalateTo: 'IRB coordinator', steps: ['Verify requestor identity and IRB authorization letter', 'Pull coded subject_id from devices table — confirm no PII in data', 'Run Athena query scoped to specific date range and facility', 'Verify data is HIPAA §164.514(c) compliant — no names, DOBs, MRNs', 'Export results to CloudTrail-audited S3 path', 'Coordinate with IRB coordinator for data transfer protocol', 'Log access event with timestamp and requestor ID'] },
-  'Narrative broken': { severity: 'P2', ttr: '20 min', escalateTo: 'AI platform on-call', steps: ['Check Ella Lambda CloudWatch logs for Bedrock API errors', 'Verify Bedrock model: us.anthropic.claude-sonnet-4-5-20251001-v1:0', 'Check SQS fanout queue depth and DLQ depth', 'Confirm Athena workgroup healthy and query not timing out', 'Test manual invocation of ambient-dev-ella with sample payload', 'If Bedrock throttled: check service quotas and increase', 'Verify EventBridge cron rule is enabled (7am + 7pm UTC)'] },
+  'Narrative broken': { severity: 'P2', ttr: '20 min', escalateTo: 'AI platform on-call', steps: ['Check Ella Lambda CloudWatch logs for Bedrock API errors', 'Verify Bedrock model: us.anthropic.claude-sonnet-4-20250514-v1:0', 'Check SQS fanout queue depth and DLQ depth', 'Confirm Athena workgroup healthy and query not timing out', 'Test manual invocation of ambient-dev-ella with sample payload', 'If Bedrock throttled: check service quotas and increase', 'Verify EventBridge cron rule is enabled (7am + 7pm UTC)'] },
   'Telemetry gap': { severity: 'P2', ttr: '15 min', escalateTo: 'Backend on-call', steps: ['Check TelemetryDivergence CloudWatch metric — expected: 0', 'Compare Athena row counts: new S3 path vs legacy Firehose path', 'Check url-minter Lambda — is it issuing presigned URLs? (UrlsIssued metric)', 'Verify device Parquet uploads arriving in S3 (raw-device/ prefix)', 'If new path failing: check SigV4 signing and Shadow scope check', 'If legacy path failing: check Firehose delivery stream status', 'Page backend on-call if divergence > 100 rows after 15 min'] },
 };
 
 const ELLA_NARRATIVES = [
-  { subjectId: 'PILOT-2847', facility: 'Riverview · Room 112', date: '2026-05-04', amPm: 'PM', tokens: 312, text: 'No fall events recorded in the past 12 hours. Overnight movement patterns (10:45 PM – 6:12 AM) suggest consistent sleep with a brief bathroom visit at 3:17 AM — duration approximately 4 minutes, normal range. Daytime activity moderate: prolonged stationary periods at 9:20 AM and 1:45 PM consistent with seated rest. No anomalous radar signatures detected. Fall risk assessment: low.' },
-  { subjectId: 'PILOT-3104', facility: 'Riverview · Room 208', date: '2026-05-04', amPm: 'PM', tokens: 287, text: 'One fall-zone proximity event at 7:33 AM — subject entered the bathroom and paused 18 seconds in a high-risk posture zone before resuming normal movement. No alert threshold crossed. Gait pattern throughout the day shows slight asymmetry consistent with prior clinical notes. Evening activity normal. Recommend clinical review of morning bathroom routine.' },
-  { subjectId: 'PILOT-1922', facility: 'Sunridge · Room 44',   date: '2026-05-03', amPm: 'AM', tokens: 298, text: 'Elevated overnight movement: 6 distinct excursions detected between 11 PM and 5 AM (prior baseline: 1–2). No fall events, but increased nocturnal activity warrants nursing staff review. Daytime behavioral pattern nominal. Ella confidence in subject tracking: 97% (single occupancy confirmed via Device Shadow).' },
+  { subjectId: 'MOCAREV-2847', facility: 'Riverview · Room 112', date: '2026-05-04', amPm: 'PM', tokens: 312, text: 'No fall events recorded in the past 12 hours. Overnight movement patterns (10:45 PM – 6:12 AM) suggest consistent sleep with a brief bathroom visit at 3:17 AM — duration approximately 4 minutes, normal range. Daytime activity moderate: prolonged stationary periods at 9:20 AM and 1:45 PM consistent with seated rest. No anomalous radar signatures detected. Fall risk assessment: low.' },
+  { subjectId: 'MOCAREV-3104', facility: 'Riverview · Room 208', date: '2026-05-04', amPm: 'PM', tokens: 287, text: 'One fall-zone proximity event at 7:33 AM — subject entered the bathroom and paused 18 seconds in a high-risk posture zone before resuming normal movement. No alert threshold crossed. Gait pattern throughout the day shows slight asymmetry consistent with prior clinical notes. Evening activity normal. Recommend clinical review of morning bathroom routine.' },
+  { subjectId: 'MOCAREV-1922', facility: 'Sunridge · Room 44',   date: '2026-05-03', amPm: 'AM', tokens: 298, text: 'Elevated overnight movement: 6 distinct excursions detected between 11 PM and 5 AM (prior baseline: 1–2). No fall events, but increased nocturnal activity warrants nursing staff review. Daytime behavioral pattern nominal. Ella confidence in subject tracking: 97% (single occupancy confirmed via Device Shadow).' },
 ];
 
 const PLAN_RESOURCES: Record<string, string[]> = {
@@ -183,7 +183,7 @@ resource "aws_lambda_function" "ella" {
       ATHENA_DATABASE  = var.telemetry_database
       ATHENA_WORKGROUP = var.athena_workgroup
       ATHENA_OUTPUT    = var.athena_output
-      BEDROCK_MODEL    = "us.anthropic.claude-sonnet-4-5-20251001-v1:0"
+      BEDROCK_MODEL    = "us.anthropic.claude-sonnet-4-20250514-v1:0"
     }
   }
 }
@@ -1096,7 +1096,7 @@ function ArchDiagram() {
           <Arr />
           <Node label="SQS fanout" sub="DLQ on 3× failure" type="narrative" />
           <Arr />
-          <Node label="Bedrock" sub="Claude Sonnet 4.5 · HIPAA eligible" type="narrative" />
+          <Node label="Bedrock" sub="Claude Sonnet 4 · HIPAA eligible" type="narrative" />
           <Arr />
           <Node label="DynamoDB" sub="daily-updates · 90-day TTL" type="narrative" />
         </Row>
@@ -1129,7 +1129,7 @@ function ArchDiagram() {
             <Node label="S3 + DynamoDB" sub="all tables encrypted" type="audit" />
           </Row>
           <Row>
-            <Node label="Admin CLI" sub="PILOT-XXXX enforcement" type="audit" />
+            <Node label="Admin CLI" sub="MOCAREV-XXXX enforcement" type="audit" />
             <Arr />
             <Node label="devices DDB + Shadow" type="audit" />
           </Row>
@@ -1314,7 +1314,7 @@ export default function CloudPage() {
     await sleep(500);
     setProvisionLog(p => [...p, `Issuing bootstrap X.509 certificate...`]);
     await sleep(700);
-    setProvisionLog(p => [...p, `✓  Cert issued · serial PILOT-${provisionAccountId.slice(-4)}`]);
+    setProvisionLog(p => [...p, `✓  Cert issued · serial MOCAREV-${provisionAccountId.slice(-4)}`]);
     await sleep(400);
     setProvisionLog(p => [...p, `Registering in control plane DynamoDB...`]);
     await sleep(600);
@@ -1562,7 +1562,7 @@ export default function CloudPage() {
                                       <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#a855f7', fontWeight: 500 }}>{n.subjectId}</span>
                                       <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)' }}>{n.facility}</span>
                                       <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-4)' }}>{n.date} · {n.amPm}</span>
-                                      <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-4)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 3, padding: '1px 6px' }}>{n.tokens} tokens · claude-sonnet-4-5</span>
+                                      <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-4)', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 3, padding: '1px 6px' }}>{n.tokens} tokens · claude-sonnet-4</span>
                                     </div>
                                     <p style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.65, margin: 0, fontStyle: 'italic' }}>{n.text}</p>
                                   </div>

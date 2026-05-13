@@ -123,10 +123,10 @@ const DOMAINS = [
     specs: [
       { k: 'Region',  v: 'us-east-1' },
       { k: 'Runtime', v: 'Python 3.12' },
-      { k: 'AI',      v: 'Sonnet 4.6' },
+      { k: 'AI',      v: 'Sonnet 4' },
       { k: 'IaC',     v: 'CDK v2' },
     ],
-    description: 'CDK v2 · 11 CloudFormation stacks live · 18 API endpoints · 166 unit tests · 9 smoke tests. ambient-device-policy deployed to IoT Core. X-Ray tracing, reserved concurrency, HIPAA 7-yr TTL, Cognito Advanced Security ENFORCED. 5-job CI/CD pipeline.',
+    description: 'CDK v2 · 11 CloudFormation stacks live · 18 API endpoints · 163 unit tests · 9 smoke tests. MOCAREV-NNNN coded subject IDs per study-mvp.md §1.5. Ella narratives live via Bedrock Sonnet 4 (cross-region inference) — Athena partition-projection fixed. X-Ray tracing, reserved concurrency, HIPAA 7-yr TTL. 5-job CI/CD pipeline.',
     currentStep: '12 · Production Sign-Off',
     freezeKey: 'ambient-cloud-frozen-v1',
     freezeLabel: 'Production Freeze',
@@ -231,11 +231,11 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve Apple Developer account -20209 lock via Apple Support for future direct portal access', owner: 'Mobile' },
   ],
   cloudengineering: [
-    { task: 'Production sign-off checklist — runbooks dry-run, CloudTrail data event verification', owner: 'Cloud+Security' },
-    { task: 'Verify dual-write reconciler — TelemetryDivergence alarm, promote FAC-PILOT-001 to parquet_only', owner: 'Cloud' },
-    { task: 'Cognito MFA enrollment for all pilot nurse and admin accounts', owner: 'Cloud' },
-    { task: 'SNS subscription verification — confirm all facility staff subscribed for fall-alert delivery', owner: 'Cloud' },
-    { task: 'Smoke test suite run against dev tenant post-deploy (pytest -m smoke)', owner: 'Cloud+Security' },
+    { task: 'Approve Bedrock model access in us-east-2 and us-west-2 (Ella cross-region inference — DLQ accumulating until resolved)', owner: 'Cloud' },
+    { task: 'Re-seed DynamoDB with MOCAREV-NNNN records: seed_pilot_data.py --clear && seed_pilot_data.py --with-alerts', owner: 'Cloud' },
+    { task: 'Drain Ella SQS DLQ and verify narratives generate clean after Bedrock access approved', owner: 'Cloud' },
+    { task: 'Verify dual-write reconciler — TelemetryDivergence alarm, promote FAC-MOCAREV-001 to parquet_only', owner: 'Cloud' },
+    { task: 'Implement nurse keyring unlock UI (study-mvp.md §11.3): passphrase modal, AES-GCM decrypt, IndexedDB', owner: 'FE+Cloud' },
   ],
   mechanical: [
     { task: 'Complete PCB layout in Altium — route controlled-impedance traces, run DRC to zero errors', owner: 'Layout' },
@@ -269,8 +269,8 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Set up Firebase + Android FCM build: google-services.json → setup_android_push.sh → eas build android',
   ],
   cloudengineering: [
-    'Production sign-off: runbooks dry-run + CloudTrail data event verification (step 12)',
-    'Promote FAC-PILOT-001 to parquet_only after reconciler shows 0% divergence over 24h',
+    'Approve Bedrock model access (us-east-2 + us-west-2) → drain Ella DLQ → verify narrative generation end-to-end',
+    'Reseed DynamoDB MOCAREV-NNNN records + implement nurse keyring unlock UI (§11.3)',
   ],
   mechanical: [
     'Route all Altium traces, run DRC to zero errors, export preliminary Gerber',
@@ -297,9 +297,10 @@ const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text
 // ── Cross-domain blockers ──────────────────────────────────────────────────────
 
 const BLOCKERS: { blocked: string; blocking: string; issue: string }[] = [
-  { blocked: 'Firmware',   blocking: 'EE Hardware',  issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
-  { blocked: 'Mobile App', blocking: 'Apple',        issue: 'Apple account -20209 lock still blocking direct Apple Developer Portal API — workaround (Admin ASC API key) in use; build queued' },
-  { blocked: 'Mechanical', blocking: 'EE Hardware',  issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
+  { blocked: 'Firmware',          blocking: 'EE Hardware',  issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
+  { blocked: 'Mobile App',        blocking: 'Apple',        issue: 'Apple account -20209 lock still blocking direct Apple Developer Portal API — workaround (Admin ASC API key) in use; build queued' },
+  { blocked: 'Mechanical',        blocking: 'EE Hardware',  issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
+  { blocked: 'Cloud Engineering', blocking: 'AWS Console',  issue: 'Bedrock model access form pending in us-east-2 and us-west-2 — Ella SQS fanout fails until cross-region inference approved in all three regions' },
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────────────
