@@ -706,9 +706,6 @@ export default function CarlsonPage() {
               Engineered for<br/>
               <em style={{ fontStyle: 'italic', color: C.text2 }}>Memory Care.</em>
             </h2>
-            <p style={{ fontSize: 17, lineHeight: 1.76, color: C.text2, margin: 0 }}>
-              We&apos;ll have a live demo running at our table — radar sensor data flowing into Ella AI, surfacing insights in real time. No pitch deck. Just the actual product.
-            </p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start' }}>
             <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: C.maroon, color: '#fff', borderRadius: 6, padding: '16px 36px', fontSize: 15, fontWeight: 500, textDecoration: 'none', transition: 'background 0.15s', letterSpacing: '0.01em' }}>
