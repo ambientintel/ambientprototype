@@ -517,7 +517,7 @@ export default function CarlsonPage() {
 
       {/* ── PULL QUOTE ───────────────────────────────────────────────────────── */}
       <Rule />
-      <section className="c-pull" style={{ background: C.bg2, padding: '96px 56px' }}>
+      <section className="c-pull" style={{ background: C.surf1, padding: '96px 56px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="01" label="The Problem" />
           <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: 1.36, letterSpacing: '-0.018em', color: C.text, margin: '0 0 64px' }}>
@@ -562,7 +562,7 @@ export default function CarlsonPage() {
 
       {/* ── 02: TECHNOLOGY ───────────────────────────────────────────────────── */}
       <Rule />
-      <section className="c-sec" style={{ background: C.bg2, padding: '128px 80px' }}>
+      <section className="c-sec" style={{ background: C.surf1, padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="03" label="Technology" />
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }}>
@@ -587,7 +587,7 @@ export default function CarlsonPage() {
 
       {/* ── 03: ELLA AI ──────────────────────────────────────────────────────── */}
       <Rule />
-      <section className="c-sec" style={{ background: C.bg2, padding: '128px 80px' }}>
+      <section className="c-sec" style={{ padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="04" label="Flagship Product" />
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
@@ -669,7 +669,7 @@ export default function CarlsonPage() {
 
       {/* ── 04: MINNESOTA ────────────────────────────────────────────────────── */}
       <Rule />
-      <section className="c-sec" style={{ padding: '128px 80px' }}>
+      <section className="c-sec" style={{ background: C.surf1, padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="05" label="Minnesota Roots" />
           <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(40px, 4.5vw, 60px)', lineHeight: 1.08, letterSpacing: '-0.028em', margin: '0 0 64px', maxWidth: 640 }}>
