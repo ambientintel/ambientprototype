@@ -597,7 +597,7 @@ export default function CarlsonPage() {
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start' }}>
 
             {/* Dashboard card — left */}
-            <div style={{ background: C.surf1, border: `1px solid ${C.line}`, overflow: 'hidden' }}>
+            <div style={{ background: C.surf1, border: `1px solid ${C.lineStrg}`, overflow: 'hidden' }}>
               <div style={{ padding: '13px 20px', borderBottom: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.text3 }}>Ella AI · Live Dashboard</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.green }}>
@@ -652,10 +652,9 @@ export default function CarlsonPage() {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginBottom: 40 }}>
                 {[
-                  { text: 'Plain-language resident summaries via AWS Bedrock', color: C.accent  },
+                  { text: 'Daily AI summaries for nurses',                        color: C.accent  },
                   { text: 'Prioritized alert queue with anomaly detection',      color: C.gold   },
                   { text: 'Behavioral trend analysis — days, weeks, months',     color: C.green  },
-                  { text: 'Privacy by architecture — PHI never in transit',      color: C.maroon },
                 ].map((item, i) => (
                   <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 0, borderTop: `1px solid ${C.line}`, padding: '17px 0' }}>
                     <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', color: item.color, marginRight: 20, marginTop: 3, flexShrink: 0, paddingRight: 20, borderRight: `1px solid ${C.line}` }}>0{i+1}</span>
