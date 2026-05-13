@@ -627,48 +627,44 @@ export default function CarlsonPage() {
       <section className="c-sec" style={{ background: C.surf1, padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="03" label="Opportunity" />
-          <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start', marginBottom: 80 }}>
-            <div>
-              <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(22px, 2.6vw, 34px)', lineHeight: 1.52, letterSpacing: '-0.012em', color: C.text, margin: 0 }}>
-                Dementia is the fastest-growing cause of death in the developed world. The care infrastructure hasn&apos;t kept up and the workforce shortage makes it impossible to close the gap with people alone.
-              </p>
-            </div>
-            <div>
+          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(22px, 2.6vw, 34px)', lineHeight: 1.52, letterSpacing: '-0.012em', color: C.text2, margin: '0 0 72px', maxWidth: 720 }}>
+            Dementia is the fastest-growing cause of death in the developed world. The care infrastructure hasn&apos;t kept up and the workforce shortage makes it impossible to close the gap with people alone.
+          </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, borderTop: `1px solid ${C.line}` }}>
-                {[
-                  { label: 'Growing at', value: '7.9% CAGR', note: 'remote patient monitoring in elder care' },
-                  { label: 'US facilities', value: '28,900+', note: 'licensed memory care units nationwide' },
-                  { label: 'By 2050', value: '13M', note: 'Americans projected to have Alzheimer\'s' },
-                ].map((row) => (
-                  <div key={row.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '28px 0', borderBottom: `1px solid ${C.line}` }}>
-                    <span style={{ fontFamily: C.mono, fontSize: 10, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase' }}>{row.label}</span>
-                    <span style={{ fontFamily: C.serif, fontSize: 'clamp(36px, 4vw, 48px)', fontWeight: 300, color: C.text, letterSpacing: '-0.03em', lineHeight: 1 }}>{row.value}</span>
-                    <span style={{ fontFamily: C.sans, fontSize: 15, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{row.note}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* TAM / SAM stat bar */}
+          {/* Unified data grid — context stats + market sizing in one visual system */}
           <div style={{ border: `1px solid ${C.lineStrg}` }}>
+
+            {/* Row 1: 3 context stats */}
+            <div className="c-three" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderBottom: `1px solid ${C.lineStrg}` }}>
+              {[
+                { label: 'Growing at',    value: '7.9% CAGR', note: 'remote patient monitoring in elder care'      },
+                { label: 'US facilities', value: '28,900+',   note: 'licensed memory care units nationwide'        },
+                { label: 'By 2050',       value: '13M',       note: 'Americans projected to have Alzheimer\'s'     },
+              ].map((row, i) => (
+                <div key={row.label} style={{ padding: '40px 40px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
+                  <span style={{ display: 'block', fontFamily: C.mono, fontSize: 10, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase', marginBottom: 12 }}>{row.label}</span>
+                  <span style={{ display: 'block', fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(32px, 3.6vw, 50px)', letterSpacing: '-0.03em', lineHeight: 1, color: C.text, marginBottom: 12 }}>{row.value}</span>
+                  <span style={{ fontFamily: C.sans, fontSize: 13, color: C.text3, lineHeight: 1.5 }}>{row.note}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Rows 2–3: TAM + SAM with proportion bars */}
             {[
-              { label: 'TAM', sublabel: 'Total Addressable Market',       value: '$38B',  desc: 'Global eldercare monitoring & analytics market',                          barPct: 100,  ratio: null           },
-              { label: 'SAM', sublabel: 'Serviceable Addressable Market', value: '$4.2B', desc: 'US memory care facilities — sensor monitoring & AI analytics',            barPct: 11.1, ratio: '≈ 11% of TAM' },
+              { label: 'TAM', sublabel: 'Total Addressable Market',       value: '$38B',  desc: 'Global eldercare monitoring & analytics market',                barPct: 100,  ratio: null           },
+              { label: 'SAM', sublabel: 'Serviceable Addressable Market', value: '$4.2B', desc: 'US memory care facilities — sensor monitoring & AI analytics',  barPct: 11.1, ratio: '≈ 11% of TAM' },
             ].map((item, i) => (
               <div key={item.label} style={{ borderTop: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
-                {/* Full-bleed proportion bar — SAM is visibly 11% of TAM */}
                 <div style={{ height: 3, background: 'rgba(240,180,41,0.10)', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${item.barPct}%`, background: C.gold, opacity: 0.68 }} />
                 </div>
-                <div style={{ padding: '44px 48px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 32, marginBottom: 20 }}>
+                <div style={{ padding: '40px 48px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 32, marginBottom: 16 }}>
                     <div>
                       <span style={{ display: 'block', fontFamily: C.mono, fontSize: 13, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase', marginBottom: 5 }}>{item.label}</span>
                       <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.14em', color: C.text4, textTransform: 'uppercase' }}>{item.sublabel}</span>
                     </div>
-                    <span style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(52px, 6.5vw, 88px)', lineHeight: 1, letterSpacing: '-0.04em', color: C.text, flexShrink: 0 }}>{item.value}</span>
+                    <span style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(48px, 6vw, 84px)', lineHeight: 1, letterSpacing: '-0.04em', color: C.text, flexShrink: 0 }}>{item.value}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
                     <p style={{ fontFamily: C.sans, fontSize: 14, color: C.text3, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
@@ -677,6 +673,7 @@ export default function CarlsonPage() {
                 </div>
               </div>
             ))}
+
           </div>
         </div>
       </section>
