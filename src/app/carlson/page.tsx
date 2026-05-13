@@ -454,8 +454,27 @@ export default function CarlsonPage() {
         .c-s { animation: fade-up 0.85s 0.4s ease both; }
         .c-p { animation: fade-up 0.85s 0.55s ease both; }
         .c-chip:hover { border-color:rgba(255,255,255,0.26)!important; color:rgba(240,241,242,0.88)!important; }
-        .c-primary:hover { background:#5c0013!important; }
-        .c-ghost:hover { border-color:rgba(255,255,255,0.24)!important; color:${C.text}!important; }
+        @keyframes btn-scan {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        .c-primary {
+          background: #ffffff!important;
+          color: #0a0a0a!important;
+          position: relative;
+          overflow: hidden;
+        }
+        .c-primary::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(105deg, transparent 40%, rgba(0,0,0,0.06) 50%, transparent 60%);
+          background-size: 200% 100%;
+          animation: btn-scan 2.4s linear infinite;
+        }
+        .c-primary:hover { background: #e8e8e8!important; }
+        .c-ghost { border-color: rgba(255,255,255,0.22)!important; color: rgba(255,255,255,0.62)!important; }
+        .c-ghost:hover { border-color:rgba(255,255,255,0.55)!important; color:${C.text}!important; background: rgba(255,255,255,0.04)!important; }
         .c-nav-link:hover { color:rgba(240,241,242,0.88)!important; }
         .c-hero-section { height:92vh; height:92dvh; }
         @media(min-width:961px) and (max-width:1100px){
@@ -496,7 +515,7 @@ export default function CarlsonPage() {
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <span className="c-nav-label" style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4 }}>Founder&apos;s Day 2026</span>
-          <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 20px', borderRadius: 6, background: C.maroon, color: '#fff', fontSize: 13, fontWeight: 500, textDecoration: 'none', letterSpacing: '0.01em', transition: 'background 0.15s' }}>
+          <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 20px', borderRadius: 0, fontSize: 13, fontWeight: 600, textDecoration: 'none', letterSpacing: '0.04em', transition: 'background 0.15s' }}>
             Connect
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -708,7 +727,7 @@ export default function CarlsonPage() {
             </h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start' }}>
-            <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: C.maroon, color: '#fff', borderRadius: 6, padding: '16px 36px', fontSize: 15, fontWeight: 500, textDecoration: 'none', transition: 'background 0.15s', letterSpacing: '0.01em' }}>
+            <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, borderRadius: 0, padding: '16px 40px', fontSize: 15, fontWeight: 600, textDecoration: 'none', transition: 'background 0.15s', letterSpacing: '0.04em' }}>
               Get in Touch
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
