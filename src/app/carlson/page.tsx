@@ -649,30 +649,25 @@ export default function CarlsonPage() {
               ))}
             </div>
 
-            {/* Rows 2–3: TAM + SAM with proportion bars */}
-            {[
-              { label: 'TAM', sublabel: 'Total Addressable Market',       value: '$38B',  desc: 'Global eldercare monitoring & analytics market',                barPct: 100,  ratio: null           },
-              { label: 'SAM', sublabel: 'Serviceable Addressable Market', value: '$4.2B', desc: 'US memory care facilities — sensor monitoring & AI analytics',  barPct: 11.1, ratio: '≈ 11% of TAM' },
-            ].map((item, i) => (
-              <div key={item.label} style={{ borderTop: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
-                <div style={{ height: 3, background: 'rgba(240,180,41,0.10)', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${item.barPct}%`, background: C.gold, opacity: 0.68 }} />
-                </div>
-                <div style={{ padding: '40px 48px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 32, marginBottom: 16 }}>
-                    <div>
-                      <span style={{ display: 'block', fontFamily: C.mono, fontSize: 13, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase', marginBottom: 5 }}>{item.label}</span>
-                      <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.14em', color: C.text4, textTransform: 'uppercase' }}>{item.sublabel}</span>
-                    </div>
-                    <span style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(48px, 6vw, 84px)', lineHeight: 1, letterSpacing: '-0.04em', color: C.text, flexShrink: 0 }}>{item.value}</span>
+            {/* TAM + SAM — side by side */}
+            <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              {[
+                { label: 'TAM', sublabel: 'Total Addressable Market',       value: '$38B',  desc: 'Global eldercare monitoring & analytics market',               ratio: null           },
+                { label: 'SAM', sublabel: 'Serviceable Addressable Market', value: '$4.2B', desc: 'US memory care facilities — sensor monitoring & AI analytics', ratio: '≈ 11% of TAM' },
+              ].map((item, i) => (
+                <div key={item.label} style={{ padding: '44px 48px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 20 }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 11, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase' }}>{item.label}</span>
+                    <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.12em', color: C.text4, textTransform: 'uppercase' }}>{item.sublabel}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
+                  <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(52px, 6.5vw, 84px)', lineHeight: 1, letterSpacing: '-0.04em', color: C.text, margin: '0 0 20px' }}>{item.value}</p>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
                     <p style={{ fontFamily: C.sans, fontSize: 14, color: C.text3, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
-                    {item.ratio && <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.16em', color: C.gold, textTransform: 'uppercase', opacity: 0.52, flexShrink: 0 }}>{item.ratio}</span>}
+                    {item.ratio && <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.14em', color: C.gold, textTransform: 'uppercase', opacity: 0.55, flexShrink: 0 }}>{item.ratio}</span>}
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
           </div>
         </div>
