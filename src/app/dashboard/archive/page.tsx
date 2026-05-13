@@ -219,7 +219,7 @@ export default function ArchivePage() {
           </table>
         </div>
         <p style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--mono)', marginTop: 10 }}>
-          {visible.length} of {ARCHIVED.length} records · MOH 301–310 · pilot cohort
+          {visible.length} of {ARCHIVED.length} records · MOH 301–312 · pilot cohort
         </p>
       </main>
     </div>

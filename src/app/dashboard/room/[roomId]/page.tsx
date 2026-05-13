@@ -296,7 +296,7 @@ export default function RoomDashboard() {
 
         <div className="sidebar-footer">
           <span className="status-dot"/>
-          <span>Sensors online · MOH 301–310</span>
+          <span>Sensors online · MOH 301–312</span>
         </div>
       </aside>
 

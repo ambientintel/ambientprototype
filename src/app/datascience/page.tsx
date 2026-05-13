@@ -566,7 +566,7 @@ export default function DataSciencePage() {
             <h1 className="page-title">Data <em>Science</em></h1>
           </div>
           <div className="tool-group">
-            <span style={{ fontFamily:'var(--mono)', fontSize:11, color:C.text3 }}>MOH 301–310 · Live data</span>
+            <span style={{ fontFamily:'var(--mono)', fontSize:11, color:C.text3 }}>MOH 301–312 · Live data</span>
             <span style={{ width:6, height:6, borderRadius:'50%', background:C.sage, boxShadow:`0 0 5px ${C.sage}`, display:'inline-block' }}/>
           </div>
         </header>

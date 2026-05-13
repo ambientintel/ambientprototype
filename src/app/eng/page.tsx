@@ -246,7 +246,7 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
   ],
   webapp: [
     { task: 'Set VERCEL_TOKEN in ambientweb project to activate push subscription storage (Edge Config ambient-push ecfg_wsm…)', owner: 'FE+DevOps' },
-    { task: 'Run pilot validation: nurse auth, Ella narrative, fall alert ACK, web push delivery across MOH 301–310', owner: 'Product+FE' },
+    { task: 'Run pilot validation: nurse auth, Ella narrative, fall alert ACK, web push delivery across MOH 301–312', owner: 'Product+FE' },
     { task: 'Seed real room assignments from pilot coordinator — use Devices page PATCH to assign roomId + zone per device', owner: 'Product+FE' },
     { task: 'Verify device management page with admin Cognito account — confirm GET /admin/devices + PATCH /admin/devices/{id} respond 200', owner: 'FE+Cloud' },
     { task: 'Monitor /api/ambient proxy for 502s — keep AMBIENT_WEB_SVC_PASSWORD in sync with Cognito', owner: 'DevOps' },

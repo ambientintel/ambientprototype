@@ -145,7 +145,7 @@ export default function OverviewPage() {
 
         <div className="sidebar-footer">
           <span className="status-dot"/>
-          <span>Sensors online · MOH 301–310</span>
+          <span>Sensors online · MOH 301–312</span>
           <a href="https://www.ellamemory.com/" target="_blank" rel="noopener noreferrer" style={{ display:'block', marginTop:6, fontFamily:'var(--mono)', fontSize:10, color:'var(--text-4)', textDecoration:'none' }}>ellamemory.com ↗</a>
         </div>
       </nav>
@@ -174,7 +174,7 @@ export default function OverviewPage() {
         {/* ── Status strip ── */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))', gap:12, marginBottom:28 }}>
           {[
-            { label:'Residents',    value:'10', sub:'MOH 301–310',         color:'var(--accent)' },
+            { label:'Residents',    value:'12', sub:'MOH 301–312',         color:'var(--accent)' },
             { label:'Active Alerts',value:String(activeAlerts.length),  sub:'Require attention', color:'#FF6B6B' },
             { label:'Falls Today',  value:String(totalFalls),            sub:'Across all rooms',  color:'#FF6B6B' },
             { label:'Stable Rooms', value:String(stableRooms.length),   sub:'No alerts',         color:'#3DCC91' },

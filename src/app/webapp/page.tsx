@@ -216,7 +216,7 @@ const STEPS: Step[] = [
     sections: [
       {
         heading: 'Architecture',
-        body: 'The ambientcloud backend assigns each resident a coded ID (PILOT-0001 through PILOT-0010) and never transmits names over the wire. The nurse\'s workstation holds an encrypted keyring file (keyring.enc) that maps coded IDs to resident names. At shift start, the nurse provides a passphrase; the app derives an AES-GCM key, decrypts the keyring in memory, and hydrates the UI. The passphrase and plaintext keyring are never persisted.',
+        body: 'The ambientcloud backend assigns each resident a coded ID (PILOT-0001 through PILOT-0012) and never transmits names over the wire. The nurse\'s workstation holds an encrypted keyring file (keyring.enc) that maps coded IDs to resident names. At shift start, the nurse provides a passphrase; the app derives an AES-GCM key, decrypts the keyring in memory, and hydrates the UI. The passphrase and plaintext keyring are never persisted.',
         artifacts: [
           { file: 'apps/web/src/lib/keyring.ts',               role: 'AES-GCM encrypt/decrypt, PBKDF2 key derivation, in-memory identity map.' },
           { file: 'apps/web/src/components/KeyringUnlock.tsx',  role: 'Shift-start modal. Accepts passphrase, decrypts keyring, stores map in React context.' },
@@ -257,7 +257,7 @@ const STEPS: Step[] = [
         artifacts: [
           { file: 'apps/web/src/app/dashboard/overview/page.tsx', role: 'Floor overview: stats bar, alerts table, room grid, live feed ticker.' },
           { file: 'apps/web/src/app/dashboard/alerts/page.tsx',   role: 'Full chronological alert log with status filter (All / Active / Ack / Resolved).' },
-          { file: 'apps/web/src/app/dashboard/floormap/page.tsx', role: 'SVG heat-map of MOH 301–310 with per-room activity level and status color.' },
+          { file: 'apps/web/src/app/dashboard/floormap/page.tsx', role: 'Floor map of MOH 301–312 with per-room activity level, status color, and Ella narrative freshness.' },
           { file: 'apps/web/src/app/dashboard/layout.tsx',        role: 'Shared layout: persistent left sidebar nav + rooms list with priority indicators.' },
         ],
       },
@@ -266,7 +266,7 @@ const STEPS: Step[] = [
         table: {
           cols: ['Stat', 'Data source', 'Update cadence'],
           rows: [
-            ['Residents monitored', 'Length of ROOMS array',               'Static (pilot = 10)'],
+            ['Residents monitored', 'Length of ROOMS array',               'Static (pilot = 12)'],
             ['Active alerts',       'ALERTS.filter(a => a.status === "active")', 'Client state'],
             ['Falls today',         'ALERTS.filter today + fall type',     'Client state'],
             ['Stable rooms',        'ROOMS with no active alert',          'Derived'],
@@ -275,7 +275,7 @@ const STEPS: Step[] = [
       },
       {
         heading: 'Sidebar navigation',
-        body: 'The dashboard layout sidebar has two sections: Views (Overview, Floor Map, Alerts, Reports, Analytics, Browse) and Rooms (MOH 301–310). Each room entry shows a priority dot — red for active fall, amber for motion, green for stable. Rooms are listed in room-number order.',
+        body: 'The dashboard layout sidebar has two sections: Views (Overview, Floor Map, Alerts, Reports, Analytics, Browse) and Rooms (MOH 301–312). Each room entry shows a priority dot — red for active fall, amber for motion, green for stable. Rooms are listed in room-number order.',
         warnings: [
           'Room data and alert data are currently hardcoded in component state. Connecting to the ambientcloud backend API is a pending step — see open decisions.',
         ],
