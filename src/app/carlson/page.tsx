@@ -494,7 +494,7 @@ export default function CarlsonPage() {
         <FlowGlowBg />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(8,8,8,0.52) 0%,rgba(8,8,8,0.06) 35%,rgba(8,8,8,0) 100%)', pointerEvents: 'none', zIndex: 1 }} />
         <div className="c-hero" style={{ position: 'relative', zIndex: 2, maxWidth: 1280, margin: '0 auto', padding: '148px 56px 120px', width: '100%' }}>
-          <p className="c-e" style={{ fontFamily: C.mono, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.gold, margin: '0 0 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <p className="c-e" style={{ fontFamily: C.mono, fontSize: 16, textTransform: 'uppercase', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.82)', margin: '0 0 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: C.gold, animation: 'pulse-gold 2s ease-out infinite', flexShrink: 0 }} />
             Carlson School of Management &middot; Office of Technology Commercialization &middot; University of Minnesota
           </p>
