@@ -818,9 +818,6 @@ export default function CarlsonPage() {
       <footer style={{ padding: '28px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <span style={{ fontFamily: C.serif, fontSize: 14, fontWeight: 300, color: C.text2 }}>Ambient Intelligence</span>
-          <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.text4, margin: 0, textAlign: 'center' }}>
-            PCT Patent · UMN OTC · Minneapolis 2026 · gener8tor
-          </p>
           <div style={{ display: 'flex', gap: 28 }}>
             {[
               ['https://www.ellamemory.com/', 'ellamemory.com'],
