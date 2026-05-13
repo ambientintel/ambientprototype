@@ -16,7 +16,7 @@ const C = {
   gold:       '#F0B429',
   accent:     '#4F9CF9',
   green:      '#3DCC91',
-  serif:      'var(--serif, Georgia, serif)',
+  serif:      '"Times New Roman", Times, serif',
   mono:       'var(--mono, monospace)',
   sans:       'var(--sans, -apple-system, sans-serif)',
 };
