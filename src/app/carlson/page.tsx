@@ -39,6 +39,19 @@ function FlowGlowBg() {
   return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />;
 }
 
+/* ── Button canvas (FlowGlow Mono fill) ─────────────────────────────────────── */
+function BtnCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    // @ts-ignore
+    const create = function create(e,t){let a,l=e.getContext("2d"),i=0,n=0,r=performance.now(),o=[[255,255,255],[210,210,210],[170,170,170],[240,240,240],[185,185,185],[225,225,225]],s=[{fx:.31,fy:.47,px:0,py:.5*Math.PI},{fx:.53,fy:.29,px:Math.PI,py:1.2*Math.PI},{fx:.41,fy:.67,px:.7*Math.PI,py:0},{fx:.23,fy:.53,px:1.5*Math.PI,py:.8*Math.PI},{fx:.59,fy:.37,px:.3*Math.PI,py:1.7*Math.PI},{fx:.43,fy:.61,px:1.1*Math.PI,py:.3*Math.PI}],h=["#ffffff","#d0d0d0","#aaaaaa","#888888","#cccccc","#f0f0f0"],d=[...h],m=[...h],c=1,p=.45,g=e=>{let t=parseInt(e.replace("#",""),16);return[t>>16&255,t>>8&255,255&t]},u=()=>{let t=e.getBoundingClientRect(),q=window.devicePixelRatio||1;e.width=t.width*q||window.innerWidth*q,e.height=t.height*q||window.innerHeight*q,l.setTransform(q,0,0,q,0,0)},b=(e,t,a,i,n)=>{n=Math.max(0,Math.min(n,a/2,i/2)),l.beginPath(),l.moveTo(e+n,t),l.lineTo(e+a-n,t),l.arcTo(e+a,t,e+a,t+n,n),l.lineTo(e+a,t+i-n),l.arcTo(e+a,t+i,e+a-n,t+i,n),l.lineTo(e+n,t+i),l.arcTo(e,t+i,e,t+i-n,n),l.lineTo(e,t+n),l.arcTo(e,t,e+n,t,n),l.closePath()},f=u=>{let y=Math.min((u-r)/1e3,.05);r=u;let M=t(),_q=window.devicePixelRatio||1,x=e.width/_q,w=e.height/_q,k=x/2,S=w/2,v=Math.min(x,w);i+=M.speed*y,n+=.4*y,c=Math.min(1,c+y/.55),(p-=y)<=0&&c>=1&&(p=.4+.15*Math.random(),d=[...m],c=0,m=[...h].sort(()=>Math.random()-.5));let C=d.map((e,t)=>((e,t,a)=>{let[l,i,n]=g(e),[r,o,s]=g(t);return`rgb(${Math.round(l+(r-l)*a)},${Math.round(i+(o-i)*a)},${Math.round(n+(s-n)*a)})`})(e,m[t],c));l.clearRect(0,0,x,w),l.fillStyle="#000000",l.fillRect(0,0,x,w);let A=M.padding,R=M.strokeWidth,F=M.intensity,I=x-2*A,P=w-2*A,$=M.cornerRadius,z=v*M.blobSize;l.save(),b(A,A,I,P,$),l.clip(),l.globalCompositeOperation="screen",s.forEach((e,t)=>{let[a,n,r]=o[t],s=k+.4*I*Math.sin(i*e.fx+e.px),h=S+.4*P*Math.cos(i*e.fy+e.py),d=l.createRadialGradient(s,h,0,s,h,z);d.addColorStop(0,`rgba(${a},${n},${r},${.82*F})`),d.addColorStop(.42,`rgba(${a},${n},${r},${.36*F})`),d.addColorStop(1,`rgba(${a},${n},${r},0)`),l.beginPath(),l.arc(s,h,z,0,2*Math.PI),l.fillStyle=d,l.fill()}),l.restore();let T=(e,t,a)=>{let i;l.save(),t>0&&(l.filter=`blur(${t}px)`),l.globalAlpha=a,i=l.createConicGradient(n-Math.PI/2,k,S),C.forEach((e,t)=>i.addColorStop(t/C.length,e)),i.addColorStop(1,C[0]),l.strokeStyle=i,l.lineWidth=e,l.lineCap="round",b(A,A,I,P,$),l.stroke(),l.restore()};T(4.5*R,26*F,.3*F),T(2.8*R,14*F,.5*F),T(1.6*R,5*F,.72*F),T(R,0,1),a=requestAnimationFrame(f)};u(),a=requestAnimationFrame(f);let y=new ResizeObserver(()=>u());return y.observe(e),()=>{cancelAnimationFrame(a),y.disconnect()}};
+    return create(canvas, () => ({ cornerRadius: 6, speed: 0.27, blobSize: 1.8, intensity: 0.79, strokeWidth: 2, padding: 0 }));
+  }, []);
+  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />;
+}
+
 /* ── Primitives ──────────────────────────────────────────────────────────────── */
 function Rule() {
   return <div style={{ height: 1, background: C.line, width: '100%' }} />;
@@ -454,34 +467,16 @@ export default function CarlsonPage() {
         .c-s { animation: fade-up 0.85s 0.4s ease both; }
         .c-p { animation: fade-up 0.85s 0.55s ease both; }
         .c-chip:hover { border-color:rgba(255,255,255,0.26)!important; color:rgba(240,241,242,0.88)!important; }
-        @keyframes metal-flow {
-          0%   { background-position: 200% center; }
-          100% { background-position: -200% center; }
-        }
-        @keyframes streak {
-          0%   { transform: translateX(-180%) skewX(-18deg); }
-          100% { transform: translateX(480%) skewX(-18deg); }
-        }
         .c-primary {
-          background: linear-gradient(108deg, #3a3a3a 0%, #888 18%, #f0f0f0 34%, #ffffff 42%, #d8d8d8 52%, #777 68%, #2e2e2e 84%, #888 100%) !important;
-          background-size: 300% 100% !important;
-          animation: metal-flow 2.8s linear infinite !important;
-          color: #0a0a0a !important;
+          background: #000 !important;
+          color: #fff !important;
           border-radius: 6px !important;
           border: none !important;
           font-weight: 500 !important;
           position: relative !important;
           overflow: hidden !important;
         }
-        .c-primary::after {
-          content: '';
-          position: absolute;
-          top: 0; bottom: 0;
-          width: 28%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
-          animation: streak 2.8s linear infinite;
-        }
-        .c-primary:hover { filter: brightness(1.08) !important; }
+        .c-primary:hover { filter: brightness(1.18) !important; }
         .c-ghost { background:rgba(255,255,255,0.06)!important; border:1px solid rgba(255,255,255,0.18)!important; border-radius:6px!important; color:rgba(255,255,255,0.70)!important; font-weight:500!important; }
         .c-ghost:hover { background:rgba(255,255,255,0.11)!important; border-color:rgba(255,255,255,0.36)!important; color:#fff!important; }
         .c-nav-link:hover { color:rgba(240,241,242,0.88)!important; }
@@ -524,9 +519,12 @@ export default function CarlsonPage() {
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <span className="c-nav-label" style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4 }}>Founder&apos;s Day 2026</span>
-          <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em', transition: 'background 0.15s' }}>
-            Connect
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em' }}>
+            <BtnCanvas />
+            <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              Connect
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </span>
           </a>
         </div>
       </nav>
@@ -736,9 +734,12 @@ export default function CarlsonPage() {
             </h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start' }}>
-            <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '13px 32px', fontSize: 15, textDecoration: 'none', transition: 'background 0.15s', letterSpacing: '0.01em' }}>
-              Get in Touch
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '13px 32px', fontSize: 15, textDecoration: 'none', letterSpacing: '0.01em' }}>
+              <BtnCanvas />
+              <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                Get in Touch
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </span>
             </a>
             <a href="https://www.ellamemory.com/" target="_blank" rel="noopener noreferrer" className="c-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '13px 32px', fontSize: 15, textDecoration: 'none', transition: 'background 0.15s, border-color 0.15s, color 0.15s' }}>
               Explore Ella Memory
