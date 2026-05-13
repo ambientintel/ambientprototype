@@ -505,14 +505,14 @@ export default function CarlsonPage() {
           <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px' }}>
             24/7 contactless and noninvasive monitoring<br/>engineered for memory care.
           </p>
-          <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 0, border: `1px solid ${C.lineStrg}`, background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(8px)', width: 'fit-content' }}>
+          <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 0, border: `1px solid ${C.lineStrg}`, background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(8px)', width: 'fit-content' }}>
             {[
-              { label: 'PARTNER', value: 'Office of Discovery and Translation' },
-              { label: 'VENUE',   value: 'Bakken Medical Devices Center' },
+              { label: 'R&D',   value: 'Office of Discovery and Translation' },
+              { label: 'VENUE', value: 'Bakken Medical Devices Center' },
             ].map((item, i) => (
-              <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '12px 24px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
-                <span style={{ fontFamily: C.mono, fontSize: 8, letterSpacing: '0.18em', color: C.text4, textTransform: 'uppercase' }}>{item.label}</span>
-                <span style={{ fontFamily: C.mono, fontSize: 12, color: 'rgba(255,255,255,0.72)', letterSpacing: '0.05em' }}>{item.value}</span>
+              <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '14px 28px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
+                <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.20em', color: C.gold, textTransform: 'uppercase', opacity: 0.85 }}>{item.label}</span>
+                <span style={{ fontFamily: C.mono, fontSize: 14, color: 'rgba(255,255,255,0.90)', letterSpacing: '0.03em' }}>{item.value}</span>
               </div>
             ))}
           </div>
