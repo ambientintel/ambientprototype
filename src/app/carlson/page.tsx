@@ -628,7 +628,7 @@ export default function CarlsonPage() {
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'start', marginBottom: 80 }}>
             <div>
               <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(22px, 2.6vw, 34px)', lineHeight: 1.52, letterSpacing: '-0.012em', color: C.text, margin: 0 }}>
-                Dementia is the fastest-growing cause of death in the developed world. The care infrastructure hasn&apos;t kept up — and the workforce shortage makes it impossible to close the gap with people alone.
+                Dementia is the fastest-growing cause of death in the developed world. The care infrastructure hasn&apos;t kept up and the workforce shortage makes it impossible to close the gap with people alone.
               </p>
             </div>
             <div>
