@@ -524,10 +524,10 @@ export default function CarlsonPage() {
               { label: 'R&D',    value: 'Office of Discovery and Translation' },
               { label: 'ENDURE', value: 'Bakken Medical Devices Center' },
             ].map((item) => (
-              <div key={item.label} style={{ display: 'flex', alignItems: 'stretch', background: 'transparent', border: '1px solid rgba(255,255,255,0.22)' }}>
-                <div style={{ width: 3, background: 'rgba(255,255,255,0.90)', flexShrink: 0 }} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '12px 18px' }}>
-                  <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.24em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' }}>{item.label}</span>
+              <div key={item.label} style={{ display: 'flex', alignItems: 'stretch', background: 'rgba(255,255,255,0.10)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', border: '1px solid rgba(255,255,255,0.28)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 24px rgba(0,0,0,0.18)' }}>
+                <div style={{ width: 3, background: 'rgba(255,255,255,0.95)', flexShrink: 0 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '13px 20px' }}>
+                  <span style={{ fontFamily: C.mono, fontSize: 11, letterSpacing: '0.20em', color: 'rgba(255,255,255,0.82)', textTransform: 'uppercase', fontWeight: 600 }}>{item.label}</span>
                   <span style={{ fontFamily: C.sans, fontSize: 15, color: '#ffffff', letterSpacing: '-0.01em', fontWeight: 500, lineHeight: 1.2, whiteSpace: 'nowrap' }}>{item.value}</span>
                 </div>
               </div>
