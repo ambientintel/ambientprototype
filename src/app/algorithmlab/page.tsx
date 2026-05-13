@@ -144,6 +144,14 @@ const DAILY_ACTIVITY_SYNTH: { date: string; dow: string; counts: number }[] = ((
   });
 })();
 
+// ── Hourly AmbientActivityCounts (Ambient Activity Index) ─────
+const AAI_RNG = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+const DAILY_HOURLY_SYNTH: { hour: string; today: number; avg7d: number }[] = Array.from({ length: 13 }, (_, h) => ({
+  hour: h === 0 ? '12 AM' : h < 12 ? `${h} AM` : '12 PM',
+  today: h < 6 ? Math.round(4  + AAI_RNG(h*3+1)*22) : h === 6 ? Math.round(52 + AAI_RNG(h*3+2)*40) : Math.min(1000, Math.round(180+(h-7)*92+AAI_RNG(h*3+3)*58)),
+  avg7d: h < 6 ? Math.round(9  + AAI_RNG(h*7+4)*16) : h === 6 ? Math.round(44 + AAI_RNG(h*7+5)*28) : Math.min(1000, Math.round(158+(h-7)*74+AAI_RNG(h*7+6)*40)),
+}));
+
 // ── Signal processing algorithms ──────────────────────────────
 function movingAverage(data: number[], w: number): (number | null)[] {
   return data.map((_, i) => i < w - 1 ? null
@@ -3769,48 +3777,122 @@ export default function AlgorithmLabPage() {
             )}
 
             {algo === 'daily_activity' && (() => {
+              // 14-day bar chart derived values
               const total = dailyActivityData.reduce((a, d) => a + d.counts, 0);
-              const mean = total / Math.max(1, dailyActivityData.length);
-              const peak = dailyActivityData.length ? dailyActivityData.reduce((b, d) => d.counts > b.counts ? d : b) : null;
-              const low  = dailyActivityData.length ? dailyActivityData.reduce((b, d) => d.counts < b.counts ? d : b) : null;
+              const mean  = total / Math.max(1, dailyActivityData.length);
+              const peak  = dailyActivityData.length ? dailyActivityData.reduce((b, d) => d.counts > b.counts ? d : b) : null;
+              const low   = dailyActivityData.length ? dailyActivityData.reduce((b, d) => d.counts < b.counts ? d : b) : null;
+
+              // Ambient Activity Index — hourly data
+              const hourlyData = radarUploaded ? (() => {
+                const byHour = new Map<number, number>();
+                for (const f of radarFrames) {
+                  const h = new Date(f.timestamp * 1000).getHours();
+                  byHour.set(h, (byHour.get(h) ?? 0) + f.PointsDetected);
+                }
+                const maxCnt = Math.max(1, ...Array.from(byHour.values()));
+                return Array.from({ length: 13 }, (_, h) => ({
+                  hour: h === 0 ? '12 AM' : h < 12 ? `${h} AM` : '12 PM',
+                  today: Math.round(((byHour.get(h) ?? 0) / maxCnt) * 1000),
+                  avg7d: null as number | null,
+                }));
+              })() : DAILY_HOURLY_SYNTH;
+
+              const todayTotal = hourlyData.reduce((a, d) => a + d.today, 0);
+              const avgTotal   = hourlyData.reduce((a, d) => a + (d.avg7d ?? 0), 0);
+              const delta      = avgTotal > 0 ? Math.round((todayTotal - avgTotal) / avgTotal * 100) : 0;
+              const walkingMin = Math.max(20, 48 + Math.round(delta * 0.35));
+              const sittingMin = Math.max(60, 195 - Math.round(delta * 0.55));
+              const todayDate  = dailyActivityData.length ? dailyActivityData[dailyActivityData.length - 1].date : 'Today';
+
               return (
-                <ChartCard title="AmbientActivityCounts Daily Activity" sub="Sum of PointsDetected per day · higher values indicate more detected motion events" badge={radarUploaded ? 'Live data' : 'Synthetic'} badgeColor={radarUploaded ? C.sage : C.amber} full>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={dailyActivityData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
-                      <CartesianGrid stroke={C.line} strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} interval={0} />
-                      <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={52} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}`} />
-                      <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [Number(v).toLocaleString(), 'AmbientActivityCounts'] as [string,string]} labelFormatter={(l: unknown) => `${l}`} />
-                      <ReferenceLine y={mean} stroke={C.text3} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: 'avg', fill: C.text4, fontSize: 9, fontFamily: 'var(--mono)', position: 'right' }} />
-                      <Bar dataKey="counts" radius={[4,4,0,0]} name="AmbientActivityCounts">
-                        {dailyActivityData.map((d, i) => (
-                          <Cell key={i} fill={d.counts >= mean * 1.15 ? C.sage : d.counts <= mean * 0.72 ? C.purple : C.accent} fillOpacity={0.78} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 18 }}>
-                    {[
-                      { label: 'Peak Day',  value: peak ? peak.date : '—',   sub: peak ? peak.counts.toLocaleString() : '',  color: C.sage   },
-                      { label: 'Low Day',   value: low  ? low.date  : '—',   sub: low  ? low.counts.toLocaleString()  : '',  color: C.purple },
-                      { label: 'Daily Avg', value: Math.round(mean).toLocaleString(), sub: 'PointsDetected/day', color: C.accent },
-                    ].map(m => (
-                      <div key={m.label} style={{ padding: '12px 16px', background: C.s2, borderRadius: 8 }}>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.10em', marginBottom: 4 }}>{m.label}</div>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 600, color: m.color, marginBottom: 2 }}>{m.value}</div>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{m.sub}</div>
+                <>
+                  {/* ── Ambient Activity Index ── */}
+                  <ChartCard title="Ambient Activity Index" sub={`Daily Activity · ${todayDate} · hourly`} badge={delta >= 0 ? `+${delta}% vs avg` : `${delta}% vs avg`} badgeColor={delta >= 0 ? C.sage : C.purple} full>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <ComposedChart data={hourlyData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                        <defs>
+                          <linearGradient id="aaiGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={C.coral} stopOpacity={0.22}/>
+                            <stop offset="100%" stopColor={C.coral} stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid stroke={C.line} strokeDasharray="3 3" vertical={false}/>
+                        <XAxis dataKey="hour" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false}/>
+                        <YAxis domain={[0, 1000]} ticks={[0,250,500,750,1000]} tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={38}/>
+                        <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown, name: unknown) => [Number(v).toLocaleString(), String(name)] as [string,string]}/>
+                        <Area type="monotone" dataKey="today" stroke={C.coral} strokeWidth={2.5} fill="url(#aaiGrad)" name="Today" dot={false}/>
+                        {hourlyData[0]?.avg7d !== null && (
+                          <Line type="monotone" dataKey="avg7d" stroke={C.text3} strokeWidth={1.5} strokeDasharray="5 3" dot={false} name="7-day avg"/>
+                        )}
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 18 }}>
+                      {[
+                        { label: 'Total Today',  value: todayTotal.toLocaleString(),                              color: C.coral  },
+                        { label: '7-day Avg',    value: avgTotal > 0 ? avgTotal.toLocaleString() : '—',          color: C.text2  },
+                        { label: 'Walking Est',  value: `${walkingMin} min`,                                     color: C.accent },
+                        { label: 'Sitting Est',  value: `${sittingMin} min`,                                     color: C.purple },
+                      ].map(m => (
+                        <div key={m.label} style={{ padding: '12px 16px', background: C.s2, borderRadius: 8 }}>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.10em', marginBottom: 4 }}>{m.label}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 600, color: m.color }}>{m.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 18, marginTop: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{ width: 24, height: 3, background: C.coral, borderRadius: 2 }}/>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>Today · {todayDate}</span>
                       </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 16, marginTop: 14, flexWrap: 'wrap' }}>
-                    {[{l:'Above avg',c:C.sage},{l:'Typical',c:C.accent},{l:'Below avg',c:C.purple}].map(x => (
-                      <div key={x.l} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <div style={{ width: 12, height: 12, borderRadius: 3, background: x.c, opacity: 0.78 }} />
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{x.l}</span>
-                      </div>
-                    ))}
-                  </div>
-                </ChartCard>
+                      {hourlyData[0]?.avg7d !== null && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <svg width="24" height="4" viewBox="0 0 24 4"><path d="M0 2 L5 2 M8 2 L13 2 M16 2 L21 2" stroke={C.text3} strokeWidth="1.5" strokeLinecap="round"/></svg>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>7-day average</span>
+                        </div>
+                      )}
+                    </div>
+                  </ChartCard>
+
+                  {/* ── 14-day bar chart ── */}
+                  <ChartCard title="AmbientActivityCounts Daily Activity" sub="Sum of PointsDetected per day · higher values indicate more detected motion events" badge={radarUploaded ? 'Live data' : 'Synthetic'} badgeColor={radarUploaded ? C.sage : C.amber} full>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={dailyActivityData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                        <CartesianGrid stroke={C.line} strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="date" tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} interval={0} />
+                        <YAxis tick={{ fontFamily: 'var(--mono)', fontSize: 10, fill: C.text3 }} tickLine={false} axisLine={false} width={52} tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v}`} />
+                        <Tooltip contentStyle={TT_STYLE} formatter={(v: unknown) => [Number(v).toLocaleString(), 'AmbientActivityCounts'] as [string,string]} labelFormatter={(l: unknown) => `${l}`} />
+                        <ReferenceLine y={mean} stroke={C.text3} strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: 'avg', fill: C.text4, fontSize: 9, fontFamily: 'var(--mono)', position: 'right' }} />
+                        <Bar dataKey="counts" radius={[4,4,0,0]} name="AmbientActivityCounts">
+                          {dailyActivityData.map((d, i) => (
+                            <Cell key={i} fill={d.counts >= mean * 1.15 ? C.sage : d.counts <= mean * 0.72 ? C.purple : C.accent} fillOpacity={0.78} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
+                      {[
+                        { label: 'Peak Day',  value: peak ? peak.date : '—',   sub: peak ? peak.counts.toLocaleString() : '',  color: C.sage   },
+                        { label: 'Low Day',   value: low  ? low.date  : '—',   sub: low  ? low.counts.toLocaleString()  : '',  color: C.purple },
+                        { label: 'Daily Avg', value: Math.round(mean).toLocaleString(), sub: 'PointsDetected/day', color: C.accent },
+                      ].map(m => (
+                        <div key={m.label} style={{ padding: '12px 16px', background: C.s2, borderRadius: 8 }}>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: C.text4, textTransform: 'uppercase', letterSpacing: '0.10em', marginBottom: 4 }}>{m.label}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 600, color: m.color, marginBottom: 2 }}>{m.value}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{m.sub}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, marginTop: 14, flexWrap: 'wrap' }}>
+                      {[{l:'Above avg',c:C.sage},{l:'Typical',c:C.accent},{l:'Below avg',c:C.purple}].map(x => (
+                        <div key={x.l} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <div style={{ width: 12, height: 12, borderRadius: 3, background: x.c, opacity: 0.78 }} />
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3 }}>{x.l}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </ChartCard>
+                </>
               );
             })()}
 
