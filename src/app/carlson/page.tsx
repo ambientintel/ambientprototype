@@ -503,7 +503,7 @@ export default function CarlsonPage() {
             <em style={{ fontStyle: 'italic', color: C.text2 }}>2026</em>
           </h1>
           <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px', maxWidth: 600 }}>
-            24/7 contactless and noninvasive monitoring engineered for memory care.
+            24/7 contactless and noninvasive monitoring<br/>engineered for memory care.
           </p>
           <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {['Wed, May 13, 2026', '4:30 – 7:00 PM', 'Walter Library · Toaster Hub'].map(chip => (
