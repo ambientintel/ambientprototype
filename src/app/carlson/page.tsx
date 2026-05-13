@@ -505,14 +505,17 @@ export default function CarlsonPage() {
           <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px' }}>
             24/7 contactless and noninvasive monitoring<br/>engineered for memory care.
           </p>
-          <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          <div className="c-p" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {[
               { label: 'R&D',    value: 'Office of Discovery and Translation', accent: C.gold },
               { label: 'ENDURE', value: 'Bakken Medical Devices Center',       accent: C.accent },
             ].map((item) => (
-              <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '16px 24px', borderTop: `2px solid ${item.accent}`, background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)', minWidth: 220 }}>
-                <span style={{ fontFamily: C.mono, fontSize: 10, letterSpacing: '0.22em', color: item.accent, textTransform: 'uppercase', fontWeight: 600 }}>{item.label}</span>
-                <span style={{ fontFamily: C.sans, fontSize: 15, color: C.text, letterSpacing: '-0.01em', fontWeight: 400, lineHeight: 1.3 }}>{item.value}</span>
+              <div key={item.label} style={{ display: 'flex', alignItems: 'stretch', gap: 0, background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(16px)', border: `1px solid rgba(255,255,255,0.10)`, boxShadow: `inset 0 0 0 0 transparent, 0 0 18px ${item.accent}18` }}>
+                <div style={{ width: 3, background: item.accent, flexShrink: 0 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '14px 20px' }}>
+                  <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.24em', color: item.accent, textTransform: 'uppercase' }}>{item.label}</span>
+                  <span style={{ fontFamily: C.sans, fontSize: 16, color: C.text, letterSpacing: '-0.02em', fontWeight: 400, lineHeight: 1.25, whiteSpace: 'nowrap' }}>{item.value}</span>
+                </div>
               </div>
             ))}
           </div>
