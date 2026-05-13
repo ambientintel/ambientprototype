@@ -741,7 +741,6 @@ export default function CarlsonPage() {
         <CtaCanvas />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }} className="c-two">
           <div>
-            <p style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.22em', color: C.text4, margin: '0 0 24px' }}>May 13 · Toaster Innovation Hub</p>
             <h2 style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(38px, 4.5vw, 62px)', lineHeight: 1.06, letterSpacing: '-0.032em', margin: '0 0 24px' }}>
               Engineered for<br/>
               <em style={{ fontStyle: 'italic', color: C.text2 }}>Memory Care.</em>
