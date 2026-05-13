@@ -572,7 +572,7 @@ export default function CarlsonPage() {
                 <em style={{ fontStyle: 'italic', color: C.text2 }}>Active intelligence.</em>
               </h2>
               <p style={{ fontSize: 18, lineHeight: 1.76, color: C.text2, margin: '0 0 40px' }}>
-                Point-cloud data flows through AWS Kinesis into a Bedrock-powered AI model that generates plain-language summaries for the nurse dashboard in real time. No images. No identifiable data in transit.
+                Ambient device data flows securely through the cloud, where an AI model translates it into summaries on the nurse dashboard in real time. Nurses see what matters without sifting through raw signals and unnecessary alerts.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                 {['IWR6843AOP Radar', 'AWS Kinesis', 'Bedrock AI', 'HIPAA Compliant', 'No Camera', 'No Wearable', 'PCT Patent Filed'].map(tag => (
