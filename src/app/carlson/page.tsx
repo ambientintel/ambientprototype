@@ -544,7 +544,7 @@ export default function CarlsonPage() {
 
       {/* ── 02: TECHNOLOGY ───────────────────────────────────────────────────── */}
       <Rule />
-      <section className="c-sec" style={{ padding: '128px 80px' }}>
+      <section className="c-sec" style={{ background: C.bg2, padding: '128px 80px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <SectionMeta n="03" label="Technology" />
           <div className="c-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 104, alignItems: 'center' }}>
