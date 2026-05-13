@@ -532,7 +532,7 @@ export default function CarlsonPage() {
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <span className="c-nav-label" style={{ fontFamily: C.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.16em', color: C.text4 }}>Founder&apos;s Day 2026</span>
-          <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em' }}>
+          <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', fontSize: 13, textDecoration: 'none', letterSpacing: '0.01em' }}>
             <BtnCanvas />
             <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
               Connect
@@ -747,7 +747,7 @@ export default function CarlsonPage() {
             </h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start' }}>
-            <a href="mailto:bribradley@gmail.com" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '13px 32px', fontSize: 15, textDecoration: 'none', letterSpacing: '0.01em' }}>
+            <a href="https://www.linkedin.com/in/brianbradleyjohnson/" target="_blank" rel="noopener noreferrer" className="c-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '13px 32px', fontSize: 15, textDecoration: 'none', letterSpacing: '0.01em' }}>
               <BtnCanvas />
               <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 10 }}>
                 Get in Touch
