@@ -554,7 +554,7 @@ export default function CarlsonPage() {
             Founder&apos;s Day{' '}
             <em style={{ fontStyle: 'italic', color: C.text2 }}>2026</em>
           </h1>
-          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(20px, 2.2vw, 28px)', letterSpacing: '-0.02em', color: C.text2, margin: '0 0 32px' }}>
+          <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(32px, 4vw, 52px)', letterSpacing: '-0.03em', color: C.text2, margin: '0 0 32px' }}>
             Ambient <em style={{ fontStyle: 'italic' }}>Intelligence</em>
           </p>
           <p className="c-s" style={{ fontSize: 'clamp(26px, 3.2vw, 40px)', lineHeight: 1.32, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.75)', margin: '0 0 56px' }}>
