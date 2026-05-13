@@ -216,17 +216,17 @@ const STEPS: Step[] = [
     sections: [
       {
         heading: 'Architecture',
-        body: 'The ambientcloud backend assigns each resident a coded ID (MOCAREV-0001 through MOCAREV-0030) and never transmits names over the wire. The nurse\'s workstation holds an encrypted keyring file (keyring.enc) that maps coded IDs to resident names. At shift start, the nurse provides a passphrase; the app derives an AES-GCM key, decrypts the keyring in memory, and hydrates the UI. The passphrase and plaintext keyring are never persisted.',
+        body: 'The ambientcloud backend assigns each resident a coded IRB identifier in MOCAREV-NNNN format (MOCAREV-0001 through MOCAREV-0030 system-wide; pilot FAC-MOCAREV-001 uses MOCAREV-0001 through MOCAREV-0012) and never transmits names over the wire. The nurse\'s workstation holds an encrypted keyring file (.keyring.enc) that maps coded IDs to resident names. At shift start, the nurse provides a passphrase; the app derives an AES-GCM key via PBKDF2-SHA256 (600k iterations), decrypts the keyring in memory, and hydrates the UI across all 5 dashboard pages. The passphrase and plaintext keyring are never persisted — 4-hour idle lock wipes the in-memory map.',
         artifacts: [
           { file: 'apps/web/src/lib/keyring.ts',               role: 'AES-GCM encrypt/decrypt, PBKDF2 key derivation, in-memory identity map.' },
           { file: 'apps/web/src/components/KeyringUnlock.tsx',  role: 'Shift-start modal. Accepts passphrase, decrypts keyring, stores map in React context.' },
-          { file: 'apps/web/src/context/IdentityContext.tsx',   role: 'React context that holds the decrypted MOCAREV-ID → name map for the session.' },
+          { file: 'apps/web/src/context/IdentityContext.tsx',   role: 'React context that holds the decrypted MOCAREV-NNNN → ResidentIdentity map. 4-hour idle lock, beforeunload wipe. Consumed by all 5 dashboard pages via useIdentity().' },
         ],
       },
       {
         heading: 'Keyring file format',
         commands: [
-          { label: 'generate a keyring for the pilot', code: '# Run the provisioning script (requires Node 20):\nnode scripts/provision-keyring.mjs \\\n  --passphrase "shift-passphrase-here" \\\n  --map \'{"MOCAREV-0001":"Room 301 Resident","MOCAREV-0002":"Room 302 Resident",...}\'\n  --out keyring.enc\n\n# keyring.enc: base64(iv + ciphertext + authTag)\n# Distribute securely — do NOT commit to git' },
+          { label: 'generate a keyring for the pilot', code: '# Run the provisioning script (requires Node 20):\n# Input: pilot-subjects.json with MOCAREV-NNNN → { displayName, room } map\nnode scripts/provision-keyring.mjs \\\n  --input pilot-subjects.json \\\n  --output keyring.enc\n# Prompts for passphrase interactively\n\n# pilot-subjects.json shape:\n# { "subjects": { "MOCAREV-0001": { "displayName": "...", "room": "301" }, ... } }\n\n# keyring.enc: 16-byte salt + 12-byte IV + AES-GCM ciphertext\n# Distribute securely out-of-band (USB, encrypted email)\n# NEVER commit to git — see .gitignore entries' },
           { label: 'verify decryption', code: 'node scripts/verify-keyring.mjs \\\n  --passphrase "shift-passphrase-here" \\\n  --keyring keyring.enc\n# Prints resolved names to stdout — for verification only' },
         ],
         warnings: [
@@ -241,7 +241,7 @@ const STEPS: Step[] = [
           rows: [
             ['Safe Harbor',    '§164.514(b)',  '18 identifiers removed from API response. Coded IDs are non-inferrable.'],
             ['Expert Method',  '§164.514(b)',  'Not used — Safe Harbor is sufficient for this pilot scope.'],
-            ['Re-identification', '§164.514(c)', 'Keyring enables authorized re-identification on the local device only.'],
+            ['Re-identification', '§164.514(c)', 'Keyring enables authorized re-identification on the local device only. MOCAREV-NNNN codes are non-inferrable IRB identifiers.'],
             ['Audit log',      '§164.312(b)',  'Shift unlock events logged to ambientcloud with user ID and timestamp.'],
           ],
         },
@@ -459,7 +459,7 @@ const STEPS: Step[] = [
         heading: 'Vercel project setup',
         commands: [
           { label: 'link project and deploy', code: 'cd apps/web\nvercel link\n# Select: ambientintel → ambientweb\n# Framework preset: Next.js\n# Root directory: apps/web\n\nvercel --prod\n# Deploys main branch to ellamemory.com' },
-          { label: 'verify deployment', code: 'vercel ls\n# Shows recent deployments and their URLs\n\ncurl -I https://ellamemory.com/api/auth/me\n# → HTTP 401 (unauthenticated) — confirms route is live' },
+          { label: 'verify deployment', code: 'vercel ls\n# Shows recent deployments and their URLs\n\ncurl -I https://ellamemory.com/api/auth/me\n# → HTTP 401 (unauthenticated) — confirms route is live\n\n# Verify pilot facility subjects endpoint:\ncurl "https://ellamemory.com/api/ambient/subjects?facility_id=FAC-MOCAREV-001"\n# → JSON array of SubjectSummary objects' },
         ],
         artifacts: [
           { file: 'apps/web/vercel.json', role: 'Vercel config: framework=nextjs, root=apps/web, build command, output directory.' },
@@ -550,7 +550,7 @@ const CHECKLIST_ITEMS = [
   'WorkOS application created and REDIRECT_URI set',
   'AuthKit SSO flow working (sign in / sign out)',
   'De-identification keyring implemented (AES-GCM)',
-  'Pilot ID map created (MOCAREV-0001 to MOCAREV-0030)',
+  'Pilot ID map created (MOCAREV-0001 to MOCAREV-0012 for FAC-MOCAREV-001 pilot)',
   'Dashboard overview renders with room grid + alerts',
   'Floor map heatmap functional',
   'Room detail: Ella narrative loads',

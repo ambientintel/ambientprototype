@@ -126,7 +126,7 @@ const DOMAINS = [
       { k: 'AI',      v: 'Sonnet 4' },
       { k: 'IaC',     v: 'CDK v2' },
     ],
-    description: 'CDK v2 · 11 CloudFormation stacks live · 18 API endpoints · 163 unit tests · 9 smoke tests. MOCAREV-NNNN coded subject IDs per study-mvp.md §1.5. Ella narratives live via Bedrock Sonnet 4 (cross-region inference) — Athena partition-projection fixed. X-Ray tracing, reserved concurrency, HIPAA 7-yr TTL. 5-job CI/CD pipeline.',
+    description: 'CDK v2 · 11 CloudFormation stacks live · 18 API endpoints · 206 unit tests · 9 smoke tests. MOCAREV-NNNN coded subject IDs per study-mvp.md §1.5. Ella narratives live via Bedrock Sonnet 4 (cross-region inference) — Athena partition-projection fixed. X-Ray tracing, reserved concurrency, HIPAA 7-yr TTL. 5-job CI/CD pipeline.',
     currentStep: '12 · Production Sign-Off',
     freezeKey: 'ambient-cloud-frozen-v1',
     freezeLabel: 'Production Freeze',
@@ -188,7 +188,7 @@ const DOMAINS = [
       { k: 'Workspace', v: 'pnpm 9' },
       { k: 'Pilot',    v: '12 Rooms' },
     ],
-    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, floor map (Ella freshness), Ella narrative, 2-step ACK + false-positive flag. Web push + in-page audio alert (first-load guarded). TTS speak button. Prev/next room navigation. Device management: admin status view, IoT shadow, inline PATCH, filter chips. CSV export in reports. Analytics: all static sections labeled estimated.',
+    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, nurse keyring AES-GCM unlock (4-hr idle lock, PBKDF2 600k), identity overlay wired into all 5 dashboard pages. Floor map (Ella freshness), Ella narrative, 2-step ACK + false-positive flag. Web push + in-page audio alert (first-load guarded). TTS speak button. Prev/next room navigation. Device management: admin status view, IoT shadow, inline PATCH, filter chips. CSV export in reports. Analytics: all static sections labeled estimated.',
     currentStep: '10 · Pilot Validation',
     freezeKey: 'ambient-webapp-frozen-v1',
     freezeLabel: 'Deployment Lock',
@@ -232,10 +232,10 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
   ],
   cloudengineering: [
     { task: 'Approve Bedrock model access in us-east-2 and us-west-2 (Ella cross-region inference — DLQ accumulating until resolved)', owner: 'Cloud' },
-    { task: 'Re-seed DynamoDB with MOCAREV-NNNN records: seed_pilot_data.py --clear && seed_pilot_data.py --with-alerts', owner: 'Cloud' },
-    { task: 'Drain Ella SQS DLQ and verify narratives generate clean after Bedrock access approved', owner: 'Cloud' },
+    { task: 'Re-seed DynamoDB with MOCAREV-NNNN records and drain Ella SQS DLQ after Bedrock access approved', owner: 'Cloud' },
     { task: 'Verify dual-write reconciler — TelemetryDivergence alarm, promote FAC-MOCAREV-001 to parquet_only', owner: 'Cloud' },
-    { task: 'Implement nurse keyring unlock UI (study-mvp.md §11.3): passphrase modal, AES-GCM decrypt, IndexedDB', owner: 'FE+Cloud' },
+    { task: 'Production sign-off checklist — runbooks dry-run, CloudTrail data event verification', owner: 'Cloud+Security' },
+    { task: 'Smoke test suite run against dev tenant post-deploy (pytest -m smoke)', owner: 'Cloud+Security' },
   ],
   mechanical: [
     { task: 'Complete PCB layout in Altium — route controlled-impedance traces, run DRC to zero errors', owner: 'Layout' },
@@ -270,7 +270,7 @@ const SPRINT_FOCUS: Record<string, string[]> = {
   ],
   cloudengineering: [
     'Approve Bedrock model access (us-east-2 + us-west-2) → drain Ella DLQ → verify narrative generation end-to-end',
-    'Reseed DynamoDB MOCAREV-NNNN records + implement nurse keyring unlock UI (§11.3)',
+    'Promote FAC-MOCAREV-001 to parquet_only after reconciler shows 0% divergence over 24h',
   ],
   mechanical: [
     'Route all Altium traces, run DRC to zero errors, export preliminary Gerber',
