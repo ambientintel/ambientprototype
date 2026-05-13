@@ -443,7 +443,7 @@ export default function CarlsonPage() {
         .c-primary:hover { background:#5c0013!important; }
         .c-ghost:hover { border-color:rgba(255,255,255,0.24)!important; color:${C.text}!important; }
         .c-nav-link:hover { color:rgba(240,241,242,0.88)!important; }
-        .c-hero-section { min-height:100vh; min-height:100dvh; }
+        .c-hero-section { height:100vh; height:100dvh; }
         @media(min-width:961px) and (max-width:1100px){
           .c-hero { padding:88px 56px 72px!important; }
         }
@@ -490,7 +490,7 @@ export default function CarlsonPage() {
       </nav>
 
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
-      <section className="c-hero-section" style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+      <section className="c-hero-section" style={{ position: 'relative', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
         <FlowGlowBg />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(8,8,8,0.52) 0%,rgba(8,8,8,0.06) 35%,rgba(8,8,8,0) 100%)', pointerEvents: 'none', zIndex: 1 }} />
         <div className="c-hero" style={{ position: 'relative', zIndex: 2, maxWidth: 1280, margin: '0 auto', padding: '148px 56px 120px', width: '100%' }}>
