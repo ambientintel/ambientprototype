@@ -639,7 +639,7 @@ export default function CarlsonPage() {
               { label: 'By 2050',       value: '13M',     unit: null,   note: 'Americans projected to have Alzheimer\'s' },
             ].map((row, i) => (
               <div key={row.label} style={{ padding: '36px 44px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
-                <span style={{ display: 'block', fontFamily: C.mono, fontSize: 10, letterSpacing: '0.20em', color: C.gold, textTransform: 'uppercase', marginBottom: 12 }}>{row.label}</span>
+                <span style={{ display: 'block', fontFamily: C.mono, fontSize: 12, letterSpacing: '0.18em', color: C.gold, textTransform: 'uppercase', marginBottom: 12 }}>{row.label}</span>
                 <span style={{ display: 'block', fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(36px, 4.2vw, 58px)', letterSpacing: '-0.03em', lineHeight: 1, color: C.text, marginBottom: row.unit ? 4 : 14 }}>{row.value}</span>
                 {row.unit && <span style={{ display: 'block', fontFamily: C.mono, fontSize: 10, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.50)', textTransform: 'uppercase', marginBottom: 14 }}>{row.unit}</span>}
                 <span style={{ fontFamily: C.sans, fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{row.note}</span>
@@ -654,9 +654,9 @@ export default function CarlsonPage() {
               { label: 'SAM', sublabel: 'Serviceable Addressable Market', value: '$4.2B', desc: 'US memory care facilities — sensor monitoring & AI analytics', ratio: '≈ 11% of TAM' },
             ].map((item, i) => (
               <div key={item.label} style={{ padding: '48px 56px', borderLeft: i > 0 ? `1px solid ${C.lineStrg}` : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 20 }}>
-                  <span style={{ fontFamily: C.mono, fontSize: 12, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase' }}>{item.label}</span>
-                  <span style={{ fontFamily: C.sans, fontSize: 13, color: 'rgba(255,255,255,0.50)' }}>{item.sublabel}</span>
+                <div style={{ marginBottom: 20 }}>
+                  <span style={{ display: 'block', fontFamily: C.mono, fontSize: 16, letterSpacing: '0.18em', color: C.gold, textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</span>
+                  <span style={{ fontFamily: C.sans, fontSize: 15, color: 'rgba(255,255,255,0.60)' }}>{item.sublabel}</span>
                 </div>
                 <p style={{ fontFamily: C.serif, fontWeight: 300, fontSize: 'clamp(56px, 7vw, 92px)', lineHeight: 1, letterSpacing: '-0.04em', color: C.text, margin: '0 0 20px' }}>{item.value}</p>
                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
