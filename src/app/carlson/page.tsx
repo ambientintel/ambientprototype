@@ -635,16 +635,16 @@ export default function CarlsonPage() {
             </div>
             <div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: `1px solid ${C.lineStrg}` }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, borderTop: `1px solid ${C.line}` }}>
                 {[
                   { label: 'Growing at', value: '7.9% CAGR', note: 'remote patient monitoring in elder care' },
                   { label: 'US facilities', value: '28,900+', note: 'licensed memory care units nationwide' },
                   { label: 'By 2050', value: '13M', note: 'Americans projected to have Alzheimer\'s' },
-                ].map((row, i) => (
-                  <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '16px 20px', borderTop: i > 0 ? `1px solid ${C.line}` : 'none' }}>
-                    <span style={{ fontFamily: C.mono, fontSize: 9, letterSpacing: '0.18em', color: C.text4, textTransform: 'uppercase', flexShrink: 0, width: 72 }}>{row.label}</span>
-                    <span style={{ fontFamily: C.serif, fontSize: 22, fontWeight: 300, color: C.text, letterSpacing: '-0.02em', flexShrink: 0, width: 110 }}>{row.value}</span>
-                    <span style={{ fontFamily: C.sans, fontSize: 13, color: C.text3, lineHeight: 1.4 }}>{row.note}</span>
+                ].map((row) => (
+                  <div key={row.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '28px 0', borderBottom: `1px solid ${C.line}` }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 10, letterSpacing: '0.22em', color: C.gold, textTransform: 'uppercase' }}>{row.label}</span>
+                    <span style={{ fontFamily: C.serif, fontSize: 'clamp(36px, 4vw, 48px)', fontWeight: 300, color: C.text, letterSpacing: '-0.03em', lineHeight: 1 }}>{row.value}</span>
+                    <span style={{ fontFamily: C.sans, fontSize: 15, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{row.note}</span>
                   </div>
                 ))}
               </div>
