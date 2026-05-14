@@ -711,21 +711,6 @@ export default function WebAppPage() {
   }
 
   return (
-    <>
-    <style dangerouslySetInnerHTML={{__html: `
-      .df-ready {
-        background: #7C3AED;
-        border: 1.5px solid transparent;
-      }
-      .df-ready .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
-      .df-ready .df-sub   { color: rgba(255,255,255,0.82); }
-      .df-frozen {
-        background: #6D28D9;
-        border: 1.5px solid transparent;
-      }
-      .df-frozen .df-title { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.18); }
-      .df-frozen .df-sub   { color: rgba(255,255,255,0.82); }
-    `}} />
     <div className="app" style={{ background: '#F1F3F6', minHeight: '100vh', position: 'relative' }}>
 
       {/* ── Sidebar ── */}
@@ -868,39 +853,53 @@ export default function WebAppPage() {
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: designFrozen ? '#7C3AED' : ready ? '#7C3AED' : '#9CA3AF' }}>
                   {designFrozen ? 'Saved ✓' : 'Goal'}
                 </div>
-                <button
-                  onClick={toggleFreeze}
-                  className={designFrozen ? 'df-frozen' : ready ? 'df-ready' : ''}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 9,
-                    padding: '8px 16px', borderRadius: 9,
-                    cursor: ready || designFrozen ? 'pointer' : 'default',
-                    ...(!(designFrozen || ready) && { background: '#F9FAFB', border: '1.5px dashed #D1D5DB' }),
-                    transition: 'all 0.25s',
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                    {designFrozen || ready ? (
-                      <>
-                        <path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke="#7C3AED" strokeWidth="1.6" strokeLinecap="round"/>
-                        <circle cx="8" cy="8" r="2.2" fill="#7C3AED" fillOpacity="0.25"/>
-                      </>
-                    ) : (
-                      <>
-                        <rect x="4" y="7" width="8" height="7" rx="1.5" stroke="#9CA3AF" strokeWidth="1.4"/>
-                        <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="#9CA3AF" strokeWidth="1.4" strokeLinecap="round"/>
-                      </>
-                    )}
-                  </svg>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
-                    <span className="df-title" style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: designFrozen ? '#7C3AED' : ready ? '#6D28D9' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-                      {designFrozen ? 'Deployed ✓' : 'Pilot Launch'}
-                    </span>
-                    <span className="df-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: designFrozen ? '#7C3AED' : ready ? '#7C3AED' : '#9CA3AF' }}>
-                      {designFrozen ? (frozenDate ? `Locked ${frozenDate}` : 'Deployment locked') : ready ? 'Ready — click to lock' : `${Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}% complete`}
-                    </span>
-                  </div>
-                </button>
+                {(() => {
+                  const active = designFrozen || ready;
+                  const bg = designFrozen ? '#6D28D9' : ready ? '#7C3AED' : '#F9FAFB';
+                  const border = active ? '1.5px solid transparent' : '1.5px dashed #D1D5DB';
+                  const shadow = active
+                    ? '0 8px 20px -8px rgba(124,58,237,0.55), 0 1px 0 rgba(255,255,255,0.18) inset'
+                    : 'none';
+                  const titleColor = active ? '#FFFFFF' : '#9CA3AF';
+                  const subColor = active ? 'rgba(255,255,255,0.85)' : '#9CA3AF';
+                  const iconStroke = active ? '#FFFFFF' : '#9CA3AF';
+                  return (
+                    <button
+                      onClick={toggleFreeze}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 9,
+                        padding: '8px 16px', borderRadius: 9,
+                        cursor: active ? 'pointer' : 'default',
+                        background: bg,
+                        border,
+                        boxShadow: shadow,
+                        transition: 'all 0.25s',
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                        {active ? (
+                          <>
+                            <path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke={iconStroke} strokeWidth="1.6" strokeLinecap="round" strokeOpacity="0.92"/>
+                            <circle cx="8" cy="8" r="2.2" fill={iconStroke} fillOpacity="0.85"/>
+                          </>
+                        ) : (
+                          <>
+                            <rect x="4" y="7" width="8" height="7" rx="1.5" stroke={iconStroke} strokeWidth="1.4"/>
+                            <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke={iconStroke} strokeWidth="1.4" strokeLinecap="round"/>
+                          </>
+                        )}
+                      </svg>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
+                        <span style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: titleColor, letterSpacing: '-0.01em', lineHeight: 1.2, textShadow: active ? '0 1px 2px rgba(0,0,0,0.18)' : 'none' }}>
+                          {designFrozen ? 'Deployed ✓' : 'Pilot Launch'}
+                        </span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: subColor }}>
+                          {designFrozen ? (frozenDate ? `Locked ${frozenDate}` : 'Deployment locked') : ready ? 'Ready — click to lock' : `${Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}% complete`}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -1108,6 +1107,5 @@ export default function WebAppPage() {
         </div>
       </main>
     </div>
-    </>
   );
 }
