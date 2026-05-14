@@ -1,24 +1,25 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { ENG_DOMAIN_BY_ID } from '@/lib/eng-domains';
 
 
 
 // ── Domain definitions ─────────────────────────────────────────────────────────
+// Numeric/state fields (lsKey, freezeKey, checklistTotal, checklistDefault,
+// href) come from @/lib/eng-domains so /eng and /engineering can't drift.
+
+const _m = ENG_DOMAIN_BY_ID;
 
 const DOMAINS = [
   {
-    id: 'firmware',
-    href: '/firmware',
+    ..._m.firmware,
     label: 'Firmware',
     subtitle: 'AM62x Linux build chain',
     color: '#2563EB',
     colorBg: '#EFF6FF',
     colorBorder: '#BFDBFE',
     repo: 'ambientintel/ambientfirmware',
-    lsKey: 'ambient-fw-checklist-v2',
-    checklistTotal: 20,
-    checklistDefault: 9,
     stepsTotal: 15,
     stepsDone: 6,
     phases: [
@@ -35,21 +36,16 @@ const DOMAINS = [
     ],
     description: 'TI Processor SDK 11 · Yocto · U-Boot · custom DTB for IWR6843AOP integration. Build → bring-up → OTA.',
     currentStep: '07 · Kernel Patch Management',
-    freezeKey: 'ambient-fw-frozen-v1',
     freezeLabel: 'Firmware Freeze',
   },
   {
-    id: 'ee',
-    href: '/ee',
+    ..._m.ee,
     label: 'EE Hardware',
     subtitle: 'IWR6843AOP + OSD62x-PM PCB',
     color: '#C2410C',
     colorBg: '#FFF7ED',
     colorBorder: '#FED7AA',
     repo: 'ambientintel/ambientelectrical',
-    lsKey: 'ambient-ee-checklist-v1',
-    checklistTotal: 22,
-    checklistDefault: 13,
     stepsTotal: 12,
     stepsDone: 6,
     phases: [
@@ -66,21 +62,16 @@ const DOMAINS = [
     ],
     description: '8-layer controlled-impedance board. Schematic → Gerbers → fab order → EVT bring-up. 21 CFR 820 DHF.',
     currentStep: '07 · Fab Order',
-    freezeKey: 'ambient-ee-frozen-v1',
     freezeLabel: 'Design Freeze',
   },
   {
-    id: 'mobileapp',
-    href: '/mobileapp',
+    ..._m.mobileapp,
     label: 'Mobile App',
     subtitle: 'Expo SDK 54 · React Native',
     color: '#0D9488',
     colorBg: '#F0FDFA',
     colorBorder: '#99F6E4',
     repo: 'ambientintel/ambientapp',
-    lsKey: 'ambient-mobileapp-checklist-v1',
-    checklistTotal: 23,
-    checklistDefault: 17,
     stepsTotal: 12,
     stepsDone: 11,
     phases: [
@@ -97,21 +88,16 @@ const DOMAINS = [
     ],
     description: 'Nurse fall alert app. Cognito SRP auth + SecureStore session. Alert list, detail, acknowledge, false-positive flag all done. EAS iOS IPA build finished (May 12 2026, build 36dbf33f). Ready to distribute via TestFlight or OTA install link.',
     currentStep: '11 · Distribution',
-    freezeKey: 'ambient-mobileapp-frozen-v1',
     freezeLabel: 'Phase I Lock',
   },
   {
-    id: 'cloudengineering',
-    href: '/cloudengineering',
+    ..._m.cloudengineering,
     label: 'Cloud Engineering',
     subtitle: 'AWS CDK v2 · Python 3.12',
     color: '#4338CA',
     colorBg: '#EEF2FF',
     colorBorder: '#C7D2FE',
     repo: 'ambientintel/ambientcloud',
-    lsKey: 'ambient-cloud-checklist-v2',
-    checklistTotal: 22,
-    checklistDefault: 21,
     stepsTotal: 12,
     stepsDone: 12,
     phases: [
@@ -128,21 +114,16 @@ const DOMAINS = [
     ],
     description: 'CDK v2 · 11 CloudFormation stacks live · 18 API endpoints · 206 unit tests · 9 smoke tests. MOCAREV-NNNN coded subject IDs per study-mvp.md §1.5. Ella narratives live via Bedrock Sonnet 4 (cross-region inference) — Athena partition-projection fixed. X-Ray tracing, reserved concurrency, HIPAA 7-yr TTL. 5-job CI/CD pipeline.',
     currentStep: '12 · Production Sign-Off',
-    freezeKey: 'ambient-cloud-frozen-v1',
     freezeLabel: 'Production Freeze',
   },
   {
-    id: 'mechanical',
-    href: '/mechanical',
+    ..._m.mechanical,
     label: 'Mechanical',
     subtitle: 'IWR6843AOP enclosure · harness · fab',
     color: '#0891B2',
     colorBg: '#ECFEFF',
     colorBorder: '#A5F3FC',
     repo: 'ambientintel/ambientmechanical',
-    lsKey: 'ambient-mechanical-checklist-v1',
-    checklistTotal: 22,
-    checklistDefault: 5,
     stepsTotal: 7,
     stepsDone: 1,
     phases: [
@@ -159,21 +140,16 @@ const DOMAINS = [
     ],
     description: 'PCB design, enclosure, cable harness, fabrication, and validation for the Ambient ceiling-mount radar compute node.',
     currentStep: '02 · PCB Design (Altium)',
-    freezeKey: 'ambient-mechanical-frozen-v1',
     freezeLabel: 'EVT Freeze',
   },
   {
-    id: 'webapp',
-    href: '/webapp',
+    ..._m.webapp,
     label: 'Web App',
     subtitle: 'Next.js 16 · pnpm monorepo',
     color: '#7C3AED',
     colorBg: '#F5F3FF',
     colorBorder: '#DDD6FE',
     repo: 'ambientintel/ambientweb',
-    lsKey: 'ambient-webapp-checklist-v1',
-    checklistTotal: 20,
-    checklistDefault: 19,
     stepsTotal: 13,
     stepsDone: 13,
     phases: [
@@ -190,7 +166,6 @@ const DOMAINS = [
     ],
     description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS email/password auth, HIPAA de-identification, nurse keyring AES-GCM unlock (4-hr idle lock, PBKDF2 600k), identity overlay wired into all 10 dashboard pages (Overview, Floor Map, Alerts, Reports, Analytics, Browse, Room detail, Devices, Archive, Engineering board). May 2026 security audit: assertNoPhi guard wired at the /api/ambient proxy boundary, /api/push/send locked behind ella-session, signin/signout fixed for local dev, weak cookie-key padding removed, Next.js patched 16.2.4 → 16.2.6, 8 dead deps pruned (authkit-nextjs, @nivo/*, radix-ui, cva, tailwind-merge), audit 17 → 1 vuln.',
     currentStep: '10 · Pilot Validation',
-    freezeKey: 'ambient-webapp-frozen-v1',
     freezeLabel: 'Deployment Lock',
   },
 ] as const;

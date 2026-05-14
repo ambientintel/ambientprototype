@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, Fragment } from "react";
 import Link from "next/link";
+import { ENG_DOMAINS, ENG_DOMAIN_BY_ID, ENG_DOMAIN_BY_SERVER_KEY } from "@/lib/eng-domains";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Priority = "critical" | "high" | "medium" | "low";
@@ -433,14 +434,7 @@ export default function EngineeringPage() {
 
   // ── Subsystem checklist progress from shared server state ─────────────────
   useEffect(() => {
-    const DOMAIN_MAP = [
-      { key: 'firmware',   total: 20 },
-      { key: 'ee',         total: 22 },
-      { key: 'cloud',      total: 22 },
-      { key: 'webapp',     total: 20 },
-      { key: 'mobileapp',  total: 23 },
-      { key: 'mechanical', total: 22 },
-    ];
+    const DOMAIN_MAP = ENG_DOMAINS.map(d => ({ key: d.serverKey, total: d.checklistTotal }));
     fetch('/api/eng/state').then(r => r.json()).then((all) => {
       const p: Record<string, number> = {};
       const dn: Record<string, number> = {};
@@ -641,12 +635,21 @@ export default function EngineeringPage() {
                   }}/>
                 </div>
               </Link>
-              <NavCard href="/firmware"        label="Firmware"   color="#00B4D8" lsKey="ambient-fw-checklist-v2"          total={20} defaultDone={9}  serverPct={subProgress['firmware']} />
-              <NavCard href="/ee"              label="EE"         color="#2563EB" lsKey="ambient-ee-checklist-v1"          total={22} defaultDone={13} serverPct={subProgress['ee']} />
-              <NavCard href="/cloudengineering" label="Cloud Eng" color="#38BDF8" lsKey="ambient-cloud-checklist-v2"       total={22} defaultDone={16} serverPct={subProgress['cloud']} />
-              <NavCard href="/webapp"          label="Web App"    color="#3DCC91" lsKey="ambient-webapp-checklist-v1"      total={20} defaultDone={13} serverPct={subProgress['webapp']} />
-              <NavCard href="/mobileapp"       label="Mobile App" color="#FB923C" lsKey="ambient-mobileapp-checklist-v1"  total={23} defaultDone={5}  serverPct={subProgress['mobileapp']} />
-              <NavCard href="/mechanical"      label="Mechanical" color="#34D399" lsKey="ambient-mechanical-checklist-v1" total={22} defaultDone={5}  serverPct={subProgress['mechanical']} />
+              {([
+                { id:'firmware',         label:'Firmware',   color:'#00B4D8' },
+                { id:'ee',               label:'EE',         color:'#2563EB' },
+                { id:'cloudengineering', label:'Cloud Eng',  color:'#38BDF8' },
+                { id:'webapp',           label:'Web App',    color:'#3DCC91' },
+                { id:'mobileapp',        label:'Mobile App', color:'#FB923C' },
+                { id:'mechanical',       label:'Mechanical', color:'#34D399' },
+              ] as const).map(d => {
+                const m = ENG_DOMAIN_BY_ID[d.id];
+                return (
+                  <NavCard key={d.id} href={m.href} label={d.label} color={d.color}
+                    lsKey={m.lsKey} total={m.checklistTotal} defaultDone={m.checklistDefault}
+                    serverPct={subProgress[m.serverKey]} />
+                );
+              })}
               <div style={{ width:1, background:"var(--line)", flexShrink:0, marginLeft:4, alignSelf:"stretch" }}/>
               <CreateIssueBtn onClick={() => setShowCreate(true)} />
             </div>
@@ -1313,12 +1316,13 @@ export default function EngineeringPage() {
           };
           const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month:"short", day:"numeric" });
 
+          const tracked = (sk: string) => ({ stateKey: sk, total: ENG_DOMAIN_BY_SERVER_KEY[sk]?.checklistTotal });
           const STREAMS: { id:string; label:string; sub:string; href:string; color:string; stateKey?:string; total?:number }[] = [
-            { id:"ee",    label:"EE Hardware",       sub:"IWR6843AOP · OSD62x-PM",  href:"/ee",               color:"#FB923C", stateKey:"ee",         total:22 },
-            { id:"fw",    label:"Firmware",          sub:"AM62x · sensor stack",    href:"/firmware",         color:"#818CF8", stateKey:"firmware",   total:20 },
-            { id:"mech",  label:"Mechanical",        sub:"Enclosure · tooling",     href:"/mechanical",       color:"#FCD34D", stateKey:"mechanical", total:22 },
+            { id:"ee",    label:"EE Hardware",       sub:"IWR6843AOP · OSD62x-PM",  href:"/ee",               color:"#FB923C", ...tracked("ee") },
+            { id:"fw",    label:"Firmware",          sub:"AM62x · sensor stack",    href:"/firmware",         color:"#818CF8", ...tracked("firmware") },
+            { id:"mech",  label:"Mechanical",        sub:"Enclosure · tooling",     href:"/mechanical",       color:"#FCD34D", ...tracked("mechanical") },
             { id:"bom",   label:"BOM / Sourcing",    sub:"Parts · long-lead",       href:"/bom",              color:"#F472B6" },
-            { id:"cloud", label:"Cloud Engineering", sub:"AWS · ingest · APM",      href:"/cloudengineering", color:"#22D3EE", stateKey:"cloud",      total:22 },
+            { id:"cloud", label:"Cloud Engineering", sub:"AWS · ingest · APM",      href:"/cloudengineering", color:"#22D3EE", ...tracked("cloud") },
             { id:"clin",  label:"Clinical Research", sub:"IRB · pilot ops",         href:"/clinicalresearch", color:"#A78BFA" },
             { id:"samd",  label:"SaMD / Regulatory", sub:"DHF · Q-Sub · IFU",       href:"/digitalhealth",    color:"#3DCC91" },
           ];
