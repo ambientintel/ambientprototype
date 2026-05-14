@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import Link from "next/link";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ interface NewIssueForm {
 // ── Component ──────────────────────────────────────────────────────────────
 export default function EngineeringPage() {
   const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
-  const [view, setView] = useState<"board" | "backlog" | "people">("board");
+  const [view, setView] = useState<"board" | "backlog" | "people" | "timeline">("board");
   const [search, setSearch] = useState("");
   const [filterAssignee, setFilterAssignee] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -507,6 +507,7 @@ export default function EngineeringPage() {
           {[
             { label:"Board",    icon:<path d="M2.5 2.5h4v11h-4zM9.5 2.5h4v6h-4zM9.5 11.5h4v2h-4z" strokeLinejoin="round"/>, v:"board" as const },
             { label:"Backlog",  icon:<><rect x="2.5" y="3" width="11" height="1.5" rx=".75"/><rect x="2.5" y="6.5" width="11" height="1.5" rx=".75"/><rect x="2.5" y="10" width="11" height="1.5" rx=".75"/></>, v:"backlog" as const },
+            { label:"Timeline", icon:<><path d="M1.5 8h13" strokeLinecap="round"/><circle cx="4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12" cy="8" r="1.5"/></>, v:"timeline" as const },
             { label:"People",   icon:<><circle cx="5" cy="5.5" r="2.5"/><circle cx="11" cy="5.5" r="2.5"/><path d="M1 13c0-2.2 1.8-4 4-4s4 1.8 4 4M7 13c0-2.2 1.8-4 4-4s4 1.8 4 4" strokeLinecap="round"/></>, v:"people" as const },
           ].map(({ label, icon, v }) => (
             <div key={label} style={{ ...s.navItem, background: view === v ? "rgba(45,114,210,0.13)" : "transparent", color: view === v ? "var(--text)" : "var(--text-2)", boxShadow: view === v ? "inset 2px 0 0 var(--accent)" : "none" }} onClick={() => setView(v)}>
@@ -596,9 +597,9 @@ export default function EngineeringPage() {
 
           {/* View tabs */}
           <div style={{ display:"flex", gap:0, borderBottom:"none", marginTop:-4 }}>
-            {(["board","backlog","people"] as const).map(v => (
+            {(["board","backlog","timeline","people"] as const).map(v => (
               <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", cursor:"pointer", padding:"8px 16px 12px", fontSize:13, fontFamily:"var(--sans)", color: view===v ? "var(--text)" : "var(--text-3)", borderBottom: view===v ? "2px solid var(--accent)" : "2px solid transparent", transition:"color 0.15s", textTransform:"capitalize" }}>
-                {v === "board" ? "Board" : v === "backlog" ? "Backlog" : "People"}
+                {v === "board" ? "Board" : v === "backlog" ? "Backlog" : v === "timeline" ? "Timeline" : "People"}
               </button>
             ))}
           </div>
@@ -1230,6 +1231,287 @@ export default function EngineeringPage() {
             </div>
           </div>
         )}
+
+        {/* ── Timeline View ── */}
+        {view === "timeline" && (() => {
+          const TL_START = new Date(2026, 4, 14);
+          const TL_END   = new Date(2026, 11, 1);
+          const TL_SPAN  = (TL_END.getTime() - TL_START.getTime()) / 86_400_000;
+          const pct = (iso: string) => {
+            const d = new Date(iso).getTime();
+            return Math.max(0, Math.min(100, ((d - TL_START.getTime()) / 86_400_000) / TL_SPAN * 100));
+          };
+          const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month:"short", day:"numeric" });
+
+          const STREAMS = [
+            { id:"ee",    label:"EE Hardware",       sub:"IWR6843AOP · OSD62x-PM",  href:"/ee",               color:"#FB923C" },
+            { id:"fw",    label:"Firmware",          sub:"AM62x · sensor stack",    href:"/firmware",         color:"#818CF8" },
+            { id:"mech",  label:"Mechanical",        sub:"Enclosure · tooling",     href:"/mechanical",       color:"#FCD34D" },
+            { id:"bom",   label:"BOM / Sourcing",    sub:"Parts · long-lead",       href:"/bom",              color:"#F472B6" },
+            { id:"cloud", label:"Cloud",             sub:"AWS · ingest · APM",      href:"/cloud",            color:"#22D3EE" },
+            { id:"clin",  label:"Clinical Research", sub:"IRB · pilot ops",         href:"/clinicalresearch", color:"#A78BFA" },
+            { id:"samd",  label:"SaMD / Regulatory", sub:"DHF · Q-Sub · IFU",       href:"/digitalhealth",    color:"#3DCC91" },
+          ];
+
+          const BARS: Record<string, { label:string; start:string; end:string; ms?:string }[]> = {
+            ee: [
+              { label:"Schematic capture (rev A)",   start:"2026-05-14", end:"2026-05-22" },
+              { label:"PCB layout — 4-layer",         start:"2026-05-18", end:"2026-05-28" },
+              { label:"DRC + design review → fab",    start:"2026-05-26", end:"2026-05-31", ms:"M1" },
+              { label:"Board bring-up @ Advanced PCT", start:"2026-06-15", end:"2026-06-25" },
+              { label:"EVT validation (radar + power)", start:"2026-06-25", end:"2026-07-12" },
+              { label:"Rev B tweaks + final BOM",      start:"2026-07-10", end:"2026-07-14", ms:"M2" },
+              { label:"DVT @ EI Microcircuits",       start:"2026-08-05", end:"2026-09-15" },
+            ],
+            fw: [
+              { label:"Sensor fusion (radar + PIR)",   start:"2026-05-14", end:"2026-06-05" },
+              { label:"Realtime WS feed",              start:"2026-05-14", end:"2026-06-01" },
+              { label:"Bring-up FW (AM62x boot)",      start:"2026-06-15", end:"2026-06-28" },
+              { label:"Drivers → rev A board",         start:"2026-06-25", end:"2026-07-10" },
+              { label:"OTA pipeline",                   start:"2026-07-01", end:"2026-07-20" },
+              { label:"Pilot freeze + QA pass",        start:"2026-07-20", end:"2026-07-30", ms:"M3" },
+              { label:"Pilot OTA patches",              start:"2026-08-01", end:"2026-10-31" },
+            ],
+            mech: [
+              { label:"Enclosure CAD r1",              start:"2026-05-14", end:"2026-05-28" },
+              { label:"3D-printed test fits",          start:"2026-05-28", end:"2026-06-15" },
+              { label:"Enclosure CAD r2 (DfM)",        start:"2026-06-15", end:"2026-07-08" },
+              { label:"Tooling spec → EI Micro",       start:"2026-07-08", end:"2026-07-14", ms:"M2" },
+              { label:"Pilot injection run",            start:"2026-07-15", end:"2026-07-30" },
+            ],
+            bom: [
+              { label:"EVT BOM v0.9",                  start:"2026-05-14", end:"2026-05-28" },
+              { label:"Long-lead parts ordered",       start:"2026-05-22", end:"2026-05-31", ms:"M1" },
+              { label:"Production BOM v1.0",            start:"2026-06-25", end:"2026-07-14", ms:"M2" },
+              { label:"Sourcing locked + alternates",   start:"2026-07-14", end:"2026-07-25" },
+              { label:"Pilot kit BOM (24 units)",       start:"2026-07-20", end:"2026-07-30" },
+            ],
+            cloud: [
+              { label:"Datadog APM rollout",            start:"2026-05-14", end:"2026-05-25" },
+              { label:"Security audit closeout",        start:"2026-05-14", end:"2026-05-30" },
+              { label:"Multi-tenant scaling",           start:"2026-05-14", end:"2026-06-20" },
+              { label:"Pilot tenant provisioning",      start:"2026-06-20", end:"2026-07-15" },
+              { label:"Pilot ops monitoring",           start:"2026-08-01", end:"2026-10-31" },
+              { label:"Data export pipeline",           start:"2026-09-15", end:"2026-10-25" },
+              { label:"Data freeze",                    start:"2026-10-31", end:"2026-11-05", ms:"M4" },
+            ],
+            clin: [
+              { label:"IRB protocol draft",             start:"2026-05-14", end:"2026-05-28" },
+              { label:"IRB submission",                  start:"2026-05-28", end:"2026-06-10" },
+              { label:"IRB review window",              start:"2026-06-10", end:"2026-07-15" },
+              { label:"Site agreements signed",          start:"2026-06-15", end:"2026-07-20" },
+              { label:"Consent + staff training",        start:"2026-07-01", end:"2026-07-28", ms:"M3" },
+              { label:"Pilot Study (n=24)",              start:"2026-08-01", end:"2026-10-31" },
+              { label:"Mid-study data review",          start:"2026-09-15", end:"2026-09-22" },
+              { label:"Stat analysis + report",         start:"2026-11-01", end:"2026-11-25", ms:"M5" },
+            ],
+            samd: [
+              { label:"ISO 14971 risk file update",      start:"2026-05-14", end:"2026-06-15" },
+              { label:"Design History File",             start:"2026-05-22", end:"2026-07-10" },
+              { label:"Pre-Sub Q-Sub draft → FDA",       start:"2026-06-01", end:"2026-07-15", ms:"M2" },
+              { label:"Pilot label + IFU",               start:"2026-07-01", end:"2026-07-28" },
+              { label:"NSR pilot filing",                start:"2026-07-15", end:"2026-07-30" },
+              { label:"Pilot FDA report package",        start:"2026-11-01", end:"2026-11-30", ms:"M5" },
+            ],
+          };
+
+          const MILESTONES = [
+            { id:"M1", date:"2026-06-01", label:"EE board order → Advanced PCT",   color:"#FF6B6B" },
+            { id:"M2", date:"2026-07-15", label:"Design + BOM → EI Microcircuits", color:"#FF6B6B" },
+            { id:"M3", date:"2026-08-01", label:"Pilot Study begins",              color:"#FFC940" },
+            { id:"M4", date:"2026-10-31", label:"Pilot Study ends",                color:"#FFC940" },
+            { id:"M5", date:"2026-11-30", label:"Summary & data analysis",         color:"#2D72D2" },
+          ];
+
+          const MONTHS = ["2026-06-01","2026-07-01","2026-08-01","2026-09-01","2026-10-01","2026-11-01","2026-12-01"];
+          const MLABEL: Record<string, string> = {
+            "2026-06-01":"JUN","2026-07-01":"JUL","2026-08-01":"AUG","2026-09-01":"SEP","2026-10-01":"OCT","2026-11-01":"NOV","2026-12-01":"DEC"
+          };
+
+          const ROW_H = 22;
+          const ROW_GAP = 4;
+
+          function packBars(bars: { label:string; start:string; end:string; ms?:string }[]) {
+            const ends: number[] = [];
+            return bars.map(b => {
+              const s = new Date(b.start).getTime();
+              const e = new Date(b.end).getTime();
+              let row = ends.findIndex(end => end <= s);
+              if (row === -1) { row = ends.length; ends.push(0); }
+              ends[row] = e;
+              return { ...b, row };
+            });
+          }
+
+          return (
+            <div style={{ ...s.content, flex:1, overflowY:"auto" }}>
+              <SectionDivider label="Programme Timeline · May → Nov 2026" n="00" first />
+
+              {/* Milestone summary cards */}
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:10, marginBottom:24 }}>
+                {MILESTONES.map(m => (
+                  <div key={m.id} style={{
+                    position:"relative", padding:"14px 14px 12px 18px", borderRadius:8,
+                    background:`linear-gradient(135deg, ${m.color}12, ${m.color}03)`,
+                    border:`1px solid ${m.color}40`, overflow:"hidden",
+                  }}>
+                    <div style={{ position:"absolute", top:0, left:0, width:3, height:"100%", background:m.color, boxShadow:`0 0 14px ${m.color}` }}/>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:5 }}>
+                      <span style={{ width:8, height:8, background:m.color, transform:"rotate(45deg)", boxShadow:`0 0 8px ${m.color}` }}/>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.16em", color:m.color, fontWeight:600 }}>{m.id}</span>
+                    </div>
+                    <div style={{ fontFamily:"var(--serif)", fontSize:14, color:"var(--text)", lineHeight:1.25, marginBottom:6, fontWeight:300 }}>{m.label}</div>
+                    <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", letterSpacing:"0.1em" }}>{fmt(m.date).toUpperCase()} · 2026</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Timeline grid */}
+              <div style={{ display:"grid", gridTemplateColumns:"220px 1fr", border:"1px solid var(--line)", borderRadius:10, background:"var(--surface-1)", overflow:"hidden" }}>
+
+                {/* Header: corner */}
+                <div style={{ borderBottom:"1px solid var(--line)", borderRight:"1px solid var(--line)", padding:"12px 14px", display:"flex", flexDirection:"column", justifyContent:"flex-end", height:64 }}>
+                  <div style={{ fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.18em", color:"var(--text-4)", textTransform:"uppercase" }}>Workstream</div>
+                </div>
+
+                {/* Header: axis */}
+                <div style={{ position:"relative", height:64, borderBottom:"1px solid var(--line)" }}>
+                  {MONTHS.map(d => (
+                    <div key={d} style={{ position:"absolute", left:`${pct(d)}%`, bottom:6, fontFamily:"var(--mono)", fontSize:9.5, letterSpacing:"0.16em", color:"var(--text-3)", paddingLeft:6 }}>
+                      {MLABEL[d]}
+                    </div>
+                  ))}
+                  {MILESTONES.map(m => (
+                    <div key={m.id} style={{ position:"absolute", left:`${pct(m.date)}%`, top:10 }}>
+                      <div title={`${m.id} · ${m.label} · ${fmt(m.date)} 2026`} style={{
+                        width:12, height:12, background:m.color,
+                        transform:"translateX(-50%) rotate(45deg)",
+                        boxShadow:`0 0 14px ${m.color}, 0 0 4px ${m.color}`,
+                        border:"1px solid rgba(255,255,255,0.55)",
+                      }}/>
+                      <div style={{ position:"absolute", top:15, left:0, transform:"translateX(-50%)", whiteSpace:"nowrap", fontFamily:"var(--mono)", fontSize:8, letterSpacing:"0.16em", color:m.color, fontWeight:700 }}>
+                        {m.id}
+                      </div>
+                    </div>
+                  ))}
+                  {/* TODAY label */}
+                  <div style={{ position:"absolute", left:`${pct("2026-05-14")}%`, top:10, transform:"translateX(2px)" }}>
+                    <div style={{ width:8, height:8, borderRadius:"50%", background:"#FF6B6B", boxShadow:"0 0 12px #FF6B6B, 0 0 4px #FF6B6B" }}/>
+                    <div style={{ position:"absolute", top:13, left:14, whiteSpace:"nowrap", fontFamily:"var(--mono)", fontSize:8, letterSpacing:"0.2em", color:"#FF6B6B", fontWeight:700 }}>
+                      TODAY · MAY 14
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lanes */}
+                {STREAMS.map((st, idx) => {
+                  const packed = packBars(BARS[st.id] || []);
+                  const subRows = Math.max(1, ...packed.map(p => p.row + 1));
+                  const laneH = subRows * (ROW_H + ROW_GAP) + 8;
+                  const isLast = idx === STREAMS.length - 1;
+
+                  return (
+                    <Fragment key={st.id}>
+                      {/* Lane label (link to workstream page) */}
+                      <Link href={st.href} style={{ textDecoration:"none", color:"inherit" }}>
+                        <div
+                          style={{
+                            borderRight:"1px solid var(--line)",
+                            borderBottom: isLast ? "none" : "1px solid var(--line)",
+                            padding:"10px 14px 10px 20px",
+                            height:laneH, display:"flex", flexDirection:"column", justifyContent:"center", gap:3,
+                            background:"transparent", cursor:"pointer", transition:"background 0.15s",
+                            position:"relative",
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = `${st.color}10`; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <div style={{ position:"absolute", left:0, top:10, bottom:10, width:3, background:st.color, borderRadius:"0 3px 3px 0", boxShadow:`0 0 10px ${st.color}80` }}/>
+                          <div style={{ fontFamily:"var(--sans)", fontSize:13, color:"var(--text)", fontWeight:500 }}>{st.label}</div>
+                          <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.08em" }}>{st.sub}</div>
+                        </div>
+                      </Link>
+
+                      {/* Lane track */}
+                      <div style={{ position:"relative", height:laneH, borderBottom: isLast ? "none" : "1px solid var(--line)" }}>
+                        {/* Gridlines */}
+                        {MONTHS.map(d => (
+                          <div key={d} style={{ position:"absolute", left:`${pct(d)}%`, top:0, bottom:0, width:1, background:"var(--line)", opacity:0.6 }}/>
+                        ))}
+                        {/* Milestone vertical lines */}
+                        {MILESTONES.map(m => (
+                          <div key={m.id} style={{ position:"absolute", left:`${pct(m.date)}%`, top:0, bottom:0, width:1, borderLeft:`1px dashed ${m.color}55` }}/>
+                        ))}
+                        {/* TODAY line */}
+                        <div style={{ position:"absolute", left:`${pct("2026-05-14")}%`, top:0, bottom:0, width:2, background:"#FF6B6B", boxShadow:"0 0 12px #FF6B6B", opacity:0.55 }}/>
+
+                        {/* Bars */}
+                        {packed.map((b, i) => {
+                          const left = pct(b.start);
+                          const right = pct(b.end);
+                          const w = Math.max(0.6, right - left);
+                          const top = b.row * (ROW_H + ROW_GAP) + 4;
+                          const ms = b.ms ? MILESTONES.find(m => m.id === b.ms) : undefined;
+
+                          return (
+                            <div key={i}
+                              title={`${b.label}  ·  ${fmt(b.start)} → ${fmt(b.end)}${ms ? `  ·  feeds ${ms.id} (${ms.label})` : ''}`}
+                              style={{
+                                position:"absolute", top, left:`${left}%`, width:`${w}%`, height:ROW_H,
+                                background:`linear-gradient(90deg, ${st.color}55, ${st.color}28)`,
+                                border:`1px solid ${st.color}`,
+                                borderRadius:4,
+                                display:"flex", alignItems:"center", padding:"0 7px",
+                                fontFamily:"var(--mono)", fontSize:9.5, color:"#fff", fontWeight:500, letterSpacing:"0.02em",
+                                whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                                cursor:"default", transition:"background 0.15s, box-shadow 0.15s",
+                                boxShadow:`inset 0 0 0 1px ${st.color}33`,
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.background = `linear-gradient(90deg, ${st.color}aa, ${st.color}66)`;
+                                e.currentTarget.style.boxShadow = `0 0 14px ${st.color}66, inset 0 0 0 1px ${st.color}`;
+                                e.currentTarget.style.zIndex = "5";
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.background = `linear-gradient(90deg, ${st.color}55, ${st.color}28)`;
+                                e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${st.color}33`;
+                                e.currentTarget.style.zIndex = "";
+                              }}
+                            >
+                              <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{b.label}</span>
+                              {ms && (
+                                <span style={{ marginLeft:"auto", paddingLeft:6, fontFamily:"var(--mono)", fontSize:8, color:ms.color, fontWeight:700, letterSpacing:"0.14em", flexShrink:0 }}>
+                                  → {b.ms}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </Fragment>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div style={{ display:"flex", alignItems:"center", gap:18, marginTop:18, padding:"10px 14px", borderRadius:8, background:"var(--surface-1)", border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", letterSpacing:"0.1em", flexWrap:"wrap" }}>
+                <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ width:8, height:8, background:"#FF6B6B", transform:"rotate(45deg)", boxShadow:"0 0 6px #FF6B6B" }}/>
+                  CRITICAL EXTERNAL DELIVERABLE
+                </span>
+                <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ width:8, height:8, background:"#FFC940", transform:"rotate(45deg)", boxShadow:"0 0 6px #FFC940" }}/>
+                  PILOT BOUNDARY
+                </span>
+                <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ width:8, height:8, background:"#2D72D2", transform:"rotate(45deg)", boxShadow:"0 0 6px #2D72D2" }}/>
+                  REPORT DELIVERABLE
+                </span>
+                <span style={{ marginLeft:"auto", color:"var(--text-4)" }}>HOVER A BAR FOR DATES · CLICK A LANE LABEL TO OPEN THE WORKSTREAM</span>
+              </div>
+            </div>
+          );
+        })()}
       </main>
 
       {/* ── Add Engineer Modal ── */}
