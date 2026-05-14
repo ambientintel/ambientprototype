@@ -168,23 +168,26 @@
     {
       "id": "ENG-L1778536502225",
       "type": "task",
-      "title": "AWS engineering",
-      "priority": "medium",
-      "points": 1,
+      "title": "ambientcloud X-Ray service map dashboard + security audit closeout",
+      "priority": "high",
+      "points": 5,
       "assignee": "Brian",
       "assigneeInitial": "B",
       "assigneeColor": "#22D3EE",
-      "labels": [],
-      "column": "inprogress",
-      "description": "",
+      "labels": [
+        "aws",
+        "security",
+        "observability"
+      ],
+      "column": "done",
+      "description": "AWS pilot tenant hardening for IRB pilot readiness. X-Ray service map row + per-service p99 widgets added to operator dashboard (closes Cloud lane 'APM rollout' bar via in-tenant tracing — Datadog SaaS conflicted with the no-traces-leave-tenant compliance line). Pre-pilot security audit produced docs/security-audit-closeout-2026-05.md with 20 findings; 14 + L6-partial closed in this sprint: H1 mgmt events on CloudTrail, M1 trail CMK encryption (with explicit cross-stack KMS grant), M3 sns:Unsubscribe scope, L2 PITR API migration, H3 Terraform-role trust + permission tightening, H2 dormant IAM users deleted, M4 IAM Access Analyzer enabled, M5 HIPAA password policy, M8 DDB deletion protection, M9 GuardDuty enabled, M6 step 1 deploy-role deny-overlay, L7 CFN termination protection on 11 stacks, L8 access-logs versioning. All HIGH findings closed. Discovered AWS Config + Security Hub were already enabled; SecHub is now the source of truth for ongoing hardening backlog.",
       "created": "May 11",
-      "updated": "May 11"
+      "updated": "May 14"
     }
   ],
   "personalTasks": {
     "Brian": [
-      "Mobile app for pilot study",
-      "AWS engineering"
+      "Mobile app for pilot study"
     ],
     "Gavin": [
       "finish routing PMIC to the OSD62",
@@ -205,7 +208,8 @@
     "Brian": [
       "ambientweb security audit — PHI guard wired, deps cleaned, vulns 17→1",
       "ambientweb /dashboard/engineering kanban board + PWA manifest fix",
-      "Website for pilot study"
+      "Website for pilot study",
+      "ambientcloud X-Ray service map dashboard + security audit closeout"
     ]
   },
   "history": [
