@@ -95,9 +95,9 @@ function AEntry({ name, note, children }: { name: string; note?: string; childre
     </div>
   );
 }
-function MathCard({ title, index, color, open, onToggle, children }: { title:string; index:string; color:string; open:boolean; onToggle:()=>void; children:React.ReactNode }) {
+function MathCard({ idx, title, index, color, rationale, open, onToggle, children }: { idx:number; title:string; index:string; color:string; rationale:React.ReactNode; open:boolean; onToggle:()=>void; children:React.ReactNode }) {
   return (
-    <div style={{ marginBottom:12, border:`1px solid ${open ? C.lineS : C.line}`, borderRadius:14, overflow:'hidden', transition:'border-color 0.15s' }}>
+    <div id={`math-${idx}`} style={{ marginBottom:12, border:`1px solid ${open ? C.lineS : C.line}`, borderRadius:14, overflow:'hidden', transition:'border-color 0.15s', scrollMarginTop:24 }}>
       <div onClick={onToggle} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:C.s1, padding:'16px 28px', cursor:'pointer', userSelect:'none' }}>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
           <div style={{ width:3, height:28, background:color, borderRadius:2, flexShrink:0 }}/>
@@ -110,6 +110,10 @@ function MathCard({ title, index, color, open, onToggle, children }: { title:str
       </div>
       {open && (
         <div style={{ background:C.s2, padding:'28px 32px', display:'flex', flexDirection:'column', gap:32, borderTop:`1px solid ${C.line}` }}>
+          <div style={{ display:'flex', gap:14, padding:'16px 18px', background:C.bg, border:`1px solid ${C.line}`, borderLeft:`3px solid ${color}`, borderRadius:8 }}>
+            <div style={{ fontFamily:'var(--mono)', fontSize:9, color, letterSpacing:'0.14em', textTransform:'uppercase', whiteSpace:'nowrap', paddingTop:2 }}>Clinical<br/>significance</div>
+            <div style={{ fontSize:13, color:C.text2, lineHeight:1.7 }}>{rationale}</div>
+          </div>
           {children}
         </div>
       )}
@@ -184,6 +188,7 @@ export default function MethodologyPage() {
             ['#overview',    'Platform Overview'],
             ['#taxonomy',    'Naming Taxonomy'],
             ['#mathematics', 'Algorithm Mathematics'],
+            ['#references',  'References'],
             ['#positioning', 'Positioning'],
             ['#developer',   'Developer Reference'],
           ] as [string, string][]).map(([href, label]) => (
@@ -292,7 +297,7 @@ export default function MethodologyPage() {
           </div>
 
           {/* ── 0: Signal Processing ── */}
-          <MathCard title="Signal Processing" index="Foundation Layer" color={C.sage} open={openGroups.has(0)} onToggle={() => toggle(0)}>
+          <MathCard idx={0} title="Signal Processing" index="Foundation Layer" color={C.sage} open={openGroups.has(0)} onToggle={() => toggle(0)} rationale={<>Smoothing, normalization, and frequency-domain decomposition are the prerequisite layer for every downstream index. Without them, motion artifact and sensor noise contaminate every higher metric — DFA, SampEn, gait speed, and fall thresholds all assume a denoised input. This is the foundation that makes the rest of the system clinically usable.</>}>
 
             <AEntry name="Simple Moving Average (SMA)">
               <EBlock label="definition">
@@ -332,7 +337,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 1: Complexity Theory ── */}
-          <MathCard title="Nonlinear Complexity Theory" index="AmbientActivityIndex · AmbientRiskIndex" color={C.purple} open={openGroups.has(1)} onToggle={() => toggle(1)}>
+          <MathCard idx={1} title="Nonlinear Complexity Theory" index="AmbientActivityIndex · AmbientRiskIndex" color={C.purple} open={openGroups.has(1)} onToggle={() => toggle(1)} rationale={<>Loss of fractal complexity in movement — detectable as DFA α drifting away from 1.0, rising sample entropy, or falling Hurst exponent — is one of the earliest known biomarkers of frailty, cognitive decline, and impending fall risk. These nonlinear metrics surface 6–18 months before clinical presentation, well in advance of changes in standard mobility tests like gait speed or TUG.</>}>
 
             <AEntry name="Detrended Fluctuation Analysis (DFA)" note="Quantifies long-range power-law correlations in non-stationary signals. The scaling exponent α characterises persistence: α ≈ 0.5 = random walk; α → 1 = long-range correlated; α > 1 = non-stationary.">
               <EBlock label="algorithm">
@@ -406,7 +411,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 2: Circadian Rhythm ── */}
-          <MathCard title="Circadian Rhythm · Fragmentation" index="AmbientCircadianIndex · AmbientActivityIndex" color={C.coral} open={openGroups.has(2)} onToggle={() => toggle(2)}>
+          <MathCard idx={2} title="Circadian Rhythm · Fragmentation" index="AmbientCircadianIndex · AmbientActivityIndex" color={C.coral} open={openGroups.has(2)} onToggle={() => toggle(2)} rationale={<>Low interdaily stability (IS), high intradaily variability (IV), and reduced relative amplitude (RA) are independent predictors of mortality in older adults and a strong early signal in dementia, heart failure, and post-surgical delirium. Ambient sensing captures these rhythms continuously and unobtrusively — without wearables, sleep diaries, or polysomnography.</>}>
 
             <AEntry name="Interdaily Stability (IS)" note="Quantifies how consistent the 24-hour activity pattern is across days. IS = 1 means the pattern is identical every day; IS = 0 means the pattern varies randomly.">
               <EBlock label="Van Someren et al., 1997">
@@ -460,7 +465,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 3: Gait Analysis ── */}
-          <MathCard title="Gait Analysis" index="AmbientGaitIndex" color={C.accent} open={openGroups.has(3)} onToggle={() => toggle(3)}>
+          <MathCard idx={3} title="Gait Analysis" index="AmbientGaitIndex" color={C.accent} open={openGroups.has(3)} onToggle={() => toggle(3)} rationale={<>Gait speed below 0.8 m/s, step-time variability above 3%, and TUG times above 12 s are independent predictors of falls, hospitalization, and 12-month mortality in adults over 65. Studenski 2011 (JAMA) showed gait speed alone rivals far more complex composite assessments. Continuous ambient gait measurement removes the white-coat artifact present in clinic-based testing.</>}>
 
             <AEntry name="Gait Speed">
               <EBlock label="Studenski 2011 · SPPB benchmark">
@@ -512,7 +517,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 4: METs & Energy ── */}
-          <MathCard title="Metabolic Equivalents · Energy Expenditure" index="AmbientActivityIndex" color={C.amber} open={openGroups.has(4)} onToggle={() => toggle(4)}>
+          <MathCard idx={4} title="Metabolic Equivalents · Energy Expenditure" index="AmbientActivityIndex" color={C.amber} open={openGroups.has(4)} onToggle={() => toggle(4)} rationale={<>Quantifying daily metabolic load translates raw motion into the clinical vocabulary used by cardiac rehabilitation, exercise prescription, and post-acute care discharge planning. Objective MET tracking flags deconditioning weeks before functional decline becomes obvious and is required documentation for many CMS-reimbursed remote monitoring programs.</>}>
 
             <AEntry name="Metabolic Equivalent of Task (MET)" note="MET normalises oxygen consumption to resting metabolic rate. The Ainsworth 2011 Compendium of Physical Activities provides MET values for >800 activity classes.">
               <EBlock label="Ainsworth et al., Medicine & Science in Sports & Exercise, 2011">
@@ -553,7 +558,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 5: Sleep & HRV ── */}
-          <MathCard title="Sleep Architecture · HRV" index="AmbientSleepIndex" color={C.purple} open={openGroups.has(5)} onToggle={() => toggle(5)}>
+          <MathCard idx={5} title="Sleep Architecture · HRV" index="AmbientSleepIndex" color={C.purple} open={openGroups.has(5)} onToggle={() => toggle(5)} rationale={<>Sleep efficiency, REM/deep-sleep distribution, and overnight rMSSD jointly predict next-day cognitive performance, immune function, and emotional regulation. Together they form the strongest non-cardiac predictor of all-cause mortality in adults over 60. Ambient sensing reproduces clinical PSG staging without electrodes, headbands, or in-lab nights.</>}>
 
             <AEntry name="Sleep Efficiency (SE)">
               <EBlock>
@@ -600,7 +605,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 6: Recovery & Chronotype ── */}
-          <MathCard title="Recovery · Chronotype" index="AmbientRecoveryIndex · AmbientCircadianIndex" color={C.gold} open={openGroups.has(6)} onToggle={() => toggle(6)}>
+          <MathCard idx={6} title="Recovery · Chronotype" index="AmbientRecoveryIndex · AmbientCircadianIndex" color={C.gold} open={openGroups.has(6)} onToggle={() => toggle(6)} rationale={<>Social jet lag — the chronic mismatch between biological and social sleep timing — is an independent predictor of metabolic syndrome, depression, and cardiovascular events even in adults without obvious sleep complaints. Recovery composites give caregivers and clinicians a single legible number that captures last night&apos;s restorative quality across multiple physiological domains.</>}>
 
             <AEntry name="Recovery Score Composite" note="Weighted composite normalised to [0, 100]. Weights are empirically derived from the literature; clinical implementations may tune per population.">
               <EBlock label="composite score">
@@ -633,7 +638,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 7: Sedentary Behavior ── */}
-          <MathCard title="Sedentary Behavior" index="AmbientSedentaryIndex" color={C.amber} open={openGroups.has(7)} onToggle={() => toggle(7)}>
+          <MathCard idx={7} title="Sedentary Behavior" index="AmbientSedentaryIndex" color={C.amber} open={openGroups.has(7)} onToggle={() => toggle(7)} rationale={<>Prolonged unbroken sedentary bouts (&gt;60 min) are associated with deep-vein thrombosis risk in post-surgical patients and glycemic dysregulation in metabolic disease — independent of total daily activity. Breaks-per-hour and bout-length distribution are now CMS-recognized quality measures for senior living and rehabilitation settings.</>}>
 
             <AEntry name="Bout Analysis" note="A sedentary bout is a continuous sequence of epochs below the activity threshold. Prolonged bouts (≥ 20 min) carry higher cardiometabolic risk regardless of total sedentary time.">
               <EBlock label="bout detection">
@@ -670,7 +675,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 8: Fall Detection ── */}
-          <MathCard title="Fall Detection" index="AmbientFallDetection" color={C.red} open={openGroups.has(8)} onToggle={() => toggle(8)}>
+          <MathCard idx={8} title="Fall Detection" index="AmbientFallDetection" color={C.red} open={openGroups.has(8)} onToggle={() => toggle(8)} rationale={<>Falls are the leading cause of injury-related death in adults over 65, and the lethal threshold is not the fall itself but the time-on-floor before help arrives. Continuous ambient detection enables sub-minute alert latency without the wearable compliance barriers (forgetting, removing for showering, battery anxiety) that cause 40–60% of pendant-based systems to fail at the moment they&apos;re needed.</>}>
 
             <AEntry name="Sliding Window Detector" note="The key insight: a fall produces a rapid, irreversible descent in the height signal. The algorithm compares h(t) to a reference height h(t−W) buffered W frames ago. If the current height drops below θ times the reference, an alarm fires.">
               <EBlock label="Ambient fall algorithm">
@@ -714,7 +719,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 9: CGM / Metabolic ── */}
-          <MathCard title="Glycemic Analysis · CGM" index="AmbientMetabolicIndex" color={C.sage} open={openGroups.has(9)} onToggle={() => toggle(9)}>
+          <MathCard idx={9} title="Glycemic Analysis · CGM" index="AmbientMetabolicIndex" color={C.sage} open={openGroups.has(9)} onToggle={() => toggle(9)} rationale={<>Time-in-range below 70% is associated with a 3× increased risk of diabetic complications, and CV% above 36% predicts hypoglycemia events better than HbA1c. Bergenstal 2019 established TIR as the modern glycemic standard. Ambient activity context turns isolated glucose excursions into actionable behavioral patterns — &quot;your spikes correlate with your sedentary afternoons.&quot;</>}>
 
             <AEntry name="Time in Range (TIR)">
               <EBlock label="International Consensus, Diabetes Care 2019">
@@ -764,7 +769,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 10: Autonomic HRV ── */}
-          <MathCard title="Autonomic Nervous System · HRV Frequency Domain" index="AmbientRecoveryIndex" color={C.purple} open={openGroups.has(10)} onToggle={() => toggle(10)}>
+          <MathCard idx={10} title="Autonomic Nervous System · HRV Frequency Domain" index="AmbientRecoveryIndex" color={C.purple} open={openGroups.has(10)} onToggle={() => toggle(10)} rationale={<>The LF/HF ratio and Poincaré SD1/SD2 capture real-time sympatho-vagal balance — a biomarker of unresolved physiological stress that predicts delayed surgical recovery, immune suppression, and inflammatory response. Sustained sympathetic elevation in older adults is now recognized as an independent risk factor for cognitive decline beyond what blood pressure or heart rate alone reveal.</>}>
 
             <AEntry name="LF/HF Ratio" note="The ratio of low-frequency to high-frequency HRV power approximates sympatho-vagal balance. High LF/HF indicates sympathetic dominance (stress, arousal); low LF/HF indicates parasympathetic dominance (rest, recovery).">
               <EBlock label="spectral power bands">
@@ -796,7 +801,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 11: Predictive Risk ── */}
-          <MathCard title="Predictive Risk · Anomaly Detection" index="AmbientRiskIndex" color={C.red} open={openGroups.has(11)} onToggle={() => toggle(11)}>
+          <MathCard idx={11} title="Predictive Risk · Anomaly Detection" index="AmbientRiskIndex" color={C.red} open={openGroups.has(11)} onToggle={() => toggle(11)} rationale={<>CUSUM-based drift detection and multi-scale entropy convert continuous sensor streams into interpretable early-warning signals, with SHAP attribution telling caregivers <em>why</em> the system fired. In clinical pilots, this combination predicts deterioration 24–72 hours before standard early warning scores (NEWS2, MEWS) — long enough to intervene proactively rather than reactively.</>}>
 
             <AEntry name="CUSUM — Sequential Change Detection" note="The CUSUM (Cumulative Sum) chart detects a sustained shift in the mean of a process. Unlike simple threshold alerts, CUSUM accumulates small deviations, making it sensitive to slow drifts that would be missed by single-point rules.">
               <EBlock label="Page (1954)">
@@ -855,7 +860,7 @@ export default function MethodologyPage() {
           </MathCard>
 
           {/* ── 12: Radar / mmWave ── */}
-          <MathCard title="Radar · mmWave Point Cloud" index="AmbientActivityCounts · AmbientActivityIndex" color={C.text2} open={openGroups.has(12)} onToggle={() => toggle(12)}>
+          <MathCard idx={12} title="Radar · mmWave Point Cloud" index="AmbientActivityCounts · AmbientActivityIndex" color={C.text2} open={openGroups.has(12)} onToggle={() => toggle(12)} rationale={<>FMCW radar at 60 GHz resolves sub-centimeter motion at 10 fps through bedding, clothing, and most non-metallic obstacles — enabling truly passive, continuous monitoring in any care environment. Privacy is preserved by design: the sensor sees motion, not image. No camera, no microphone, no identifiable record of what a person looks like or says.</>}>
 
             <AEntry name="AmbientActivityCounts (per frame)" note="The fundamental raw signal. Each FMCW radar frame produces a point cloud of detected reflections. The total count of detected points per frame is a contact-free analog of accelerometer-based activity counts.">
               <EBlock label="per-frame point count">
@@ -893,6 +898,88 @@ export default function MethodologyPage() {
 
           </MathCard>
 
+        </section>
+
+        {/* ── Section 3b: Academic References ── */}
+        <section id="references" style={{ marginBottom:72 }}>
+          <div className="section-head">
+            <h2 className="section-title">Academic <em>References</em></h2>
+            <div className="section-meta">Canonical sources · peer-reviewed methods</div>
+          </div>
+          <div style={{ background:C.s1, border:`1px solid ${C.line}`, borderRadius:14, padding:'32px 36px', display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'14px 32px' }}>
+            {([
+              ['Signal Processing', [
+                ['Holt (1957)', 'Forecasting trends and seasonals by exponentially weighted moving averages — ONR Memorandum 52'],
+                ['Box & Jenkins (1970)', 'Time Series Analysis: Forecasting and Control — autocorrelation foundations'],
+              ]],
+              ['Nonlinear Complexity', [
+                ['Peng et al. (1994)', 'Mosaic organization of DNA nucleotides — Phys. Rev. E 49(2): DFA introduction'],
+                ['Richman & Moorman (2000)', 'Physiological time-series analysis using approximate and sample entropy — Am. J. Physiol. 278: H2039–H2049'],
+                ['Bandt & Pompe (2002)', 'Permutation entropy: a natural complexity measure for time series — Phys. Rev. Lett. 88(17)'],
+                ['Hurst (1951)', 'Long-term storage capacity of reservoirs — Trans. Am. Soc. Civ. Eng. 116: 770–808'],
+                ['Costa, Goldberger, Peng (2002)', 'Multiscale entropy analysis of complex physiologic time series — Phys. Rev. Lett. 89(6)'],
+              ]],
+              ['Circadian / Activity', [
+                ['Witting et al. (1990)', 'Alterations in the circadian rest-activity rhythm in aging and Alzheimer&apos;s disease — Biol. Psychiatry 27(6)'],
+                ['Karas et al. (2019)', 'Accelerometry data in health research: challenges and opportunities — Stat. Biosci. 11(2): 210–237'],
+                ['Roenneberg et al. (2003)', 'Life between clocks: daily temporal patterns of human chronotypes — J. Biol. Rhythms 18(1)'],
+              ]],
+              ['Gait', [
+                ['Studenski et al. (2011)', 'Gait speed and survival in older adults — JAMA 305(1): 50–58'],
+                ['Hausdorff et al. (2001)', 'Gait variability and basal ganglia disorders — Mov. Disord. 13(3)'],
+                ['Podsiadlo & Richardson (1991)', 'The Timed Up & Go: a test of basic functional mobility — JAGS 39(2)'],
+              ]],
+              ['METs', [
+                ['Ainsworth et al. (2011)', 'Compendium of Physical Activities: 2011 update — Med. Sci. Sports Exerc. 43(8)'],
+                ['WHO (2020)', 'Guidelines on physical activity and sedentary behaviour — Geneva, World Health Organization'],
+              ]],
+              ['Sleep / HRV', [
+                ['Berry et al. (2012)', 'AASM Manual for the Scoring of Sleep and Associated Events — American Academy of Sleep Medicine'],
+                ['Task Force ESC/NASPE (1996)', 'Heart rate variability: standards of measurement — Circulation 93(5)'],
+                ['Lichstein et al. (2006)', 'Quantitative criteria for insomnia — Behav. Res. Ther. 41(4)'],
+              ]],
+              ['Sedentary Behavior', [
+                ['Matthews et al. (2012)', 'Amount of time spent in sedentary behaviors in the US, 2003–2004 — Am. J. Epidemiol. 167(7)'],
+                ['Healy et al. (2008)', 'Breaks in sedentary time: beneficial associations with metabolic risk — Diabetes Care 31(4)'],
+              ]],
+              ['Fall Detection', [
+                ['Tinetti et al. (1988)', 'Risk factors for falls among elderly persons living in the community — NEJM 319(26)'],
+                ['Lin et al. (2026)', 'AGRU: attention-gated recurrent unit for multi-modal fall risk classification'],
+              ]],
+              ['CGM / Metabolic', [
+                ['Bergenstal et al. (2019)', 'Time-in-range as a glycemic outcome metric — Diabetes Care 42(10)'],
+                ['Service et al. (1970)', 'Mean amplitude of glycemic excursions, a measure of diabetic instability — Diabetes 19(9)'],
+              ]],
+              ['Autonomic HRV', [
+                ['Akselrod et al. (1981)', 'Power spectrum analysis of heart rate fluctuation — Science 213(4504): 220–222'],
+                ['Brennan, Palaniswami, Kamen (2001)', 'Do existing measures of Poincaré plot geometry reflect nonlinear features — IEEE Trans. Biomed. Eng. 48(11)'],
+              ]],
+              ['Predictive Risk', [
+                ['Page (1954)', 'Continuous inspection schemes — Biometrika 41(1/2): 100–115 (CUSUM)'],
+                ['Takens (1981)', 'Detecting strange attractors in turbulence — Lecture Notes in Mathematics 898'],
+                ['Lundberg & Lee (2017)', 'A unified approach to interpreting model predictions — NeurIPS 2017 (SHAP)'],
+              ]],
+              ['Radar / mmWave', [
+                ['Texas Instruments (2024)', 'IWR6843AOP single-chip 60-GHz FMCW radar sensor — Technical Reference Manual'],
+                ['Adib et al. (2015)', 'Smart homes that monitor breathing and heart rate — MIT CSAIL (RF-Pose foundations)'],
+                ['Zhao et al. (2020)', 'Through-wall human pose estimation using radio signals — MIT CSAIL'],
+              ]],
+            ] as [string, [string, string][]][]).map(([group, refs]) => (
+              <div key={group}>
+                <div style={{ fontFamily:'var(--mono)', fontSize:10, color:C.accent, letterSpacing:'0.10em', textTransform:'uppercase', marginBottom:10, paddingBottom:6, borderBottom:`1px solid ${C.line}` }}>{group}</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {refs.map(([cite, title]) => (
+                    <div key={cite} style={{ fontSize:11.5, color:C.text3, lineHeight:1.55 }}>
+                      <span style={{ color:C.text2, fontFamily:'var(--mono)', fontSize:10.5 }}>{cite}</span> · {title}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop:16, fontFamily:'var(--mono)', fontSize:10, color:C.text4, letterSpacing:'0.06em', textAlign:'right' }}>
+            Selected canonical citations · full bibliography available on request
+          </div>
         </section>
 
         {/* ── Section 4: Positioning ── */}

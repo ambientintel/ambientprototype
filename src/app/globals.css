@@ -581,6 +581,28 @@ input { font-family: inherit; color: inherit; }
   }
 }
 
+/* ── Algorithm Lab simulation pulse ── */
+@keyframes sim-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(224,108,117,0.6); }
+  70%  { box-shadow: 0 0 0 9px rgba(224,108,117,0); }
+  100% { box-shadow: 0 0 0 0 rgba(224,108,117,0); }
+}
+.sim-pulse { animation: sim-pulse 1.4s ease-out infinite; }
+
+/* ── Algorithm Lab responsive grids ── */
+@media (max-width: 900px) {
+  .algo-kpi-strip { grid-template-columns: repeat(3, 1fr) !important; }
+  .algo-chart-grid { grid-template-columns: 1fr !important; }
+  .algo-stat-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  .algo-stat-3 { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 560px) {
+  .algo-kpi-strip { grid-template-columns: repeat(2, 1fr) !important; }
+  .algo-stat-4 { grid-template-columns: 1fr !important; }
+  .algo-stat-3 { grid-template-columns: 1fr !important; }
+  .main .page-title { font-size: 30px !important; }
+}
+
 /* ── Dashboard responsive ── */
 @media (max-width: 768px) {
   .app {

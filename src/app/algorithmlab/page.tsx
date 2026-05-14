@@ -1043,6 +1043,24 @@ const FALL_ALGOS: { id: FallAlgoId; label: string; color: string; sub: string }[
   { id: 'fall_calibration', label: 'Threshold Calibration', color: C.gold,   sub: 'θ sensitivity · false positive rate' },
 ];
 
+// ── Methodology deep-link map (algo → methodology page anchor) ────
+function methodologyAnchor(a: AlgoId): string {
+  if (['moving_avg','exp_smooth','zscore','rolling_std','autocorr'].includes(a))          return '#math-0';
+  if (['cc','dfa','sample_entropy','perm_entropy','hurst','fingerprint'].includes(a))      return '#math-1';
+  if (['fragmentation','circadian'].includes(a))                                            return '#math-2';
+  if (['step_detection','gait_speed','cadence','gait_variability'].includes(a))             return '#math-3';
+  if (['activity_class','met_timeline','energy_expenditure','intensity_zones'].includes(a)) return '#math-4';
+  if (['sleep_arch','sleep_sii','sleep_hrv'].includes(a))                                   return '#math-5';
+  if (['recovery','chronotype'].includes(a))                                                 return '#math-6';
+  if (['sed_overview','sed_bouts','sed_breaks','sed_intensity'].includes(a))                 return '#math-7';
+  if (['fall_detector','fall_confidence','fall_scenarios','fall_calibration'].includes(a))   return '#math-8';
+  if (['glucose_trace','time_in_range','agp','glucose_variability'].includes(a))             return '#math-9';
+  if (['lfhf','poincare_plot','stress_index','autonomic_24h'].includes(a))                   return '#math-10';
+  if (['mse','phase_space','cusum','risk_panel','fall_risk','shap_features','age_strata'].includes(a)) return '#math-11';
+  if (['radar_signal','height_trace','point_density','daily_activity'].includes(a))           return '#math-12';
+  return '';
+}
+
 // ── Ambient Index taxonomy map ────────────────────────────────
 const ALGO_INDEX_MAP: Partial<Record<AlgoId, { name: string; short: string; color: string }>> = {
   daily_activity:      { name: 'AmbientActivityCounts', short: 'Counts',    color: C.sage   },
@@ -1092,20 +1110,25 @@ function interpRisk(s: number) { return s < 25 ? { text: 'Low risk', c: C.sage }
 function interpMSE(slope: number) { return slope > 0.06 ? { text: 'Healthy complexity scaling', c: C.sage } : slope > 0 ? { text: 'Moderate scaling', c: C.amber } : slope > -0.06 ? { text: 'Flat — reduced complexity', c: C.coral } : { text: 'Decreasing — pathological', c: C.red }; }
 
 // ── ChartCard ─────────────────────────────────────────────────
-function ChartCard({ title, sub, badge, badgeColor, full, children }: {
-  title: string; sub: string; badge?: string; badgeColor?: string; full?: boolean; children: React.ReactNode;
+function ChartCard({ title, sub, badge, badgeColor, full, mathLink, children }: {
+  title: string; sub: string; badge?: string; badgeColor?: string; full?: boolean; mathLink?: string; children: React.ReactNode;
 }) {
   const bc = badgeColor ?? C.accent;
   return (
     <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '28px 28px 24px', gridColumn: full ? '1 / -1' : undefined }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22, gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 22, letterSpacing: '-0.01em', marginBottom: 4 }}>{title}</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>{sub}</div>
         </div>
-        {badge && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, background: `${bc}22`, border: `1px solid ${bc}55`, color: bc, fontFamily: 'var(--mono)', fontSize: 11 }}>{badge}</span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {mathLink && (
+            <Link href={`/methodology${mathLink}`} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textDecoration: 'none', letterSpacing: '0.06em', padding: '4px 9px', borderRadius: 999, border: `1px solid ${C.line}`, transition: 'color 0.15s, border-color 0.15s' }} onMouseEnter={e => { e.currentTarget.style.color = C.accent; e.currentTarget.style.borderColor = `${C.accent}55`; }} onMouseLeave={e => { e.currentTarget.style.color = C.text4; e.currentTarget.style.borderColor = C.line; }}>see math →</Link>
+          )}
+          {badge && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, background: `${bc}22`, border: `1px solid ${bc}55`, color: bc, fontFamily: 'var(--mono)', fontSize: 11 }}>{badge}</span>
+          )}
+        </div>
       </div>
       {children}
     </div>
@@ -1240,6 +1263,69 @@ export default function AlgorithmLabPage() {
 
   const [radarFrames, setRadarFrames] = useState<RadarFrame[]>(RADAR_FRAMES);
   const [radarUploaded, setRadarUploaded] = useState(false);
+  const [simulating, setSimulating] = useState(false);
+  const simCounterRef = useRef<number>(0);
+  const simBaseTsRef  = useRef<number>(0);
+
+  // ── Real-time simulation: generates radar frames at 10fps ─────
+  useEffect(() => {
+    if (!simulating) return;
+    const id = setInterval(() => {
+      const idx = simCounterRef.current;
+      simCounterRef.current += 1;
+      const t = idx / 10;
+      const r = (s: number) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+      const noise = (s: number, a: number) => (r(s) - 0.5) * a;
+      // Walking pattern: 5s walk, 3s stand, 4s sit, 2s rise — repeats every 14s
+      const cycle = t % 14;
+      let x = 0, h = 1.72, pts = 5;
+      if (cycle < 5) {
+        x = cycle * 0.7;
+        h = 1.72 + 0.026 * Math.sin(t * 2 * Math.PI * 1.85) + noise(idx * 7 + 1, 0.014);
+        pts = 18 + Math.floor(r(idx * 3) * 14);
+      } else if (cycle < 8) {
+        x = 3.5; h = 1.72 + noise(idx * 5 + 2, 0.018); pts = 10 + Math.floor(r(idx * 2) * 4);
+      } else if (cycle < 12) {
+        x = 3.5; h = 1.05 + noise(idx * 9 + 3, 0.022); pts = 5 + Math.floor(r(idx * 11) * 4);
+      } else {
+        x = 3.5; h = 1.05 + (cycle - 12) * 0.335 + noise(idx * 13 + 4, 0.018); pts = 9 + Math.floor(r(idx * 17) * 4);
+      }
+      const ts = simBaseTsRef.current + t;
+      const dt = new Date(ts * 1000);
+      const frame: RadarFrame = {
+        frameNumber: idx,
+        HeightData: [[Math.max(0, x + noise(idx * 19, 0.025)), Math.max(0.5, h), Math.max(0.5, h - 0.08 + noise(idx * 23, 0.014))]],
+        timestamp: ts,
+        CurrTime: dt.toUTCString().replace(' GMT', ''),
+        PointsDetected: Math.max(1, pts),
+      };
+      setRadarFrames(prev => {
+        const next = [...prev, frame];
+        return next.length > 1200 ? next.slice(-1200) : next;
+      });
+    }, 100);
+    return () => clearInterval(id);
+  }, [simulating]);
+
+  const startSimulation = useCallback(() => {
+    simCounterRef.current = 0;
+    simBaseTsRef.current  = Date.now() / 1000;
+    setRadarFrames([]);
+    setRadarUploaded(false);
+    setSimulating(true);
+  }, []);
+  const stopSimulation = useCallback(() => {
+    setSimulating(false);
+    setRadarFrames(RADAR_FRAMES);
+  }, []);
+
+  // Stop simulation if user navigates away from radar algos
+  useEffect(() => {
+    if (simulating && !isRadar(algo)) {
+      setSimulating(false);
+      setRadarFrames(RADAR_FRAMES);
+    }
+  }, [algo, simulating]);
   const radarInputRef = useRef<HTMLInputElement>(null);
 
   // Fall detection state
@@ -1650,7 +1736,7 @@ export default function AlgorithmLabPage() {
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', borderRadius: 999, background: `${currentAlgoIndex.color}1A`, border: `1px solid ${currentAlgoIndex.color}55`, color: currentAlgoIndex.color, fontFamily: 'var(--mono)', fontSize: 11.5, letterSpacing: '0.04em', fontWeight: 500 }}>
                   {currentAlgoIndex.name}
                 </span>
-                <Link href="/methodology" style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textDecoration: 'none', letterSpacing: '0.06em' }}>→ methodology</Link>
+                <Link href={`/methodology${methodologyAnchor(algo)}`} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text4, textDecoration: 'none', letterSpacing: '0.06em', transition: 'color 0.15s' }} onMouseEnter={e => (e.currentTarget.style.color = C.accent)} onMouseLeave={e => (e.currentTarget.style.color = C.text4)}>→ see equation</Link>
               </div>
             )}
           </div>
@@ -1661,26 +1747,50 @@ export default function AlgorithmLabPage() {
         </header>
 
         {(inRadar || inGait || inMET) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: '12px 20px', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 10 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3 }}>
-              {radarUploaded
-                ? (algo === 'daily_activity' ? `${dailyActivityData.length} days · ${radarFrames.length} frames` : `${radarFrames.length} frames loaded`)
-                : (algo === 'daily_activity' ? 'Demo: synthetic 14-day AmbientActivityCounts' : 'Demo: synthetic TUG assessment · 60s · 20fps')}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: '12px 20px', background: C.s1, border: `1px solid ${simulating ? C.coral : C.line}`, borderRadius: 10, transition: 'border-color 0.2s' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, display: 'flex', alignItems: 'center', gap: 10 }}>
+              {simulating && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span className="sim-pulse" style={{ width: 7, height: 7, borderRadius: '50%', background: C.coral, boxShadow: `0 0 0 0 ${C.coral}99` }}/>
+                  <span style={{ color: C.coral, letterSpacing: '0.08em' }}>● LIVE SIM</span>
+                  <span style={{ color: C.text4 }}>·</span>
+                </span>
+              )}
+              <span>
+                {simulating
+                  ? `Streaming · ${radarFrames.length} frames · ${(radarFrames.length / 10).toFixed(1)}s @ 10 fps`
+                  : radarUploaded
+                    ? (algo === 'daily_activity' ? `${dailyActivityData.length} days · ${radarFrames.length} frames` : `${radarFrames.length} frames loaded`)
+                    : (algo === 'daily_activity' ? 'Demo: synthetic 14-day AmbientActivityCounts' : 'Demo: synthetic TUG assessment · 60s · 20fps')}
+              </span>
             </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-              {radarUploaded && (
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              {!simulating && radarUploaded && (
                 <button onClick={() => { setRadarFrames(RADAR_FRAMES); setRadarUploaded(false); }} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.text3, background: 'none', border: `1px solid ${C.line}`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>reset demo</button>
               )}
-              <button onClick={() => radarInputRef.current?.click()} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.accent, background: `${C.accent}18`, border: `1px solid ${C.accent}44`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer' }}>
-                Upload JSON / JSONL
-              </button>
+              {inRadar && (
+                simulating ? (
+                  <button onClick={stopSimulation} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.coral, background: `${C.coral}18`, border: `1px solid ${C.coral}55`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 7, height: 7, background: C.coral }}/> Stop
+                  </button>
+                ) : (
+                  <button onClick={startSimulation} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.sage, background: `${C.sage}18`, border: `1px solid ${C.sage}55`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ display: 'inline-block', width: 0, height: 0, borderLeft: `7px solid ${C.sage}`, borderTop: '4px solid transparent', borderBottom: '4px solid transparent' }}/> Simulate
+                  </button>
+                )
+              )}
+              {!simulating && (
+                <button onClick={() => radarInputRef.current?.click()} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: C.accent, background: `${C.accent}18`, border: `1px solid ${C.accent}44`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer' }}>
+                  Upload JSON / JSONL
+                </button>
+              )}
               <input ref={radarInputRef} type="file" accept=".json,.jsonl,.txt" style={{ display: 'none' }} onChange={handleRadarUpload} />
             </div>
           </div>
         )}
 
         {/* KPI strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 28 }}>
+        <div className="algo-kpi-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 28 }}>
           {(inRadar ? algo === 'daily_activity' ? [
             { label: 'Days',         value: dailyActivityData.length.toString(),  color: C.accent },
             { label: 'Total Counts', value: dailyActivityData.reduce((a,d) => a + d.counts, 0).toLocaleString(), color: C.sage },
@@ -1787,7 +1897,7 @@ export default function AlgorithmLabPage() {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="algo-chart-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
 
           {/* Drop zone — always shown */}
           <div style={{ gridColumn: '1 / -1', background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
@@ -3726,7 +3836,7 @@ export default function AlgorithmLabPage() {
             )}
 
             {algo === 'radar_signal' && (
-              <ChartCard title="Height Signal" sub="Frame-by-frame detected height (m) · standing ~1.72m · sitting ~1.05m" badge={radarUploaded ? 'Live data' : 'Synthetic'} badgeColor={radarUploaded ? C.sage : C.amber} full>
+              <ChartCard title="Height Signal" sub="Frame-by-frame detected height (m) · standing ~1.72m · sitting ~1.05m" badge={radarUploaded ? 'Live data' : 'Synthetic'} badgeColor={radarUploaded ? C.sage : C.amber} mathLink="#math-12" full>
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={radarSeries} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
                     <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
@@ -3753,7 +3863,7 @@ export default function AlgorithmLabPage() {
             )}
 
             {algo === 'height_trace' && (
-              <ChartCard title="Phase Timeline" sub="Activity state annotation · walking / standing / sitting transitions" badge={`${radarEpochData.length} epochs`} full>
+              <ChartCard title="Phase Timeline" sub="Activity state annotation · walking / standing / sitting transitions" badge={`${radarEpochData.length} epochs`} mathLink="#math-12" full>
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={radarEpochData.map(ep => ({ ...ep, cls: classifyActivity(ep) }))} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
                     <CartesianGrid stroke={C.line} strokeDasharray="3 3" />
@@ -3808,7 +3918,7 @@ export default function AlgorithmLabPage() {
               return (
                 <>
                   {/* ── Ambient Activity Index ── */}
-                  <ChartCard title="Ambient Activity Index" sub={`Daily Activity · ${todayDate} · hourly`} badge={delta >= 0 ? `+${delta}% vs avg` : `${delta}% vs avg`} badgeColor={delta >= 0 ? C.sage : C.purple} full>
+                  <ChartCard title="Ambient Activity Index" sub={`Daily Activity · ${todayDate} · hourly`} badge={delta >= 0 ? `+${delta}% vs avg` : `${delta}% vs avg`} badgeColor={delta >= 0 ? C.sage : C.purple} mathLink="#math-12" full>
                     <ResponsiveContainer width="100%" height={260}>
                       <ComposedChart data={hourlyData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
                         <defs>
@@ -3827,7 +3937,7 @@ export default function AlgorithmLabPage() {
                         )}
                       </ComposedChart>
                     </ResponsiveContainer>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 18 }}>
+                    <div className="algo-stat-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 18 }}>
                       {[
                         { label: 'Total Today',  value: todayTotal.toLocaleString(),                              color: C.coral  },
                         { label: '7-day Avg',    value: avgTotal > 0 ? avgTotal.toLocaleString() : '—',          color: C.text2  },
@@ -3855,7 +3965,7 @@ export default function AlgorithmLabPage() {
                   </ChartCard>
 
                   {/* ── 14-day bar chart ── */}
-                  <ChartCard title="AmbientActivityCounts Daily Activity" sub="Sum of PointsDetected per day · higher values indicate more detected motion events" badge={radarUploaded ? 'Live data' : 'Synthetic'} badgeColor={radarUploaded ? C.sage : C.amber} full>
+                  <ChartCard title="AmbientActivityCounts Daily Activity" sub="Sum of PointsDetected per day · higher values indicate more detected motion events" badge={radarUploaded ? 'Live data' : 'Synthetic'} badgeColor={radarUploaded ? C.sage : C.amber} mathLink="#math-12" full>
                     <ResponsiveContainer width="100%" height={240}>
                       <BarChart data={dailyActivityData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
                         <CartesianGrid stroke={C.line} strokeDasharray="3 3" vertical={false} />
@@ -3870,7 +3980,7 @@ export default function AlgorithmLabPage() {
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
+                    <div className="algo-stat-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
                       {[
                         { label: 'Peak Day',  value: peak ? peak.date : '—',   sub: peak ? peak.counts.toLocaleString() : '',  color: C.sage   },
                         { label: 'Low Day',   value: low  ? low.date  : '—',   sub: low  ? low.counts.toLocaleString()  : '',  color: C.purple },
