@@ -250,7 +250,8 @@
       "Mon": "yes",
       "SU": "yes",
       "M": "yes",
-      "T": "yes"
+      "T": "yes",
+      "TH": "yes"
     },
     "Isaac": {
       "M": "yes"
