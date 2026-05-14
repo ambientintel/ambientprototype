@@ -1459,8 +1459,8 @@ export default function EngineeringPage() {
                       <span style={{ width:8, height:8, background:m.color, transform:"rotate(45deg)", boxShadow:`0 0 8px ${m.color}` }}/>
                       <span style={{ fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.16em", color:m.color, fontWeight:600 }}>{m.id}</span>
                     </div>
-                    <div style={{ fontFamily:"var(--serif)", fontSize:14, color:"var(--text)", lineHeight:1.25, marginBottom:6, fontWeight:300 }}>{m.label}</div>
-                    <div style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", letterSpacing:"0.1em" }}>{fmt(m.date).toUpperCase()} · 2026</div>
+                    <div style={{ fontFamily:"var(--serif)", fontSize:15, color:"var(--text)", lineHeight:1.3, marginBottom:8, fontWeight:400 }}>{m.label}</div>
+                    <div style={{ fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text-2)", letterSpacing:"0.12em", fontWeight:600 }}>{fmt(m.date).toUpperCase()} · 2026</div>
                   </div>
                 ))}
               </div>
@@ -1470,13 +1470,13 @@ export default function EngineeringPage() {
 
                 {/* Header: corner */}
                 <div style={{ borderBottom:"1px solid var(--line)", borderRight:"1px solid var(--line)", padding:"12px 14px", display:"flex", flexDirection:"column", justifyContent:"flex-end", height:64 }}>
-                  <div style={{ fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.18em", color:"var(--text-4)", textTransform:"uppercase" }}>Workstream</div>
+                  <div style={{ fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.18em", color:"var(--text-2)", textTransform:"uppercase", fontWeight:600 }}>Workstream</div>
                 </div>
 
                 {/* Header: axis */}
                 <div style={{ position:"relative", height:64, borderBottom:"1px solid var(--line)" }}>
                   {MONTHS.map(d => (
-                    <div key={d} style={{ position:"absolute", left:`${pct(d)}%`, bottom:6, fontFamily:"var(--mono)", fontSize:9.5, letterSpacing:"0.16em", color:"var(--text-3)", paddingLeft:6 }}>
+                    <div key={d} style={{ position:"absolute", left:`${pct(d)}%`, bottom:6, fontFamily:"var(--mono)", fontSize:10.5, letterSpacing:"0.16em", color:"var(--text)", paddingLeft:6, fontWeight:600 }}>
                       {MLABEL[d]}
                     </div>
                   ))}
@@ -1488,7 +1488,7 @@ export default function EngineeringPage() {
                         boxShadow:`0 0 14px ${m.color}, 0 0 4px ${m.color}`,
                         border:"1px solid rgba(255,255,255,0.55)",
                       }}/>
-                      <div style={{ position:"absolute", top:15, left:0, transform:"translateX(-50%)", whiteSpace:"nowrap", fontFamily:"var(--mono)", fontSize:8, letterSpacing:"0.16em", color:m.color, fontWeight:700 }}>
+                      <div style={{ position:"absolute", top:15, left:0, transform:"translateX(-50%)", whiteSpace:"nowrap", fontFamily:"var(--mono)", fontSize:9.5, letterSpacing:"0.16em", color:m.color, fontWeight:700 }}>
                         {m.id}
                       </div>
                     </div>
@@ -1496,7 +1496,7 @@ export default function EngineeringPage() {
                   {/* TODAY label */}
                   <div style={{ position:"absolute", left:`${todayPct}%`, top:10, transform:"translateX(2px)" }}>
                     <div style={{ width:8, height:8, borderRadius:"50%", background:"#FF6B6B", boxShadow:"0 0 12px #FF6B6B, 0 0 4px #FF6B6B" }}/>
-                    <div style={{ position:"absolute", top:13, left:14, whiteSpace:"nowrap", fontFamily:"var(--mono)", fontSize:8, letterSpacing:"0.2em", color:"#FF6B6B", fontWeight:700 }}>
+                    <div style={{ position:"absolute", top:13, left:14, whiteSpace:"nowrap", fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.2em", color:"#FF8888", fontWeight:700 }}>
                       TODAY · {todayLabel}
                     </div>
                   </div>
@@ -1541,19 +1541,19 @@ export default function EngineeringPage() {
                         >
                           <div style={{ position:"absolute", left:0, top:10, bottom:10, width:3, background:st.color, borderRadius:"0 3px 3px 0", boxShadow:`0 0 10px ${st.color}80` }}/>
                           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6 }}>
-                            <div style={{ fontFamily:"var(--sans)", fontSize:13, color:"var(--text)", fontWeight:500 }}>{st.label}</div>
-                            <span style={{ fontFamily:"var(--mono)", fontSize:9, color:st.color, fontWeight:600 }}>↗</span>
+                            <div style={{ fontFamily:"var(--sans)", fontSize:13.5, color:"var(--text)", fontWeight:500 }}>{st.label}</div>
+                            <span style={{ fontFamily:"var(--mono)", fontSize:11, color:st.color, fontWeight:700 }}>↗</span>
                           </div>
-                          <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.08em" }}>{st.sub}</div>
+                          <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", letterSpacing:"0.08em" }}>{st.sub}</div>
                           {status.pct != null ? (
                             <>
                               <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2 }}>
-                                <div style={{ flex:1, height:3, borderRadius:2, background:"var(--surface-3)", overflow:"hidden" }}>
+                                <div style={{ flex:1, height:4, borderRadius:2, background:"var(--surface-3)", overflow:"hidden" }}>
                                   <div style={{ height:"100%", width:`${status.pct}%`, background: status.pct === 100 ? "#3DCC91" : st.color, transition:"width 0.4s ease", boxShadow: status.pct > 0 ? `0 0 6px ${st.color}AA` : "none" }}/>
                                 </div>
-                                <span style={{ fontFamily:"var(--mono)", fontSize:9, color: status.pct === 100 ? "#3DCC91" : "var(--text-2)", fontWeight:600, minWidth:30, textAlign:"right" }}>{status.pct}%</span>
+                                <span style={{ fontFamily:"var(--mono)", fontSize:10.5, color: status.pct === 100 ? "#3DCC91" : "var(--text)", fontWeight:700, minWidth:34, textAlign:"right" }}>{status.pct}%</span>
                               </div>
-                              <div style={{ display:"flex", alignItems:"center", gap:5, fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)", letterSpacing:"0.1em" }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:5, fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", letterSpacing:"0.1em", fontWeight:500 }}>
                                 <span>{status.done} / {status.total} ITEMS</span>
                                 {status.frozen && (
                                   <span style={{ marginLeft:"auto", color:"#3DCC91", padding:"1px 5px", borderRadius:3, background:"rgba(61,204,145,0.12)", border:"1px solid rgba(61,204,145,0.4)" }}>FROZEN</span>
@@ -1561,7 +1561,7 @@ export default function EngineeringPage() {
                               </div>
                             </>
                           ) : (
-                            <div style={{ fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)", letterSpacing:"0.12em", marginTop:2 }}>OFF-BOARD · MANUAL TRACK</div>
+                            <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", letterSpacing:"0.12em", marginTop:2, fontWeight:500 }}>OFF-BOARD · MANUAL TRACK</div>
                           )}
                         </div>
                       </Link>
@@ -1591,15 +1591,15 @@ export default function EngineeringPage() {
                           const isBehind  = st_status === "behind";
 
                           const bg = isDone
-                            ? `linear-gradient(90deg, #3DCC9170, #3DCC9148)`
+                            ? `linear-gradient(90deg, #3DCC9199, #3DCC9166)`
                             : isBehind
-                              ? `linear-gradient(90deg, #FF6B6B55, #FF6B6B28)`
-                              : `linear-gradient(90deg, ${st.color}55, ${st.color}28)`;
+                              ? `linear-gradient(90deg, #FF6B6B88, #FF6B6B55)`
+                              : `linear-gradient(90deg, ${st.color}88, ${st.color}55)`;
                           const bgHover = isDone
-                            ? `linear-gradient(90deg, #3DCC91bb, #3DCC9180)`
+                            ? `linear-gradient(90deg, #3DCC91dd, #3DCC91aa)`
                             : isBehind
-                              ? `linear-gradient(90deg, #FF6B6Bbb, #FF6B6B80)`
-                              : `linear-gradient(90deg, ${st.color}aa, ${st.color}66)`;
+                              ? `linear-gradient(90deg, #FF6B6Bdd, #FF6B6Baa)`
+                              : `linear-gradient(90deg, ${st.color}cc, ${st.color}99)`;
                           const borderColor = isDone ? "#3DCC91" : isBehind ? "#FF6B6B" : st.color;
 
                           return (
@@ -1611,7 +1611,8 @@ export default function EngineeringPage() {
                                 border:`1px solid ${borderColor}`,
                                 borderRadius:4,
                                 display:"flex", alignItems:"center", padding:"0 7px",
-                                fontFamily:"var(--mono)", fontSize:9.5, color:"#fff", fontWeight:500, letterSpacing:"0.02em",
+                                fontFamily:"var(--mono)", fontSize:10, color:"#fff", fontWeight:600, letterSpacing:"0.02em",
+                                textShadow:"0 1px 2px rgba(0,0,0,0.45)",
                                 whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
                                 cursor:"default", transition:"background 0.15s, box-shadow 0.15s",
                                 boxShadow: isDone
@@ -1646,7 +1647,7 @@ export default function EngineeringPage() {
                               )}
                               <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{b.label}</span>
                               {ms && (
-                                <span style={{ marginLeft:"auto", paddingLeft:6, fontFamily:"var(--mono)", fontSize:8, color:ms.color, fontWeight:700, letterSpacing:"0.14em", flexShrink:0 }}>
+                                <span style={{ marginLeft:"auto", paddingLeft:6, fontFamily:"var(--mono)", fontSize:9.5, color:"#fff", fontWeight:700, letterSpacing:"0.14em", flexShrink:0, textShadow:`0 0 4px ${ms.color}`, background:`${ms.color}40`, padding:"1px 5px", borderRadius:3, border:`1px solid ${ms.color}aa` }}>
                                   → {b.ms}
                                 </span>
                               )}
@@ -1660,7 +1661,7 @@ export default function EngineeringPage() {
               </div>
 
               {/* Legend */}
-              <div style={{ display:"flex", alignItems:"center", gap:14, marginTop:18, padding:"10px 14px", borderRadius:8, background:"var(--surface-1)", border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", letterSpacing:"0.1em", flexWrap:"wrap" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:14, marginTop:18, padding:"11px 16px", borderRadius:8, background:"var(--surface-1)", border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text-2)", letterSpacing:"0.1em", flexWrap:"wrap", fontWeight:600 }}>
                 <span style={{ display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ width:8, height:8, background:"#FF6B6B", transform:"rotate(45deg)", boxShadow:"0 0 6px #FF6B6B" }}/>
                   CRITICAL DELIVERABLE
@@ -1686,7 +1687,7 @@ export default function EngineeringPage() {
                   <span style={{ width:14, height:10, background:"linear-gradient(90deg, #818CF855, #818CF828)", border:"1px solid #818CF8", borderRadius:2 }}/>
                   PLANNED
                 </span>
-                <span style={{ marginLeft:"auto", color:"var(--text-4)" }}>BAR FILL DERIVED FROM /api/eng/state · HOVER FOR DATES</span>
+                <span style={{ marginLeft:"auto", color:"var(--text-3)", fontWeight:500 }}>BAR FILL DERIVED FROM /api/eng/state · HOVER FOR DATES</span>
               </div>
 
               {/* ── Workstream Status panel ── */}
@@ -1710,30 +1711,30 @@ export default function EngineeringPage() {
                         <div style={{ position:"absolute", top:0, left:0, width:3, height:"100%", background:st.color, boxShadow:`0 0 10px ${st.color}` }}/>
                         <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:6 }}>
                           <div>
-                            <div style={{ fontFamily:"var(--sans)", fontSize:13, color:"var(--text)", fontWeight:500 }}>{st.label}</div>
-                            <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.08em", marginTop:2 }}>{st.sub}</div>
+                            <div style={{ fontFamily:"var(--sans)", fontSize:13.5, color:"var(--text)", fontWeight:500 }}>{st.label}</div>
+                            <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", letterSpacing:"0.08em", marginTop:3 }}>{st.sub}</div>
                           </div>
-                          <span style={{ fontFamily:"var(--mono)", fontSize:10, color:st.color, fontWeight:600 }}>↗</span>
+                          <span style={{ fontFamily:"var(--mono)", fontSize:11, color:st.color, fontWeight:700 }}>↗</span>
                         </div>
                         {status.pct != null ? (
                           <>
                             <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
-                              <div style={{ flex:1, height:4, borderRadius:2, background:"var(--surface-3)", overflow:"hidden" }}>
+                              <div style={{ flex:1, height:5, borderRadius:2, background:"var(--surface-3)", overflow:"hidden" }}>
                                 <div style={{ height:"100%", width:`${status.pct}%`, background: pct100 ? "#3DCC91" : st.color, transition:"width 0.4s ease", boxShadow: status.pct > 0 ? `0 0 8px ${st.color}AA` : "none" }}/>
                               </div>
-                              <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:700, color: pct100 ? "#3DCC91" : st.color, minWidth:36, textAlign:"right" }}>{status.pct}%</span>
+                              <span style={{ fontFamily:"var(--mono)", fontSize:12, fontWeight:700, color: pct100 ? "#3DCC91" : st.color, minWidth:38, textAlign:"right" }}>{status.pct}%</span>
                             </div>
-                            <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:6, fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.1em" }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:7, fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", letterSpacing:"0.1em", fontWeight:500 }}>
                               <span>{status.done} / {status.total} ITEMS</span>
                               {status.frozen && (
-                                <span style={{ marginLeft:"auto", color:"#3DCC91", padding:"1px 6px", borderRadius:3, background:"rgba(61,204,145,0.12)", border:"1px solid rgba(61,204,145,0.4)", letterSpacing:"0.14em" }}>FROZEN</span>
+                                <span style={{ marginLeft:"auto", color:"#3DCC91", padding:"1px 6px", borderRadius:3, background:"rgba(61,204,145,0.12)", border:"1px solid rgba(61,204,145,0.4)", letterSpacing:"0.14em", fontWeight:700 }}>FROZEN</span>
                               )}
                             </div>
                           </>
                         ) : (
                           <>
-                            <div style={{ marginTop:8, fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.14em" }}>OFF-BOARD · MANUAL</div>
-                            <div style={{ marginTop:6, fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)" }}>OPEN PAGE FOR DETAILS →</div>
+                            <div style={{ marginTop:8, fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", letterSpacing:"0.14em", fontWeight:600 }}>OFF-BOARD · MANUAL</div>
+                            <div style={{ marginTop:6, fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", fontWeight:500 }}>OPEN PAGE FOR DETAILS →</div>
                           </>
                         )}
                       </div>
@@ -1754,12 +1755,12 @@ export default function EngineeringPage() {
                   >
                     <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:6 }}>
                       <div>
-                        <div style={{ fontFamily:"var(--sans)", fontSize:13, color:"var(--text)", fontWeight:500 }}>Platform Status</div>
-                        <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.08em", marginTop:2 }}>All domains · /eng</div>
+                        <div style={{ fontFamily:"var(--sans)", fontSize:13.5, color:"var(--text)", fontWeight:500 }}>Platform Status</div>
+                        <div style={{ fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", letterSpacing:"0.08em", marginTop:3 }}>All domains · /eng</div>
                       </div>
-                      <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"#3DCC91", fontWeight:600 }}>↗</span>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:11, color:"#3DCC91", fontWeight:700 }}>↗</span>
                     </div>
-                    <div style={{ marginTop:8, fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.1em", lineHeight:1.55 }}>
+                    <div style={{ marginTop:8, fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", letterSpacing:"0.1em", lineHeight:1.55, fontWeight:500 }}>
                       AGGREGATED DASHBOARD<br/>
                       WITH FREEZE LOCKS,<br/>
                       DECISIONS, & CHECKLISTS
