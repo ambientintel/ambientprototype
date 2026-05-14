@@ -583,15 +583,62 @@ export default function EngineeringPage() {
               {syncStatus !== "idle" && <SyncPulse status={syncStatus} />}
               <Link href="/eng" style={{ textDecoration:"none" }}>
                 <div
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.32)"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.15)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.25)"; }}
-                  style={{ padding:"8px 13px 9px", borderRadius:8, border:"1px solid rgba(255,255,255,0.12)", background:"var(--surface-1)", boxShadow:"0 1px 3px rgba(0,0,0,0.25)", transition:"all 0.18s ease", minWidth:84, cursor:"pointer", userSelect:"none" as const, display:"flex", flexDirection:"column", justifyContent:"space-between", gap:6, alignSelf:"stretch" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = "#3DCC91";
+                    e.currentTarget.style.background = "linear-gradient(135deg, rgba(61,204,145,0.20), rgba(34,211,238,0.08))";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 6px 22px rgba(61,204,145,0.32), 0 0 0 1px rgba(61,204,145,0.55)";
+                    const stripe = e.currentTarget.querySelector("[data-platform-stripe]") as HTMLElement | null;
+                    if (stripe) stripe.style.boxShadow = "0 0 14px rgba(61,204,145,0.85)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = "rgba(61,204,145,0.34)";
+                    e.currentTarget.style.background = "linear-gradient(135deg, rgba(61,204,145,0.10), rgba(34,211,238,0.02))";
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)";
+                    const stripe = e.currentTarget.querySelector("[data-platform-stripe]") as HTMLElement | null;
+                    if (stripe) stripe.style.boxShadow = "0 0 6px rgba(61,204,145,0.45)";
+                  }}
+                  style={{
+                    padding: "8px 13px 9px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(61,204,145,0.34)",
+                    background: "linear-gradient(135deg, rgba(61,204,145,0.10), rgba(34,211,238,0.02))",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)",
+                    transition: "all 0.18s ease",
+                    minWidth: 84,
+                    cursor: "pointer",
+                    userSelect: "none" as const,
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
                 >
-                  <div style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase" as const, letterSpacing:"0.12em", color:"var(--text-2)", whiteSpace:"nowrap" as const }}>Platform</div>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", letterSpacing:"0.08em" }}>
-                    <span style={{ width:6, height:6, borderRadius:"50%", background:"#3DCC91", boxShadow:"0 0 6px #3DCC91" }}/>
-                    /eng
+                  {/* Constellation sparkle — top-right, signals "all domains" */}
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="#3DCC91"
+                    style={{ position:"absolute", top:6, right:7, opacity:0.75, filter:"drop-shadow(0 0 3px #3DCC91)" }}>
+                    <path d="M6 0 L6.7 5.3 L12 6 L6.7 6.7 L6 12 L5.3 6.7 L0 6 L5.3 5.3 Z"/>
+                  </svg>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:7, paddingRight:14 }}>
+                    <span style={{
+                      fontFamily: "var(--mono)", fontSize: 10,
+                      textTransform: "uppercase" as const, letterSpacing: "0.14em",
+                      color: "#3DCC91", fontWeight: 700, whiteSpace: "nowrap" as const,
+                    }}>
+                      Platform
+                    </span>
+                    <span style={{
+                      fontFamily: "var(--mono)", fontSize: 10, fontWeight: 600,
+                      color: "#3DCC91", opacity: 0.85,
+                    }}>
+                      /eng
+                    </span>
                   </div>
+                  <div data-platform-stripe style={{
+                    height: 3, borderRadius: 2,
+                    background: "linear-gradient(90deg, #3DCC91 0%, #22D3EE 50%, #818CF8 100%)",
+                    boxShadow: "0 0 6px rgba(61,204,145,0.45)",
+                    transition: "box-shadow 0.18s",
+                  }}/>
                 </div>
               </Link>
               <NavCard href="/firmware"        label="Firmware"   color="#00B4D8" lsKey="ambient-fw-checklist-v2"          total={20} defaultDone={9}  serverPct={subProgress['firmware']} />
@@ -1322,7 +1369,7 @@ export default function EngineeringPage() {
               { label:"Pilot kit BOM (24 units)",       start:"2026-07-20", end:"2026-07-30" },
             ],
             cloud: [
-              { label:"Datadog APM rollout",            start:"2026-05-14", end:"2026-05-25" },
+              { label:"X-Ray service map + dashboard",  start:"2026-05-14", end:"2026-05-25" },
               { label:"Security audit closeout",        start:"2026-05-14", end:"2026-05-30" },
               { label:"Multi-tenant scaling",           start:"2026-05-14", end:"2026-06-20" },
               { label:"Pilot tenant provisioning",      start:"2026-06-20", end:"2026-07-15" },
