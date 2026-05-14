@@ -197,23 +197,6 @@
       "description": "Wired assertNoPhi at the /api/ambient proxy (was dead code despite the docs). Locked /api/push/send behind ella-session. Fixed signin/signout hardcoded ellamemory.com redirects for local dev. Removed handleAuth() OAuth dead code from /callback. Made WORKOS_COOKIE_PASSWORD <32 chars throw instead of silently padding to a weak key. Pruned 8 unused deps (authkit-nextjs, @nivo/*, radix-ui, cva, tailwind-merge). Bumped Next.js 16.2.4 → 16.2.6. pnpm audit 17 vulns → 1 (transitive postcss in next, pending upstream).",
       "created": "May 13",
       "updated": "May 14"
-    },
-    {
-      "id": "ENG-L1779382100002",
-      "type": "task",
-      "title": "ambientweb /dashboard/engineering kanban board + PWA manifest fix",
-      "priority": "medium",
-      "points": 2,
-      "assignee": "Brian",
-      "assigneeInitial": "B",
-      "assigneeColor": "#22D3EE",
-      "labels": [
-        "webapp"
-      ],
-      "column": "done",
-      "description": "Added /dashboard/engineering — GitHub-backed kanban (Backlog → In Progress → Review → Done) with SHA-conflict-safe writes via /api/engineering. Local-only fallback when GITHUB_TOKEN is absent. Also created public/manifest.json which was missing — service worker install was silently failing on every page load because caches.addAll() rejects on any 404.",
-      "created": "May 12",
-      "updated": "May 13"
     }
   ],
   "personalTasks": {
@@ -243,7 +226,25 @@
       "ambientweb /dashboard/engineering kanban board + PWA manifest fix"
     ]
   },
-  "history": [],
+  "history": [
+    {
+      "id": "ENG-L1779382100002",
+      "type": "task",
+      "title": "ambientweb /dashboard/engineering kanban board + PWA manifest fix",
+      "priority": "medium",
+      "points": 2,
+      "assignee": "Brian",
+      "assigneeInitial": "B",
+      "assigneeColor": "#22D3EE",
+      "labels": [
+        "webapp"
+      ],
+      "column": "done",
+      "description": "Added /dashboard/engineering — GitHub-backed kanban (Backlog → In Progress → Review → Done) with SHA-conflict-safe writes via /api/engineering. Local-only fallback when GITHUB_TOKEN is absent. Also created public/manifest.json which was missing — service worker install was silently failing on every page load because caches.addAll() rejects on any 404.",
+      "created": "May 12",
+      "updated": "May 14"
+    }
+  ],
   "weekStatus": {
     "Brian": {
       "Mon": "yes",
