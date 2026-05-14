@@ -955,8 +955,8 @@ export default function EngineeringPage() {
           </div>
         )}
 
-        {/* ── History ── */}
-        {history.length > 0 && (
+        {/* ── History (Board view only — archived kanban issues) ── */}
+        {view === "board" && history.length > 0 && (
           <div style={{ padding:"0 32px 40px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
               <div style={{ fontFamily:"var(--mono)", fontSize:9.5, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--text-4)" }}>History · {history.length}</div>
