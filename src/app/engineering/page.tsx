@@ -1610,20 +1610,23 @@ export default function EngineeringPage() {
                             <div key={i}
                               title={`${b.label}  ·  ${fmt(b.start)} → ${fmt(b.end)}  ·  ${st_status.toUpperCase()}${ms ? `  ·  feeds ${ms.id} (${ms.label})` : ''}`}
                               style={{
-                                position:"absolute", top, left:`${left}%`, width:`${w}%`, height:ROW_H,
+                                // calc(...% - 4px) leaves a visible gap on the right so
+                                // edge-touching bars on the same row don't read as one
+                                // long blended bar with mashed text.
+                                position:"absolute", top, left:`${left}%`, width:`calc(${w}% - 4px)`, height:ROW_H,
                                 background: bg,
                                 border:`1px solid ${borderColor}`,
                                 borderRadius:4,
                                 display:"flex", alignItems:"center", padding:"0 7px",
                                 fontFamily:"var(--mono)", fontSize:10, color:"#fff", fontWeight:600, letterSpacing:"0.02em",
-                                textShadow:"0 1px 2px rgba(0,0,0,0.45)",
+                                textShadow:"0 1px 2px rgba(0,0,0,0.55)",
                                 whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
                                 cursor:"default", transition:"background 0.15s, box-shadow 0.15s",
                                 boxShadow: isDone
-                                  ? `inset 0 0 0 1px #3DCC9166, 0 0 8px #3DCC9133`
+                                  ? `inset 0 0 0 1px #3DCC9166, inset -2px 0 0 rgba(0,0,0,0.35), 0 0 8px #3DCC9133`
                                   : isBehind
-                                    ? `inset 0 0 0 1px #FF6B6B66, 0 0 8px #FF6B6B33`
-                                    : `inset 0 0 0 1px ${st.color}33`,
+                                    ? `inset 0 0 0 1px #FF6B6B66, inset -2px 0 0 rgba(0,0,0,0.35), 0 0 8px #FF6B6B33`
+                                    : `inset 0 0 0 1px ${st.color}33, inset -2px 0 0 rgba(0,0,0,0.30)`,
                                 opacity: isDone ? 0.95 : 1,
                               }}
                               onMouseEnter={e => {
@@ -1634,10 +1637,10 @@ export default function EngineeringPage() {
                               onMouseLeave={e => {
                                 e.currentTarget.style.background = bg;
                                 e.currentTarget.style.boxShadow = isDone
-                                  ? `inset 0 0 0 1px #3DCC9166, 0 0 8px #3DCC9133`
+                                  ? `inset 0 0 0 1px #3DCC9166, inset -2px 0 0 rgba(0,0,0,0.35), 0 0 8px #3DCC9133`
                                   : isBehind
-                                    ? `inset 0 0 0 1px #FF6B6B66, 0 0 8px #FF6B6B33`
-                                    : `inset 0 0 0 1px ${st.color}33`;
+                                    ? `inset 0 0 0 1px #FF6B6B66, inset -2px 0 0 rgba(0,0,0,0.35), 0 0 8px #FF6B6B33`
+                                    : `inset 0 0 0 1px ${st.color}33, inset -2px 0 0 rgba(0,0,0,0.30)`;
                                 e.currentTarget.style.zIndex = "";
                               }}
                             >
