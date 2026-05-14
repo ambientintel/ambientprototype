@@ -92,45 +92,63 @@ const STEPS: Step[] = [
   },
   {
     id: 'env-config', phase: '02', title: 'Environment Config', status: 'done', tag: 'Setup', time: '~1 hr',
-    summary: 'Seven environment variables required. WorkOS and OpenAI keys provisioned per environment. Never commit .env.local to git.',
+    summary: 'Eight required vars (WorkOS auth + Ambient Cognito proxy) plus optional Web Push, Edge Config, OpenAI TTS, and GitHub engineering board keys. Never commit .env.local to git.',
     sections: [
       {
         heading: 'Required variables',
         table: {
           cols: ['Variable', 'Source', 'Required for'],
           rows: [
-            ['WORKOS_API_KEY',           'WorkOS dashboard → API Keys',           'Auth — all environments'],
-            ['WORKOS_CLIENT_ID',         'WorkOS dashboard → Applications',        'Auth — all environments'],
-            ['WORKOS_REDIRECT_URI',      'Set to https://<domain>/callback',       'Auth — must match WorkOS app config'],
-            ['WORKOS_COOKIE_PASSWORD',   '32+ char random string',                 'Session cookie encryption'],
-            ['OPENAI_API_KEY',           'OpenAI dashboard → API Keys',            'TTS playback (/api/speak)'],
-            ['NEXT_PUBLIC_VAPID_KEY',    'Generated via web-push (see step 09)',   'Web Push — browser subscription'],
-            ['VAPID_PRIVATE_KEY',        'Generated via web-push (see step 09)',   'Web Push — server send'],
+            ['WORKOS_CLIENT_ID',           'WorkOS → User Management → Applications', 'Nurse sign-in / account creation'],
+            ['WORKOS_API_KEY',             'WorkOS → API Keys',                       'Nurse sign-in / account creation'],
+            ['WORKOS_COOKIE_PASSWORD',     '32+ char random string',                  'AES-256-GCM seal for ella-session JWE cookie'],
+            ['AMBIENT_API_URL',            'ambientcloud ApiStack output AmbientApiUrl', '/api/ambient/[...path] reverse proxy base'],
+            ['AMBIENT_USER_POOL_CLIENT_ID','ambientcloud ApiStack output CognitoUserPoolClientId', 'Service-account Cognito client'],
+            ['AMBIENT_WEB_SVC_EMAIL',      'Cognito service user (web dashboard)',    'USER_PASSWORD_AUTH flow username'],
+            ['AMBIENT_WEB_SVC_PASSWORD',   'Cognito service user password',           'USER_PASSWORD_AUTH flow password'],
+            ['AWS_REGION',                 'us-east-1 (ambientcloud region)',         'Cognito endpoint region'],
+          ],
+        },
+      },
+      {
+        heading: 'Optional variables',
+        table: {
+          cols: ['Variable', 'Source', 'Unlocks'],
+          rows: [
+            ['OPENAI_API_KEY',             'OpenAI dashboard → API Keys',             'TTS speak button on /dashboard/room/[roomId]'],
+            ['NEXT_PUBLIC_VAPID_PUBLIC_KEY','npx web-push generate-vapid-keys',       'Browser-side Web Push subscription'],
+            ['VAPID_PRIVATE_KEY',          'pair with the public key above',          'Server-side push send (/api/push/send)'],
+            ['VAPID_SUBJECT',              'mailto:ops@ambientintel.co',              'Required by web-push when VAPID is set'],
+            ['EDGE_CONFIG_ID',             'vercel.com → Storage → Edge Config',      'Push subscriptions persist across deploys'],
+            ['VERCEL_TOKEN',               'vercel.com/account/tokens',               'Write access to the Edge Config above'],
+            ['GITHUB_TOKEN',               'GitHub PAT with repo:contents write',     'Backs /dashboard/engineering kanban'],
+            ['GITHUB_REPO',                'default ambientintel/ambientprototype',   'Which repo stores engineering/board.json'],
           ],
         },
         commands: [
-          { label: 'create .env.local', code: 'cp apps/web/.env.example apps/web/.env.local\n# Edit apps/web/.env.local with your values\n# NEVER commit .env.local — it is in .gitignore' },
+          { label: 'create .env.local', code: 'cp apps/web/.env.example apps/web/.env.local\n# Edit with your values — NEVER commit, it is in .gitignore' },
         ],
       },
       {
         heading: 'Vercel environment variables',
         commands: [
-          { label: 'push env vars to Vercel', code: 'vercel env add WORKOS_API_KEY production\nvercel env add WORKOS_CLIENT_ID production\nvercel env add WORKOS_REDIRECT_URI production\nvercel env add WORKOS_COOKIE_PASSWORD production\nvercel env add OPENAI_API_KEY production\nvercel env add NEXT_PUBLIC_VAPID_KEY production\nvercel env add VAPID_PRIVATE_KEY production\n\n# Verify:\nvercel env ls' },
-          { label: 'pull env vars to local', code: 'vercel env pull apps/web/.env.local\n# Merges Vercel env vars into your local .env.local' },
+          { label: 'push the 8 required vars to production', code: 'vercel env add WORKOS_CLIENT_ID production\nvercel env add WORKOS_API_KEY production\nvercel env add WORKOS_COOKIE_PASSWORD production\nvercel env add AMBIENT_API_URL production\nvercel env add AMBIENT_USER_POOL_CLIENT_ID production\nvercel env add AMBIENT_WEB_SVC_EMAIL production\nvercel env add AMBIENT_WEB_SVC_PASSWORD production\nvercel env add AWS_REGION production\n\nvercel env ls' },
+          { label: 'add the optional ones to enable push + TTS + engineering board', code: 'vercel env add NEXT_PUBLIC_VAPID_PUBLIC_KEY production\nvercel env add VAPID_PRIVATE_KEY production\nvercel env add VAPID_SUBJECT production\nvercel env add EDGE_CONFIG_ID production\nvercel env add VERCEL_TOKEN production\nvercel env add OPENAI_API_KEY production\nvercel env add GITHUB_TOKEN production\nvercel env add GITHUB_REPO production' },
+          { label: 'pull env vars to local', code: 'vercel env pull apps/web/.env.local' },
         ],
         warnings: [
-          'WORKOS_REDIRECT_URI must exactly match the URI configured in the WorkOS application. A mismatch causes a silent redirect_uri_mismatch error after SSO. For local dev use http://localhost:3000/callback.',
-          'WORKOS_COOKIE_PASSWORD must be at least 32 characters. Rotating it invalidates all active sessions — coordinate with the pilot team before changing in production.',
+          'WORKOS_COOKIE_PASSWORD must be at least 32 characters. session.ts and middleware.ts both throw on session seal/verify if it is shorter — no more silent zero-padding to a guessable key.',
+          'Rotating WORKOS_COOKIE_PASSWORD invalidates all active sessions; coordinate with the pilot team before changing in production.',
+          'AMBIENT_WEB_SVC_PASSWORD changes require redeploy — the Cognito IdToken is cached for 55 min in module-level memory inside ambient-service-auth.ts.',
         ],
       },
       {
         heading: 'WorkOS application setup',
         checklist: [
-          'WorkOS application created for Ambient Intelligence in the WorkOS dashboard',
-          'Redirect URI set to https://ellamemory.com/callback (production)',
-          'Redirect URI set to http://localhost:3000/callback (development)',
-          'AuthKit enabled on the WorkOS application',
+          'WorkOS application created for Ambient Intelligence (User Management product, not AuthKit/SSO)',
+          'Email/password sign-in enabled — this app does not use OAuth/PKCE, so no Redirect URI is required',
           'Allowed domains configured for nurse user provisioning',
+          'A test nurse user created in WorkOS for local sign-in QA',
         ],
       },
     ],
@@ -171,25 +189,28 @@ const STEPS: Step[] = [
   },
   {
     id: 'auth', phase: '04', title: 'WorkOS Auth', status: 'done', tag: 'Setup', time: '~2 hrs',
-    summary: 'AuthKit SSO integration via WorkOS SDK. Three API routes handle sign-in, callback, sign-out, and session reads. Sessions are encrypted in an HttpOnly cookie.',
+    summary: 'Direct email/password against WorkOS User Management (no OAuth, no PKCE, no hosted SSO page). Five API routes: login, register, me, signin (redirect to /login form), signout. Sessions sealed as an AES-256-GCM JWE cookie via jose.',
     sections: [
       {
         heading: 'Auth API routes',
         artifacts: [
-          { file: 'apps/web/src/app/api/auth/signin/route.ts',   role: 'Redirects to WorkOS hosted SSO login page with PKCE.' },
-          { file: 'apps/web/src/app/api/auth/callback/route.ts', role: 'Handles OAuth callback, exchanges code for session, sets encrypted cookie.' },
-          { file: 'apps/web/src/app/api/auth/signout/route.ts',  role: 'Clears session cookie and redirects to WorkOS logout endpoint.' },
-          { file: 'apps/web/src/app/api/auth/me/route.ts',       role: 'Returns current user session as JSON. Used by AuthButton to hydrate the UI.' },
+          { file: 'apps/web/src/app/login/page.tsx',             role: 'Email/password sign-in + create-account form. The only place users actually type credentials.' },
+          { file: 'apps/web/src/app/api/auth/login/route.ts',    role: 'POSTs to api.workos.com/user_management/authenticate (grant_type=password), seals the result as an ella-session JWE cookie.' },
+          { file: 'apps/web/src/app/api/auth/register/route.ts', role: 'POSTs to api.workos.com/user_management/users to create a nurse account.' },
+          { file: 'apps/web/src/app/api/auth/me/route.ts',       role: 'Returns the unsealed session as JSON. Used by AuthButton to hydrate the UI.' },
+          { file: 'apps/web/src/app/api/auth/signin/route.ts',   role: 'Compatibility redirect → /login. Kept so any old "Sign in" links still land somewhere sensible.' },
+          { file: 'apps/web/src/app/api/auth/signout/route.ts',  role: 'Clears the ella-session cookie and redirects to /login (req.url-relative — works in local dev and prod).' },
+          { file: 'apps/web/src/app/callback/route.ts',          role: 'Vestigial redirect → /login. Left over from the deleted AuthKit OAuth flow; kept as a 302 so any stale bookmark still lands somewhere sane.' },
         ],
       },
       {
         heading: 'AuthButton component',
-        body: 'The AuthButton is a client component that fetches /api/auth/me on mount. It renders a sign-in link when unauthenticated and an avatar + sign-out link when authenticated. It never exposes session data to the page-level server component.',
+        body: 'Client component that fetches /api/auth/me on mount. When unauthenticated it links directly to /login; when authenticated it renders the nurse name + a Sign out link to /api/auth/signout. Page-level server components never see the session.',
         artifacts: [
-          { file: 'apps/web/src/components/AuthButton.tsx', role: 'Client component. Polls /api/auth/me, renders user avatar or sign-in CTA.' },
+          { file: 'apps/web/src/components/AuthButton.tsx', role: 'Client component. Calls /api/auth/me, renders nurse name or Sign in CTA.' },
         ],
         commands: [
-          { label: 'test auth flow locally', code: '# 1. Start dev server\npnpm --filter @ambient/web dev\n\n# 2. Visit http://localhost:3000\n# 3. Click "Sign in" → WorkOS hosted login\n# 4. Complete SSO → redirected to /callback\n# 5. Verify session: curl http://localhost:3000/api/auth/me' },
+          { label: 'test auth flow locally', code: '# 1. Start dev server\npnpm --filter @ambient/web dev\n\n# 2. Visit http://localhost:3000 → redirects to /login\n# 3. Enter nurse email + password (created in WorkOS dashboard or via /api/auth/register)\n# 4. POST /api/auth/login → ella-session cookie set → /dashboard/overview\n# 5. Verify session: curl --cookie "ella-session=…" http://localhost:3000/api/auth/me' },
         ],
       },
       {
@@ -197,15 +218,17 @@ const STEPS: Step[] = [
         table: {
           cols: ['Attribute', 'Value', 'Reason'],
           rows: [
-            ['Name',     'wos-session',   'WorkOS SDK default'],
-            ['HttpOnly', 'true',          'Prevents XSS access to session token'],
-            ['SameSite', 'Lax',           'CSRF protection for redirect flows'],
-            ['Secure',   'true (prod)',   'HTTPS-only in production'],
-            ['Encryption', 'AES-256-GCM', 'WORKOS_COOKIE_PASSWORD as key material via jose'],
+            ['Name',       'ella-session',  'App-owned cookie — not the WorkOS SDK default'],
+            ['Format',     'JWE (jose)',    'EncryptJWT with alg=dir, enc=A256GCM, 24h exp'],
+            ['HttpOnly',   'true',          'Prevents XSS access to the token'],
+            ['SameSite',   'Lax',           'CSRF protection for top-level navigations'],
+            ['Secure',     'true',          'HTTPS-only (Chrome/Firefox allow Secure on localhost in dev)'],
+            ['Key',        'WORKOS_COOKIE_PASSWORD[0..32]', 'getKey() throws if length < 32 — no zero-padding fallback'],
           ],
         },
         warnings: [
-          'The session cookie contains a WorkOS access token. The token is not a HIPAA identifier by itself, but the combination of session + keyring unlock constitutes PHI access. Ensure Secure and HttpOnly are enforced in production — Vercel sets these automatically on HTTPS.',
+          'The session payload carries the WorkOS access_token. It is not a HIPAA identifier on its own, but combined with an unlocked keyring it gates PHI rendering — keep Secure + HttpOnly enforced in production.',
+          'Setting WORKOS_COOKIE_PASSWORD to anything shorter than 32 chars now throws inside session.ts and middleware.ts. Previously the code silently padded with zero bytes, producing a guessable AES-256-GCM key.',
         ],
       },
     ],
@@ -216,11 +239,12 @@ const STEPS: Step[] = [
     sections: [
       {
         heading: 'Architecture',
-        body: 'The ambientcloud backend assigns each resident a coded IRB identifier in MOCAREV-NNNN format (MOCAREV-0001 through MOCAREV-0030 system-wide; pilot FAC-MOCAREV-001 uses MOCAREV-0001 through MOCAREV-0012) and never transmits names over the wire. The nurse\'s workstation holds an encrypted keyring file (.keyring.enc) that maps coded IDs to resident names. At shift start, the nurse provides a passphrase; the app derives an AES-GCM key via PBKDF2-SHA256 (600k iterations), decrypts the keyring in memory, and hydrates the UI across all 5 dashboard pages. The passphrase and plaintext keyring are never persisted — 4-hour idle lock wipes the in-memory map.',
+        body: 'The ambientcloud backend assigns each resident a coded IRB identifier in MOCAREV-NNNN format (MOCAREV-0001 through MOCAREV-0030 system-wide; pilot FAC-MOCAREV-001 uses MOCAREV-0001 through MOCAREV-0012) and never transmits names over the wire. The /api/ambient proxy enforces this with a runtime assertNoPhi walk of every upstream response — forbidden fields (name, dob, mrn, room, etc.) become a 502 rather than rendering in the dashboard. The nurse\'s workstation holds an encrypted keyring file (.keyring.enc) that maps coded IDs to resident names. At shift start, the nurse provides a passphrase; the app derives an AES-256-GCM key via PBKDF2-SHA-256 (600k iterations), decrypts the keyring in memory, and hydrates names across all 10 dashboard pages. The passphrase and plaintext keyring are never persisted — 4-hour idle lock + beforeunload wipe clears the in-memory map.',
         artifacts: [
-          { file: 'apps/web/src/lib/keyring.ts',               role: 'AES-GCM encrypt/decrypt, PBKDF2 key derivation, in-memory identity map.' },
+          { file: 'apps/web/src/lib/keyring.ts',               role: 'AES-256-GCM encrypt/decrypt, PBKDF2-SHA-256 600k key derivation, salt+IV per encryption.' },
+          { file: 'apps/web/src/lib/api-client.ts',            role: 'assertNoPhi + PhiProtocolViolation. Walks every proxied body and refuses to forward responses that contain forbidden keys.' },
           { file: 'apps/web/src/components/KeyringUnlock.tsx',  role: 'Shift-start modal. Accepts passphrase, decrypts keyring, stores map in React context.' },
-          { file: 'apps/web/src/context/IdentityContext.tsx',   role: 'React context that holds the decrypted MOCAREV-NNNN → ResidentIdentity map. 4-hour idle lock, beforeunload wipe. Consumed by all 5 dashboard pages via useIdentity().' },
+          { file: 'apps/web/src/context/IdentityContext.tsx',   role: 'React context that holds the decrypted MOCAREV-NNNN → ResidentIdentity map. 4-hour idle lock, beforeunload wipe. Consumed by every dashboard page via useIdentity().' },
         ],
       },
       {
@@ -231,7 +255,7 @@ const STEPS: Step[] = [
         ],
         warnings: [
           'keyring.enc must be distributed out-of-band (USB, encrypted email). Never store in git, Vercel env vars, or any cloud service. Compromise of keyring.enc + passphrase constitutes a HIPAA breach.',
-          'The PBKDF2 iteration count is set to 310,000 (NIST SP 800-132 minimum for SHA-256). Do not reduce this — brute-force resistance is the only safeguard if keyring.enc is exfiltrated.',
+          'The PBKDF2 iteration count is set to 600,000 (current OWASP / NIST 2023 guidance for SHA-256). Do not reduce this — brute-force resistance is the only safeguard if keyring.enc is exfiltrated.',
         ],
       },
       {

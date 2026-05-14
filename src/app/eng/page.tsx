@@ -188,7 +188,7 @@ const DOMAINS = [
       { k: 'Workspace', v: 'pnpm 9' },
       { k: 'Pilot',    v: '12 Rooms' },
     ],
-    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS SSO, HIPAA de-identification, nurse keyring AES-GCM unlock (4-hr idle lock, PBKDF2 600k), identity overlay wired into all 5 dashboard pages. Floor map (Ella freshness), Ella narrative, 2-step ACK + false-positive flag. Web push + in-page audio alert (first-load guarded). TTS speak button. Prev/next room navigation. Device management: admin status view, IoT shadow, inline PATCH, filter chips. CSV export in reports. Analytics: all static sections labeled estimated.',
+    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS email/password auth, HIPAA de-identification, nurse keyring AES-GCM unlock (4-hr idle lock, PBKDF2 600k), identity overlay wired into all 10 dashboard pages (Overview, Floor Map, Alerts, Reports, Analytics, Browse, Room detail, Devices, Archive, Engineering board). May 2026 security audit: assertNoPhi guard wired at the /api/ambient proxy boundary, /api/push/send locked behind ella-session, signin/signout fixed for local dev, weak cookie-key padding removed, Next.js patched 16.2.4 → 16.2.6, 8 dead deps pruned (authkit-nextjs, @nivo/*, radix-ui, cva, tailwind-merge), audit 17 → 1 vuln.',
     currentStep: '10 · Pilot Validation',
     freezeKey: 'ambient-webapp-frozen-v1',
     freezeLabel: 'Deployment Lock',
@@ -245,11 +245,13 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve PoE+ vs barrel jack decision before Rev B — affects power routing and BOM cost', owner: 'Lead' },
   ],
   webapp: [
-    { task: 'Set VERCEL_TOKEN in ambientweb project to activate push subscription storage (Edge Config ambient-push ecfg_wsm…)', owner: 'FE+DevOps' },
+    { task: 'Set NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT in Vercel — push notifications are dark until configured', owner: 'FE+DevOps' },
+    { task: 'Set EDGE_CONFIG_ID + VERCEL_TOKEN in Vercel to persist push subscriptions across deploys (Edge Config ambient-push ecfg_wsm…)', owner: 'FE+DevOps' },
+    { task: 'Set OPENAI_API_KEY in Vercel to activate the Ella TTS speak button on /dashboard/room/[roomId]', owner: 'FE+DevOps' },
     { task: 'Run pilot validation: nurse auth, Ella narrative, fall alert ACK, web push delivery across MOH 301–312', owner: 'Product+FE' },
     { task: 'Seed real room assignments from pilot coordinator — use Devices page PATCH to assign roomId + zone per device', owner: 'Product+FE' },
     { task: 'Verify device management page with admin Cognito account — confirm GET /admin/devices + PATCH /admin/devices/{id} respond 200', owner: 'FE+Cloud' },
-    { task: 'Monitor /api/ambient proxy for 502s — keep AMBIENT_WEB_SVC_PASSWORD in sync with Cognito', owner: 'DevOps' },
+    { task: 'Monitor /api/ambient proxy for 502s — keep AMBIENT_WEB_SVC_PASSWORD in sync with Cognito; new assertNoPhi guard will 502 if cloud returns a forbidden field', owner: 'DevOps' },
   ],
 };
 
@@ -277,7 +279,8 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Finalize ceiling-mount bracket geometry and print FDM prototype for fit-check',
   ],
   webapp: [
-    'Set VERCEL_TOKEN env var to activate push subscription storage and confirm push delivery end-to-end',
+    'Add the three VAPID env vars + OPENAI_API_KEY in Vercel so push and TTS turn on (currently dark)',
+    'Set EDGE_CONFIG_ID + VERCEL_TOKEN to persist push subscriptions across deploys, then confirm push delivery end-to-end',
     'Verify Devices page with admin Cognito account — GET /admin/devices + PATCH /admin/devices/{id}',
   ],
 };
