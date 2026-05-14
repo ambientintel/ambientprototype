@@ -1422,9 +1422,11 @@ export default function EngineeringPage() {
             { id:"M5", date:"2026-11-30", label:"Summary & data analysis",         color:"#2D72D2" },
           ];
 
-          const MONTHS = ["2026-06-01","2026-07-01","2026-08-01","2026-09-01","2026-10-01","2026-11-01","2026-12-01"];
+          // Skip DEC: TL_END is Dec 1, so the DEC label would sit at 100% and
+          // clip past the right edge of the (overflow:hidden) grid.
+          const MONTHS = ["2026-06-01","2026-07-01","2026-08-01","2026-09-01","2026-10-01","2026-11-01"];
           const MLABEL: Record<string, string> = {
-            "2026-06-01":"JUN","2026-07-01":"JUL","2026-08-01":"AUG","2026-09-01":"SEP","2026-10-01":"OCT","2026-11-01":"NOV","2026-12-01":"DEC"
+            "2026-06-01":"JUN","2026-07-01":"JUL","2026-08-01":"AUG","2026-09-01":"SEP","2026-10-01":"OCT","2026-11-01":"NOV"
           };
 
           const ROW_H = 22;
@@ -1493,11 +1495,13 @@ export default function EngineeringPage() {
                       </div>
                     </div>
                   ))}
-                  {/* TODAY label */}
-                  <div style={{ position:"absolute", left:`${todayPct}%`, top:10, transform:"translateX(2px)" }}>
-                    <div style={{ width:8, height:8, borderRadius:"50%", background:"#FF6B6B", boxShadow:"0 0 12px #FF6B6B, 0 0 4px #FF6B6B" }}/>
-                    <div style={{ position:"absolute", top:13, left:14, whiteSpace:"nowrap", fontFamily:"var(--mono)", fontSize:10, letterSpacing:"0.2em", color:"#FF8888", fontWeight:700 }}>
-                      TODAY · {todayLabel}
+                  {/* TODAY label — vertically stacked to stay narrow so it
+                       doesn't horizontally collide with the nearest M# label */}
+                  <div style={{ position:"absolute", left:`${todayPct}%`, top:10 }}>
+                    <div style={{ width:8, height:8, borderRadius:"50%", background:"#FF6B6B", boxShadow:"0 0 12px #FF6B6B, 0 0 4px #FF6B6B", transform:"translateX(-50%)" }}/>
+                    <div style={{ position:"absolute", top:12, left:7, whiteSpace:"nowrap", lineHeight:1.05 }}>
+                      <div style={{ fontFamily:"var(--mono)", fontSize:9.5, letterSpacing:"0.16em", color:"#FF8888", fontWeight:700 }}>TODAY</div>
+                      <div style={{ fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.08em", color:"#FF8888", fontWeight:600, opacity:0.9 }}>{todayLabel}</div>
                     </div>
                   </div>
                 </div>
