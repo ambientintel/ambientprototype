@@ -796,7 +796,7 @@ pytest -m smoke -v
         warnings: [
           'Integration tests hit real AWS — they provision and tear down a real IoT Thing and DDB rows on every run. Use the dev account only. Never point AMBIENT_* vars at a production tenant.',
           'If a run is interrupted mid-teardown, orphan DEV-E2E* Things may be left in IoT Core. Scan: aws iot list-things | grep DEV-E2E, then retire each with `ambientcloud-admin retire <deviceId>`.',
-          'Bedrock model access must be granted once per account via Bedrock → Model access → Manage model access. Without it the narrative tests fail with AccessDeniedException.',
+          'Bedrock access for Anthropic models requires the per-account use case details form. AWS retired the dedicated Model access page in 2025 — submit by invoking an Anthropic model in the Bedrock Playground, which surfaces the form on first failure. Without it, the narrative Lambda fails with ResourceNotFoundException ("Model use case details have not been submitted").',
         ],
       },
     ],
@@ -860,7 +860,7 @@ const STACK_SPECS = [
   { label: 'Region',    value: 'us-east-1',        sub: 'AWS · single-region pilot' },
   { label: 'Runtime',   value: 'Python 3.12',       sub: 'Lambda + FastAPI + boto3' },
   { label: 'IaC',       value: 'AWS CDK v2',         sub: 'Python · unified infra/app.py' },
-  { label: 'AI Model',  value: 'Sonnet 4',         sub: 'Bedrock · HIPAA-eligible' },
+  { label: 'AI Model',  value: 'Sonnet 4.6',       sub: 'Bedrock us.anthropic.* inference profile · HIPAA-eligible' },
   { label: 'Standard',  value: 'HIPAA §164.514(c)',  sub: 'Coded data · IRB protocol' },
 ];
 

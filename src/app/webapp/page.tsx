@@ -138,7 +138,7 @@ const STEPS: Step[] = [
           { label: 'pull env vars to local', code: 'vercel env pull apps/web/.env.local' },
         ],
         warnings: [
-          'WORKOS_COOKIE_PASSWORD must be at least 32 characters. session.ts and middleware.ts both throw on session seal/verify if it is shorter — no more silent zero-padding to a guessable key.',
+          'WORKOS_COOKIE_PASSWORD must be at least 32 characters. session.ts and proxy.ts (renamed from middleware.ts in the Next 16 upgrade) both throw on session seal/verify if it is shorter — no more silent zero-padding to a guessable key.',
           'Rotating WORKOS_COOKIE_PASSWORD invalidates all active sessions; coordinate with the pilot team before changing in production.',
           'AMBIENT_WEB_SVC_PASSWORD changes require redeploy — the Cognito IdToken is cached for 55 min in module-level memory inside ambient-service-auth.ts.',
         ],
@@ -229,7 +229,7 @@ const STEPS: Step[] = [
         },
         warnings: [
           'The session payload carries the WorkOS access_token. It is not a HIPAA identifier on its own, but combined with an unlocked keyring it gates PHI rendering — keep Secure + HttpOnly enforced in production.',
-          'Setting WORKOS_COOKIE_PASSWORD to anything shorter than 32 chars now throws inside session.ts and middleware.ts. Previously the code silently padded with zero bytes, producing a guessable AES-256-GCM key.',
+          'Setting WORKOS_COOKIE_PASSWORD to anything shorter than 32 chars now throws inside session.ts and proxy.ts. Previously the code silently padded with zero bytes, producing a guessable AES-256-GCM key. Note: Next 16 renamed middleware.ts → proxy.ts; if you see middleware.ts in this codebase post-2026-05-14 Next is silently ignoring it (see commit 29645a2).',
         ],
       },
     ],
@@ -380,8 +380,8 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'web-push', phase: '09', title: 'Web Push', status: 'warning', tag: 'Integrate', time: '~1 day',
-    summary: 'VAPID keys generated and deployed to Vercel. sw.js live at /public/sw.js. Bell toggle in overview header. New-alert detection on 30s poll fires /api/push/send. Subscribe/send routes live. Blocked on VERCEL_TOKEN: Edge Config ambient-push ecfg_wsm… needs a Vercel personal access token to persist subscriptions across sessions.',
+    id: 'web-push', phase: '09', title: 'Web Push', status: 'ok', tag: 'Integrate', time: 'done',
+    summary: 'VAPID keys generated and deployed to Vercel. sw.js live at /public/sw.js. Bell toggle in overview header. New-alert detection on 30s poll fires /api/push/send. Subscribe/send routes live. VERCEL_TOKEN + EDGE_CONFIG_ID wired May 14 — push subscriptions now persist in Edge Config (ambient-push, ecfg_wsm…) across cold starts. /api/health pushStorage check green. Caveat: VERCEL_TOKEN crossed a chat transcript during the wire-up — rotate before any external repo/transcript sharing.',
     sections: [
       {
         heading: 'Generate VAPID keys',
@@ -594,7 +594,6 @@ const CHECKLIST_ITEMS = [
 const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19]);
 
 const OPEN_DECISIONS = [
-  'Web Push storage: set VERCEL_TOKEN in Vercel project env vars to activate Edge Config subscription persistence (ecfg_wsm…) — push fires in-session today but subscriptions not persisted across restarts',
   'Keyring UX: per-shift AES-GCM unlock vs persistent browser credential storage (WebAuthn PRF) — security vs usability tradeoff for pilot nurses',
   'Push reliability: Web Push + in-page audio (desktop browsers) vs native mobile push via ambientmobile (APNs/FCM) — decide primary alert channel for pilot nurses',
   'Analytics persistence: client-side session state vs server-side aggregation for shift summary and weekly trend reports',
