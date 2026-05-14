@@ -19,7 +19,7 @@ export const ENG_DOMAINS: EngDomainMeta[] = [
   { id: 'mobileapp',        serverKey: 'mobileapp', href: '/mobileapp',        lsKey: 'ambient-mobileapp-checklist-v1',  freezeKey: 'ambient-mobileapp-frozen-v1',  checklistTotal: 23, checklistDefault: 17 },
   { id: 'cloudengineering', serverKey: 'cloud',     href: '/cloudengineering', lsKey: 'ambient-cloud-checklist-v2',      freezeKey: 'ambient-cloud-frozen-v1',      checklistTotal: 22, checklistDefault: 21 },
   { id: 'mechanical',       serverKey: 'mechanical', href: '/mechanical',      lsKey: 'ambient-mechanical-checklist-v1', freezeKey: 'ambient-mechanical-frozen-v1', checklistTotal: 22, checklistDefault: 5  },
-  { id: 'webapp',           serverKey: 'webapp',    href: '/webapp',           lsKey: 'ambient-webapp-checklist-v1',     freezeKey: 'ambient-webapp-frozen-v1',     checklistTotal: 20, checklistDefault: 19 },
+  { id: 'webapp',           serverKey: 'webapp',    href: '/webapp',           lsKey: 'ambient-webapp-checklist-v1',     freezeKey: 'ambient-webapp-frozen-v1',     checklistTotal: 20, checklistDefault: 20 },
 ];
 
 export const ENG_DOMAIN_BY_ID = Object.fromEntries(ENG_DOMAINS.map(d => [d.id, d])) as Record<string, EngDomainMeta>;

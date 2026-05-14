@@ -513,7 +513,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'pilot-validation', phase: '13', title: 'Pilot Validation', status: 'pending', tag: 'Ship', time: '~1 week',
+    id: 'pilot-validation', phase: '13', title: 'Pilot Validation', status: 'done', tag: 'Ship', time: '~1 week',
     summary: 'End-to-end smoke tests covering the full nurse workflow: auth, keyring unlock, dashboard overview, fall alert push notification, room detail + Ella TTS, and alert acknowledge.',
     sections: [
       {
@@ -591,7 +591,7 @@ const CHECKLIST_ITEMS = [
   'Vercel production deploy: ellamemory.com live',
 ];
 
-const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19]);
+const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
 
 const OPEN_DECISIONS = [
   'Keyring UX: per-shift AES-GCM unlock vs persistent browser credential storage (WebAuthn PRF) — security vs usability tradeoff for pilot nurses',
