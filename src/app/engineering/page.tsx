@@ -1446,7 +1446,7 @@ export default function EngineeringPage() {
 
           return (
             <div style={{ ...s.content, flex:1, overflowY:"auto" }}>
-              <SectionDivider label="Programme Timeline · May → Nov 2026" n="00" first />
+              <SectionDivider label="Engineering Timeline · May → Nov 2026" n="00" first />
 
               {/* Milestone summary cards */}
               <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:10, marginBottom:24 }}>
