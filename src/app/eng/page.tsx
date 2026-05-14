@@ -109,10 +109,10 @@ const DOMAINS = [
     specs: [
       { k: 'Region',  v: 'us-east-1' },
       { k: 'Runtime', v: 'Python 3.12' },
-      { k: 'AI',      v: 'Sonnet 4' },
+      { k: 'AI',      v: 'Sonnet 4.6' },
       { k: 'IaC',     v: 'CDK v2' },
     ],
-    description: 'CDK v2 · 11 CloudFormation stacks live · 18 API endpoints · 206 unit tests · 9 smoke tests. MOCAREV-NNNN coded subject IDs per study-mvp.md §1.5. Ella narratives live via Bedrock Sonnet 4 (cross-region inference) — Athena partition-projection fixed. X-Ray tracing, reserved concurrency, HIPAA 7-yr TTL. 5-job CI/CD pipeline.',
+    description: 'CDK v2 · 11 CloudFormation stacks live · 18 API endpoints · 206 unit tests · 9 smoke tests. MOCAREV-NNNN coded subject IDs per study-mvp.md §1.5. Ella narratives live via Bedrock Sonnet 4.6 (us.anthropic.claude-sonnet-4-6 cross-region inference profile) — verified end-to-end May 14. X-Ray tracing, reserved concurrency, HIPAA 7-yr TTL. 5-job CI/CD pipeline. May 14 fixes: reconciler Lambda was crashing on Athena partition-projection constraint (CONSTRAINT_VIOLATION on injected facility/subject/device columns) — TelemetryDivergence had never emitted; rewrote to enumerate triples from DynamoDB, added IAM + KMS-decrypt + env-var plumbing (commits 3ac32f3 + a93dee3). Bedrock model id unified on us.anthropic.claude-sonnet-4-6 across constants.py + narrative.py + main.tf (b2684ea). Anthropic use-case form submitted; Ella DLQ purged of 56 pre-migration stale messages; MOH-311/312 device rows added; FAC-PILOT-001 orphans removed.',
     currentStep: '12 · Production Sign-Off',
     freezeLabel: 'Production Freeze',
   },
@@ -164,7 +164,7 @@ const DOMAINS = [
       { k: 'Workspace', v: 'pnpm 9' },
       { k: 'Pilot',    v: '12 Rooms' },
     ],
-    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS email/password auth, HIPAA de-identification, nurse keyring AES-GCM unlock (4-hr idle lock, PBKDF2 600k), identity overlay wired into all 10 dashboard pages (Overview, Floor Map, Alerts, Reports, Analytics, Browse, Room detail, Devices, Archive, Engineering board). May 2026 security audit: assertNoPhi guard wired at the /api/ambient proxy boundary, /api/push/send locked behind ella-session, signin/signout fixed for local dev, weak cookie-key padding removed, Next.js patched 16.2.4 → 16.2.6, 8 dead deps pruned (authkit-nextjs, @nivo/*, radix-ui, cva, tailwind-merge), audit 17 → 1 vuln.',
+    description: 'Ella Memory nurse dashboard — live at ellamemory.com. WorkOS email/password auth, HIPAA de-identification, nurse keyring AES-GCM unlock (4-hr idle lock, PBKDF2 600k), identity overlay wired into all 10 dashboard pages (Overview, Floor Map, Alerts, Reports, Analytics, Browse, Room detail, Devices, Archive, Engineering board). May 2026 security audit: assertNoPhi guard at the /api/ambient proxy boundary, /api/push/send locked behind ella-session, signin/signout fixed for local dev, weak cookie-key padding removed, Next.js patched 16.2.4 → 16.2.6, 8 dead deps pruned, audit 17 → 1 vuln. May 14 follow-up: discovered the Next 16 upgrade had silently disabled middleware (file convention renamed to proxy.ts) — auth gate / CSP / PHI-exfil guardrail were dark for ~13 days; one-commit rename (29645a2) restored them. Web push persistence wired: VAPID + EDGE_CONFIG_ID + VERCEL_TOKEN live on Vercel; OPENAI_API_KEY live; pilot-smoke.sh + patch-devices.sh + pilot-runbook.md shipped.',
     currentStep: '10 · Pilot Validation',
     freezeLabel: 'Deployment Lock',
   },
@@ -206,9 +206,9 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve Apple Developer account -20209 lock via Apple Support for future direct portal access', owner: 'Mobile' },
   ],
   cloudengineering: [
-    { task: 'Approve Bedrock model access in us-east-2 and us-west-2 (Ella cross-region inference — DLQ accumulating until resolved)', owner: 'Cloud' },
-    { task: 'Re-seed DynamoDB with MOCAREV-NNNN records and drain Ella SQS DLQ after Bedrock access approved', owner: 'Cloud' },
-    { task: 'Verify dual-write reconciler — TelemetryDivergence alarm, promote FAC-MOCAREV-001 to parquet_only', owner: 'Cloud' },
+    { task: 'Wait for real device telemetry to start flowing — TelemetryDivergence metric needs ≥1 hour of data before the 48h-of-zero clock can start ticking toward dual-write retirement', owner: 'Cloud+Hardware' },
+    { task: 'After 48h of TelemetryDivergence=0 in CloudWatch, promote FAC-MOCAREV-001 to parquet_only and retire the Firehose path', owner: 'Cloud' },
+    { task: 'Run a CDK deploy of TelemetryStack to re-apply the reconciler IAM + env changes from source (currently live via direct AWS API patch; CDK source is updated in a93dee3 but not yet deployed)', owner: 'Cloud' },
     { task: 'Production sign-off checklist — runbooks dry-run, CloudTrail data event verification', owner: 'Cloud+Security' },
     { task: 'Smoke test suite run against dev tenant post-deploy (pytest -m smoke)', owner: 'Cloud+Security' },
   ],
@@ -220,13 +220,10 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve PoE+ vs barrel jack decision before Rev B — affects power routing and BOM cost', owner: 'Lead' },
   ],
   webapp: [
-    { task: 'Set NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT in Vercel — push notifications are dark until configured', owner: 'FE+DevOps' },
-    { task: 'Set EDGE_CONFIG_ID + VERCEL_TOKEN in Vercel to persist push subscriptions across deploys (Edge Config ambient-push ecfg_wsm…)', owner: 'FE+DevOps' },
-    { task: 'Set OPENAI_API_KEY in Vercel to activate the Ella TTS speak button on /dashboard/room/[roomId]', owner: 'FE+DevOps' },
-    { task: 'Run pilot validation: nurse auth, Ella narrative, fall alert ACK, web push delivery across MOH 301–312', owner: 'Product+FE' },
-    { task: 'Seed real room assignments from pilot coordinator — use Devices page PATCH to assign roomId + zone per device', owner: 'Product+FE' },
-    { task: 'Verify device management page with admin Cognito account — confirm GET /admin/devices + PATCH /admin/devices/{id} respond 200', owner: 'FE+Cloud' },
-    { task: 'Monitor /api/ambient proxy for 502s — keep AMBIENT_WEB_SVC_PASSWORD in sync with Cognito; new assertNoPhi guard will 502 if cloud returns a forbidden field', owner: 'DevOps' },
+    { task: 'Get the MOCAREV-NNNN → room number TSV from the pilot coordinator, then run ./scripts/patch-devices.sh with the ella-session cookie (30s for all 12 rooms)', owner: 'Product' },
+    { task: 'Execute pilot validation at MOH 301–312 per docs/pilot-runbook.md (8 sections: pre-flight smoke, device assignments, nurse auth, keyring unlock, fall alert E2E, Ella narrative, push persistence, evidence capture)', owner: 'Product+FE' },
+    { task: 'Rotate VERCEL_TOKEN + GITHUB_TOKEN — both crossed a chat transcript on May 14 during the Edge Config wire-up; mint new ones, vercel env rm/add interactively, revoke old', owner: 'DevOps' },
+    { task: 'Monitor /api/ambient proxy for 502s — keep AMBIENT_WEB_SVC_PASSWORD in sync with Cognito; assertNoPhi guard will 502 if cloud returns a forbidden field', owner: 'DevOps' },
   ],
 };
 
@@ -246,17 +243,17 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Set up Firebase + Android FCM build: google-services.json → setup_android_push.sh → eas build android',
   ],
   cloudengineering: [
-    'Approve Bedrock model access (us-east-2 + us-west-2) → drain Ella DLQ → verify narrative generation end-to-end',
-    'Promote FAC-MOCAREV-001 to parquet_only after reconciler shows 0% divergence over 24h',
+    'Watch CloudWatch AmbientIntelligence/Telemetry → TelemetryDivergence (per FacilityId) once devices come online; ≤0.1% over 48h unlocks parquet_only promotion',
+    'CDK deploy TelemetryStack to re-apply reconciler env+IAM from source (currently live via direct API patch)',
   ],
   mechanical: [
     'Route all Altium traces, run DRC to zero errors, export preliminary Gerber',
     'Finalize ceiling-mount bracket geometry and print FDM prototype for fit-check',
   ],
   webapp: [
-    'Add the three VAPID env vars + OPENAI_API_KEY in Vercel so push and TTS turn on (currently dark)',
-    'Set EDGE_CONFIG_ID + VERCEL_TOKEN to persist push subscriptions across deploys, then confirm push delivery end-to-end',
-    'Verify Devices page with admin Cognito account — GET /admin/devices + PATCH /admin/devices/{id}',
+    'Get MOCAREV-NNNN → room mapping from coordinator; batch-PATCH via scripts/patch-devices.sh (helper shipped May 14)',
+    'Execute docs/pilot-runbook.md end-to-end at MOH 301–312 — pre-flight smoke, nurse auth, keyring unlock, fall alert E2E, Ella narrative, push',
+    'Rotate VERCEL_TOKEN + GITHUB_TOKEN exposed during May 14 wire-up before any external sharing of repos or screenshots',
   ],
 };
 
@@ -278,7 +275,8 @@ const BLOCKERS: { blocked: string; blocking: string; issue: string }[] = [
   { blocked: 'Firmware',          blocking: 'EE Hardware',  issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
   { blocked: 'Mobile App',        blocking: 'Apple',        issue: 'Apple account -20209 lock still blocking direct Apple Developer Portal API — workaround (Admin ASC API key) in use; build queued' },
   { blocked: 'Mechanical',        blocking: 'EE Hardware',  issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
-  { blocked: 'Cloud Engineering', blocking: 'AWS Console',  issue: 'Bedrock model access form pending in us-east-2 and us-west-2 — Ella SQS fanout fails until cross-region inference approved in all three regions' },
+  { blocked: 'Cloud Engineering', blocking: 'Hardware',     issue: 'TelemetryDivergence metric can\'t accumulate 48h of zero until real device frames start landing in the raw Parquet path — gated on EE/Firmware bring-up' },
+  { blocked: 'Web App',           blocking: 'Pilot Coordinator', issue: 'Final MOCAREV-NNNN → MOH-NNN room mapping needed before scripts/patch-devices.sh can run; pilot validation runbook can\'t start without it' },
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────────────
