@@ -1393,7 +1393,7 @@ export default function EngineeringPage() {
             ],
             cloud: [
               { label:"X-Ray service map + dashboard",  start:"2026-05-14", end:"2026-05-25" },
-              { label:"Security audit closeout",        start:"2026-05-14", end:"2026-05-30" },
+              { label:"Security audit closeout ✓",      start:"2026-05-14", end:"2026-05-15" },
               { label:"Multi-tenant scaling",           start:"2026-05-14", end:"2026-06-20" },
               { label:"Pilot tenant provisioning",      start:"2026-06-20", end:"2026-07-15" },
               { label:"Pilot ops monitoring",           start:"2026-08-01", end:"2026-10-31" },
