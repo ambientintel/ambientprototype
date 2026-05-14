@@ -1605,6 +1605,10 @@ export default function EngineeringPage() {
                           const st_status = statusByIdx[i] || "planned";
                           const isDone    = st_status === "done";
                           const isBehind  = st_status === "behind";
+                          // Narrow bar: not enough room inside for the label
+                          // (and maybe not even for the chip). Render a
+                          // floating chip-style label to the right.
+                          const isNarrow = w < 6 || (!!ms && w < 8);
 
                           const bg = isDone
                             ? `linear-gradient(90deg, #3DCC9199, #3DCC9166)`
@@ -1619,7 +1623,8 @@ export default function EngineeringPage() {
                           const borderColor = isDone ? "#3DCC91" : isBehind ? "#FF6B6B" : st.color;
 
                           return (
-                            <div key={i}
+                            <Fragment key={i}>
+                            <div
                               title={`${b.label}  ·  ${fmt(b.start)} → ${fmt(b.end)}  ·  ${st_status.toUpperCase()}${ms ? `  ·  feeds ${ms.id} (${ms.label})` : ''}`}
                               style={{
                                 // calc(...% - 4px) leaves a visible gap on the right so
@@ -1664,13 +1669,44 @@ export default function EngineeringPage() {
                               {isBehind && (
                                 <span style={{ flexShrink:0, marginRight:4, color:"#FF6B6B", fontFamily:"var(--mono)", fontWeight:700 }}>!</span>
                               )}
-                              <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{b.label}</span>
-                              {ms && (
+                              {!isNarrow && <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{b.label}</span>}
+                              {ms && !isNarrow && (
                                 <span style={{ marginLeft:"auto", paddingLeft:6, fontFamily:"var(--mono)", fontSize:9.5, color:"#fff", fontWeight:700, letterSpacing:"0.14em", flexShrink:0, textShadow:`0 0 4px ${ms.color}`, background:`${ms.color}40`, padding:"1px 5px", borderRadius:3, border:`1px solid ${ms.color}aa` }}>
                                   → {b.ms}
                                 </span>
                               )}
                             </div>
+                            {/* Floating chip-style label for narrow bars */}
+                            {isNarrow && (
+                              <div style={{
+                                position:"absolute",
+                                top: top + 3,
+                                left:`calc(${left + w}% - 2px)`,
+                                height: ROW_H - 6,
+                                paddingLeft: 6, paddingRight: 7,
+                                display: "inline-flex", alignItems: "center", gap: 6,
+                                fontFamily: "var(--mono)", fontSize: 9.5, color: "#fff", fontWeight: 600,
+                                whiteSpace: "nowrap",
+                                background: "rgba(10,12,18,0.82)",
+                                backdropFilter: "blur(2px)",
+                                WebkitBackdropFilter: "blur(2px)",
+                                borderRadius: 3,
+                                border: `1px solid ${st.color}99`,
+                                textShadow: "0 1px 2px rgba(0,0,0,0.85)",
+                                pointerEvents: "none",
+                                letterSpacing: "0.02em",
+                                zIndex: 4,
+                                boxShadow: `0 2px 6px rgba(0,0,0,0.4)`,
+                              }}>
+                                <span>{b.label}</span>
+                                {ms && (
+                                  <span style={{ color: ms.color, fontWeight: 700, fontSize: 8.5, letterSpacing: "0.14em", flexShrink: 0, paddingLeft: 4, borderLeft: `1px solid ${ms.color}66` }}>
+                                    → {b.ms}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            </Fragment>
                           );
                         })}
                       </div>
