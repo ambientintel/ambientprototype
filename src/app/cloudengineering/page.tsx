@@ -503,8 +503,8 @@ const STEPS: Step[] = [
         table: {
           cols: ['Parameter', 'Value', 'Notes'],
           rows: [
-            ['Model ID',         'us.anthropic.claude-sonnet-4-20250514-v1:0', 'Cross-region inference profile — routes to us-east-1/us-east-2/us-west-2. Model access must be approved in all three regions. IAM wildcard: arn:aws:bedrock:*::foundation-model/anthropic.* + inference-profile/us.anthropic.*'],
-            ['Region',           'us-east-1 (deploy)',                         'Inference profile routes to us-east-1, us-east-2, us-west-2 — model access approval required in all three via Bedrock console'],
+            ['Model ID',         'us.anthropic.claude-sonnet-4-6',             'Cross-region SYSTEM_DEFINED inference profile — routes across us-east-1/us-east-2/us-west-2. Models AUTHORIZED in all three regions on this account; per-account Anthropic use case form submitted 2026-05-14. IAM wildcard: arn:aws:bedrock:*::foundation-model/anthropic.* + inference-profile/us.anthropic.*'],
+            ['Region',           'us-east-1 (deploy)',                         'Inference profile auto-routes inference to us-east-1, us-east-2, or us-west-2 based on capacity. Anthropic use case form is per-account, not per-region.'],
             ['Max tokens',       '1024',                                        'Sufficient for 12h summary — increase to 2048 if summaries truncate'],
             ['Temperature',      '0.3',                                         'Low temp for clinical consistency — not creative generation'],
             ['System prompt',    'services/ella/src/system_prompt.txt',        'De-identification instructions + forbidden-attribute guard'],
