@@ -97,6 +97,12 @@ interface NewIssueForm {
 export default function EngineeringPage() {
   const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
   const [view, setView] = useState<"board" | "backlog" | "people" | "timeline">("board");
+  const [tlPopover, setTlPopover] = useState<null | {
+    x: number; y: number;
+    bar: { label: string; start: string; end: string; ms?: string };
+    status: "done" | "behind" | "planned";
+    stream: { id: string; label: string; sub: string; color: string; href: string };
+  }>(null);
   const [search, setSearch] = useState("");
   const [filterAssignee, setFilterAssignee] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -1444,9 +1450,111 @@ export default function EngineeringPage() {
             });
           }
 
+          // Popover info derived at render time so it stays in sync with status
+          const popMs = tlPopover?.bar.ms ? MILESTONES.find(m => m.id === tlPopover.bar.ms) : undefined;
+          const popDays = tlPopover ? Math.round((new Date(tlPopover.bar.end).getTime() - new Date(tlPopover.bar.start).getTime()) / 86_400_000) : 0;
+          const popStatusColor = tlPopover?.status === "done" ? "#3DCC91" : tlPopover?.status === "behind" ? "#FF6B6B" : tlPopover?.stream.color;
+
           return (
             <div style={{ ...s.content, flex:1, overflowY:"auto" }}>
               <SectionDivider label="Engineering Timeline · May → Nov 2026" n="00" first />
+
+              {/* ── Task detail popover (Jira-style) ── */}
+              {tlPopover && (
+                <>
+                  <div
+                    onClick={() => setTlPopover(null)}
+                    style={{ position:"fixed", inset:0, zIndex:49, background:"transparent" }}
+                  />
+                  <div style={{
+                    position:"fixed",
+                    left: tlPopover.x, top: tlPopover.y,
+                    zIndex: 50,
+                    width: 300,
+                    background: "var(--surface-1)",
+                    border: `1px solid ${tlPopover.stream.color}66`,
+                    borderRadius: 10,
+                    padding: "14px 16px 12px",
+                    boxShadow: `0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px ${tlPopover.stream.color}33`,
+                    fontFamily: "var(--sans)", color: "var(--text)",
+                  }}>
+                    {/* Header: workstream tag + close */}
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginBottom:10 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <span style={{ width:8, height:8, borderRadius:2, background:tlPopover.stream.color, boxShadow:`0 0 8px ${tlPopover.stream.color}` }}/>
+                        <span style={{ fontFamily:"var(--mono)", fontSize:9.5, letterSpacing:"0.16em", color:tlPopover.stream.color, fontWeight:700, textTransform:"uppercase" }}>
+                          {tlPopover.stream.label}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setTlPopover(null)}
+                        aria-label="Close"
+                        style={{ background:"transparent", border:"none", color:"var(--text-3)", cursor:"pointer", padding:2, fontFamily:"var(--mono)", fontSize:14, lineHeight:1 }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-3)"; }}
+                      >×</button>
+                    </div>
+
+                    {/* Task title */}
+                    <div style={{ fontFamily:"var(--serif)", fontSize:15.5, fontWeight:400, lineHeight:1.3, marginBottom:10, color:"var(--text)" }}>
+                      {tlPopover.bar.label}
+                    </div>
+
+                    {/* Date range row */}
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, fontFamily:"var(--mono)", fontSize:10.5, color:"var(--text-2)", letterSpacing:"0.08em" }}>
+                      <span>{fmt(tlPopover.bar.start)}</span>
+                      <span style={{ color:"var(--text-4)" }}>→</span>
+                      <span>{fmt(tlPopover.bar.end)}</span>
+                      <span style={{ marginLeft:"auto", color:"var(--text-3)" }}>{popDays}d</span>
+                    </div>
+
+                    {/* Status badge */}
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom: popMs ? 8 : 12 }}>
+                      <span style={{
+                        fontFamily:"var(--mono)", fontSize:9.5, fontWeight:700, letterSpacing:"0.16em",
+                        color: popStatusColor, padding:"3px 8px", borderRadius:4,
+                        background: `${popStatusColor}18`, border:`1px solid ${popStatusColor}66`,
+                        textTransform:"uppercase",
+                      }}>
+                        {tlPopover.status}
+                      </span>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", letterSpacing:"0.1em" }}>{tlPopover.stream.sub}</span>
+                    </div>
+
+                    {/* Milestone link */}
+                    {popMs && (
+                      <div style={{
+                        display:"flex", alignItems:"center", gap:8,
+                        padding:"8px 10px", borderRadius:6,
+                        background:`${popMs.color}10`, border:`1px solid ${popMs.color}44`,
+                        marginBottom:12,
+                      }}>
+                        <span style={{ width:8, height:8, background:popMs.color, transform:"rotate(45deg)", boxShadow:`0 0 6px ${popMs.color}` }}/>
+                        <span style={{ fontFamily:"var(--mono)", fontSize:9.5, color:popMs.color, fontWeight:700, letterSpacing:"0.14em" }}>FEEDS {popMs.id}</span>
+                        <span style={{ flex:1, fontFamily:"var(--sans)", fontSize:12, color:"var(--text-2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{popMs.label}</span>
+                      </div>
+                    )}
+
+                    {/* Open workstream */}
+                    <Link href={tlPopover.stream.href} style={{ textDecoration:"none" }}>
+                      <div
+                        style={{
+                          display:"flex", alignItems:"center", justifyContent:"space-between", gap:8,
+                          padding:"8px 12px", borderRadius:6,
+                          background:"var(--surface-2)", border:"1px solid var(--line)",
+                          fontFamily:"var(--mono)", fontSize:10, color:"var(--text-2)", letterSpacing:"0.1em",
+                          cursor:"pointer", transition:"all 0.15s",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = `${tlPopover.stream.color}15`; e.currentTarget.style.borderColor = tlPopover.stream.color; e.currentTarget.style.color = "var(--text)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-2)"; }}
+                      >
+                        <span>OPEN {tlPopover.stream.label.toUpperCase()}</span>
+                        <span style={{ color:tlPopover.stream.color, fontWeight:700 }}>↗ {tlPopover.stream.href}</span>
+                      </div>
+                    </Link>
+                  </div>
+                </>
+              )}
 
               {/* Milestone summary cards */}
               <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:10, marginBottom:24 }}>
@@ -1605,9 +1713,9 @@ export default function EngineeringPage() {
                           const st_status = statusByIdx[i] || "planned";
                           const isDone    = st_status === "done";
                           const isBehind  = st_status === "behind";
-                          // Narrow bar: not enough room inside for the label
-                          // (and maybe not even for the chip). Render a
-                          // floating chip-style label to the right.
+                          // Narrow bar: skip the inline label/chip; the user
+                          // will click the bar to see details in a popover
+                          // (Jira-style).
                           const isNarrow = w < 6 || (!!ms && w < 8);
 
                           const bg = isDone
@@ -1638,7 +1746,7 @@ export default function EngineeringPage() {
                                 fontFamily:"var(--mono)", fontSize:10, color:"#fff", fontWeight:600, letterSpacing:"0.02em",
                                 textShadow:"0 1px 2px rgba(0,0,0,0.55)",
                                 whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-                                cursor:"default", transition:"background 0.15s, box-shadow 0.15s",
+                                cursor:"pointer", transition:"background 0.15s, box-shadow 0.15s",
                                 boxShadow: isDone
                                   ? `inset 0 0 0 1px #3DCC9166, inset -2px 0 0 rgba(0,0,0,0.35), 0 0 8px #3DCC9133`
                                   : isBehind
@@ -1660,6 +1768,22 @@ export default function EngineeringPage() {
                                     : `inset 0 0 0 1px ${st.color}33, inset -2px 0 0 rgba(0,0,0,0.30)`;
                                 e.currentTarget.style.zIndex = "";
                               }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                // Anchor popover under the bar's left edge, but
+                                // flip right if near the right viewport edge.
+                                const POPOVER_W = 300;
+                                const x = rect.left + window.scrollX;
+                                const flipRight = x + POPOVER_W > window.innerWidth - 16;
+                                setTlPopover({
+                                  x: flipRight ? Math.max(8, window.innerWidth - POPOVER_W - 16) : x,
+                                  y: rect.bottom + window.scrollY + 8,
+                                  bar: { label: b.label, start: b.start, end: b.end, ms: b.ms },
+                                  status: st_status,
+                                  stream: { id: st.id, label: st.label, sub: st.sub, color: st.color, href: st.href },
+                                });
+                              }}
                             >
                               {isDone && (
                                 <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="#3DCC91" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, marginRight:4 }}>
@@ -1676,36 +1800,6 @@ export default function EngineeringPage() {
                                 </span>
                               )}
                             </div>
-                            {/* Floating chip-style label for narrow bars */}
-                            {isNarrow && (
-                              <div style={{
-                                position:"absolute",
-                                top: top + 3,
-                                left:`calc(${left + w}% - 2px)`,
-                                height: ROW_H - 6,
-                                paddingLeft: 6, paddingRight: 7,
-                                display: "inline-flex", alignItems: "center", gap: 6,
-                                fontFamily: "var(--mono)", fontSize: 9.5, color: "#fff", fontWeight: 600,
-                                whiteSpace: "nowrap",
-                                background: "rgba(10,12,18,0.82)",
-                                backdropFilter: "blur(2px)",
-                                WebkitBackdropFilter: "blur(2px)",
-                                borderRadius: 3,
-                                border: `1px solid ${st.color}99`,
-                                textShadow: "0 1px 2px rgba(0,0,0,0.85)",
-                                pointerEvents: "none",
-                                letterSpacing: "0.02em",
-                                zIndex: 4,
-                                boxShadow: `0 2px 6px rgba(0,0,0,0.4)`,
-                              }}>
-                                <span>{b.label}</span>
-                                {ms && (
-                                  <span style={{ color: ms.color, fontWeight: 700, fontSize: 8.5, letterSpacing: "0.14em", flexShrink: 0, paddingLeft: 4, borderLeft: `1px solid ${ms.color}66` }}>
-                                    → {b.ms}
-                                  </span>
-                                )}
-                              </div>
-                            )}
                             </Fragment>
                           );
                         })}
