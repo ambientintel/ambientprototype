@@ -380,7 +380,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'web-push', phase: '09', title: 'Web Push', status: 'ok', tag: 'Integrate', time: 'done',
+    id: 'web-push', phase: '09', title: 'Web Push', status: 'done', tag: 'Integrate', time: 'done',
     summary: 'VAPID keys generated and deployed to Vercel. sw.js live at /public/sw.js. Bell toggle in overview header. New-alert detection on 30s poll fires /api/push/send. Subscribe/send routes live. VERCEL_TOKEN + EDGE_CONFIG_ID wired May 14 — push subscriptions now persist in Edge Config (ambient-push, ecfg_wsm…) across cold starts. /api/health pushStorage check green. Caveat: VERCEL_TOKEN crossed a chat transcript during the wire-up — rotate before any external repo/transcript sharing.',
     sections: [
       {
