@@ -1510,7 +1510,19 @@ export default function EngineeringPage() {
                 {STREAMS.map((st, idx) => {
                   const packed = packBars(BARS[st.id] || []);
                   const subRows = Math.max(1, ...packed.map(p => p.row + 1));
-                  const laneH = subRows * (ROW_H + ROW_GAP) + 8;
+                  // Lane label content is taller than a 1-sub-row track (title +
+                  // subtitle + progress + items count with padding & gaps ≈ 96px
+                  // for tracked lanes / ≈ 80px for off-board). If we sized the
+                  // lane to the track only, the label would overflow into the
+                  // adjacent lanes and the text would visually blend. Take the
+                  // max so the label always fits, and vertically center the
+                  // bars in the resulting space.
+                  const isTracked   = !!st.stateKey;
+                  const MIN_LABEL_H = isTracked ? 96 : 80;
+                  const trackH      = subRows * (ROW_H + ROW_GAP) + 8;
+                  const laneH       = Math.max(MIN_LABEL_H, trackH);
+                  const trackContentH = subRows * (ROW_H + ROW_GAP) - ROW_GAP;
+                  const trackTopOffset = Math.max(4, Math.floor((laneH - trackContentH) / 2));
                   const isLast = idx === STREAMS.length - 1;
                   const status = laneStatus(st);
                   // Completion frontier: sort by start, mark first N% as "done"
@@ -1588,7 +1600,7 @@ export default function EngineeringPage() {
                           const left = pct(b.start);
                           const right = pct(b.end);
                           const w = Math.max(0.6, right - left);
-                          const top = b.row * (ROW_H + ROW_GAP) + 4;
+                          const top = b.row * (ROW_H + ROW_GAP) + trackTopOffset;
                           const ms = b.ms ? MILESTONES.find(m => m.id === b.ms) : undefined;
                           const st_status = statusByIdx[i] || "planned";
                           const isDone    = st_status === "done";
