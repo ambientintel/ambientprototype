@@ -144,6 +144,8 @@ export default function EngineeringPage() {
 
   const [loading, setLoading] = useState(true);
   const [subProgress, setSubProgress] = useState<Record<string, number>>({});
+  const [subDone,     setSubDone]     = useState<Record<string, number>>({});
+  const [subFrozen,   setSubFrozen]   = useState<Record<string, string | null>>({});
   const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
   const boardShaRef    = useRef<string | null>(null);
   const saveTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -441,11 +443,19 @@ export default function EngineeringPage() {
     ];
     fetch('/api/eng/state').then(r => r.json()).then((all) => {
       const p: Record<string, number> = {};
+      const dn: Record<string, number> = {};
+      const fz: Record<string, string | null> = {};
       DOMAIN_MAP.forEach(({ key, total }) => {
         const d = all[key];
-        if (d && Array.isArray(d.checked)) p[key] = Math.round((d.checked.length / total) * 100);
+        if (d && Array.isArray(d.checked)) {
+          p[key]  = Math.round((d.checked.length / total) * 100);
+          dn[key] = d.checked.length;
+        }
+        if (d && typeof d.frozen === 'string') fz[key] = d.frozen;
       });
       setSubProgress(p);
+      setSubDone(dn);
+      setSubFrozen(fz);
     }).catch(() => {});
   }, []);
 
@@ -571,6 +581,19 @@ export default function EngineeringPage() {
             </div>
             <div style={{ display:"flex", alignItems:"stretch", gap:8 }}>
               {syncStatus !== "idle" && <SyncPulse status={syncStatus} />}
+              <Link href="/eng" style={{ textDecoration:"none" }}>
+                <div
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.32)"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.15)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.25)"; }}
+                  style={{ padding:"8px 13px 9px", borderRadius:8, border:"1px solid rgba(255,255,255,0.12)", background:"var(--surface-1)", boxShadow:"0 1px 3px rgba(0,0,0,0.25)", transition:"all 0.18s ease", minWidth:84, cursor:"pointer", userSelect:"none" as const, display:"flex", flexDirection:"column", justifyContent:"space-between", gap:6, alignSelf:"stretch" }}
+                >
+                  <div style={{ fontFamily:"var(--mono)", fontSize:10, textTransform:"uppercase" as const, letterSpacing:"0.12em", color:"var(--text-2)", whiteSpace:"nowrap" as const }}>Platform</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", letterSpacing:"0.08em" }}>
+                    <span style={{ width:6, height:6, borderRadius:"50%", background:"#3DCC91", boxShadow:"0 0 6px #3DCC91" }}/>
+                    /eng
+                  </div>
+                </div>
+              </Link>
               <NavCard href="/firmware"        label="Firmware"   color="#00B4D8" lsKey="ambient-fw-checklist-v2"          total={20} defaultDone={9}  serverPct={subProgress['firmware']} />
               <NavCard href="/ee"              label="EE"         color="#2563EB" lsKey="ambient-ee-checklist-v1"          total={22} defaultDone={13} serverPct={subProgress['ee']} />
               <NavCard href="/cloudengineering" label="Cloud Eng" color="#38BDF8" lsKey="ambient-cloud-checklist-v2"       total={22} defaultDone={16} serverPct={subProgress['cloud']} />
@@ -1243,15 +1266,27 @@ export default function EngineeringPage() {
           };
           const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month:"short", day:"numeric" });
 
-          const STREAMS = [
-            { id:"ee",    label:"EE Hardware",       sub:"IWR6843AOP · OSD62x-PM",  href:"/ee",               color:"#FB923C" },
-            { id:"fw",    label:"Firmware",          sub:"AM62x · sensor stack",    href:"/firmware",         color:"#818CF8" },
-            { id:"mech",  label:"Mechanical",        sub:"Enclosure · tooling",     href:"/mechanical",       color:"#FCD34D" },
+          const STREAMS: { id:string; label:string; sub:string; href:string; color:string; stateKey?:string; total?:number }[] = [
+            { id:"ee",    label:"EE Hardware",       sub:"IWR6843AOP · OSD62x-PM",  href:"/ee",               color:"#FB923C", stateKey:"ee",         total:22 },
+            { id:"fw",    label:"Firmware",          sub:"AM62x · sensor stack",    href:"/firmware",         color:"#818CF8", stateKey:"firmware",   total:20 },
+            { id:"mech",  label:"Mechanical",        sub:"Enclosure · tooling",     href:"/mechanical",       color:"#FCD34D", stateKey:"mechanical", total:22 },
             { id:"bom",   label:"BOM / Sourcing",    sub:"Parts · long-lead",       href:"/bom",              color:"#F472B6" },
-            { id:"cloud", label:"Cloud",             sub:"AWS · ingest · APM",      href:"/cloud",            color:"#22D3EE" },
+            { id:"cloud", label:"Cloud Engineering", sub:"AWS · ingest · APM",      href:"/cloudengineering", color:"#22D3EE", stateKey:"cloud",      total:22 },
             { id:"clin",  label:"Clinical Research", sub:"IRB · pilot ops",         href:"/clinicalresearch", color:"#A78BFA" },
             { id:"samd",  label:"SaMD / Regulatory", sub:"DHF · Q-Sub · IFU",       href:"/digitalhealth",    color:"#3DCC91" },
           ];
+
+          const TODAY_MS = new Date(2026, 4, 14).getTime();
+          // For each stream, compute completion frontier from server state
+          const laneStatus = (st: typeof STREAMS[number]) => {
+            if (!st.stateKey) return { pct: null as number | null, done: 0, total: 0, frozen: null as string | null };
+            return {
+              pct:    subProgress[st.stateKey] ?? null,
+              done:   subDone[st.stateKey] ?? 0,
+              total:  st.total ?? 0,
+              frozen: subFrozen[st.stateKey] ?? null,
+            };
+          };
 
           const BARS: Record<string, { label:string; start:string; end:string; ms?:string }[]> = {
             ee: [
@@ -1409,6 +1444,20 @@ export default function EngineeringPage() {
                   const subRows = Math.max(1, ...packed.map(p => p.row + 1));
                   const laneH = subRows * (ROW_H + ROW_GAP) + 8;
                   const isLast = idx === STREAMS.length - 1;
+                  const status = laneStatus(st);
+                  // Completion frontier: sort by start, mark first N% as "done"
+                  const sortedIdx = packed.map((b, i) => i).sort((a, b) =>
+                    new Date(packed[a].start).getTime() - new Date(packed[b].start).getTime()
+                  );
+                  const doneCount = status.pct == null ? 0 : Math.round((status.pct / 100) * packed.length);
+                  const statusByIdx: Record<number, "done" | "behind" | "planned"> = {};
+                  sortedIdx.forEach((origI, i) => {
+                    const b = packed[origI];
+                    const endMs = new Date(b.end).getTime();
+                    if (status.pct != null && i < doneCount) statusByIdx[origI] = "done";
+                    else if (endMs < TODAY_MS && status.pct != null) statusByIdx[origI] = "behind";
+                    else statusByIdx[origI] = "planned";
+                  });
 
                   return (
                     <Fragment key={st.id}>
@@ -1419,7 +1468,7 @@ export default function EngineeringPage() {
                             borderRight:"1px solid var(--line)",
                             borderBottom: isLast ? "none" : "1px solid var(--line)",
                             padding:"10px 14px 10px 20px",
-                            height:laneH, display:"flex", flexDirection:"column", justifyContent:"center", gap:3,
+                            height:laneH, display:"flex", flexDirection:"column", justifyContent:"center", gap:5,
                             background:"transparent", cursor:"pointer", transition:"background 0.15s",
                             position:"relative",
                           }}
@@ -1427,8 +1476,29 @@ export default function EngineeringPage() {
                           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                         >
                           <div style={{ position:"absolute", left:0, top:10, bottom:10, width:3, background:st.color, borderRadius:"0 3px 3px 0", boxShadow:`0 0 10px ${st.color}80` }}/>
-                          <div style={{ fontFamily:"var(--sans)", fontSize:13, color:"var(--text)", fontWeight:500 }}>{st.label}</div>
+                          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6 }}>
+                            <div style={{ fontFamily:"var(--sans)", fontSize:13, color:"var(--text)", fontWeight:500 }}>{st.label}</div>
+                            <span style={{ fontFamily:"var(--mono)", fontSize:9, color:st.color, fontWeight:600 }}>↗</span>
+                          </div>
                           <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.08em" }}>{st.sub}</div>
+                          {status.pct != null ? (
+                            <>
+                              <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2 }}>
+                                <div style={{ flex:1, height:3, borderRadius:2, background:"var(--surface-3)", overflow:"hidden" }}>
+                                  <div style={{ height:"100%", width:`${status.pct}%`, background: status.pct === 100 ? "#3DCC91" : st.color, transition:"width 0.4s ease", boxShadow: status.pct > 0 ? `0 0 6px ${st.color}AA` : "none" }}/>
+                                </div>
+                                <span style={{ fontFamily:"var(--mono)", fontSize:9, color: status.pct === 100 ? "#3DCC91" : "var(--text-2)", fontWeight:600, minWidth:30, textAlign:"right" }}>{status.pct}%</span>
+                              </div>
+                              <div style={{ display:"flex", alignItems:"center", gap:5, fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)", letterSpacing:"0.1em" }}>
+                                <span>{status.done} / {status.total} ITEMS</span>
+                                {status.frozen && (
+                                  <span style={{ marginLeft:"auto", color:"#3DCC91", padding:"1px 5px", borderRadius:3, background:"rgba(61,204,145,0.12)", border:"1px solid rgba(61,204,145,0.4)" }}>FROZEN</span>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <div style={{ fontFamily:"var(--mono)", fontSize:8.5, color:"var(--text-4)", letterSpacing:"0.12em", marginTop:2 }}>OFF-BOARD · MANUAL TRACK</div>
+                          )}
                         </div>
                       </Link>
 
@@ -1452,32 +1522,64 @@ export default function EngineeringPage() {
                           const w = Math.max(0.6, right - left);
                           const top = b.row * (ROW_H + ROW_GAP) + 4;
                           const ms = b.ms ? MILESTONES.find(m => m.id === b.ms) : undefined;
+                          const st_status = statusByIdx[i] || "planned";
+                          const isDone    = st_status === "done";
+                          const isBehind  = st_status === "behind";
+
+                          const bg = isDone
+                            ? `linear-gradient(90deg, #3DCC9170, #3DCC9148)`
+                            : isBehind
+                              ? `linear-gradient(90deg, #FF6B6B55, #FF6B6B28)`
+                              : `linear-gradient(90deg, ${st.color}55, ${st.color}28)`;
+                          const bgHover = isDone
+                            ? `linear-gradient(90deg, #3DCC91bb, #3DCC9180)`
+                            : isBehind
+                              ? `linear-gradient(90deg, #FF6B6Bbb, #FF6B6B80)`
+                              : `linear-gradient(90deg, ${st.color}aa, ${st.color}66)`;
+                          const borderColor = isDone ? "#3DCC91" : isBehind ? "#FF6B6B" : st.color;
 
                           return (
                             <div key={i}
-                              title={`${b.label}  ·  ${fmt(b.start)} → ${fmt(b.end)}${ms ? `  ·  feeds ${ms.id} (${ms.label})` : ''}`}
+                              title={`${b.label}  ·  ${fmt(b.start)} → ${fmt(b.end)}  ·  ${st_status.toUpperCase()}${ms ? `  ·  feeds ${ms.id} (${ms.label})` : ''}`}
                               style={{
                                 position:"absolute", top, left:`${left}%`, width:`${w}%`, height:ROW_H,
-                                background:`linear-gradient(90deg, ${st.color}55, ${st.color}28)`,
-                                border:`1px solid ${st.color}`,
+                                background: bg,
+                                border:`1px solid ${borderColor}`,
                                 borderRadius:4,
                                 display:"flex", alignItems:"center", padding:"0 7px",
                                 fontFamily:"var(--mono)", fontSize:9.5, color:"#fff", fontWeight:500, letterSpacing:"0.02em",
                                 whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
                                 cursor:"default", transition:"background 0.15s, box-shadow 0.15s",
-                                boxShadow:`inset 0 0 0 1px ${st.color}33`,
+                                boxShadow: isDone
+                                  ? `inset 0 0 0 1px #3DCC9166, 0 0 8px #3DCC9133`
+                                  : isBehind
+                                    ? `inset 0 0 0 1px #FF6B6B66, 0 0 8px #FF6B6B33`
+                                    : `inset 0 0 0 1px ${st.color}33`,
+                                opacity: isDone ? 0.95 : 1,
                               }}
                               onMouseEnter={e => {
-                                e.currentTarget.style.background = `linear-gradient(90deg, ${st.color}aa, ${st.color}66)`;
-                                e.currentTarget.style.boxShadow = `0 0 14px ${st.color}66, inset 0 0 0 1px ${st.color}`;
+                                e.currentTarget.style.background = bgHover;
+                                e.currentTarget.style.boxShadow = `0 0 14px ${borderColor}66, inset 0 0 0 1px ${borderColor}`;
                                 e.currentTarget.style.zIndex = "5";
                               }}
                               onMouseLeave={e => {
-                                e.currentTarget.style.background = `linear-gradient(90deg, ${st.color}55, ${st.color}28)`;
-                                e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${st.color}33`;
+                                e.currentTarget.style.background = bg;
+                                e.currentTarget.style.boxShadow = isDone
+                                  ? `inset 0 0 0 1px #3DCC9166, 0 0 8px #3DCC9133`
+                                  : isBehind
+                                    ? `inset 0 0 0 1px #FF6B6B66, 0 0 8px #FF6B6B33`
+                                    : `inset 0 0 0 1px ${st.color}33`;
                                 e.currentTarget.style.zIndex = "";
                               }}
                             >
+                              {isDone && (
+                                <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="#3DCC91" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, marginRight:4 }}>
+                                  <path d="M1.5 5l2.5 2.5 4.5-4.5"/>
+                                </svg>
+                              )}
+                              {isBehind && (
+                                <span style={{ flexShrink:0, marginRight:4, color:"#FF6B6B", fontFamily:"var(--mono)", fontWeight:700 }}>!</span>
+                              )}
                               <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{b.label}</span>
                               {ms && (
                                 <span style={{ marginLeft:"auto", paddingLeft:6, fontFamily:"var(--mono)", fontSize:8, color:ms.color, fontWeight:700, letterSpacing:"0.14em", flexShrink:0 }}>
@@ -1494,10 +1596,10 @@ export default function EngineeringPage() {
               </div>
 
               {/* Legend */}
-              <div style={{ display:"flex", alignItems:"center", gap:18, marginTop:18, padding:"10px 14px", borderRadius:8, background:"var(--surface-1)", border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", letterSpacing:"0.1em", flexWrap:"wrap" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:14, marginTop:18, padding:"10px 14px", borderRadius:8, background:"var(--surface-1)", border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize:9.5, color:"var(--text-3)", letterSpacing:"0.1em", flexWrap:"wrap" }}>
                 <span style={{ display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ width:8, height:8, background:"#FF6B6B", transform:"rotate(45deg)", boxShadow:"0 0 6px #FF6B6B" }}/>
-                  CRITICAL EXTERNAL DELIVERABLE
+                  CRITICAL DELIVERABLE
                 </span>
                 <span style={{ display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ width:8, height:8, background:"#FFC940", transform:"rotate(45deg)", boxShadow:"0 0 6px #FFC940" }}/>
@@ -1505,9 +1607,101 @@ export default function EngineeringPage() {
                 </span>
                 <span style={{ display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ width:8, height:8, background:"#2D72D2", transform:"rotate(45deg)", boxShadow:"0 0 6px #2D72D2" }}/>
-                  REPORT DELIVERABLE
+                  REPORT
                 </span>
-                <span style={{ marginLeft:"auto", color:"var(--text-4)" }}>HOVER A BAR FOR DATES · CLICK A LANE LABEL TO OPEN THE WORKSTREAM</span>
+                <span style={{ width:1, height:14, background:"var(--line)" }}/>
+                <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ width:14, height:10, background:"linear-gradient(90deg, #3DCC9170, #3DCC9148)", border:"1px solid #3DCC91", borderRadius:2 }}/>
+                  DONE
+                </span>
+                <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ width:14, height:10, background:"linear-gradient(90deg, #FF6B6B55, #FF6B6B28)", border:"1px solid #FF6B6B", borderRadius:2 }}/>
+                  BEHIND
+                </span>
+                <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ width:14, height:10, background:"linear-gradient(90deg, #818CF855, #818CF828)", border:"1px solid #818CF8", borderRadius:2 }}/>
+                  PLANNED
+                </span>
+                <span style={{ marginLeft:"auto", color:"var(--text-4)" }}>BAR FILL DERIVED FROM /api/eng/state · HOVER FOR DATES</span>
+              </div>
+
+              {/* ── Workstream Status panel ── */}
+              <SectionDivider label="Workstream Status · Live" n="01" />
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:10, marginBottom:18 }}>
+                {STREAMS.map(st => {
+                  const status = laneStatus(st);
+                  const pct100 = status.pct === 100;
+                  return (
+                    <Link key={st.id} href={st.href} style={{ textDecoration:"none", color:"inherit" }}>
+                      <div
+                        style={{
+                          position:"relative", padding:"12px 14px 12px 18px", borderRadius:8,
+                          background:"var(--surface-1)", border:`1px solid ${st.color}33`,
+                          cursor:"pointer", transition:"all 0.18s ease", overflow:"hidden",
+                          minHeight:88,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = st.color; e.currentTarget.style.background = `${st.color}10`; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 8px 24px ${st.color}33`; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = `${st.color}33`; e.currentTarget.style.background = "var(--surface-1)"; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
+                      >
+                        <div style={{ position:"absolute", top:0, left:0, width:3, height:"100%", background:st.color, boxShadow:`0 0 10px ${st.color}` }}/>
+                        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:6 }}>
+                          <div>
+                            <div style={{ fontFamily:"var(--sans)", fontSize:13, color:"var(--text)", fontWeight:500 }}>{st.label}</div>
+                            <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.08em", marginTop:2 }}>{st.sub}</div>
+                          </div>
+                          <span style={{ fontFamily:"var(--mono)", fontSize:10, color:st.color, fontWeight:600 }}>↗</span>
+                        </div>
+                        {status.pct != null ? (
+                          <>
+                            <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+                              <div style={{ flex:1, height:4, borderRadius:2, background:"var(--surface-3)", overflow:"hidden" }}>
+                                <div style={{ height:"100%", width:`${status.pct}%`, background: pct100 ? "#3DCC91" : st.color, transition:"width 0.4s ease", boxShadow: status.pct > 0 ? `0 0 8px ${st.color}AA` : "none" }}/>
+                              </div>
+                              <span style={{ fontFamily:"var(--mono)", fontSize:11, fontWeight:700, color: pct100 ? "#3DCC91" : st.color, minWidth:36, textAlign:"right" }}>{status.pct}%</span>
+                            </div>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:6, fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.1em" }}>
+                              <span>{status.done} / {status.total} ITEMS</span>
+                              {status.frozen && (
+                                <span style={{ marginLeft:"auto", color:"#3DCC91", padding:"1px 6px", borderRadius:3, background:"rgba(61,204,145,0.12)", border:"1px solid rgba(61,204,145,0.4)", letterSpacing:"0.14em" }}>FROZEN</span>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ marginTop:8, fontFamily:"var(--mono)", fontSize:9, color:"var(--text-4)", letterSpacing:"0.14em" }}>OFF-BOARD · MANUAL</div>
+                            <div style={{ marginTop:6, fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)" }}>OPEN PAGE FOR DETAILS →</div>
+                          </>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+                {/* Platform Status (/eng) card */}
+                <Link href="/eng" style={{ textDecoration:"none", color:"inherit" }}>
+                  <div
+                    style={{
+                      position:"relative", padding:"12px 14px 12px 18px", borderRadius:8,
+                      background:"linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+                      border:"1px dashed rgba(255,255,255,0.25)",
+                      cursor:"pointer", transition:"all 0.18s ease", overflow:"hidden", minHeight:88,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.4)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.background = "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))"; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
+                  >
+                    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:6 }}>
+                      <div>
+                        <div style={{ fontFamily:"var(--sans)", fontSize:13, color:"var(--text)", fontWeight:500 }}>Platform Status</div>
+                        <div style={{ fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.08em", marginTop:2 }}>All domains · /eng</div>
+                      </div>
+                      <span style={{ fontFamily:"var(--mono)", fontSize:10, color:"#3DCC91", fontWeight:600 }}>↗</span>
+                    </div>
+                    <div style={{ marginTop:8, fontFamily:"var(--mono)", fontSize:9, color:"var(--text-3)", letterSpacing:"0.1em", lineHeight:1.55 }}>
+                      AGGREGATED DASHBOARD<br/>
+                      WITH FREEZE LOCKS,<br/>
+                      DECISIONS, & CHECKLISTS
+                    </div>
+                  </div>
+                </Link>
               </div>
             </div>
           );
