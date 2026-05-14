@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, Fragment } from 'react';
 import Link from 'next/link';
+import { ENG_DOMAIN_BY_ID } from '@/lib/eng-domains';
 
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -367,8 +368,7 @@ const CHECKLIST_ITEMS = [
   'EVT sign-off — ready for DVT',
 ];
 const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4]);
-const LS_KEY        = 'ambient-mechanical-checklist-v1';
-const LS_FREEZE_KEY = 'ambient-mechanical-frozen-v1';
+const { lsKey: LS_KEY, freezeKey: LS_FREEZE_KEY } = ENG_DOMAIN_BY_ID.mechanical;
 
 const OPEN_DECISIONS = [
   'PoE+ vs. barrel jack power input — PoE+ eliminates dedicated power cabling but adds PD controller cost. Decision needed before Rev B.',

@@ -1317,7 +1317,8 @@ export default function EngineeringPage() {
           const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month:"short", day:"numeric" });
 
           const tracked = (sk: string) => ({ stateKey: sk, total: ENG_DOMAIN_BY_SERVER_KEY[sk]?.checklistTotal });
-          const STREAMS: { id:string; label:string; sub:string; href:string; color:string; stateKey?:string; total?:number }[] = [
+          type Stream = { id:string; label:string; sub:string; href:string; color:string; stateKey?:string; total?:number };
+          const STREAMS: Stream[] = [
             { id:"ee",    label:"EE Hardware",       sub:"IWR6843AOP · OSD62x-PM",  href:"/ee",               color:"#FB923C", ...tracked("ee") },
             { id:"fw",    label:"Firmware",          sub:"AM62x · sensor stack",    href:"/firmware",         color:"#818CF8", ...tracked("firmware") },
             { id:"mech",  label:"Mechanical",        sub:"Enclosure · tooling",     href:"/mechanical",       color:"#FCD34D", ...tracked("mechanical") },
@@ -1327,16 +1328,28 @@ export default function EngineeringPage() {
             { id:"samd",  label:"SaMD / Regulatory", sub:"DHF · Q-Sub · IFU",       href:"/digitalhealth",    color:"#3DCC91" },
           ];
 
-          const TODAY_MS = new Date(2026, 4, 14).getTime();
-          // For each stream, compute completion frontier from server state
-          const laneStatus = (st: typeof STREAMS[number]) => {
+          // Live "today" pulled at render. Component is 'use client' and Timeline
+          // never renders during SSR (default view is "board"), so no hydration risk.
+          const TODAY      = new Date();
+          const TODAY_MS   = TODAY.getTime();
+          const todayPct   = Math.max(0, Math.min(100, ((TODAY_MS - TL_START.getTime()) / 86_400_000) / TL_SPAN * 100));
+          const todayLabel = TODAY.toLocaleDateString("en-US", { month:"short", day:"numeric" }).toUpperCase();
+          // For each stream, compute completion frontier from server state.
+          // Mirrors NavCard semantics: server > canonical default. Untracked
+          // lanes (bom / clin / samd) return null to signal "off-board".
+          const laneStatus = (st: Stream) => {
             if (!st.stateKey) return { pct: null as number | null, done: 0, total: 0, frozen: null as string | null };
-            return {
-              pct:    subProgress[st.stateKey] ?? null,
-              done:   subDone[st.stateKey] ?? 0,
-              total:  st.total ?? 0,
-              frozen: subFrozen[st.stateKey] ?? null,
-            };
+            const meta       = ENG_DOMAIN_BY_SERVER_KEY[st.stateKey];
+            const total      = meta?.checklistTotal ?? st.total ?? 0;
+            const serverPct  = subProgress[st.stateKey];
+            const serverDone = subDone[st.stateKey];
+            const frozen     = subFrozen[st.stateKey] ?? null;
+            if (serverPct !== undefined && serverDone !== undefined) {
+              return { pct: serverPct, done: serverDone, total, frozen };
+            }
+            const defDone = meta?.checklistDefault ?? 0;
+            const defPct  = total ? Math.round((defDone / total) * 100) : 0;
+            return { pct: defPct, done: defDone, total, frozen };
           };
 
           const BARS: Record<string, { label:string; start:string; end:string; ms?:string }[]> = {
@@ -1481,10 +1494,10 @@ export default function EngineeringPage() {
                     </div>
                   ))}
                   {/* TODAY label */}
-                  <div style={{ position:"absolute", left:`${pct("2026-05-14")}%`, top:10, transform:"translateX(2px)" }}>
+                  <div style={{ position:"absolute", left:`${todayPct}%`, top:10, transform:"translateX(2px)" }}>
                     <div style={{ width:8, height:8, borderRadius:"50%", background:"#FF6B6B", boxShadow:"0 0 12px #FF6B6B, 0 0 4px #FF6B6B" }}/>
                     <div style={{ position:"absolute", top:13, left:14, whiteSpace:"nowrap", fontFamily:"var(--mono)", fontSize:8, letterSpacing:"0.2em", color:"#FF6B6B", fontWeight:700 }}>
-                      TODAY · MAY 14
+                      TODAY · {todayLabel}
                     </div>
                   </div>
                 </div>
@@ -1564,7 +1577,7 @@ export default function EngineeringPage() {
                           <div key={m.id} style={{ position:"absolute", left:`${pct(m.date)}%`, top:0, bottom:0, width:1, borderLeft:`1px dashed ${m.color}55` }}/>
                         ))}
                         {/* TODAY line */}
-                        <div style={{ position:"absolute", left:`${pct("2026-05-14")}%`, top:0, bottom:0, width:2, background:"#FF6B6B", boxShadow:"0 0 12px #FF6B6B", opacity:0.55 }}/>
+                        <div style={{ position:"absolute", left:`${todayPct}%`, top:0, bottom:0, width:2, background:"#FF6B6B", boxShadow:"0 0 12px #FF6B6B", opacity:0.55 }}/>
 
                         {/* Bars */}
                         {packed.map((b, i) => {

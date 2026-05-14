@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { ENG_DOMAIN_BY_ID } from '@/lib/eng-domains';
 
 
 // ── Copy button ────────────────────────────────────────────────────────────────
@@ -488,8 +489,7 @@ const OPEN_DECISIONS = [
 
 // ── Page component ─────────────────────────────────────────────────────────────
 
-const LS_KEY        = 'ambient-fw-checklist-v2';
-const LS_FREEZE_KEY = 'ambient-fw-frozen-v1';
+const { lsKey: LS_KEY, freezeKey: LS_FREEZE_KEY } = ENG_DOMAIN_BY_ID.firmware;
 
 export default function FirmwarePage() {
   const [active, setActive]             = useState('env');

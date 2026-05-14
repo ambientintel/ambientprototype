@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { ENG_DOMAIN_BY_ID } from '@/lib/eng-domains';
 
 
 // ── Copy button ────────────────────────────────────────────────────────────────
@@ -616,8 +617,7 @@ const OPEN_DECISIONS = [
 
 // ── Page component ─────────────────────────────────────────────────────────────
 
-const LS_KEY        = 'ambient-mobileapp-checklist-v1';
-const LS_FREEZE_KEY = 'ambient-mobileapp-frozen-v1';
+const { lsKey: LS_KEY, freezeKey: LS_FREEZE_KEY } = ENG_DOMAIN_BY_ID.mobileapp;
 
 export default function MobileAppPage() {
   const [active, setActive]           = useState('repo');

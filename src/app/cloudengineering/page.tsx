@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { ENG_DOMAIN_BY_ID } from '@/lib/eng-domains';
 
 
 // ── Copy button ────────────────────────────────────────────────────────────────
@@ -901,8 +902,7 @@ const OPEN_DECISIONS = [
 
 // ── Page component ─────────────────────────────────────────────────────────────
 
-const LS_KEY        = 'ambient-cloud-checklist-v2';
-const LS_FREEZE_KEY = 'ambient-cloud-frozen-v1';
+const { lsKey: LS_KEY, freezeKey: LS_FREEZE_KEY } = ENG_DOMAIN_BY_ID.cloudengineering;
 
 export default function CloudEngineeringPage() {
   const [active, setActive]       = useState('arch-review');
