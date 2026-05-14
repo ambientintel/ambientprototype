@@ -183,7 +183,6 @@
   ],
   "personalTasks": {
     "Brian": [
-      "Website for pilot study",
       "Mobile app for pilot study",
       "AWS engineering"
     ],
@@ -205,7 +204,8 @@
   "completedTasks": {
     "Brian": [
       "ambientweb security audit — PHI guard wired, deps cleaned, vulns 17→1",
-      "ambientweb /dashboard/engineering kanban board + PWA manifest fix"
+      "ambientweb /dashboard/engineering kanban board + PWA manifest fix",
+      "Website for pilot study"
     ]
   },
   "history": [
