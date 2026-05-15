@@ -648,6 +648,7 @@ export default function EngineeringPage() {
                 { id:'webapp',           label:'Web App',    color:'#3DCC91' },
                 { id:'mobileapp',        label:'Mobile App', color:'#FB923C' },
                 { id:'mechanical',       label:'Mechanical', color:'#34D399' },
+                { id:'cybersecurity',    label:'Cyber',      color:'#DC2626' },
               ] as const).map(d => {
                 const m = ENG_DOMAIN_BY_ID[d.id];
                 return (

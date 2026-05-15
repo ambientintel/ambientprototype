@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { ENG_DOMAIN_BY_ID } from '@/lib/eng-domains';
 
 // ── Copy button ────────────────────────────────────────────────────────────────
 
@@ -51,10 +52,9 @@ const PIPELINE_PHASES = [
   { label: 'Validate', ids: ['e2e-validation'] },
 ];
 
-// ── localStorage keys ──────────────────────────────────────────────────────────
+// ── localStorage keys ─────────────────────────────────────────────────��────────
 
-const LS_KEY       = 'ambient-cyber-checklist-v1';
-const LS_FREEZE_KEY = 'ambient-cyber-frozen-v1';
+const { lsKey: LS_KEY, freezeKey: LS_FREEZE_KEY } = ENG_DOMAIN_BY_ID.cybersecurity;
 
 // ── Step data ──────────────────────────────────────────────────────────────────
 
@@ -506,6 +506,8 @@ export default function CybersecurityPage() {
   const [liveDate, setLiveDate]           = useState<string | null>(null);
   const isMounted = useRef(false);
 
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(LS_KEY);
@@ -513,12 +515,26 @@ export default function CybersecurityPage() {
       const fz = localStorage.getItem(LS_FREEZE_KEY);
       if (fz) { const p = JSON.parse(fz); setPipelineLive(true); setLiveDate(p.date); }
     } catch { /* ignore */ }
+    fetch('/api/eng/state').then(r => r.json()).then((all) => {
+      const d = all['cyber'];
+      if (!d) return;
+      if (Array.isArray(d.checked)) { setChecked(new Set(d.checked)); try { localStorage.setItem(LS_KEY, JSON.stringify(d.checked)); } catch { /* ignore */ } }
+      if (typeof d.frozen === 'string') { setPipelineLive(true); setLiveDate(d.frozen); try { localStorage.setItem(LS_FREEZE_KEY, JSON.stringify({ frozen: true, date: d.frozen })); } catch { /* ignore */ } }
+      else if (d.frozen === null) { setPipelineLive(false); setLiveDate(null); try { localStorage.removeItem(LS_FREEZE_KEY); } catch { /* ignore */ } }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!isMounted.current) { isMounted.current = true; return; }
-    try { localStorage.setItem(LS_KEY, JSON.stringify([...checked])); } catch { /* ignore */ }
-  }, [checked]);
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => {
+      fetch('/api/eng/state', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: 'cyber', checked: [...checked], frozen: pipelineLive ? liveDate : null }),
+      }).catch(() => {});
+    }, 800);
+  }, [checked, pipelineLive, liveDate]);
 
   function toggleChecked(i: number) {
     setChecked(prev => {
