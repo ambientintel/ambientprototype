@@ -49,6 +49,7 @@ export default authkitMiddleware({
       "/carlson",
       "/ee",
       "/cloudengineering",
+      "/cybersecurity",
       "/eng",
       "/cloud",
       "/firmware",
