@@ -444,7 +444,7 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
         body: 'Firebase project created, google-services.json committed, EAS preview APK built and signed (EAS-managed keystore). Installable for ~30 days via the EAS install link. Push delivery still requires the SNS GCM platform-application ARN to be wired into the ambient-dev-api Lambda — see Distribution step.',
         commands: [
           { label: 'rebuild Android APK (fresh ~30-day window)', code: 'cd ~/ambientmobile\neas build --platform android --profile preview' },
-          { label: 'see also', code: '# docs/android-fcm-setup.md — original Firebase + SNS setup guide\n# scripts/setup_android_push.sh — re-run only if Firebase Server Key rotates' },
+          { label: 'see also', code: '# docs/android-fcm-setup.md — Firebase + SNS setup guide\n# scripts/setup_android_push.sh — re-run only if the Firebase service-account key rotates' },
         ],
         warnings: [
           'google-services.json is in the repo. The Web API key inside is package-name restricted to com.ambientintel.ellamemory and is safe to commit to the private repo.',
@@ -461,7 +461,7 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
         artifacts: [
           { file: 'eas.json', role: 'EAS build profiles — development / preview (internal APK+IPA) / production', size: '' },
           { file: 'app.json', role: 'Expo config — bundle ID, EAS project, googleServicesFile, APNS entitlements', size: '' },
-          { file: 'scripts/setup_android_push.sh', role: 'Creates SNS GCM Platform Application + updates Lambda env var', size: '' },
+          { file: 'scripts/setup_android_push.sh', role: 'Creates the SNS GCM Platform Application (FCM v1) from a Firebase service-account key', size: '' },
           { file: 'docs/android-fcm-setup.md', role: 'Step-by-step Android FCM setup guide', size: '' },
         ],
       },
@@ -495,14 +495,16 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
       },
       {
         heading: 'Android — APK ready; FCM delivery pending SNS GCM wiring',
-        body: 'Firebase project, google-services.json commit, and APK build are done. The remaining step lives in ambientcloud: create the SNS GCM Platform Application from the Firebase Server Key and set the resulting ARN as GCM_PLATFORM_APP_ARN on the ambient-dev-api Lambda (or as the gcm_platform_app_arn CDK context). Until that lands, the APK installs and the push token registers, but FCM messages will never reach the device.',
+        body: 'Firebase project, google-services.json commit, and APK build are done. The remaining step lives in ambientcloud: create the SNS GCM Platform Application (FCM v1) from a Firebase service-account JSON key, then wire its ARN as the CDK context value gcm_platform_app_arn and redeploy the Api stack. Until that lands, the APK installs and the push token registers, but FCM messages never reach the device.',
         commands: [
-          { label: '1 · Wire SNS GCM platform app ARN (one-shot)', code: 'cd ~/ambientmobile\n# Firebase Console → Project Settings → Cloud Messaging → copy Server key\n./scripts/setup_android_push.sh <firebase-server-key>\n# Creates the SNS GCM Platform Application\n# Sets GCM_PLATFORM_APP_ARN on the ambient-dev-api Lambda\n# Equivalent CDK context key: gcm_platform_app_arn' },
-          { label: '2 · Share APK install link with Android nurses', code: '# expo.dev → Ella project → Builds → 53f00c95\n# Click Install → copy the install URL (or scan QR)\n# Nurses: allow "Install from unknown sources" once in Settings → Special App Access' },
-          { label: '3 · Smoke-test push delivery on a physical device', code: 'cd ~/ambientmobile\npython3 scripts/inject_test_alert.py\n# Expect: lock-screen banner on the test device within ~5s\n# Tap → app opens to AlertDetail with the eventId from the payload' },
+          { label: '1 · Create the SNS GCM platform application', code: '# Firebase Console → Project Settings → Service accounts\n#   → Generate new private key → download the JSON file\ncd ~/ambientmobile\n./scripts/setup_android_push.sh <path/to/service-account.json>\n# Prints the SNS GCM Platform Application ARN (FCM v1)' },
+          { label: '2 · Wire the ARN via CDK context, then deploy', code: '# Add to ambientcloud/infra/cdk.json under "context":\n#   "gcm_platform_app_arn": "<ARN printed by step 1>"\ncd ~/ambientcloud/infra\ncdk deploy Ambient-dev-Api\n# cdk deploy is the single source of truth for the Lambda env' },
+          { label: '3 · Share APK install link with Android nurses', code: '# expo.dev → Ella project → Builds → 53f00c95\n# Click Install → copy the install URL (or scan QR)\n# Nurses: allow "Install from unknown sources" once in Settings → Special App Access' },
+          { label: '4 · Smoke-test push delivery on a physical device', code: 'cd ~/ambientmobile\npython3 scripts/inject_test_alert.py\n# Expect: lock-screen banner on the test device within ~5s\n# Tap → app opens to AlertDetail with the eventId from the payload' },
         ],
         warnings: [
-          'The push pipeline silently no-ops on a missing ARN — no log line, no DLQ entry. Confirm GCM_PLATFORM_APP_ARN is set on the Lambda before declaring Android delivery working.',
+          'Wire the ARN through CDK context — not a manual Lambda poke. api_stack.py declares the API Lambda’s entire environment map, so the next cdk deploy resets GCM_PLATFORM_APP_ARN to the cdk.json context value. An `aws lambda update-function-configuration` poke survives only until that deploy, then silently reverts to "". The same applies to APNS_PLATFORM_APP_ARN.',
+          'The push pipeline silently no-ops on a missing ARN — no log line, no DLQ entry. The /push/register endpoint returns 503 "platform application not configured" when the ARN is empty.',
           'EAS APK download links expire after 30 days. Regenerate with a new build as needed.',
         ],
       },
