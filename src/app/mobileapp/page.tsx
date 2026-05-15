@@ -490,7 +490,7 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
         ],
         warnings: [
           'TestFlight requires Apple review approval for first submission (usually same-day for internal testers).',
-          'Switch Lambda APNS_PLATFORM_APP_ARN from ella-apns-sandbox to ella-apns-prod before production TestFlight submission.',
+          'APNS_PLATFORM_APP_ARN is already wired to ella-apns-prod via the cdk.json context key apns_platform_app_arn (production APNs covers both EAS preview and TestFlight builds). No Lambda change is needed for TestFlight submission.',
         ],
       },
       {
