@@ -711,6 +711,47 @@ function MilestonesTab({ s, update }: { s: CRState; update: (v: CRState) => void
 
 // ── CONSORT Diagram ───────────────────────────────────────────────────────────
 
+const D_BW = 200, D_BH = 48;
+
+const Box = ({ x, y, w=D_BW, h=D_BH, lines, color='#10B981' }: {
+  x:number; y:number; w?:number; h?:number; lines:[string,string?]; color?:string;
+}) => (
+  <g>
+    <rect x={x} y={y} width={w} height={h} rx={5}
+      fill="rgba(7,21,16,0.9)" stroke={color} strokeWidth={1.2} />
+    <text x={x+w/2} y={y+h/2-(lines[1]?7:0)} textAnchor="middle"
+      fill="#D1FAE5" fontSize={10.5} fontFamily="'SF Mono',monospace" fontWeight={500}>
+      {lines[0]}
+    </text>
+    {lines[1] && (
+      <text x={x+w/2} y={y+h/2+10} textAnchor="middle"
+        fill="#6B8F7E" fontSize={9.5} fontFamily="'SF Mono',monospace">
+        {lines[1]}
+      </text>
+    )}
+  </g>
+);
+
+const Arrow = ({ x1,y1,x2,y2 }: {x1:number;y1:number;x2:number;y2:number}) => (
+  <line x1={x1} y1={y1} x2={x2} y2={y2}
+    stroke="rgba(16,185,129,0.4)" strokeWidth={1.5} markerEnd="url(#arr)" />
+);
+
+const Conn = ({ x1,y1,x2,y2 }: {x1:number;y1:number;x2:number;y2:number}) => (
+  <line x1={x1} y1={y1} x2={x2} y2={y2}
+    stroke="rgba(16,185,129,0.25)" strokeWidth={1.5} />
+);
+
+const PhaseLabel = ({ label, y, color }: { label:string; y:number; color:string }) => (
+  <g>
+    <rect x={0} y={y} width={48} height={20} rx={3} fill={`${color}18`} />
+    <text x={24} y={y+13} textAnchor="middle" fill={color}
+      fontSize={8} fontFamily="'SF Mono',monospace" fontWeight={600} letterSpacing={1}>
+      {label}
+    </text>
+  </g>
+);
+
 function DiagramTab({ s }: { s: CRState }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const arms = s.design.arms.length > 0 ? s.design.arms : [
@@ -721,7 +762,7 @@ function DiagramTab({ s }: { s: CRState }) {
   const isSingleArm = s.design.designType === 'single-arm' || s.design.designType === 'dose-escalation';
 
   const W = 760, H = 520;
-  const CX = 380, BW = 200, BH = 48;
+  const CX = 380;
   const A0X = 55, A1X = 505, AW = 195, AH = 58;
   const a0cx = A0X + AW / 2, a1cx = A1X + AW / 2;
 
@@ -734,44 +775,6 @@ function DiagramTab({ s }: { s: CRState }) {
     a.href = url; a.download = 'consort-diagram.svg'; a.click();
     URL.revokeObjectURL(url);
   }
-
-  const Box = ({ x, y, w=BW, h=BH, lines, color='#10B981' }: {
-    x:number; y:number; w?:number; h?:number; lines:[string,string?]; color?:string;
-  }) => (
-    <g>
-      <rect x={x} y={y} width={w} height={h} rx={5}
-        fill="rgba(7,21,16,0.9)" stroke={color} strokeWidth={1.2} />
-      <text x={x+w/2} y={y+h/2-(lines[1]?7:0)} textAnchor="middle"
-        fill="#D1FAE5" fontSize={10.5} fontFamily="'SF Mono',monospace" fontWeight={500}>
-        {lines[0]}
-      </text>
-      {lines[1] && (
-        <text x={x+w/2} y={y+h/2+10} textAnchor="middle"
-          fill="#6B8F7E" fontSize={9.5} fontFamily="'SF Mono',monospace">
-          {lines[1]}
-        </text>
-      )}
-    </g>
-  );
-
-  const Arrow = ({ x1,y1,x2,y2 }: {x1:number;y1:number;x2:number;y2:number}) => (
-    <line x1={x1} y1={y1} x2={x2} y2={y2}
-      stroke="rgba(16,185,129,0.4)" strokeWidth={1.5} markerEnd="url(#arr)" />
-  );
-  const Conn = ({ x1,y1,x2,y2 }: {x1:number;y1:number;x2:number;y2:number}) => (
-    <line x1={x1} y1={y1} x2={x2} y2={y2}
-      stroke="rgba(16,185,129,0.25)" strokeWidth={1.5} />
-  );
-
-  const PhaseLabel = ({ label, y, color }: { label:string; y:number; color:string }) => (
-    <g>
-      <rect x={0} y={y} width={48} height={20} rx={3} fill={`${color}18`} />
-      <text x={24} y={y+13} textAnchor="middle" fill={color}
-        fontSize={8} fontFamily="'SF Mono',monospace" fontWeight={600} letterSpacing={1}>
-        {label}
-      </text>
-    </g>
-  );
 
   return (
     <div>
