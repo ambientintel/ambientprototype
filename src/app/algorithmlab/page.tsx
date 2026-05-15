@@ -2570,7 +2570,7 @@ export default function AlgorithmLabPage() {
               <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
                 <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Delay Embedding</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
-                  Plotting x(t) vs x(t+τ) reconstructs the topology of the underlying attractor from a single observable. The shape of the cloud reveals the system's dynamics — circular or elliptical attractors suggest oscillation, scattered clouds suggest noise or chaos.
+                  Plotting x(t) vs x(t+τ) reconstructs the topology of the underlying attractor from a single observable. The shape of the cloud reveals the system&rsquo;s dynamics — circular or elliptical attractors suggest oscillation, scattered clouds suggest noise or chaos.
                 </div>
                 <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[
@@ -2625,7 +2625,7 @@ export default function AlgorithmLabPage() {
               <div style={{ background: C.s1, border: `1px solid ${C.line}`, borderRadius: 14, padding: '24px 28px' }}>
                 <div style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 20, letterSpacing: '-0.01em', marginBottom: 12 }}>Why CUSUM matters</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: C.text3, lineHeight: 1.7 }}>
-                  In ambient monitoring, a patient's baseline changes slowly — weeks before a fall or cognitive event. CUSUM accumulates small deviations from baseline, making it far more sensitive than threshold alarms. It trades instantaneous accuracy for longitudinal sensitivity. Clinical deployment: run on 30-day rolling windows, alert care team when drift exceeds h.
+                  In ambient monitoring, a patient&rsquo;s baseline changes slowly — weeks before a fall or cognitive event. CUSUM accumulates small deviations from baseline, making it far more sensitive than threshold alarms. It trades instantaneous accuracy for longitudinal sensitivity. Clinical deployment: run on 30-day rolling windows, alert care team when drift exceeds h.
                 </div>
               </div>
             </>}

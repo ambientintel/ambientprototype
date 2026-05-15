@@ -388,7 +388,7 @@ export default function BiodesignLanding() {
                 margin: 0, fontSize: 'clamp(28px, 3.5vw, 48px)', fontWeight: 700,
                 letterSpacing: '-0.02em', lineHeight: 1.1, maxWidth: 460,
               }}>
-                Every Tool You Need.<br />Nothing You Don't.
+                Every Tool You Need.<br />Nothing You Don&rsquo;t.
               </h2>
               <p style={{ margin: 0, fontSize: 14, color: 'var(--text-3)', maxWidth: 340, lineHeight: 1.7 }}>
                 Eight purpose-built modules covering the complete medical device development lifecycle.

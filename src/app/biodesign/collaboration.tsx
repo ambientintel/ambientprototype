@@ -450,7 +450,7 @@ export function CollaborationOverlay({ state, update, currentPhase, currentTab, 
             </div>
 
             <div style={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 4, padding: '16px 20px' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>What's included in the share</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>What&rsquo;s included in the share</div>
               {[
                 ['Project overview', 'Name, indication, description'],
                 ['Regulatory strategy', 'Pathway, device class, predicate, notes'],

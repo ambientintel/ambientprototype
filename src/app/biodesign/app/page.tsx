@@ -339,7 +339,7 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
               Observe before inventing. Capture unmet clinical needs using the Stanford Biodesign framework before exploring solutions — needs drive concepts, regulatory strategy, and market fit.
             </p>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'rgba(232,168,82,0.62)', fontFamily: 'var(--mono)', marginBottom: 26 }}>
-              "A way to [problem] for [population] in [setting] so that [outcome]."
+              &ldquo;A way to [problem] for [population] in [setting] so that [outcome].&rdquo;
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <AiDraftButton
@@ -358,7 +358,7 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
             <div>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Clinical Need Discovery</h2>
               <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(232,168,82,0.58)', fontFamily: 'var(--mono)', fontStyle: 'italic' }}>
-                "A way to [problem] for [population] in [setting] so that [outcome]."
+                &ldquo;A way to [problem] for [population] in [setting] so that [outcome].&rdquo;
               </p>
             </div>
             <div style={{ display: 'flex', gap: 16, fontFamily: 'var(--mono)', flexShrink: 0 }}>
@@ -502,7 +502,7 @@ function NeedsTab({ state, update }: { state: BiodesignState; update: (s: Biodes
             <Field label="Desired Outcome" value={draft.outcome} onChange={v => setDraft(d => ({ ...d, outcome: v }))} placeholder="reduce X, improve Y" />
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic', marginBottom: 14, padding: '8px 10px', background: 'var(--surface-2)', borderRadius: 2 }}>
-            "A way to <strong style={{ color: 'var(--text-2)' }}>{draft.problem || '…'}</strong> for <strong style={{ color: 'var(--text-2)' }}>{draft.population || '…'}</strong> in <strong style={{ color: 'var(--text-2)' }}>{draft.setting || '…'}</strong> so that <strong style={{ color: 'var(--text-2)' }}>{draft.outcome || '…'}</strong>"
+            &ldquo;A way to <strong style={{ color: 'var(--text-2)' }}>{draft.problem || '…'}</strong> for <strong style={{ color: 'var(--text-2)' }}>{draft.population || '…'}</strong> in <strong style={{ color: 'var(--text-2)' }}>{draft.setting || '…'}</strong> so that <strong style={{ color: 'var(--text-2)' }}>{draft.outcome || '…'}</strong>&rdquo;
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={addNeed} style={{ padding: '6px 16px', borderRadius: 2, fontSize: 12, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none' }}>Add Need</button>
@@ -765,7 +765,7 @@ function ConceptsTab({ state, update }: { state: BiodesignState; update: (s: Bio
               const n = state.needs.find(n => n.id === state.selectedNeedId);
               return n ? (
                 <div style={{ fontStyle: 'italic', fontSize: 12, color: 'rgba(160,126,232,0.6)', fontFamily: 'var(--mono)', marginBottom: 22 }}>
-                  "A way to {n.problem} for {n.population}{n.setting ? ` in ${n.setting}` : ''} so that {n.outcome}"
+                  &ldquo;A way to {n.problem} for {n.population}{n.setting ? ` in ${n.setting}` : ''} so that {n.outcome}&rdquo;
                 </div>
               ) : null;
             })()}

@@ -1,5 +1,6 @@
 'use client';
 import { useId } from 'react';
+import Link from 'next/link';
 
 // ── Data visualizations (from /invest Flagship Product section) ───────────────
 
@@ -214,9 +215,9 @@ export default function MNPage() {
 
       {/* ── NAV ── */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 48px', height: 60, background: `rgba(14,24,48,0.84)`, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.line}` }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           <span style={{ fontFamily: 'var(--serif, Georgia, serif)', fontSize: 15, fontWeight: 300, color: C.text, letterSpacing: '-0.01em' }}>Ambient <em style={{ fontStyle: 'italic', color: C.text2 }}>Intelligence</em></span>
-        </a>
+        </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <a href="#network"     className="mn-nav-link">Network</a>
           <a href="#patent"      className="mn-nav-link">IP</a>
@@ -706,7 +707,7 @@ export default function MNPage() {
               <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: 'rgba(122,0,25,0.75)', margin: '0 0 14px' }}>University of Minnesota</p>
               <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', color: C.text, margin: '0 0 16px', lineHeight: 1.2 }}>Office of Discovery<br/>and Translation</p>
               <p style={{ fontSize: 14, fontStyle: 'italic', color: C.text3, paddingLeft: 14, borderLeft: '2px solid rgba(122,0,25,0.4)', lineHeight: 1.65, margin: '0 0 20px' }}>
-                Facilitating the transfer of university-developed technologies into products and services that benefit society — and supporting Ambient Intelligence's PCT filing and commercialization strategy.
+                Facilitating the transfer of university-developed technologies into products and services that benefit society — and supporting Ambient Intelligence&rsquo;s PCT filing and commercialization strategy.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
                 {['Technology Transfer', 'PCT Management', 'Commercialization'].map(tag => (
@@ -720,7 +721,7 @@ export default function MNPage() {
               <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: 'rgba(240,180,41,0.75)', margin: '0 0 14px' }}>Manufacturing Partner</p>
               <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', color: C.text, margin: '0 0 16px', lineHeight: 1.2 }}>EI Microcircuits</p>
               <p style={{ fontSize: 14, fontStyle: 'italic', color: C.text3, paddingLeft: 14, borderLeft: '2px solid rgba(240,180,41,0.4)', lineHeight: 1.65, margin: '0 0 20px' }}>
-                Advanced electronic manufacturing, PCB assembly, and hardware fabrication services — bringing Ambient Intelligence's sensor and IoT hardware from prototype to production-ready.
+                Advanced electronic manufacturing, PCB assembly, and hardware fabrication services — bringing Ambient Intelligence&rsquo;s sensor and IoT hardware from prototype to production-ready.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
                 {['PCB Assembly', 'Hardware Fabrication', 'IoT Manufacturing'].map(tag => (
@@ -734,7 +735,7 @@ export default function MNPage() {
               <p style={{ fontFamily: 'var(--mono, monospace)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.14em', color: 'rgba(79,156,249,0.75)', margin: '0 0 14px' }}>Digital Engineering</p>
               <p style={{ fontFamily: 'var(--serif, Georgia, serif)', fontWeight: 300, fontSize: 28, letterSpacing: '-0.02em', color: C.text, margin: '0 0 16px', lineHeight: 1.2 }}>Gasket Studios</p>
               <p style={{ fontSize: 14, fontStyle: 'italic', color: C.text3, paddingLeft: 14, borderLeft: `2px solid ${C.accentSoft}`, lineHeight: 1.65, margin: '0 0 20px' }}>
-                Partnering on digital product engineering — UI/UX design, software architecture, and technology delivery — ensuring Ambient Intelligence's platform meets the highest standards of clinical usability.
+                Partnering on digital product engineering — UI/UX design, software architecture, and technology delivery — ensuring Ambient Intelligence&rsquo;s platform meets the highest standards of clinical usability.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
                 {['Product Engineering', 'UI/UX Design', 'Software Architecture'].map(tag => (

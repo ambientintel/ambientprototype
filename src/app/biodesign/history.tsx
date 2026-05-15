@@ -80,7 +80,7 @@ export function HistoryModal({ projectId, currentState, onRestore, onClose }: Pr
           ) : snapshots.length === 0 ? (
             <div style={{ padding: '40px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 12, color: 'var(--text-4)', fontFamily: 'var(--mono)', marginBottom: 6 }}>No checkpoints saved</div>
-              <div style={{ fontSize: 11, color: 'var(--text-4)', opacity: 0.6 }}>Click "+ Checkpoint" to save a snapshot of the current state.</div>
+              <div style={{ fontSize: 11, color: 'var(--text-4)', opacity: 0.6 }}>Click &ldquo;+ Checkpoint&rdquo; to save a snapshot of the current state.</div>
             </div>
           ) : (
             snapshots.map(snap => {

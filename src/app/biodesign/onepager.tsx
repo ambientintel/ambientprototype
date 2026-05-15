@@ -98,8 +98,8 @@ export function InvestorOnePager({ state, onClose }: Props) {
                 {topNeed ? (
                   <>
                     <p style={{ margin: 0, fontSize: 13, lineHeight: 1.65, color: '#2d3748', fontStyle: 'italic' }}>
-                      "A way to <strong>{topNeed.problem}</strong> for <strong>{topNeed.population}</strong>
-                      {topNeed.setting ? ` in ${topNeed.setting}` : ''} so that <strong>{topNeed.outcome}</strong>."
+                      &ldquo;A way to <strong>{topNeed.problem}</strong> for <strong>{topNeed.population}</strong>
+                      {topNeed.setting ? ` in ${topNeed.setting}` : ''} so that <strong>{topNeed.outcome}</strong>.&rdquo;
                     </p>
                     <NeedsList needs={state.needs.filter(n => n.status === 'selected' || n.status === 'validated').slice(0, 3)} />
                   </>

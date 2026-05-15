@@ -405,7 +405,7 @@ export default function MobilePage() {
           <Link href="/mobilelab" style={{ fontFamily: C.mono, fontSize: 10, color: C.text3, textDecoration: 'none', letterSpacing: '0.08em' }}>
             MOBILE LAB
           </Link>
-          <span style={{ fontFamily: C.mono, fontSize: 10, color: C.text3 }}>//</span>
+          <span style={{ fontFamily: C.mono, fontSize: 10, color: C.text3 }}>{'//'}</span>
           <Link href="/control" style={{ fontFamily: C.mono, fontSize: 10, color: C.text3, textDecoration: 'none', letterSpacing: '0.08em' }}>
             CONTROL CENTER
           </Link>

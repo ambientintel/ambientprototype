@@ -965,7 +965,7 @@ function EmployeeProfiles() {
       {profiles.length === 0 ? (
         <div style={{ textAlign:"center", padding:"60px 20px", border:"1px dashed var(--line-strong)", borderRadius:12 }}>
           <div style={{ fontFamily:"var(--mono)", fontSize:11, color:"var(--text-4)", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10 }}>No Profiles Yet</div>
-          <div style={{ fontSize:13, color:"var(--text-3)", marginBottom:20 }}>Start an onboarding profile to track a new hire's progress and documents.</div>
+          <div style={{ fontSize:13, color:"var(--text-3)", marginBottom:20 }}>Start an onboarding profile to track a new hire&rsquo;s progress and documents.</div>
           <button onClick={() => setShowModal(true)}
             style={{ padding:"9px 20px", background:"var(--surface-2)", border:"1px solid var(--line-strong)", borderRadius:7, color:"var(--text-2)", fontFamily:"var(--mono)", fontSize:11, cursor:"pointer" }}>
             + Start First Onboarding

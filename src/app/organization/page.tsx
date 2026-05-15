@@ -1,5 +1,7 @@
 'use client';
+/* eslint-disable prefer-const -- minified canvas engine blob uses chained `let a,l=...` declarations where eslint cannot prove every sibling is non-reassigned */
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 
 type Cfg = Record<string, number>;
 
@@ -743,9 +745,9 @@ export default function OrganizationPage() {
 
       {/* NAV */}
       <nav style={{ position:'fixed',top:0,left:0,right:0,zIndex:100,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 48px',height:60,background:'rgba(11,22,40,0.88)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderBottom:`1px solid ${C.line}` }}>
-        <a href="/" style={{ textDecoration:'none' }}>
+        <Link href="/" style={{ textDecoration:'none' }}>
           <span style={{ fontFamily:'var(--serif)',fontSize:15,fontWeight:300,color:C.text,letterSpacing:'-0.01em' }}>Ambient <em style={{ fontStyle:'italic',color:C.text2 }}>Intelligence</em></span>
-        </a>
+        </Link>
         <div style={{ display:'flex',gap:30 }}>
           {[['HR','/humancapitalmgmt'],['Cloud','/cloud'],['Firmware','/firmware'],['Research','/clinicalresearch'],['MN','/mn']].map(([l,h])=>(
             <a key={l} href={h} className="org-nav-link">{l}</a>

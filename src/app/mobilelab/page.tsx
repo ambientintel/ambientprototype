@@ -725,7 +725,7 @@ export default function MobileLab() {
                   <li>Allow notifications to receive fall alerts</li>
                   <li>Keep the app on your home screen for quick access</li>
                   <li>Alerts arrive even when the app is closed</li>
-                  <li>Tap "Respond" on any alert notification to open the app</li>
+                  <li>Tap &ldquo;Respond&rdquo; on any alert notification to open the app</li>
                 </ul>
               </div>
             </>

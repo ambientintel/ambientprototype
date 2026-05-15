@@ -555,7 +555,7 @@ export default function PureBurger() {
               fontSize: 'clamp(32px, 4vw, 52px)', letterSpacing: '-0.03em',
               margin: '8px 0 0', color: C.dark, lineHeight: 1.1,
             }}>
-              Beef. Chicken. That's it.
+              Beef. Chicken. That&rsquo;s it.
             </h2>
           </div>
 

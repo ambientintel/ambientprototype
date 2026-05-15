@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable prefer-const -- minified canvas engine blobs use chained `let a,l=...` declarations where eslint cannot prove every sibling is non-reassigned */
 import React from 'react';
 
 // ─── types ───────────────────────────────────────────────────────────────────

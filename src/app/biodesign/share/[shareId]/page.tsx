@@ -133,7 +133,7 @@ export default function SharePage({ params }: { params: Promise<{ shareId: strin
               {topNeeds.map((n, i) => (
                 <div key={n.id} style={{ marginBottom: 10, paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
                   <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.55, fontStyle: 'italic' }}>
-                    "A way to {n.problem} for {n.population}{n.setting ? ` in ${n.setting}` : ''} so that {n.outcome}."
+                    &ldquo;A way to {n.problem} for {n.population}{n.setting ? ` in ${n.setting}` : ''} so that {n.outcome}.&rdquo;
                   </div>
                 </div>
               ))}
