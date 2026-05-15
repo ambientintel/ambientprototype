@@ -1408,7 +1408,7 @@ const wireframeBg: BgDef = {
     const SHAPES = [{V:cubeV,E:cubeE},{V:icoV,E:icoE},{V:torV,E:torE}];
 
     const proj = (v: [number,number,number], rx: number, ry2: number, fov: number, cx: number, cy: number, sc: number) => {
-      let [x,y,z] = v;
+      const [x,y,z] = v;
       const y1=y*Math.cos(rx)-z*Math.sin(rx), z1=y*Math.sin(rx)+z*Math.cos(rx);
       const x2=x*Math.cos(ry2)+z1*Math.sin(ry2), z2=-x*Math.sin(ry2)+z1*Math.cos(ry2);
       const d=fov/(fov+z2+fov*0.9);
@@ -1928,7 +1928,7 @@ const domainWarpBg: BgDef = {
     let offCanvas: HTMLCanvasElement | null = null;
     let offCtx: CanvasRenderingContext2D | null = null;
 
-    const hash = (n: number) => { let x = Math.sin(n) * 43758.5453123; return x - Math.floor(x); };
+    const hash = (n: number) => { const x = Math.sin(n) * 43758.5453123; return x - Math.floor(x); };
     const noise2 = (x: number, y: number) => {
       const ix = Math.floor(x), iy = Math.floor(y), fx = x-ix, fy = y-iy;
       const ux = fx*fx*(3-2*fx), uy = fy*fy*(3-2*fy);
@@ -5923,7 +5923,7 @@ export default function BackgroundLab() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     return bg.create(canvas, () => cfgRef.current);
-  }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeId]);  
 
   // Slideshow auto-advance
   React.useEffect(() => {
@@ -5958,7 +5958,7 @@ export default function BackgroundLab() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   const activeBg = BACKGROUNDS.find(b => b.id === activeId)!;
   const cfg = configs[activeId] ?? activeBg.defaults;

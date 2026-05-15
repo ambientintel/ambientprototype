@@ -31,7 +31,7 @@ function fmtDate(d: string | null | undefined): string {
   } catch { return d; }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function agencyColor(code: string): string {
   if (code.includes('NIH'))  return '#4F9CF9';
   if (code === 'NSF')        return '#3DCC91';

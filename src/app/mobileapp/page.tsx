@@ -58,7 +58,7 @@ const PIPELINE_PHASES = [
 const STEPS: Step[] = [
   {
     id: 'repo', phase: '01', title: 'Repository Setup', status: 'done', tag: 'Environment', time: '< 5 min',
-    summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. All screens implemented and type-checked clean. AppState session refresh, cold-start notification handler, and expo-splash-screen added. ~82% complete toward TestFlight launch.',
+    summary: 'Expo SDK 54 managed workflow, TypeScript 5.9 strict, pnpm. All screens implemented and type-checked clean. AppState session refresh, cold-start notification handler, expo-splash-screen, and stored-session push token re-registration added. iOS IPA ccc4f957 + Android APK 53f00c95 both built (2026-05-12). Remaining work: SNS GCM platform-app ARN wiring (lives in ambientcloud) and pilot distribution.',
     sections: [
       {
         heading: 'Clone and install',
@@ -437,25 +437,26 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
   },
   {
     id: 'build', phase: '10', title: 'EAS Build', status: 'done', tag: 'Distribution', time: '~20–40 min per build',
-    summary: 'iOS IPA build finished (build 36dbf33f, May 12 2026, 10m 19s total). Profile: preview · SDK 54.0.0 · v1.0.0 (1). Admin ASC API key U4BSUK3SZ8 used to bypass Apple -20209 lock. Associated Domains enabled. IPA available for 13 days via EAS OTA install link. Next: submit to TestFlight or distribute install link to pilot nurses.',
+    summary: 'Both binaries built 2026-05-12. iOS IPA ccc4f957 (dist cert valid to 2027-05-12) and Android APK 53f00c95. Profile: preview · SDK 54.0.0 · v1.0.0 (1). Admin ASC API key U4BSUK3SZ8 used to bypass Apple -20209 lock. Associated Domains enabled. iOS IPA available for 13 days via EAS OTA install link (window expires ~May 25 2026). Next: distribute to pilot nurses or submit to TestFlight; wire SNS GCM ARN in ambientcloud for Android push delivery.',
     sections: [
       {
-        heading: 'Android build — do now (no Apple account needed)',
+        heading: 'Android build — done (APK 53f00c95)',
+        body: 'Firebase project created, google-services.json committed, EAS preview APK built and signed (EAS-managed keystore). Installable for ~30 days via the EAS install link. Push delivery still requires the SNS GCM platform-application ARN to be wired into the ambient-dev-api Lambda — see Distribution step.',
         commands: [
-          { label: '1 · Create Firebase project + register Android app', code: '# console.firebase.google.com\n# Add project → name: Ambient Intelligence\n# Register Android app → package: com.ambientintel.ellamemory\n# Download google-services.json → place in ~/ambientmobile/' },
-          { label: '2 · Configure AWS push + Lambda env var', code: '# After placing google-services.json:\ncd ~/ambientmobile\n\n# Get Server key from Firebase Console → Project Settings → Cloud Messaging\n./scripts/setup_android_push.sh <firebase-server-key>\n\n# The script creates the SNS GCM Platform Application\n# and updates GCM_PLATFORM_APP_ARN in the ambient-dev-api Lambda' },
-          { label: '3 · Commit google-services.json and build', code: 'git add google-services.json\ngit commit -m "Add google-services.json for Android FCM"\n\n# Trigger Android EAS build (~20 min)\neas build --platform android --profile preview' },
+          { label: 'rebuild Android APK (fresh ~30-day window)', code: 'cd ~/ambientmobile\neas build --platform android --profile preview' },
+          { label: 'see also', code: '# docs/android-fcm-setup.md — original Firebase + SNS setup guide\n# scripts/setup_android_push.sh — re-run only if Firebase Server Key rotates' },
         ],
         warnings: [
-          'google-services.json must be committed — EAS Build reads it from the repo. The Web API key inside is restricted to com.ambientintel.ellamemory and safe to commit to the private repo.',
-          'The backend GCM payload now includes notification + priority:high so nurses receive a lock-screen alert even when the app is killed. Without this, data-only FCM messages are silenced on most Android devices.',
+          'google-services.json is in the repo. The Web API key inside is package-name restricted to com.ambientintel.ellamemory and is safe to commit to the private repo.',
+          'The backend GCM payload includes notification + priority:high so nurses receive a lock-screen alert even when the app is killed. Without this, data-only FCM messages are silenced on most Android devices.',
         ],
       },
       {
-        heading: 'iOS build — ready, needs APNs .p8 key',
-        body: 'Full step-by-step guide at docs/ios-pilot-build.md. One-time steps: create APNs Auth Key in Apple Developer portal → run scripts/setup_ios_push.sh to activate SNS APNS platform app → register test devices → eas build --profile preview.',
+        heading: 'iOS build — done (IPA ccc4f957)',
+        body: 'APNs Auth Key uploaded; SNS APNS platform application active. Distribution certificate valid through 2027-05-12. Build ccc4f957 is installable for 13 days via the EAS OTA install link (window expires ~May 25 2026). After that, rebuild for a fresh window or move to TestFlight (see Distribution step).',
         commands: [
-          { label: 'iOS build (see docs/ios-pilot-build.md)', code: '# 1. Create APNs Auth Key at developer.apple.com (Key ID + .p8 file)\n# 2. Activate SNS APNS platform application\nscripts/setup_ios_push.sh <KEY_ID> <TEAM_ID> <path/to/AuthKey.p8>\n# 3. Register nurse test devices\neas device:create\n# 4. Build for internal distribution (~20 min)\neas build --platform ios --profile preview' },
+          { label: 'rebuild a fresh OTA window (~20 min)', code: 'eas build --platform ios --profile preview' },
+          { label: 'see also', code: '# docs/ios-pilot-build.md — end-to-end build + distribution guide\n# scripts/setup_ios_push.sh — re-run only if APNs Auth Key rotates' },
         ],
         artifacts: [
           { file: 'eas.json', role: 'EAS build profiles — development / preview (internal APK+IPA) / production', size: '' },
@@ -467,13 +468,13 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
     ],
   },
   {
-    id: 'distribute', phase: '11', title: 'Distribution', status: 'warning', tag: 'Distribution', time: '~1 hr setup',
-    summary: 'iOS IPA build 36dbf33f ready (May 12 2026, 13-day OTA window). Two paths: (A) send EAS OTA install link directly to pilot nurses — fastest, no App Store needed; or (B) submit to TestFlight for internal testing track. Android build blocked on Firebase google-services.json. Privacy policy live at ellamemory.com/privacy.',
+    id: 'distribute', phase: '11', title: 'Distribution', status: 'pending', tag: 'Distribution', time: '~1 hr setup',
+    summary: 'iOS IPA ccc4f957 and Android APK 53f00c95 both ready (May 12 2026). iOS paths: (A) send EAS OTA install link directly to pilot nurses — fastest, no App Store needed (window expires ~May 25 2026); or (B) submit to TestFlight for internal testing track (App Store Connect record provisioned, ascAppId 6768776508). Android: APK installable via EAS link; end-to-end push delivery still requires the SNS GCM platform-application ARN to be wired into the ambient-dev-api Lambda (in ambientcloud). Privacy policy live at ellamemory.com/privacy.',
     sections: [
       {
         heading: 'iOS path A — EAS OTA install link (fastest, active now)',
         commands: [
-          { label: 'get OTA install link from EAS dashboard', code: '# expo.dev → Ella project → Builds → build 36dbf33f\n# Click "Install" → copy the install URL\n# Send to iOS nurses: they open the link on device → tap Install\n# Requires device to have Expo Go OR accept unsigned profile\n# ⚠ 13-day window from May 12 — expires ~May 25 2026' },
+          { label: 'get OTA install link from EAS dashboard', code: '# expo.dev → Ella project → Builds → build ccc4f957\n# Click "Install" → copy the install URL\n# Send to iOS nurses: they open the link on device → tap Install\n# Requires device to have Expo Go OR accept unsigned profile\n# ⚠ 13-day window from May 12 — expires ~May 25 2026' },
           { label: 'rebuild to extend window (if expired)', code: 'eas build --platform ios --profile preview\n# Creates a fresh build with new 13-day window\n# Build ~20 min · uses Admin ASC API key U4BSUK3SZ8 (bypass Apple -20209 lock)' },
         ],
         warnings: [
@@ -484,8 +485,7 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
       {
         heading: 'iOS path B — TestFlight (recommended for >2-week study)',
         commands: [
-          { label: 'create App Store Connect record (once)', code: '# appstoreconnect.apple.com → My Apps → + → New App\n# Platform: iOS, Name: Ella, Bundle ID: com.ambientintel.ellamemory\n# Copy the Apple ID number (10-digit) → fill ascAppId in eas.json' },
-          { label: 'submit to TestFlight', code: 'eas submit --platform ios --profile production\n# Uses appleId + ascAppId from eas.json submit config\n# Requires privacy policy URL → ellamemory.com/privacy ✅' },
+          { label: 'submit to TestFlight', code: 'eas submit --platform ios --profile production\n# Uses appleId + ascAppId from eas.json submit config (ascAppId 6768776508)\n# Requires privacy policy URL → ellamemory.com/privacy ✅' },
           { label: 'invite internal testers', code: '# App Store Connect → TestFlight → Internal Testing\n# Add nurse email addresses (they receive an email invite)\n# No UDID registration needed for internal testers\n# 90-day expiry — rebuild at 80-day mark if study extends' },
         ],
         warnings: [
@@ -494,14 +494,15 @@ const { alerts } = await res.json() as { alerts: AlertPayload[] };
         ],
       },
       {
-        heading: 'Android — blocked on Firebase setup',
+        heading: 'Android — APK ready; FCM delivery pending SNS GCM wiring',
+        body: 'Firebase project, google-services.json commit, and APK build are done. The remaining step lives in ambientcloud: create the SNS GCM Platform Application from the Firebase Server Key and set the resulting ARN as GCM_PLATFORM_APP_ARN on the ambient-dev-api Lambda (or as the gcm_platform_app_arn CDK context). Until that lands, the APK installs and the push token registers, but FCM messages will never reach the device.',
         commands: [
-          { label: '1 · Create Firebase project + download config', code: '# console.firebase.google.com → Add project: Ambient Intelligence\n# Register Android app → package: com.ambientintel.ellamemory\n# Download google-services.json → place in ~/ambientmobile/' },
-          { label: '2 · Run setup script + build', code: 'cd ~/ambientmobile\n./scripts/setup_android_push.sh <firebase-server-key>\n\ngit add google-services.json\ngit commit -m "Add google-services.json for Android FCM"\neas build --platform android --profile preview' },
-          { label: '3 · Share APK download link', code: '# expo.dev → Ella project → Builds → Android build\n# Download APK → share URL with Android nurses\n# Nurses: allow "Install from unknown sources" once in Settings → Special App Access' },
+          { label: '1 · Wire SNS GCM platform app ARN (one-shot)', code: 'cd ~/ambientmobile\n# Firebase Console → Project Settings → Cloud Messaging → copy Server key\n./scripts/setup_android_push.sh <firebase-server-key>\n# Creates the SNS GCM Platform Application\n# Sets GCM_PLATFORM_APP_ARN on the ambient-dev-api Lambda\n# Equivalent CDK context key: gcm_platform_app_arn' },
+          { label: '2 · Share APK install link with Android nurses', code: '# expo.dev → Ella project → Builds → 53f00c95\n# Click Install → copy the install URL (or scan QR)\n# Nurses: allow "Install from unknown sources" once in Settings → Special App Access' },
+          { label: '3 · Smoke-test push delivery on a physical device', code: 'cd ~/ambientmobile\npython3 scripts/inject_test_alert.py\n# Expect: lock-screen banner on the test device within ~5s\n# Tap → app opens to AlertDetail with the eventId from the payload' },
         ],
         warnings: [
-          'google-services.json is safe to commit to the private repo (Android restricted API key bound to com.ambientintel.ellamemory only).',
+          'The push pipeline silently no-ops on a missing ARN — no log line, no DLQ entry. Confirm GCM_PLATFORM_APP_ARN is set on the Lambda before declaring Android delivery working.',
           'EAS APK download links expire after 30 days. Regenerate with a new build as needed.',
         ],
       },

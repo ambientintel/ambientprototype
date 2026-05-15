@@ -62,7 +62,7 @@ function generateActivitySignal(pts = 576): number[] {
   return Array.from({ length: pts }, (_, i) => {
     const h = ((i % epd) / epd) * 24;
     const d = Math.floor(i / epd);
-    let base = h >= 7 && h < 23
+    const base = h >= 7 && h < 23
       ? 18 + 25 * Math.sin(Math.PI * (h - 7) / 16)
         + (h >= 7.5 && h < 10  ? 55 * Math.exp(-(((h - 9)    / 0.7) * ((h - 9)    / 0.7))) : 0)
         + (h >= 14  && h < 17  ? 48 * Math.exp(-(((h - 15.5) / 1.0) * ((h - 15.5) / 1.0))) : 0)

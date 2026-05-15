@@ -187,7 +187,7 @@ export function PredicateSearchOverlay({ state, onSelect, onClose }: PredicateSe
     }, 300);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [query, productCode]);
 
   // Auto-search on mount if we have pre-filled values

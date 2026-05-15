@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 declare global {
-  // eslint-disable-next-line no-var
+   
   var __ambientPending: Map<string, { code: string; name: string; email: string; role: string; createdAt: number }> | undefined;
 }
 
