@@ -476,7 +476,7 @@ const CHECKLIST_ITEMS = [
   'Custom DTB build validated (k3-am62-lp-sk-ambient.dtb)',
   'IWR6843AOP prototyped on Raspberry Pi',
   'AM62 SoC locked: Octavo OSD62x-PM (ADR-0002)',
-  'SK-AM62-LP (PROC124E2, HS-FS) hardware received',
+  'SK-AM62-LP (HS-FS device) hardware received',
   'First boot confirmed (SDK 12.x WIC image, 2026-05-15)',
   'OTA strategy: Mender self-hosted (ADR-0003)',
   'First boot with custom kernel (SDK 11.x)',
