@@ -472,7 +472,7 @@ const CHECKLIST_ITEMS = [
   'Cross-toolchain verified (aarch64-oe-linux-gcc 13.4)',
   'Kernel + DTB built (Image 22 MB, dtb 65 KB)',
   'U-Boot compiled (tiboot3.bin, tispl.bin, u-boot.img)',
-  'Repo pushed to ambientintel/ambientfirmware',
+  'Repo pushed to ambientintel/ambientfirm',
   'Custom DTB build validated (k3-am62-lp-sk-ambient.dtb)',
   'IWR6843AOP prototyped on Raspberry Pi',
   'AM62 SoC locked: Octavo OSD62x-PM (ADR-0002)',

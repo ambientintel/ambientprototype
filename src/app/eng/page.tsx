@@ -19,7 +19,7 @@ const DOMAINS = [
     color: '#2563EB',
     colorBg: '#EFF6FF',
     colorBorder: '#BFDBFE',
-    repo: 'ambientintel/ambientfirmware',
+    repo: 'ambientintel/ambientfirm',
     stepsTotal: 15,
     stepsDone: 8,
     phases: [
