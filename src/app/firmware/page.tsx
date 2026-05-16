@@ -758,7 +758,7 @@ export default function FirmwarePage() {
             ))}
 
             {/* Production Release milestone */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 24, paddingRight: 4, flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: 24, height: 1, background: designFrozen || ready ? 'linear-gradient(90deg,#E5E7EB,#2563EB)' : '#E5E7EB' }} />
                 <svg width="6" height="10" viewBox="0 0 6 10" fill="none" style={{ flexShrink: 0 }}>
@@ -766,7 +766,7 @@ export default function FirmwarePage() {
                 </svg>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: designFrozen || ready ? '#2563EB' : '#9CA3AF' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: designFrozen || ready ? '#2563EB' : '#9CA3AF', whiteSpace: 'nowrap' }}>
                   {designFrozen ? 'Saved ✓' : 'Goal'}
                 </div>
                 <button
@@ -774,13 +774,14 @@ export default function FirmwarePage() {
                   className={designFrozen ? 'df-frozen' : ready ? 'df-ready' : ''}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 9,
-                    padding: '8px 16px', borderRadius: 9,
+                    padding: '8px 14px', borderRadius: 9,
                     cursor: ready || designFrozen ? 'pointer' : 'default',
+                    whiteSpace: 'nowrap',
                     ...(!(designFrozen || ready) && { background: '#F9FAFB', border: '1.5px dashed #D1D5DB' }),
                     transition: 'all 0.25s',
                   }}
                 >
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
                     {designFrozen || ready ? (
                       <>
                         <path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke="#2563EB" strokeWidth="1.6" strokeLinecap="round"/>
@@ -794,10 +795,10 @@ export default function FirmwarePage() {
                     )}
                   </svg>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
-                    <span className="df-title" style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: designFrozen ? '#2563EB' : ready ? '#1D4ED8' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                    <span className="df-title" style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: designFrozen ? '#2563EB' : ready ? '#1D4ED8' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                       {designFrozen ? 'Released ✓' : 'Production Release'}
                     </span>
-                    <span className="df-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF' }}>
+                    <span className="df-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF', whiteSpace: 'nowrap' }}>
                       {designFrozen ? (frozenDate ? `Locked ${frozenDate}` : 'Firmware locked') : ready ? 'Ready — click to lock' : `${Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}% complete`}
                     </span>
                   </div>
