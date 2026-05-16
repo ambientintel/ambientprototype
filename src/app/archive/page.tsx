@@ -50,7 +50,7 @@ const GROUPS: { label: string; pages: PageEntry[] }[] = [
   {
     label: 'Hardware & Firmware',
     pages: [
-      { href: '/firmware',    label: 'Firmware Development',   tag: 'Firmware',   tagColor: { bg: 'rgba(240,180,41,0.18)', color: '#F0B429' },  description: 'AM62x Linux build chain runbook — TI Processor SDK 11, Yocto, U-Boot, custom DTB for IWR6843AOP integration. Build → bring-up → OTA.',  meta: 'ambientfirmware · AM62x · Yocto · IWR6843AOP' },
+      { href: '/firmware',    label: 'Firmware Development',   tag: 'Firmware',   tagColor: { bg: 'rgba(240,180,41,0.18)', color: '#F0B429' },  description: 'AM62x Linux build chain runbook — TI Processor SDK 11, Yocto, U-Boot, custom DTB for IWR6843AOP integration. Build → bring-up → OTA.',  meta: 'ambientfirm · AM62x · Yocto · IWR6843AOP' },
       { href: '/ee',          label: 'EE Hardware Validation', tag: 'EE',         tagColor: { bg: 'rgba(245,158,11,0.18)', color: '#F59E0B' },  description: 'IWR6843AOP + OSD62x-PM PCB validation runbook — schematic, Gerbers, fab order, and EVT→DVT→PVT→MP bring-up phases with 21 CFR 820 DHF.',  meta: 'ambientee · IWR6843AOP · OSD62x · EVT' },
       { href: '/mechanical',  label: 'Mechanical Engineering', tag: 'Mechanical', tagColor: { bg: 'rgba(251,146,60,0.18)', color: '#FB923C' },  description: 'System definition and PCB design runbook — power budget, interface matrix, mechanical constraints, and Altium Designer PCB layout workflow.',  meta: 'ambientmechanical · Altium · PCB · enclosure' },
     ],

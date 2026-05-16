@@ -240,7 +240,7 @@ const STEPS: Step[] = [
         heading: 'Replace with SDK 11.x prebuilts (optional)',
         body: 'The WIC image ships SDK 12.x binaries. To run the SDK 11.02.08.02 build, mount the FAT BOOT partition after flashing and replace the boot files:',
         commands: [
-          { label: 'macOS — FAT BOOT partition mounts as /Volumes/BOOT', code: 'PREBUILT=~/ti-am62x/workspace/sdk/ti-processor-sdk-linux-am62xx-evm/board-support/prebuilt-images/am62xx-lp-evm\n\n# HS-FS variant explicitly — PROC124E2 is HS-FS\ncp $PREBUILT/tiboot3-am62x-hs-fs-evm.bin /Volumes/BOOT/tiboot3.bin\ncp $PREBUILT/tispl.bin                    /Volumes/BOOT/\ncp $PREBUILT/u-boot.img                   /Volumes/BOOT/\ncp $PREBUILT/Image                        /Volumes/BOOT/\ncp $PREBUILT/k3-am62-lp-sk.dtb           /Volumes/BOOT/\ncp $PREBUILT/uEnv.txt                     /Volumes/BOOT/\nsync && diskutil unmountDisk /dev/diskN' },
+          { label: 'macOS — FAT BOOT partition mounts as /Volumes/BOOT', code: 'PREBUILT=~/ti-am62x/workspace/sdk/ti-processor-sdk-linux-am62xx-evm/board-support/prebuilt-images/am62xx-lp-evm\n\n# SK-AM62-LP is HS-FS — use hs-fs variant explicitly\ncp $PREBUILT/tiboot3-am62x-hs-fs-evm.bin /Volumes/BOOT/tiboot3.bin\ncp $PREBUILT/tispl.bin                    /Volumes/BOOT/\ncp $PREBUILT/u-boot.img                   /Volumes/BOOT/\ncp $PREBUILT/Image                        /Volumes/BOOT/\ncp $PREBUILT/k3-am62-lp-sk.dtb           /Volumes/BOOT/\ncp $PREBUILT/uEnv.txt                     /Volumes/BOOT/\nsync && diskutil unmountDisk /dev/diskN' },
         ],
         warnings: [
           'Always use tiboot3-am62x-hs-fs-evm.bin explicitly. The plain tiboot3.bin symlink may point to the HS (not HS-FS) variant. Wrong variant = complete silence on boot.',

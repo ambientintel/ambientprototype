@@ -98,7 +98,7 @@ const STEPS: Step[] = [
           rows: [
             ['ambientintel/ambientcloud',    'AWS backend — Cognito user pool, IoT Core, FastAPI'],
             ['ambientintel/ambientweb',      'Nurse dashboard (Next.js) — name-hydrated views'],
-            ['ambientintel/ambientfirmware', 'TI AM62x + IWR6843AOP device firmware'],
+            ['ambientintel/ambientfirm', 'TI AM62x + IWR6843AOP device firmware'],
           ],
         },
       },
