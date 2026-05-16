@@ -245,13 +245,14 @@ const STEPS: Step[] = [
         warnings: [
           'Always use tiboot3-am62x-hs-fs-evm.bin explicitly. The plain tiboot3.bin symlink may point to the HS (not HS-FS) variant. Wrong variant = complete silence on boot.',
           'DTB name is k3-am62-lp-sk.dtb — not k3-am625-sk-lp.dtb. TI naming convention: SoC family + variant prefix, board class suffix.',
+          'GRUB EFI loads the kernel from /boot/Image on the ext4 rootfs — NOT from the Image file on the FAT BOOT partition. Copying Image to /Volumes/BOOT/ has no effect on which kernel boots. To run SDK 11.x: boot the board, then run: cp /run/media/boot-mmcblk1p1/Image /boot/Image && reboot',
         ],
       },
     ],
   },
   {
     id: 'boot', phase: '10', title: 'First Boot', status: 'done', tag: 'Deploy', time: '~30 min',
-    summary: 'Boot chain: ROM → tiboot3 → tispl → u-boot → kernel → rootfs. Serial console 115200 8N1. First boot achieved 2026-05-15 with SDK 12.x WIC image.',
+    summary: 'Boot chain: ROM → tiboot3 → tispl → u-boot → GRUB EFI → kernel → rootfs. Serial console 115200 8N1 on J17 (NOT J18). SDK 12.x WIC boot: 2026-05-15. SDK 11.x kernel (6.12.57-ti) boot: 2026-05-16.',
     sections: [
       {
         heading: 'Hardware connections and boot mode',
@@ -259,8 +260,8 @@ const STEPS: Step[] = [
       },
       {
         heading: 'Open the serial console',
-        commands: [{ label: 'macOS — J17 (FT4232) enumerates as 4 ports; use the one ending in 40', code: 'ls /dev/tty.usbserial-*\n# → tty.usbserial-XXXXXXXXXXXX40  ← SOC_UART0 (Linux console) ← use this\n#   tty.usbserial-XXXXXXXXXXXX41  ← SOC_UART1\n#   tty.usbserial-XXXXXXXXXXXX42  ← WKUP_UART0\n#   tty.usbserial-XXXXXXXXXXXX43  ← MCU_UART0\ntio /dev/tty.usbserial-XXXXXXXXXXXX40 -b 115200' }],
-        warnings: ['The serial number prefix (12 digits) varies by cable and USB hub. Always run ls /dev/tty.usbserial-* first to discover the actual port names.'],
+        commands: [{ label: 'macOS — J17 (FT4232) enumerates as 4 ports; use the one ending in 40', code: 'ls /dev/tty.usbserial-*\n# → tty.usbserial-102612400940  ← SOC_UART0 (Linux console) ← use this\n#   tty.usbserial-102612400941  ← SOC_UART1\n#   tty.usbserial-102612400942  ← WKUP_UART0\n#   tty.usbserial-102612400943  ← MCU_UART0\ntio /dev/tty.usbserial-102612400940 -b 115200' }],
+        warnings: ['J17 and J18 are BOTH micro-USB-B and look identical. J17 = FT4232 UART (console). J18 = XDS110 JTAG. Plugging into J18 produces complete silence — no errors, board appears dead. Always verify J17 before assuming a boot failure.'],
       },
       {
         heading: 'Expected boot chain',
@@ -276,11 +277,12 @@ const STEPS: Step[] = [
         },
       },
       {
-        heading: 'First boot results (2026-05-15)',
-        body: 'Verified on SK-AM62-LP PROC124E2 (HS-FS) using SDK 12.00.00.07.04 LP WIC image.',
+        heading: 'First boot results',
+        body: 'Verified on SK-AM62-LP PROC124E2 (HS-FS). SDK 12.x WIC boot 2026-05-15. SDK 11.x kernel boot 2026-05-16. GRUB EFI loads kernel from /boot/Image on the ext4 rootfs — NOT from the FAT BOOT partition Image. To swap kernels: replace /boot/Image on the rootfs and reboot.',
         commands: [
-          { label: 'capture boot log', code: 'tio /dev/tty.usbserial-XXXXXXXXXXXX40 -b 115200 --log-file first-boot.log' },
-          { label: 'verification commands — all passed', code: 'uname -a\n# Linux am62xx-lp-evm 6.18.13-ti-00778-gc21449208550-dirty aarch64\n\ncat /proc/device-tree/model\n# Texas Instruments AM62x LP SK\n\nls /sys/class/net\n# eth0  eth1  lo  mcu_mcan0  mcu_mcan1\n\ndmesg | grep -i error\n# Only benign: RTC erratum i2327, PowerVR GPU firmware missing (irrelevant)' },
+          { label: 'capture boot log', code: 'tio /dev/tty.usbserial-102612400940 -b 115200 --log-file first-boot.log' },
+          { label: 'SDK 12.x verification (2026-05-15)', code: 'uname -a\n# Linux am62xx-lp-evm 6.18.13-ti-00778-gc21449208550-dirty aarch64\n\ncat /proc/device-tree/model\n# Texas Instruments AM62x LP SK\n\nls /sys/class/net\n# eth0  eth1  lo  mcu_mcan0  mcu_mcan1\n\ndmesg | grep -i error\n# Only benign: RTC erratum i2327, PowerVR GPU firmware missing (irrelevant)' },
+          { label: 'SDK 11.x verification (2026-05-16)', code: 'uname -r\n# 6.12.57-ti-g31b07ab8dfbc\n\ncat /proc/device-tree/model\n# Texas Instruments AM62x LP SK\n\nls /sys/class/net\n# eth0  eth1  lo' },
         ],
         warnings: [
           'The AM62x ROM produces zero UART output itself. First output is from tiboot3 (R5 SPL). Zero serial output means the ROM rejected tiboot3 — not that the board is dead.',
@@ -494,7 +496,7 @@ const CHECKLIST_ITEMS = [
   'CI pipeline building on every push',
 ];
 
-const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11]);
+const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12]);
 
 const OPEN_DECISIONS = [
   'Wi-Fi module: Murata 1YN vs CYW43xx — TI SDK driver maturity check pending',
@@ -502,6 +504,7 @@ const OPEN_DECISIONS = [
   'Fab stackup: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape routing',
   'OP-TEE trusted app scope — key storage only, or also fall-event timestamp signing?',
   'CI self-hosted runner strategy for 14 GB SDK dependency',
+  'Ambient DTB boot: GRUB EFI boot path confirmed — fdtfile uEnv.txt approach may not apply; verify devicetree directive in grub.cfg instead',
 ];
 
 // ── Page component ─────────────────────────────────────────────────────────────
