@@ -249,7 +249,11 @@
       "updated": "May 14"
     }
   ],
-  "weekStatus": {},
+  "weekStatus": {
+    "Brian": {
+      "S": "yes"
+    }
+  },
   "team": [
     {
       "name": "Gavin",
