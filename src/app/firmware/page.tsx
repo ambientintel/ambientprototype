@@ -228,8 +228,8 @@ const STEPS: Step[] = [
         heading: 'Flash with WIC image (correct approach)',
         body: 'The LP WIC image is a complete disk image (MBR + FAT32 boot + ext4 rootfs) with the correct HS-FS tiboot3 variant preloaded. This is the only reliable method on macOS. balenaEtcher also works but has been observed to fail on this file; use the dd pipeline if Etcher errors.',
         commands: [
-          { label: 'download LP WIC image (SDK 12.x, no TI account required)', code: 'curl -L -o ~/Downloads/tisdk-lp-evm-12.wic.xz \\\n  "https://dr-download.ti.com/software-development/software-development-kit-sdk/MD-PvdSyIiioq/12.00.00.07.04/tisdk-default-image-am62xx-lp-evm-12.00.00.07.04.rootfs.wic.xz"' },
-          { label: 'flash — verify diskN first, this writes the whole disk', code: 'diskutil list\ndiskutil unmountDisk /dev/diskN\nxz -d --stdout ~/Downloads/tisdk-lp-evm-12.wic.xz | sudo dd of=/dev/rdiskN bs=8m' },
+          { label: 'download (SDK 12.00.00.07.04, no TI account required)', code: 'curl -L -o ~/Downloads/tisdk-lp-evm-12.wic.xz \\\n  "https://dr-download.ti.com/software-development/software-development-kit-sdk/MD-PvdSyIiioq/12.00.00.07.04/tisdk-default-image-am62xx-lp-evm-12.00.00.07.04.rootfs.wic.xz"\n# browser download uses full name: tisdk-default-image-am62xx-lp-evm-12.00.00.07.04.rootfs.wic.xz — adjust path below if so' },
+          { label: 'flash — verify diskN is your SD card first', code: 'diskutil list\ndiskutil unmountDisk /dev/diskN\nxz -d --stdout ~/Downloads/tisdk-lp-evm-12.wic.xz | sudo dd of=/dev/rdiskN bs=8m\n# Ctrl-T shows progress. ~5-10 min for 32 GB card.' },
         ],
         warnings: [
           'Writing to the wrong device destroys data. Run diskutil list and confirm the disk number every time.',
