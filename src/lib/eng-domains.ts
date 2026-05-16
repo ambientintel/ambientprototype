@@ -14,7 +14,7 @@ export interface EngDomainMeta {
 }
 
 export const ENG_DOMAINS: EngDomainMeta[] = [
-  { id: 'firmware',         serverKey: 'firmware',  href: '/firmware',         lsKey: 'ambient-fw-checklist-v2',         freezeKey: 'ambient-fw-frozen-v1',         checklistTotal: 20, checklistDefault: 9  },
+  { id: 'firmware',         serverKey: 'firmware',  href: '/firmware',         lsKey: 'ambient-fw-checklist-v2',         freezeKey: 'ambient-fw-frozen-v1',         checklistTotal: 25, checklistDefault: 12 },
   { id: 'ee',               serverKey: 'ee',        href: '/ee',               lsKey: 'ambient-ee-checklist-v1',         freezeKey: 'ambient-ee-frozen-v1',         checklistTotal: 22, checklistDefault: 13 },
   { id: 'mobileapp',        serverKey: 'mobileapp', href: '/mobileapp',        lsKey: 'ambient-mobileapp-checklist-v1',  freezeKey: 'ambient-mobileapp-frozen-v1',  checklistTotal: 23, checklistDefault: 17 },
   { id: 'cloudengineering', serverKey: 'cloud',     href: '/cloudengineering', lsKey: 'ambient-cloud-checklist-v2',      freezeKey: 'ambient-cloud-frozen-v1',      checklistTotal: 22, checklistDefault: 21 },
