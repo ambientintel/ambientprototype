@@ -92,7 +92,7 @@ const STEPS: Step[] = [
           rows: [
             ['board-support/ti-linux-kernel-6.12.57+git-ti/', 'Linux kernel source'],
             ['board-support/u-boot-*/', 'U-Boot source'],
-            ['board-support/prebuilt-images/am62xx-evm/', 'TI prebuilt reference binaries'],
+            ['board-support/prebuilt-images/am62xx-lp-evm/', 'TI prebuilt LP binaries (tiboot3-am62x-hs-fs-evm.bin, tispl.bin, etc.)'],
             ['linux-devkit/.../aarch64-oe-linux/', 'A53 cross-compiler (gcc 13.4)'],
             ['k3r5-devkit/', 'R5F toolchain'],
             ['kernel-env.sh', 'Safe env helper — use this, not linux-devkit/environment-setup'],
@@ -221,59 +221,71 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'sdcard', phase: '09', title: 'SD Card Preparation', status: 'pending', tag: 'Deploy', time: '~10 min',
-    summary: 'MBR + FAT32 boot (256 MB) + ext4 rootfs. Hardware on order.',
+    id: 'sdcard', phase: '09', title: 'SD Card Preparation', status: 'done', tag: 'Deploy', time: '~10 min',
+    summary: 'Flash the TI LP WIC image with xz|dd. Do NOT use macOS fdisk — the ROM silently rejects its partition tables.',
     sections: [
       {
-        heading: 'Identify and partition',
+        heading: 'Flash with WIC image (correct approach)',
+        body: 'The LP WIC image is a complete disk image (MBR + FAT32 boot + ext4 rootfs) with the correct HS-FS tiboot3 variant preloaded. This is the only reliable method on macOS. balenaEtcher also works but has been observed to fail on this file; use the dd pipeline if Etcher errors.',
         commands: [
-          { label: 'macOS — VERIFY size matches card before writing', code: 'diskutil list\ndiskutil unmountDisk /dev/diskN\nsudo dd if=/dev/zero of=/dev/rdiskN bs=1m count=16 conv=fsync\nsudo newfs_msdos -F 32 -v BOOT /dev/rdiskNs1' },
-          { label: 'inside container — format rootfs partition', code: 'sudo mkfs.ext4 -L rootfs /dev/sdXN2' },
+          { label: 'download LP WIC image (SDK 12.x, no TI account required)', code: 'curl -L -o ~/Downloads/tisdk-lp-evm-12.wic.xz \\\n  "https://dr-download.ti.com/software-development/software-development-kit-sdk/MD-PvdSyIiioq/12.00.00.07.04/tisdk-default-image-am62xx-lp-evm-12.00.00.07.04.rootfs.wic.xz"' },
+          { label: 'flash — verify diskN first, this writes the whole disk', code: 'diskutil list\ndiskutil unmountDisk /dev/diskN\nxz -d --stdout ~/Downloads/tisdk-lp-evm-12.wic.xz | sudo dd of=/dev/rdiskN bs=8m' },
         ],
-        warnings: ['Writing to the wrong device destroys data. Double-check diskN every time.'],
+        warnings: [
+          'Writing to the wrong device destroys data. Run diskutil list and confirm the disk number every time.',
+          'macOS fdisk + newfs_msdos produces partition tables the AM62x ROM silently rejects. The board appears dead with zero serial output. Use WIC + dd only.',
+        ],
       },
       {
-        heading: 'Copy boot artifacts',
+        heading: 'Replace with SDK 11.x prebuilts (optional)',
+        body: 'The WIC image ships SDK 12.x binaries. To run the SDK 11.02.08.02 build, mount the FAT BOOT partition after flashing and replace the boot files:',
         commands: [
-          { label: 'macOS — FAT partition mounts as /Volumes/BOOT', code: 'cp deploy/tiboot3.bin        /Volumes/BOOT/\ncp deploy/tispl.bin         /Volumes/BOOT/\ncp deploy/u-boot.img        /Volumes/BOOT/\ncp deploy/Image             /Volumes/BOOT/\ncp deploy/k3-am625-sk-lp.dtb /Volumes/BOOT/\nsync && diskutil unmountDisk /dev/diskN' },
-          { label: 'inside container — populate rootfs', code: 'sudo tar -xpf deploy/tisdk-default-image-am62xx-evm.tar.xz \\\n  -C /mnt/sdcard-rootfs\nsudo sync && sudo umount /mnt/sdcard-rootfs' },
+          { label: 'macOS — FAT BOOT partition mounts as /Volumes/BOOT', code: 'PREBUILT=~/ti-am62x/workspace/sdk/ti-processor-sdk-linux-am62xx-evm/board-support/prebuilt-images/am62xx-lp-evm\n\n# HS-FS variant explicitly — PROC124E2 is HS-FS\ncp $PREBUILT/tiboot3-am62x-hs-fs-evm.bin /Volumes/BOOT/tiboot3.bin\ncp $PREBUILT/tispl.bin                    /Volumes/BOOT/\ncp $PREBUILT/u-boot.img                   /Volumes/BOOT/\ncp $PREBUILT/Image                        /Volumes/BOOT/\ncp $PREBUILT/k3-am62-lp-sk.dtb           /Volumes/BOOT/\nsync && diskutil unmountDisk /dev/diskN' },
         ],
-        warnings: ['Filenames are exact. ROM looks for tiboot3.bin. A53 SPL looks for tispl.bin and u-boot.img.', 'Always sync before unmounting. Power-off without sync is the leading cause of SD card corruption.'],
+        warnings: [
+          'Always use tiboot3-am62x-hs-fs-evm.bin explicitly. The plain tiboot3.bin symlink may point to the HS (not HS-FS) variant. Wrong variant = complete silence on boot.',
+          'DTB name is k3-am62-lp-sk.dtb — not k3-am625-sk-lp.dtb. TI naming convention: SoC family + variant prefix, board class suffix.',
+        ],
       },
     ],
   },
   {
-    id: 'boot', phase: '10', title: 'First Boot', status: 'pending', tag: 'Deploy', time: '~30 min',
-    summary: 'Boot chain: ROM → tiboot3 → tispl → u-boot → kernel → rootfs. Serial console 115200 8N1.',
+    id: 'boot', phase: '10', title: 'First Boot', status: 'done', tag: 'Deploy', time: '~30 min',
+    summary: 'Boot chain: ROM → tiboot3 → tispl → u-boot → kernel → rootfs. Serial console 115200 8N1. First boot achieved 2026-05-15 with SDK 12.x WIC image.',
     sections: [
       {
+        heading: 'Hardware connections and boot mode',
+        body: 'Boot mode switches: SW3 (bits 0–7): sw1, sw2, sw7 ON, all others OFF. SW4 (bits 8–15): sw2 ON only, all others OFF. (SW1 is the RST+INT push button — do not touch.) Insert SD card. Connect micro-USB-B to J17 (FT4232 UART bridge — NOT J18, which is XDS110 JTAG). Connect USB-C power to J13 or J15 last.',
+      },
+      {
         heading: 'Open the serial console',
-        commands: [{ label: 'macOS — use the higher-numbered tty.usbmodem* device', code: 'ls /dev/tty.usb*\ntio /dev/tty.usbmodemXXXXXX3 -b 115200\n# 115200 8N1, no flow control' }],
-        body: 'Set SW1 to SD boot — verify against the board QSG, not from memory. Insert SD card. Connect USB-C to XDS110 UART port (J18). Connect power last.',
+        commands: [{ label: 'macOS — J17 (FT4232) enumerates as 4 ports; use the one ending in 40', code: 'ls /dev/tty.usbserial-*\n# → tty.usbserial-XXXXXXXXXXXX40  ← SOC_UART0 (Linux console) ← use this\n#   tty.usbserial-XXXXXXXXXXXX41  ← SOC_UART1\n#   tty.usbserial-XXXXXXXXXXXX42  ← WKUP_UART0\n#   tty.usbserial-XXXXXXXXXXXX43  ← MCU_UART0\ntio /dev/tty.usbserial-XXXXXXXXXXXX40 -b 115200' }],
+        warnings: ['The serial number prefix (12 digits) varies by cable and USB hub. Always run ls /dev/tty.usbserial-* first to discover the actual port names.'],
       },
       {
         heading: 'Expected boot chain',
         table: {
           cols: ['Stage', 'Who runs', 'Expected output', 'Failure signal'],
           rows: [
-            ['1', 'ROM → tiboot3.bin', '"U-Boot SPL … Trying to boot from MMC2"', 'Silence → wrong boot mode or SD unreadable'],
-            ['2', 'tiboot3 → tispl.bin', '"Loading fit image from MMC"', 'Hang → DDR training or tispl.bin missing'],
-            ['3', 'A53 SPL → U-Boot', '"CPU: AM62X SR1.0 HS-FS … Hit any key"', 'Hang → u-boot.img or ATF/OP-TEE crash'],
-            ['4', 'U-Boot → kernel', '"Starting kernel … Booting Linux on CPU 0x0"', '"Bad Linux ARM64 Image magic!" → DTB/kernel swap'],
-            ['5', 'Rootfs + systemd', '"am62xx-evm login:"', 'VFS panic → check root= bootarg, mmcblk0 vs 1'],
+            ['1', 'ROM → tiboot3.bin', '"U-Boot SPL … Trying to boot from MMC2"', 'Silence → macOS fdisk SD card, wrong tiboot3 variant, or wrong boot mode switches'],
+            ['2', 'tiboot3 → tispl.bin', '"Loading fit image from MMC"', 'Hang → DDR training failure or tispl.bin missing/corrupt'],
+            ['3', 'A53 SPL → U-Boot', '"CPU: AM62X SR1.0 HS-FS … Hit any key"', 'Hang → u-boot.img missing or ATF/OP-TEE crash'],
+            ['4', 'U-Boot → kernel', '"Starting kernel … Booting Linux on CPU 0x0"', '"Bad Linux ARM64 Image magic!" → DTB/kernel file swap'],
+            ['5', 'Rootfs + systemd', '"am62xx-evm login:"', 'VFS panic → check root= bootarg, mmcblk0 vs mmcblk1'],
           ],
         },
       },
       {
-        heading: 'Success criteria and capture',
+        heading: 'First boot results (2026-05-15)',
+        body: 'Verified on SK-AM62-LP PROC124E2 (HS-FS) using SDK 12.00.00.07.04 LP WIC image.',
         commands: [
-          { label: 'capture full boot log for the record', code: 'tio /dev/tty.usbmodemXXXXXX3 -b 115200 -l -L first-boot.log' },
-          { label: 'verify after boot', code: 'uname -a                        # shows built kernel\ncat /proc/device-tree/model     # → SK-AM62-LP string\nls /sys/class/net               # → lo + eth0\ndmesg | grep -i error           # should be clean' },
+          { label: 'capture boot log', code: 'tio /dev/tty.usbserial-XXXXXXXXXXXX40 -b 115200 --log-file first-boot.log' },
+          { label: 'verification commands — all passed', code: 'uname -a\n# Linux am62xx-lp-evm 6.18.13-ti-00778-gc21449208550-dirty aarch64\n\ncat /proc/device-tree/model\n# Texas Instruments AM62x LP SK\n\nls /sys/class/net\n# eth0  eth1  lo  mcu_mcan0  mcu_mcan1\n\ndmesg | grep -i error\n# Only benign: RTC erratum i2327, PowerVR GPU firmware missing (irrelevant)' },
         ],
         warnings: [
-          'mmcblk1 vs mmcblk0: eMMC enumerates before SD. Check with "mmc list" from U-Boot shell if kernel panics on rootfs mount.',
-          'Linux console is ttyS2 for AM62x. Bootargs must include console=ttyS2,115200n8.',
-          'Snapshot the working SD immediately: sudo dd if=/dev/diskN of=golden-sd.img bs=1m',
+          'The AM62x ROM produces zero UART output itself. First output is from tiboot3 (R5 SPL). Zero serial output means the ROM rejected tiboot3 — not that the board is dead.',
+          'mmcblk1 vs mmcblk0: eMMC enumerates before SD. On SK boards with no eMMC, SD is mmcblk0. Check via U-Boot: mmc list',
+          'Snapshot the working SD card immediately after first boot: diskutil unmountDisk /dev/diskN && sudo dd if=/dev/rdiskN of=golden-sd.img bs=8m',
         ],
       },
     ],
@@ -477,7 +489,7 @@ const CHECKLIST_ITEMS = [
   'CI pipeline building on every push',
 ];
 
-const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8]);
+const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10]);
 
 const OPEN_DECISIONS = [
   'Wi-Fi module: Murata 1YN vs CYW43xx — TI SDK driver maturity check pending',

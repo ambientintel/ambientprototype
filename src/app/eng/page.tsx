@@ -21,11 +21,11 @@ const DOMAINS = [
     colorBorder: '#BFDBFE',
     repo: 'ambientintel/ambientfirmware',
     stepsTotal: 15,
-    stepsDone: 6,
+    stepsDone: 8,
     phases: [
       { label: 'Environment', done: 3, total: 3 },
       { label: 'Build',       done: 3, total: 3 },
-      { label: 'Bring-Up',   done: 0, total: 5 },
+      { label: 'Bring-Up',   done: 2, total: 5 },
       { label: 'Production', done: 0, total: 4 },
     ],
     specs: [
@@ -34,8 +34,8 @@ const DOMAINS = [
       { k: 'SDK',     v: '11.02.08.02' },
       { k: 'OTA',     v: 'Mender' },
     ],
-    description: 'TI Processor SDK 11 · Yocto · U-Boot · custom DTB for IWR6843AOP integration. Build → bring-up → OTA.',
-    currentStep: '07 · Kernel Patch Management',
+    description: 'TI Processor SDK 11 · Yocto · U-Boot · custom DTB for IWR6843AOP integration. Build pipeline complete. First boot achieved 2026-05-15 (SK-AM62-LP PROC124E2, SDK 12.x WIC image). Next: custom kernel boot + TFTP/NFS dev loop.',
+    currentStep: '11 · TFTP/NFS Dev Loop',
     freezeLabel: 'Firmware Freeze',
   },
   {
@@ -185,11 +185,11 @@ const INTEGRATIONS = [
 
 const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
   firmware: [
-    { task: 'Boot custom DTB on OSD62x-PM carrier — confirm IWR6843AOP GPIO/SPI pin assignments', owner: 'BSP' },
-    { task: 'Validate IWR6843AOP SPI data path in Linux userspace (mmWave SDK driver)', owner: 'BSP' },
-    { task: 'Integrate Mender OTA client and run a remote update end-to-end', owner: 'DevOps' },
-    { task: 'Complete bring-up test sequence steps 08–11 (power rails, UART, JTAG, clocks)', owner: 'HW+BSP' },
-    { task: 'Sign off EVT bring-up checklist to unlock Production phase', owner: 'Lead' },
+    { task: 'Boot custom kernel (SDK 11.x) — replace WIC image boot files with tiboot3-am62x-hs-fs-evm.bin + tispl.bin + u-boot.img + Image + k3-am62-lp-sk.dtb', owner: 'BSP' },
+    { task: 'Set up TFTP/NFS dev loop — macOS TFTP server + U-Boot netboot env vars; cuts SD reflash cycle from ~10 min to <60 sec', owner: 'BSP' },
+    { task: 'Boot ambient DTB (k3-am62-lp-sk-ambient.dtb) — select via extlinux.conf, confirm model string and compatible list', owner: 'BSP' },
+    { task: 'Pin mux spreadsheet for OSD62x-PM — map all AM62 interfaces (UART, SPI, I2C, GPIO) against Octavo ball-out; gate custom board schematic', owner: 'HW+BSP' },
+    { task: 'Patch kernel for IWR6843AOP SPI/GPIO — add device node to ambient DTB, verify mmWave driver binds on boot', owner: 'BSP' },
   ],
   ee: [
     { task: 'Submit Gerber package to fab — confirm 8-layer stackup, drill files, impedance spec', owner: 'Layout' },
@@ -231,8 +231,8 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
 
 const SPRINT_FOCUS: Record<string, string[]> = {
   firmware: [
-    'Patch DTB for OSD62x-PM — target first boot with IWR SPI GPIO mapped',
-    'Run kernel CI on SK-AM62-LP, confirm mmWave driver loads at boot',
+    'Boot with custom kernel: mount WIC-flashed SD BOOT partition, replace boot files with SDK 11.x prebuilts + custom Image + k3-am62-lp-sk.dtb',
+    'Set up TFTP/NFS dev loop on Mac host — U-Boot netboot env vars, macOS TFTP server, confirm sub-60-sec iteration cycle',
   ],
   ee: [
     'Final Gerber review — stackup, drill files, controlled-impedance spec sign-off',
