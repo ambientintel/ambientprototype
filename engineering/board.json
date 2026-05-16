@@ -249,19 +249,7 @@
       "updated": "May 14"
     }
   ],
-  "weekStatus": {
-    "Brian": {
-      "Mon": "yes",
-      "SU": "yes",
-      "M": "yes",
-      "T": "yes",
-      "TH": "yes",
-      "F": "yes"
-    },
-    "Isaac": {
-      "M": "yes"
-    }
-  },
+  "weekStatus": {},
   "team": [
     {
       "name": "Gavin",
@@ -306,5 +294,5 @@
       "discipline": "Biomedical Engineering"
     }
   ],
-  "boardWeek": 20
+  "boardWeek": 21
 }
