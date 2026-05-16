@@ -733,77 +733,80 @@ export default function FirmwarePage() {
         </div>
 
         {/* Pipeline strip */}
-        <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, padding: '14px 20px', marginBottom: 20, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, minWidth: 'max-content', paddingRight: 24 }}>
-            {PIPELINE_PHASES.map((phase, pi) => (
-              <div key={phase.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pi === 0 ? '0 24px 0 0' : '0 24px', borderRight: '1px solid #E5E7EB' }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>{phase.label}</div>
-                <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                  {phase.ids.map((id, si) => {
-                    const s = STEPS.find(x => x.id === id)!;
-                    const sc = SC[s.status];
-                    const isActive = active === id;
-                    return (
-                      <span key={id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-                        {si > 0 && <span style={{ display: 'inline-block', width: 12, height: 1, background: '#E5E7EB', margin: '0 -2px', alignSelf: 'center' }} />}
-                        <button onClick={() => setActive(id)} title={s.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 8px', borderRadius: 7, border: isActive ? '1.5px solid #2563EB' : `1px solid ${sc.border}`, background: isActive ? '#EFF6FF' : sc.bg, cursor: 'pointer', transition: 'all 0.12s', minWidth: 44 }}>
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: isActive ? '#2563EB' : '#6B7280', fontWeight: isActive ? 600 : 400 }}>{s.phase}</span>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-            {/* Production Release milestone */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 24, paddingRight: 4, flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: 24, height: 1, background: designFrozen || ready ? 'linear-gradient(90deg,#E5E7EB,#2563EB)' : '#E5E7EB' }} />
-                <svg width="6" height="10" viewBox="0 0 6 10" fill="none" style={{ flexShrink: 0 }}>
-                  <path d="M1 1l4 4-4 4" stroke={designFrozen || ready ? '#2563EB' : '#D1D5DB'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: designFrozen || ready ? '#2563EB' : '#9CA3AF', whiteSpace: 'nowrap' }}>
-                  {designFrozen ? 'Saved ✓' : 'Goal'}
-                </div>
-                <button
-                  onClick={toggleFreeze}
-                  className={designFrozen ? 'df-frozen' : ready ? 'df-ready' : ''}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 9,
-                    padding: '8px 14px', borderRadius: 9,
-                    cursor: ready || designFrozen ? 'pointer' : 'default',
-                    whiteSpace: 'nowrap',
-                    ...(!(designFrozen || ready) && { background: '#F9FAFB', border: '1.5px dashed #D1D5DB' }),
-                    transition: 'all 0.25s',
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-                    {designFrozen || ready ? (
-                      <>
-                        <path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke="#2563EB" strokeWidth="1.6" strokeLinecap="round"/>
-                        <circle cx="8" cy="8" r="2.2" fill="#2563EB" fillOpacity="0.25"/>
-                      </>
-                    ) : (
-                      <>
-                        <rect x="4" y="7" width="8" height="7" rx="1.5" stroke="#9CA3AF" strokeWidth="1.4"/>
-                        <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="#9CA3AF" strokeWidth="1.4" strokeLinecap="round"/>
-                      </>
-                    )}
-                  </svg>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
-                    <span className="df-title" style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: designFrozen ? '#2563EB' : ready ? '#1D4ED8' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-                      {designFrozen ? 'Released ✓' : 'Production Release'}
-                    </span>
-                    <span className="df-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF', whiteSpace: 'nowrap' }}>
-                      {designFrozen ? (frozenDate ? `Locked ${frozenDate}` : 'Firmware locked') : ready ? 'Ready — click to lock' : `${Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}% complete`}
-                    </span>
+        <div style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12, marginBottom: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'stretch' }}>
+          {/* Scrollable phases — minWidth:0 lets flex child shrink so overflowX triggers */}
+          <div style={{ flex: 1, minWidth: 0, overflowX: 'auto', padding: '14px 0 14px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, minWidth: 'max-content' }}>
+              {PIPELINE_PHASES.map((phase, pi) => (
+                <div key={phase.label} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pi === 0 ? '0 24px 0 0' : '0 24px', borderRight: '1px solid #E5E7EB' }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#9CA3AF' }}>{phase.label}</div>
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                    {phase.ids.map((id, si) => {
+                      const s = STEPS.find(x => x.id === id)!;
+                      const sc = SC[s.status];
+                      const isActive = active === id;
+                      return (
+                        <span key={id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+                          {si > 0 && <span style={{ display: 'inline-block', width: 12, height: 1, background: '#E5E7EB', margin: '0 -2px', alignSelf: 'center' }} />}
+                          <button onClick={() => setActive(id)} title={s.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 8px', borderRadius: 7, border: isActive ? '1.5px solid #2563EB' : `1px solid ${sc.border}`, background: isActive ? '#EFF6FF' : sc.bg, cursor: 'pointer', transition: 'all 0.12s', minWidth: 44 }}>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: isActive ? '#2563EB' : '#6B7280', fontWeight: isActive ? 600 : 400 }}>{s.phase}</span>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
+                          </button>
+                        </span>
+                      );
+                    })}
                   </div>
-                </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Production Release — pinned right, never scrolls */}
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', borderLeft: '1px solid #E5E7EB' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: 24, height: 1, background: designFrozen || ready ? 'linear-gradient(90deg,#E5E7EB,#2563EB)' : '#E5E7EB' }} />
+              <svg width="6" height="10" viewBox="0 0 6 10" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M1 1l4 4-4 4" stroke={designFrozen || ready ? '#2563EB' : '#D1D5DB'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.14em', color: designFrozen || ready ? '#2563EB' : '#9CA3AF', whiteSpace: 'nowrap' }}>
+                {designFrozen ? 'Saved ✓' : 'Goal'}
               </div>
+              <button
+                onClick={toggleFreeze}
+                className={designFrozen ? 'df-frozen' : ready ? 'df-ready' : ''}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 9,
+                  padding: '8px 14px', borderRadius: 9,
+                  cursor: ready || designFrozen ? 'pointer' : 'default',
+                  whiteSpace: 'nowrap',
+                  ...(!(designFrozen || ready) && { background: '#F9FAFB', border: '1.5px dashed #D1D5DB' }),
+                  transition: 'all 0.25s',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                  {designFrozen || ready ? (
+                    <>
+                      <path d="M8 1v14M1 8h14M3.05 3.05l9.9 9.9M12.95 3.05l-9.9 9.9" stroke="#2563EB" strokeWidth="1.6" strokeLinecap="round"/>
+                      <circle cx="8" cy="8" r="2.2" fill="#2563EB" fillOpacity="0.25"/>
+                    </>
+                  ) : (
+                    <>
+                      <rect x="4" y="7" width="8" height="7" rx="1.5" stroke="#9CA3AF" strokeWidth="1.4"/>
+                      <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="#9CA3AF" strokeWidth="1.4" strokeLinecap="round"/>
+                    </>
+                  )}
+                </svg>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
+                  <span className="df-title" style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: designFrozen ? '#2563EB' : ready ? '#1D4ED8' : '#9CA3AF', letterSpacing: '-0.01em', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                    {designFrozen ? 'Released ✓' : 'Production Release'}
+                  </span>
+                  <span className="df-sub" style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: designFrozen ? '#2563EB' : ready ? '#2563EB' : '#9CA3AF', whiteSpace: 'nowrap' }}>
+                    {designFrozen ? (frozenDate ? `Locked ${frozenDate}` : 'Firmware locked') : ready ? 'Ready — click to lock' : `${Math.round((doneCount / CHECKLIST_ITEMS.length) * 100)}% complete`}
+                  </span>
+                </div>
+              </button>
             </div>
           </div>
         </div>
