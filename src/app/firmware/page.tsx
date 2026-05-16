@@ -476,20 +476,21 @@ const CHECKLIST_ITEMS = [
   'Custom DTB build validated (k3-am62-lp-sk-ambient.dtb)',
   'IWR6843AOP prototyped on Raspberry Pi',
   'AM62 SoC locked: Octavo OSD62x-PM (ADR-0002)',
-  'SK-AM62-LP hardware received',
-  'First boot with prebuilt SD image',
-  'First boot with custom kernel',
-  'Patches directory initialized',
+  'SK-AM62-LP (PROC124E2, HS-FS) hardware received',
+  'First boot confirmed (SDK 12.x WIC image, 2026-05-15)',
+  'OTA strategy: Mender self-hosted (ADR-0003)',
+  'First boot with custom kernel (SDK 11.x)',
+  'IWR6843AOP SPI/GPIO kernel driver patch applied',
   'JTAG / XDS110 debug loop working',
   'TFTP/NFS dev loop set up',
   'meta-ambient Yocto layer scaffolded',
-  'Mender integration in Yocto image',
+  'Mender integration in Yocto image (meta-mender)',
   'Device provisioning tested end-to-end',
   'Secure boot tested on HS-FS device',
   'CI pipeline building on every push',
 ];
 
-const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10]);
+const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11]);
 
 const OPEN_DECISIONS = [
   'Wi-Fi module: Murata 1YN vs CYW43xx — TI SDK driver maturity check pending',
