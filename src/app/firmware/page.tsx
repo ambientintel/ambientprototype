@@ -195,27 +195,53 @@ const STEPS: Step[] = [
   },
   {
     id: 'jtag', phase: '08', title: 'JTAG / Hardware Debug', status: 'pending', tag: 'Best Practice', time: '~1 hr setup',
-    summary: 'XDS110 on SK-AM62-LP gives hardware breakpoints and CPU register access before the OS boots.',
+    summary: 'XDS110 on SK-AM62-LP gives hardware breakpoints and CPU register access before the OS boots. OpenOCD 0.12.0 + ti_k3.cfg (SOC=am625) confirmed working with the onboard XDS110 on J18.',
     sections: [
       {
-        heading: 'Hardware setup',
-        body: 'The SK-AM62-LP has an onboard XDS110 emulator on connector J18 (micro-USB-B, separate from the UART debug port on J17). Connect J17 for console output and J18 for JTAG debug control. Power the board first, then connect the JTAG USB.',
+        heading: 'Hardware connections',
+        body: 'J18 (XDS110 JTAG) is micro-USB-B — looks identical to J17 (UART). Connect BOTH: J17 for console, J18 for JTAG. Power the board first (USB-C into J13), then plug J18. The XDS110 will enumerate as a Texas Instruments USB device — no /dev/tty entry appears for J18.',
+        warnings: [
+          'Power board first, THEN connect J18. Connecting J18 before power can confuse the XDS110 firmware and prevent it from enumerating correctly.',
+        ],
       },
       {
-        heading: 'OpenOCD + GDB',
+        heading: 'Install and run OpenOCD (Mac host, outside Docker)',
         commands: [
-          { label: 'start OpenOCD server', code: 'openocd -f interface/ti_xds110.cfg -f target/ti_am625.cfg' },
-          { label: 'connect GDB in a second terminal', code: 'aarch64-oe-linux-gdb vmlinux\n(gdb) target extended-remote :3333\n(gdb) monitor reset halt\n(gdb) continue' },
+          { label: 'install once', code: 'brew install openocd\n# → Open On-Chip Debugger 0.12.0' },
+          { label: 'start OpenOCD server (from ambientfirmware/ root)', code: 'openocd -f workspace/jtag/am625-xds110.cfg\n\n# Expected output:\n# Info : XDS110: connected\n# Info : XDS110: firmware version ...\n# Info : [am625.cpu.a53.0] Cortex-A53 r0p4 processor detected\n# Info : [am625.cpu.a53.1] Cortex-A53 r0p4 processor detected\n# Info : [am625.cpu.a53.2] Cortex-A53 r0p4 processor detected\n# Info : [am625.cpu.a53.3] Cortex-A53 r0p4 processor detected\n# Listening on port 3333 for gdb connections' },
+        ],
+        warnings: [
+          'Interface file is interface/xds110.cfg — NOT interface/ti_xds110.cfg (old name). Target is ti_k3.cfg with SOC=am625 — NOT ti_am625.cfg. Both wrong names produce "file not found" errors.',
+        ],
+      },
+      {
+        heading: 'Quick verification — no GDB needed',
+        commands: [
+          { label: 'telnet console (second terminal, while OpenOCD is running)', code: 'nc localhost 4444\n\n# In the OpenOCD console:\ntargets                           # list all targets and their state\nam625.cpu.a53.0 halt              # halt core 0 (board keeps running on other cores)\nam625.cpu.a53.0 reg pc            # read program counter\nam625.cpu.a53.0 resume            # resume\n\n# Read DTB load address (typical: 0x88000000)\nmdw 0x88000000 10                 # should show DTB magic: 0xedfe0dd0' },
+        ],
+      },
+      {
+        heading: 'GDB kernel debug (from inside Docker container)',
+        body: 'OpenOCD runs on the Mac host. The Docker container reaches it at host.docker.internal. GDB port 3334 = am625.cpu.a53.0 (first A53 core).',
+        commands: [
+          { label: 'GDB port map', code: '# 3333: sysctrl (M3)   3334: a53.0 ← use this\n# 3335: a53.1          3336: a53.2   3337: a53.3\n# 3338: main0_r5.0    3339: gp_mcu (M4F)' },
+          { label: 'attach GDB (inside container)', code: 'source /workspace/sdk/ti-processor-sdk-linux-am62xx-evm/kernel-env.sh\naarch64-oe-linux-gdb vmlinux\n\n(gdb) target extended-remote host.docker.internal:3334\n(gdb) monitor halt\n(gdb) info registers\n(gdb) hbreak start_kernel    # hardware breakpoint at kernel entry\n(gdb) continue               # board resumes; halts at start_kernel on next boot' },
+          { label: 'inspect DTB in memory', code: '(gdb) monitor mdw 0x88000000 4\n# First word should be DTB magic: 0xedfe0dd0' },
+        ],
+        warnings: [
+          'aarch64-oe-linux-gdb is inside the SDK cross-toolchain. It is available in the Docker container after sourcing kernel-env.sh. Do NOT use a bare gdb from macOS — it does not support AArch64 remote debugging.',
+          'vmlinux must have debug symbols (built with CONFIG_DEBUG_INFO=y). The SDK prebuilt kernel does not include symbols — hbreak/symbolic backtraces require a from-source kernel build.',
         ],
       },
       {
         heading: 'Essential debug techniques',
         checklist: [
-          'Set hardware breakpoints before kernel init to catch early panics: hbreak start_kernel',
-          'Inspect DTB in memory: x/40xw 0x88000000 (typical DTB load address)',
-          'Read UART status registers directly to debug silent-boot issues without console',
-          'JTAG works even when the board appears completely hung — always try JTAG before re-burning SD',
-          'R5 core debug: CCS can attach to both R5 and A53 clusters simultaneously. Attach R5 to debug DDR training failures before the A53 is running.',
+          'JTAG works even when the board appears completely hung — always try JTAG before re-burning SD or assuming hardware failure',
+          'Halt a53.0, read PC, and look up the address in System.map to locate where a hang is occurring',
+          'Inspect DTB in memory: monitor mdw 0x88000000 4 — first word is 0xedfe0dd0 (DTB magic) if loaded correctly',
+          'R5 debug before A53 starts: attach to main0_r5.0 (port 3338) to debug DDR training or SBL failures on the custom board',
+          'Bump adapter speed after link verified: in nc localhost 4444 → adapter speed 4000 (4 MHz is reliable for XDS110)',
+          'Board config and GDB init script: workspace/jtag/am625-xds110.cfg and workspace/jtag/gdb-kernel.init',
         ],
       },
     ],
