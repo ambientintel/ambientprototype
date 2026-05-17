@@ -217,7 +217,7 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Step 16A: UART node verify on dev board — ls /dev/ttyS*, stty -F /dev/ttyS1 921600, pip install pyserial; confirm correct device before custom board arrives', owner: 'BSP' },
     { task: 'Step 16B–D: GPIO DTS nodes (NRESET/SOP[2:0]/NERROR_OUT), radar/gpio.py gpiod wrapper in ambientapp, deployment dry run on Arago rootfs', owner: 'BSP+SW' },
     { task: 'Fix ambientapp UART default: AMBIENT_RADAR_DEVICE defaults to /dev/ttyS2 (console) — update DeviceAllow in ambient.service and set correct device in /etc/ambient/ambient.env after Step 16A identifies the radar UART', owner: 'SW' },
-    { task: 'ambientapp events module: 6 components (MQTT publisher, shadow client, IoT cred refresh, parquet writer, offline buffer, clock sync monitor) — blocks first on-board pilot', owner: 'SW' },
+    { task: 'ambientapp events module: parquet writer + S3 uploader DONE on feat/telemetry-module (src/ambient/storage/, 11 tests). 5 remaining: MQTT publisher, shadow client, IoT cred refresh, offline buffer, clock sync monitor — blocks first on-board pilot', owner: 'SW' },
   ],
   ee: [
     { task: 'Update MCU.SchDoc: add 128 GB eMMC (Kingston EMMC128G-IT3 or Micron MTFC128GAYABN, industrial pSLC) on MMC1; add micro SD card slot (Molex 503182-1853) on MMC0 as EVT-only DNP footprint; add SYSBOOT DFU strap resistors for factory programming', owner: 'HW' },
@@ -270,6 +270,7 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Step 16A (do now, no hardware needed): on dev board — ls /dev/ttyS*, stty -F /dev/ttyS1 921600, pip install pyserial; establish correct radar UART device before custom board arrives',
     'Step 15 (blocked): order Ethernet cable + USB-C adapter; once received, set up macOS TFTP server and U-Boot netboot env vars',
     'Step 16B: GPIO DTS nodes — add NRESET/SOP[2:0]/NERROR_OUT to ambient DTS, rebuild DTB, verify with gpiodetect on dev board',
+    'ambientapp: merge feat/telemetry-module → main (parquet writer + S3 uploader done); then implement MQTT publisher — next highest-priority events module component',
   ],
   ee: [
     'MCU.SchDoc: add 128 GB eMMC on MMC1 + micro SD slot (EVT-only DNP) on MMC0 + DFU SYSBOOT strap resistors',
@@ -308,7 +309,7 @@ const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text
   { domain: 'EE Hardware',       urgency: 'low',    text: 'RESOLVED 2026-05-17 — Storage architecture locked: 128 GB industrial pSLC eMMC (Kingston EMMC128G-IT3 or Micron MTFC128GAYABN) on MMC1 as primary storage. Micro SD card slot (Molex 503182-1853) on MMC0: EVT populated / DVT DNP / PVT removed. Factory programming: USB DFU (DVT+). Mender layout: boot 512 MB | rootfs-A 4 GB | rootfs-B 4 GB | data 120 GB. Radar parquet files write to /data/radar/YYYY/MM/DD/HH/ at 15-min S3 upload cadence; local copy retained 30+ days.' },
   { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk; blocked on connectivity + layer count decisions before Gerbers can be submitted.' },
   { domain: 'EE Hardware',       urgency: 'medium', text: 'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape — 10-layer likely required per Octavo layout guide. Decide before Gerber submission.' },
-  { domain: 'Firmware',          urgency: 'medium', text: 'ambientapp events module: 6 components not yet implemented (MQTT publisher, shadow client, IoT credential refresh, parquet writer, offline buffer, clock sync monitor). Blocks first on-board pilot.' },
+  { domain: 'Firmware',          urgency: 'medium', text: 'ambientapp events module: parquet writer + S3 uploader DONE (feat/telemetry-module). 5 remaining: MQTT publisher (QoS 1 fall alerts, QoS 0 aggregates, heartbeats), shadow client, IoT credential refresh loop, offline buffer, clock sync monitor. Blocks first on-board pilot.' },
   { domain: 'Mobile App',        urgency: 'high',   text: 'iOS IPA OTA install link expires May 25 (8 days from 2026-05-17) — EAS build 36dbf33f. Distribute to nurses via TestFlight or OTA link immediately or the build window closes.' },
   { domain: 'Web App',           urgency: 'high',   text: 'VERCEL_TOKEN + GITHUB_TOKEN exposed in chat transcript May 14 — rotate immediately. Mint new tokens, run vercel env rm/add, revoke old before any external sharing.' },
   { domain: 'Cloud Engineering', urgency: 'medium', text: 'CDK TelemetryStack IaC ≠ deployed state — reconciler env+IAM applied via direct AWS API (commits 3ac32f3 + a93dee3 updated source but CDK deploy never ran). Run cdk deploy TelemetryStack to restore IaC-as-deployed parity.' },

@@ -29,7 +29,7 @@ const SERVICES = [
 
 const PATHS = [
   { label: 'Hot path',       tag: '< 2s',       flow: ['Device MQTT', 'IoT Rule', 'Lambda', 'DynamoDB', 'SNS → Staff'],                            desc: 'Fall alerts. QoS 1 guaranteed delivery, sub-2-second latency budget.' },
-  { label: 'Cold path',      tag: 'New',         flow: ['Device (5-min Parquet)', 'url-minter', 'Presigned URL', 'S3'],                             desc: 'Device writes Parquet batches locally and uploads directly to S3 — no MQTT for analytic data.' },
+  { label: 'Cold path',      tag: 'New',         flow: ['Device (15-min Parquet)', 'url-minter', 'Presigned URL', 'S3'],                            desc: 'Device writes rolling parquet files locally (/data/radar/YYYY/MM/DD/HH/) and uploads every 15 min via presigned PUT. Local copy retained 30 days. Implemented: src/ambient/storage/ in ambientapp.' },
   { label: 'Cold path',      tag: 'Legacy',      flow: ['Device MQTT', 'IoT Rule', 'Firehose', 'S3 (JSON→Parquet)'],                                desc: 'Being retired. Dual-writes alongside the new path during migration.' },
   { label: 'Narrative',      tag: '12h cadence', flow: ['EventBridge cron', 'SQS fanout', 'Ella Lambda', 'Bedrock Claude', 'DynamoDB'],             desc: 'De-identified daily summaries generated per subject, surfaced in the Nurse Dashboard.' },
   { label: 'Nurse/Admin API',tag: 'REST',        flow: ['API Gateway', 'Cognito JWT', 'FastAPI Lambda', 'DynamoDB'],                                desc: 'Twelve endpoints, row-level facility scoping.' },
@@ -1023,7 +1023,7 @@ function ArchDiagram() {
         </Group>
         <Group label="Ambient Device" type="device" note="3 per room">
           <Row><Node label="mmWave Radar" sub="IWR6843AOP on AM62x" type="device" /></Row>
-          <Row><Node label="ambientapp agent" sub="WAL + spool · 5-min Parquet" type="device" /></Row>
+          <Row><Node label="ambientapp agent" sub="WAL + spool · 15-min Parquet" type="device" /></Row>
         </Group>
         <Group label="AWS IoT Core" type="iot" note="mTLS · X.509" iac="iot-core">
           <Row><Node label="Credentials Provider" sub="role alias → temp AWS creds" type="iot" /></Row>
@@ -1052,7 +1052,7 @@ function ArchDiagram() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <Group label="Cold path (new) — device-side Parquet" type="coldnew" iac="url-minter">
           <Row>
-            <Node label="Device" sub="5-min batch · ZSTD" type="device" />
+            <Node label="Device" sub="15-min batch · ZSTD" type="device" />
             <Arr />
             <Node label="url-minter" sub="SigV4 · Shadow scope check" type="coldnew" />
             <Arr />

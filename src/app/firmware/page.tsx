@@ -430,7 +430,7 @@ const STEPS: Step[] = [
           'IWR6843AOP interface step complete: UART node verified, GPIO DTS built, gpiod wrapper in radar/gpio.py, deployment dry run passed',
           'Radar boot mode locked (Step 17)',
           'Python 3.11+ on rootfs with aws-iot-sdk-python-v2, pyarrow, requests, requests-aws4auth (~55 MB)',
-          'ambientapp events module complete — MQTT publisher, shadow client, IoT credential refresh, parquet writer, offline buffer, clock sync monitor',
+          'ambientapp events module — parquet writer + S3 uploader: DONE (src/ambient/storage/ on feat/telemetry-module, 11 tests). Still needed: MQTT publisher, shadow client, IoT credential refresh, offline buffer, clock sync monitor',
           'Device cert provisioned via ambientcloud-admin provision-batch and scp\'d to /etc/ambient/credentials/',
         ],
       },
@@ -454,7 +454,7 @@ const STEPS: Step[] = [
         table: {
           cols: ['Path', 'Contents', 'Written by'],
           rows: [
-            ['/data/radar/YYYY/MM/DD/HH/', 'Parquet files, zstd, 256–512 MB each', 'ambientapp parquet writer'],
+            ['/data/radar/YYYY/MM/DD/HH/', 'Parquet files, zstd level 3, 256–512 MB each. Active file: .parquet.tmp. On rotation: rename → .parquet, .uploaded sidecar written after confirmed S3 PUT.', 'src/ambient/storage/parquet_writer.py + s3_uploader.py'],
             ['/data/ambient/pending_alerts.jsonl', 'Fall alert offline queue, survives crashes', 'FallAlertPublisher'],
             ['/data/ambient/mqtt_buffer/', 'MQTT offline buffer, 24h max, oldest-first drop', 'TelemetryPublisher'],
             ['/etc/ambient/credentials/', 'X.509 cert, private key, config.json', 'ambientcloud-admin provision-batch'],
@@ -462,15 +462,32 @@ const STEPS: Step[] = [
         },
       },
       {
+        heading: 'Storage module configuration',
+        body: 'The storage subpackage (src/ambient/storage/) is wired automatically in app.py when AMBIENT_UPLOAD_LAMBDA_URL is set. On startup: (1) renames any stale .parquet.tmp crash-recovery files, (2) queues all un-uploaded .parquet files for immediate upload, (3) starts the hourly RetentionManager. StorageManager.stop() on SIGTERM flushes the active parquet before exit.',
+        table: {
+          cols: ['Env var', 'Default', 'Description'],
+          rows: [
+            ['AMBIENT_DATA_ROOT',        '/data/radar',   'Root dir for parquet files on Mender data partition. install.sh creates this and chowns to ambient user.'],
+            ['AMBIENT_UPLOAD_LAMBDA_URL', '(required)',   'Lambda URL for url-minter in ambientcloud — returns presigned S3 PUT URL. Leave blank to write locally without uploading (dev mode).'],
+            ['AMBIENT_RETENTION_DAYS',   '30',            'Days to retain .parquet files locally after upload. Age + space (80%) policies run hourly via RetentionManager.'],
+          ],
+        },
+        warnings: [
+          'ambient.service has ReadWritePaths=/data — /data (Mender data partition) must be mounted before the service starts. deploy/ambient.service includes After=local-fs.target for this. Verify /data is in /etc/fstab on the production rootfs.',
+          'install.sh checks for /data mount and creates /data/radar owned by the ambient user. If /data is not mounted at install time, a warning is printed and the directory is not created — re-run install.sh after the partition is mounted.',
+        ],
+      },
+      {
         heading: 'Install on device',
-        body: 'Credentials must be in place before install. deploy/install.sh writes the systemd unit and installs the Python package.',
+        body: 'Credentials must be in place before install. deploy/install.sh writes the systemd unit, installs the Python package, and creates /data/radar.',
         commands: [
           { label: '1. Transfer credentials (from provisioning machine)', code: 'scp -r /path/to/credentials/ root@<device-ip>:/etc/ambient/credentials/' },
           { label: '2. Clone and install (once networking is up)', code: 'git clone https://github.com/ambientintel/ambientapp\ncd ambientapp\nbash deploy/install.sh' },
-          { label: '3. Start service and watch logs', code: 'systemctl start ambient\njournalctl -u ambient -f\n# Expected: radar configured, MQTT connected, frames publishing' },
+          { label: '3. Set storage env vars in /etc/ambient/ambient.env', code: '# Add to /etc/ambient/ambient.env:\nAMBIENT_DATA_ROOT=/data/radar\nAMBIENT_UPLOAD_LAMBDA_URL=https://<url-minter-id>.lambda-url.us-east-1.on.aws/\nAMBIENT_RETENTION_DAYS=30' },
+          { label: '4. Start service and watch logs', code: 'systemctl start ambient\njournalctl -u ambient -f\n# Expected: storage manager started, parquet .tmp file opens\n# Every 15 min: "rotated parquet: radar_...parquet (X.X MB)"\n# Then: "uploaded radar_...parquet"' },
         ],
         warnings: [
-          'Do not deploy before ambientapp events module is complete — see ambientintel/ambientapp. The MQTT publisher, shadow client, and offline buffer are not yet implemented.',
+          'Do not deploy before remaining events module components are complete — MQTT publisher, shadow client, and offline buffer are not yet implemented. Parquet writer + S3 uploader are DONE on feat/telemetry-module.',
           'Private key lives on filesystem at /etc/ambient/credentials/private.key (chmod 600). Moving to OP-TEE TrustZone-backed storage is deferred to post-pilot per device-cloud-contract.md §11.',
         ],
       },
@@ -558,7 +575,7 @@ const STEPS: Step[] = [
           ],
         },
         warnings: [
-          'Parquet files are RETAINED on device after S3 upload — local copy is the backup. A separate retention management job (not yet implemented) should purge files older than 30 days when /data usage exceeds 80%.',
+          'Parquet files are RETAINED on device after S3 upload — local copy is the backup. RetentionManager (src/ambient/storage/retention.py) runs hourly: age policy deletes .parquet + .uploaded pairs older than AMBIENT_RETENTION_DAYS (default 30); space policy evicts oldest uploaded files when /data exceeds 80% full. Un-uploaded files are never deleted by either policy.',
           'Upload cadence: every 15 minutes via presigned S3 PUT (Lambda URL + SigV4). File is finalized and uploaded when it reaches 256–512 MB or 15 minutes elapses, whichever comes first.',
           'Data rate: IWR6843AOP at 921.6 kbaud produces ~50–100 KB/s raw radar frames. Compressed parquet: ~15–30 KB/s. Daily local storage: 1.3–2.6 GB/day. 120 GB data partition holds 46–92 days before rotation.',
         ],
@@ -714,7 +731,7 @@ const OPEN_DECISIONS = [
   'OP-TEE trusted app scope — key storage only, or also fall-event timestamp signing?',
   'CI self-hosted runner strategy for 14 GB SDK dependency',
   'Connectivity: wired Ethernet / Wi-Fi / BLE / cellular mix — drives schematic, antenna count, and certification scope',
-  'ambientapp events module not yet implemented: MQTT publisher (QoS 1 fall alerts, QoS 0 aggregates, heartbeats), shadow client, IoT credential refresh loop, parquet writer + S3 batch upload, offline buffer, clock sync monitor — see device-cloud-contract.md v0.2',
+  'ambientapp events module — parquet writer + S3 uploader: DONE on feat/telemetry-module (src/ambient/storage/, 11 tests, RetentionManager included). Still needed: MQTT publisher (QoS 1 fall alerts, QoS 0 aggregates, heartbeats), shadow client, IoT credential refresh loop, offline buffer, clock sync monitor — see device-cloud-contract.md v0.2',
 ];
 
 // ── Page component ─────────────────────────────────────────────────────────────
