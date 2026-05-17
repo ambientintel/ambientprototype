@@ -34,8 +34,8 @@ const DOMAINS = [
       { k: 'SDK',     v: '11.02.08.02' },
       { k: 'OTA',     v: 'Mender' },
     ],
-    description: 'TI Processor SDK 11 · Yocto · U-Boot · custom DTB for IWR6843AOP integration. Build pipeline complete. First boot achieved 2026-05-15 (SK-AM62-LP PROC124E2, SDK 12.x WIC image). Next: custom kernel boot + TFTP/NFS dev loop.',
-    currentStep: '11 · TFTP/NFS Dev Loop',
+    description: 'TI Processor SDK 11 · Yocto · U-Boot · custom DTB for IWR6843AOP integration. Build pipeline complete. SDK 12.x WIC first boot 2026-05-15. Custom kernel 6.12.57-ti booting 2026-05-16. Ambient DTB booting 2026-05-16 — model="Ambient Intel AM62x-LP". GRUB EFI devicetree directive controls DTB (not fdtfile). Next: JTAG debug loop (J18), TFTP/NFS dev loop, IWR6843AOP driver patch.',
+    currentStep: '14 · JTAG / Hardware Debug',
     freezeLabel: 'Firmware Freeze',
   },
   {
@@ -212,17 +212,17 @@ const INTEGRATIONS = [
 
 const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
   firmware: [
-    { task: 'Boot custom kernel (SDK 11.x) — replace WIC image boot files with tiboot3-am62x-hs-fs-evm.bin + tispl.bin + u-boot.img + Image + k3-am62-lp-sk.dtb', owner: 'BSP' },
-    { task: 'Set up TFTP/NFS dev loop — macOS TFTP server + U-Boot netboot env vars; cuts SD reflash cycle from ~10 min to <60 sec', owner: 'BSP' },
-    { task: 'Boot ambient DTB (k3-am62-lp-sk-ambient.dtb) — select via extlinux.conf, confirm model string and compatible list', owner: 'BSP' },
-    { task: 'Pin mux spreadsheet for OSD62x-PM — map all AM62 interfaces (UART, SPI, I2C, GPIO) against Octavo ball-out; gate custom board schematic', owner: 'HW+BSP' },
-    { task: 'Patch kernel for IWR6843AOP SPI/GPIO — add device node to ambient DTB, verify mmWave driver binds on boot', owner: 'BSP' },
+    { task: 'Set up JTAG / XDS110 debug loop (Step 14) — connect J18 micro-USB-B while J17 UART is active; attach OpenOCD or CCS to AM625 for hardware debug', owner: 'BSP' },
+    { task: 'Set up TFTP / NFS dev loop (Step 15) — macOS TFTP server + U-Boot netboot env vars; cuts SD reflash from ~10 min to <60 sec per iteration', owner: 'BSP' },
+    { task: 'Patch kernel for IWR6843AOP SPI/GPIO (Step 16) — add device node to ambient DTB, load mmWave driver, verify it binds on boot', owner: 'BSP' },
+    { task: 'Lock radar boot mode (Step 17) — host-fed SPI preferred; this decision gates EE fab order (QSPI flash present or absent on radar island BOM)', owner: 'BSP+HW' },
+    { task: 'Implement ambientapp events module — 6 components (MQTT publisher, shadow client, IoT cred refresh, parquet writer, offline buffer, clock sync monitor) before board deployment', owner: 'SW' },
   ],
   ee: [
-    { task: 'Submit Gerber package to fab — confirm 8-layer stackup, drill files, impedance spec', owner: 'Layout' },
-    { task: 'Place BOM order: IWR6843AOP, OSD62x-PM, decoupling network, connectors', owner: 'Procurement' },
-    { task: 'Assemble EVT-0.1 boards and perform power rail sequencing bring-up', owner: 'HW' },
-    { task: 'Validate JTAG, UART debug headers, and IWR6843AOP SPI connectivity on bench', owner: 'HW' },
+    { task: 'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — required before BOM finalization; drives antenna count and certification scope', owner: 'Lead+HW' },
+    { task: 'Wait for firmware Step 17 (radar boot mode lock) before finalizing radar island QSPI BOM — host-fed SPI = no QSPI, autonomous = QSPI present', owner: 'HW+BSP' },
+    { task: 'Confirm layer count: 8-layer or upgrade to 10-layer HDI per Octavo OSD62x-PM layout guide — decide before Gerber submission', owner: 'Layout+Lead' },
+    { task: 'Assemble EVT-0.1 boards and perform power rail sequencing bring-up (after fab order and lead time)', owner: 'HW' },
     { task: 'Open DHF and begin 21 CFR 820 design history documentation', owner: 'QA' },
   ],
   mobileapp: [
@@ -265,12 +265,12 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
 
 const SPRINT_FOCUS: Record<string, string[]> = {
   firmware: [
-    'Boot with custom kernel: mount WIC-flashed SD BOOT partition, replace boot files with SDK 11.x prebuilts + custom Image + k3-am62-lp-sk.dtb',
-    'Set up TFTP/NFS dev loop on Mac host — U-Boot netboot env vars, macOS TFTP server, confirm sub-60-sec iteration cycle',
+    'Step 14: connect J18 XDS110 JTAG while J17 UART is active; attach OpenOCD or CCS to AM625; verify halt/resume from debug host',
+    'Step 15: set up TFTP/NFS dev loop on Mac host — macOS TFTP server, U-Boot netboot env vars; confirm sub-60-sec iteration cycle',
   ],
   ee: [
-    'Final Gerber review — stackup, drill files, controlled-impedance spec sign-off',
-    'Place BOM order at DigiKey — confirm IWR6843AOP + OSD62x-PM lead times',
+    'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — this decision unlocks antenna BOM and certification scope',
+    'Confirm layer count (8 vs 10-layer HDI) and wait for firmware Step 17 (radar boot mode lock) before finalizing QSPI BOM and submitting Gerbers',
   ],
   mobileapp: [
     'Distribute iOS IPA to pilot nurses: send EAS OTA install link (13-day window) or submit to TestFlight',
@@ -298,18 +298,21 @@ const SPRINT_FOCUS: Record<string, string[]> = {
 // ── Open decisions ─────────────────────────────────────────────────────────────
 
 const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text: string }[] = [
+  { domain: 'Firmware',          urgency: 'high',   text: 'Radar boot mode: host-fed SPI vs autonomous QSPI (Step 17). Host-fed = no QSPI flash on radar island; autonomous = QSPI present. Blocks EE fab order — radar island BOM cannot be finalized until this is locked.' },
+  { domain: 'EE Hardware',       urgency: 'high',   text: 'Physical connectivity: Wi-Fi / Ethernet / BLE / cellular mix — drives antenna count, schematic additions, and regulatory/certification scope. Required before BOM finalization.' },
   { domain: 'Mechanical',        urgency: 'high',   text: 'PoE+ vs barrel jack — affects power routing, BOM cost, and enclosure cutout geometry.' },
-  { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk if Gerbers not submitted by end of sprint.' },
-  { domain: 'Firmware',          urgency: 'high',   text: 'Mender vs SWUpdate for OTA — Mender adds ~8 MB to rootfs; SWUpdate is lighter but less managed.' },
+  { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk; currently blocked on radar boot mode + connectivity decisions before Gerbers can be submitted.' },
+  { domain: 'EE Hardware',       urgency: 'medium', text: 'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape — decide before fab order. 10-layer likely required per Octavo layout guide.' },
+  { domain: 'Firmware',          urgency: 'medium', text: 'ambientapp events module: 6 components not yet implemented (MQTT publisher, shadow client, IoT credential refresh, parquet writer, offline buffer, clock sync monitor). Blocks first on-board pilot.' },
   { domain: 'Cloud Engineering', urgency: 'low',    text: 'Firehose retirement timeline — 90-day window after all facilities reach parquet_only; not yet contractually nailed down.' },
   { domain: 'Web App',           urgency: 'medium', text: 'Ella narrative poll interval — 30 s vs WebSocket for real-time nurse alert delivery.' },
-  { domain: 'Firmware',          urgency: 'low',    text: 'Kernel version pin: 6.1 LTS vs 6.6 LTS — both supported by TI SDK 11, no urgency.' },
   { domain: 'Mechanical',        urgency: 'low',    text: 'Enclosure finish: matte vs glossy ABS — cosmetic only, deferred to Rev B.' },
 ];
 
 // ── Cross-domain blockers ──────────────────────────────────────────────────────
 
 const BLOCKERS: { blocked: string; blocking: string; issue: string }[] = [
+  { blocked: 'EE Hardware',       blocking: 'Firmware',     issue: 'Radar island QSPI BOM (flash present or absent) cannot be finalized until firmware Step 17 (radar boot mode) is locked — fab order cannot be placed until this closes' },
   { blocked: 'Firmware',          blocking: 'EE Hardware',  issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
   { blocked: 'Mobile App',        blocking: 'Apple',        issue: 'Apple account -20209 lock still blocking direct Apple Developer Portal API — workaround (Admin ASC API key) in use; build queued' },
   { blocked: 'Mechanical',        blocking: 'EE Hardware',  issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },

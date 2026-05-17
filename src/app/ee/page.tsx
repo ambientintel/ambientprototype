@@ -293,9 +293,17 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'fab', phase: '07', title: 'Fab Order', status: 'pending', tag: 'Build', time: '10–14 day lead',
-    summary: 'Bare PCBs ordered from PCB fab. 8-layer, 0.062" FR4, HASL-LF, IPC Class 2 standard. Hardware on order.',
+    id: 'fab', phase: '07', title: 'Fab Order', status: 'blocked', tag: 'Build', time: '10–14 day lead',
+    summary: 'Fab order blocked pending three open decisions: (1) firmware Step 17 radar boot mode lock — determines whether QSPI flash is present on radar island BOM; (2) physical connectivity (Wi-Fi / Ethernet / cellular) — affects antenna count; (3) layer count (8 vs 10-layer HDI) confirmation. Once resolved, submit Gerbers per specification below.',
     sections: [
+      {
+        heading: 'What is blocking this step',
+        warnings: [
+          'BLOCKED — Radar island QSPI BOM depends on firmware Step 17 (radar boot mode lock). Host-fed SPI = no QSPI flash; autonomous QSPI = flash present. Do not finalize BOM or place order until this is decided.',
+          'BLOCKED — Physical connectivity decision (Wi-Fi / Ethernet / BLE / cellular) not yet made. Antenna count and schematic cannot be finalized.',
+          'DECISION NEEDED — Layer count (current spec: 8-layer; Octavo OSD62x-PM layout guide likely requires 10-layer HDI). Must be confirmed before Gerber submission.',
+        ],
+      },
       {
         heading: 'Fab specification',
         table: {
