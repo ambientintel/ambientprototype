@@ -194,8 +194,8 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'jtag', phase: '08', title: 'JTAG / Hardware Debug', status: 'pending', tag: 'Best Practice', time: '~1 hr setup',
-    summary: 'XDS110 on SK-AM62-LP gives hardware breakpoints and CPU register access before the OS boots. OpenOCD 0.12.0 + ti_k3.cfg (SOC=am625) confirmed working with the onboard XDS110 on J18.',
+    id: 'jtag', phase: '08', title: 'JTAG / Hardware Debug', status: 'done', tag: 'Best Practice', time: '~1 hr setup',
+    summary: 'JTAG verified 2026-05-17. OpenOCD 0.12.0 + XDS110 + ti_k3.cfg confirmed. A53 core 0 halted at EL1H, pc=0xffff800080010a00, MMU+caches enabled. Key: must add "transport select jtag", boot Linux fully before examine (TIFS must run to enable DBGEN), use telnet not nc.',
     sections: [
       {
         heading: 'Hardware connections — Stage 1: JTAG verification only',
@@ -225,9 +225,15 @@ const STEPS: Step[] = [
         ],
       },
       {
-        heading: 'Quick verification — no GDB needed',
+        heading: 'Verified attach sequence (confirmed 2026-05-17)',
+        body: 'Boot Linux fully before attaching — TIFS must run during boot to assert DBGEN and open debug ports. Examine will fail on a powered-but-not-booted board.',
         commands: [
-          { label: 'telnet console (second terminal, while OpenOCD is running)', code: 'nc localhost 4444\n\n# In the OpenOCD console:\ntargets                           # list all targets and their state\nam625.cpu.a53.0 halt              # halt core 0 (board keeps running on other cores)\nam625.cpu.a53.0 reg pc            # read program counter\nam625.cpu.a53.0 resume            # resume\n\n# Read DTB load address (typical: 0x88000000)\nmdw 0x88000000 10                 # should show DTB magic: 0xedfe0dd0' },
+          { label: 'telnet console (second terminal, while OpenOCD is running)', code: '# nc segfaults on macOS — use telnet:\ntelnet localhost 4444' },
+          { label: 'attach sequence (type one at a time at the > prompt)', code: '# 1. Check targets — all will show "examine deferred" initially\ntargets\n\n# 2. Examine A53 core 0 (works only after Linux has booted)\nam625.cpu.a53.0 arp_examine\n# → am625.cpu.a53.0: hardware has 6 breakpoints, 4 watchpoints\n\n# 3. Halt\nam625.cpu.a53.0 arp_halt\n# → halted in AArch64 state due to debug-request, current mode: EL1H\n# → cpsr: 0xa00003c5 pc: 0xffff800080010a00\n# → MMU: enabled, D-Cache: enabled, I-Cache: enabled\n\n# 4. Resume (select target first, then resume without prefix)\ntargets am625.cpu.a53.0\nresume' },
+        ],
+        warnings: [
+          'Do NOT attempt arp_examine before Linux is booted — the debug ports are locked by HS-FS security until TIFS runs. All targets will show "examine deferred" and arp_halt will segfault OpenOCD.',
+          'transport select jtag is required in the config — XDS110 auto-selects SWD which immediately disconnects on AM625.',
         ],
       },
       {
@@ -596,7 +602,7 @@ const CHECKLIST_ITEMS = [
   'CI pipeline building on every push',
 ];
 
-const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13]);
+const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]);
 
 const OPEN_DECISIONS = [
   'Wi-Fi module: Murata 1YN vs CYW43xx — TI SDK driver maturity check pending',
