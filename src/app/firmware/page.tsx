@@ -358,13 +358,76 @@ const STEPS: Step[] = [
     ],
   },
   {
+    id: 'radar-iface', phase: '11b', title: 'IWR6843AOP Interface Preparation', status: 'pending', tag: 'Dev Board', time: '~3–4 hrs',
+    summary: 'Prepare AM62 ↔ IWR6843AOP interfaces for custom board bring-up. The app (ambientapp/radar/uart.py) uses pyserial — no kernel driver patch needed for the data path. Work splits into: (A) UART device node verification, (B) GPIO DTS nodes for NRESET/SOP/NERROR, (C) Python gpiod wrapper in ambientapp, (D) deployment dry run. SPI is conditional on Step 17 boot mode decision.',
+    sections: [
+      {
+        heading: 'Interface reality vs. original plan',
+        body: 'The original "SPI/GPIO kernel driver patch" framing was inaccurate. ambientapp uses pyserial directly — no kernel module needed. GPIO control (NRESET/SOP/NERROR) does need DTS nodes. SPI is only needed for host-fed boot mode.',
+        table: {
+          cols: ['Interface', 'App handles it?', 'What actually needs doing'],
+          rows: [
+            ['UART data + CLI', 'Yes — pyserial at 921600 baud (radar/uart.py)', 'Verify /dev/ttyS* exists and baud rate is settable'],
+            ['NRESET GPIO', 'No — "not wired" per architecture.md', 'DTS GPIO node + Python gpiod wrapper in radar/gpio.py'],
+            ['SOP[2:0] GPIO', 'No', 'DTS GPIO nodes — set before NRESET release to control boot mode'],
+            ['NERROR_OUT GPIO', 'No', 'DTS GPIO input node — monitor in fault handler'],
+            ['SPI (host-fed boot only)', 'No — radar/boot.py not written', 'Blocked on Step 17 decision — NOT needed if autonomous QSPI chosen'],
+          ],
+        },
+      },
+      {
+        heading: 'Substep A — UART device node verification (dev board, do now)',
+        body: 'MAIN_UART0 is the console (/dev/ttyS2 on this board). The radar UART on the custom board will be MAIN_UART1. Verify it exists and accepts 921600 baud before the custom board arrives.',
+        commands: [
+          { label: 'check available UART nodes', code: 'ls -la /dev/ttyS*\n# Expect at minimum: /dev/ttyS2 (console = MAIN_UART0)\n# /dev/ttyS0 or /dev/ttyS1 = MAIN_UART1 (radar UART on custom board)\n\n# Test baud rate:\nstty -F /dev/ttyS1 921600 && echo "921600 OK"' },
+          { label: 'install pyserial and verify', code: 'pip install pyserial\npython3 -c "import serial; print(serial.__version__)"' },
+        ],
+      },
+      {
+        heading: 'Substep B — GPIO device tree nodes',
+        body: 'Add GPIO nodes to k3-am62-lp-sk-ambient.dts for NRESET, SOP[2:0], and NERROR_OUT. Pin numbers come from the OSD62x-PM ball map + interfaces-am62-radar.md — use XX as placeholder until the custom board schematic is captured.',
+        commands: [
+          { label: 'add to k3-am62-lp-sk-ambient.dts', code: '/* IWR6843AOP control GPIOs — pin numbers confirmed from OSD62x-PM ball map */\nradar_gpios {\n    compatible = "gpio-keys";\n    nreset-gpios = <&main_gpio0 XX GPIO_ACTIVE_LOW>;   /* output */\n    sop2-gpios   = <&main_gpio0 XX GPIO_ACTIVE_HIGH>;  /* output */\n    sop1-gpios   = <&main_gpio0 XX GPIO_ACTIVE_HIGH>;  /* output */\n    sop0-gpios   = <&main_gpio0 XX GPIO_ACTIVE_HIGH>;  /* output */\n    nerror-gpios = <&main_gpio0 XX GPIO_ACTIVE_LOW>;   /* input  */\n};' },
+          { label: 'rebuild DTB and boot, then verify', code: 'cd /workspace/device-tree && make build KERNEL_SRC=$KERNEL_SRC\n# copy DTB to SD BOOT partition, reboot\n\n# After boot:\ngpiodetect          # list GPIO chips\ngpioinfo gpiochip0  # list all lines — confirm radar lines appear' },
+        ],
+        warnings: [
+          'Pin numbers (XX) must come from docs/interfaces-am62-radar.md + OSD62x-PM ball map. Do not guess — wrong pin assignments will fight with other peripherals.',
+        ],
+      },
+      {
+        heading: 'Substep C — Python GPIO wrapper (ambientapp)',
+        body: 'architecture.md explicitly flags: "Radar reset is not wired — in a real fault recovery scenario we want to toggle NRESET via a GPIO." Add radar/gpio.py and wire it into app.py.',
+        commands: [
+          { label: 'new file: src/ambient/radar/gpio.py', code: 'import time\nimport gpiod\n\nclass RadarGpio:\n    """Control NRESET and SOP boot-mode pins via libgpiod."""\n\n    def __init__(self, chip: str = "gpiochip0", *,\n                 nreset_line: int, sop_lines: tuple[int, int, int]) -> None:\n        self._chip = chip\n        self._nreset = nreset_line\n        self._sop = sop_lines  # (SOP0, SOP1, SOP2)\n\n    def reset(self) -> None:\n        """Assert NRESET low for 10 ms, then release."""\n        with gpiod.Chip(self._chip) as chip:\n            line = chip.get_line(self._nreset)\n            line.request(consumer="ambient-radar", type=gpiod.LINE_REQ_DIR_OUT)\n            line.set_value(0)\n            time.sleep(0.01)\n            line.set_value(1)' },
+          { label: 'add gpiod to pyproject.toml', code: 'dependencies = [\n    # existing ...\n    "gpiod>=2.1",\n]' },
+        ],
+      },
+      {
+        heading: 'Substep D — ambientapp deployment dry run (dev board)',
+        body: 'Install and start ambientapp on the Arago rootfs. The radar is not physically connected to the dev board — expect UART timeout warnings, NOT import errors or crash. This validates the full deployment path before the custom board arrives.',
+        commands: [
+          { label: 'install ambientapp on device', code: 'pip install git+https://github.com/ambientintel/ambientapp.git\n# or from local clone:\npip install -e /path/to/ambientapp' },
+          { label: 'run and check startup', code: 'python3 -m ambient --config /path/to/configs/wall_mount_6m.cfg --device /dev/ttyS1\n# EXPECTED: "opening /dev/ttyS1 at 921600 baud"\n# EXPECTED: "no data on /dev/ttyS1 after N timeouts; radar stalled?"\n# NOT expected: ImportError, FileNotFoundError, PermissionError' },
+          { label: 'validate systemd unit', code: 'cp deploy/ambient.service /etc/systemd/system/\nsystemctl daemon-reload\nsystemctl start ambient\njournalctl -u ambient -f' },
+        ],
+      },
+      {
+        heading: 'Substep E — SPI node (blocked on Step 17 boot mode decision)',
+        body: 'If host-fed boot mode is chosen, AM62 must push radar firmware over SPI before UART starts. If autonomous QSPI, SPI traces should still be routed on the custom board (for future bandwidth) but no driver or radar/boot.py is needed for the pilot.',
+        warnings: [
+          'Autonomous QSPI is recommended for the pilot: simpler bring-up, radar boots independently, no radar/boot.py required, Mender handles firmware updates, $0.50 QSPI flash BOM cost is trivial. Host-fed saves $0.50 but requires radar/boot.py (not written) and makes AM62 a boot dependency for the radar. Decide in Step 17 — do not write SPI code until that decision is locked.',
+        ],
+      },
+    ],
+  },
+  {
     id: 'app', phase: '12', title: 'Sensor App Deployment', status: 'pending', tag: 'Deploy', time: '~1 hr setup',
     summary: 'ambientapp (ambientintel/ambientapp): fall detection + activity service under systemd. Python 3.11 on AM62, reads IWR6843AOP over UART, detects events, publishes upstream. App changes still needed before board deployment.',
     sections: [
       {
         heading: 'Prerequisites',
         checklist: [
-          'IWR6843AOP UART connected to AM62 and kernel driver working (Step 16)',
+          'IWR6843AOP interface step complete: UART node verified, GPIO DTS built, gpiod wrapper in radar/gpio.py, deployment dry run passed',
           'Radar boot mode locked (Step 17)',
           'Python 3.11+ on rootfs with aws-iot-sdk-python-v2, pyarrow, requests, requests-aws4auth (~55 MB)',
           'ambientapp events module complete — MQTT publisher, shadow client, IoT credential refresh, parquet writer, offline buffer, clock sync monitor',
@@ -597,7 +660,7 @@ const CHECKLIST_ITEMS = [
   'Ambient DTB booted on target (k3-am62-lp-sk-ambient.dtb)',
   'JTAG / XDS110 debug loop working',
   'TFTP/NFS dev loop set up',
-  'IWR6843AOP SPI/GPIO kernel driver patch applied',
+  'IWR6843AOP interface prepared: UART node verified, GPIO DTS nodes (NRESET/SOP/NERROR), Python gpiod wrapper (radar/gpio.py), ambientapp deployment dry run passed',
   'Radar boot mode locked (QSPI vs host-fed SPI)',
   'ambientapp deployed on target (fall detection + activity service running)',
   'Pin mux spreadsheet: OSD62x-PM ball map',
@@ -613,7 +676,7 @@ const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]);
 
 const OPEN_DECISIONS = [
   'Wi-Fi module: Murata 1YN vs CYW43xx — TI SDK driver maturity check pending',
-  'Radar boot mode: host-fed SPI preferred — lock this before EE places fab order. Whether QSPI flash is present on the radar island BOM depends solely on this decision. EE cannot finalize radar island schematic until this is closed (ambientfirm Step 17).',
+  'Radar boot mode — DECISION NEEDED, blocks EE fab order. Autonomous QSPI recommended for pilot: radar boots from own QSPI flash, AM62 sends UART config post-boot, Mender handles firmware updates, no radar/boot.py required. Host-fed alternative: no QSPI flash, AM62 pushes binary over SPI on reset — saves $0.50 BOM but requires radar/boot.py (not written) and makes AM62 a boot dependency for the radar. SPI traces should be routed on custom board regardless so the option is preserved.',
   'Fab stackup: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape routing',
   'OP-TEE trusted app scope — key storage only, or also fall-event timestamp signing?',
   'CI self-hosted runner strategy for 14 GB SDK dependency',
