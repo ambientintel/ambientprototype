@@ -564,7 +564,7 @@ const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13]);
 
 const OPEN_DECISIONS = [
   'Wi-Fi module: Murata 1YN vs CYW43xx — TI SDK driver maturity check pending',
-  'Radar boot mode: host-fed SPI preferred; radar island BOM schematic not yet final',
+  'Radar boot mode: host-fed SPI preferred — lock this before EE places fab order. Whether QSPI flash is present on the radar island BOM depends solely on this decision. EE cannot finalize radar island schematic until this is closed (ambientfirm Step 17).',
   'Fab stackup: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape routing',
   'OP-TEE trusted app scope — key storage only, or also fall-event timestamp signing?',
   'CI self-hosted runner strategy for 14 GB SDK dependency',

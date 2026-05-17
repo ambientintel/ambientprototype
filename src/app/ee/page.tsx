@@ -568,6 +568,8 @@ const CHECKLIST_ITEMS = [
 const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
 const OPEN_DECISIONS = [
+  'Radar island QSPI flash: present or absent on radar island BOM — blocked on firmware radar boot mode decision (ambientfirm Step 17). Host-fed SPI = no QSPI; autonomous QSPI = flash present. Do not finalize radar island schematic or place fab order until boot mode is locked.',
+  'Physical connectivity: wired Ethernet / Wi-Fi / BLE / cellular mix — drives antenna count, schematic additions, and regulatory/certification scope. Decide before BOM finalization.',
   'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM BGA escape — decide before DVT layout',
   'Surface finish: upgrade HASL-LF → ENIG for DVT fine-pitch pads and BGA reliability',
   'IWR6843AOP enclosure keep-out: antenna clear zone vs metallic housing — enclosure design pending',

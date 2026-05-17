@@ -168,6 +168,32 @@ const DOMAINS = [
     currentStep: '10 · Pilot Validation',
     freezeLabel: 'Deployment Lock',
   },
+  {
+    ..._m.cybersecurity,
+    label: 'Cybersecurity',
+    subtitle: 'AWS Security Hub · GuardDuty · Terraform',
+    color: '#DC2626',
+    colorBg: '#FEF2F2',
+    colorBorder: '#FECACA',
+    repo: 'ambientintel/ambientcyber',
+    stepsTotal: 10,
+    stepsDone: 8,
+    phases: [
+      { label: 'Baseline',  done: 3, total: 3 },
+      { label: 'Detection', done: 3, total: 3 },
+      { label: 'Response',  done: 2, total: 2 },
+      { label: 'IRB Audit', done: 0, total: 2 },
+    ],
+    specs: [
+      { k: 'SIEM',   v: 'Security Hub' },
+      { k: 'Detect', v: 'GuardDuty' },
+      { k: 'Config', v: 'AWS Config' },
+      { k: 'IaC',    v: 'Terraform' },
+    ],
+    description: '14/20 pre-IRB audit items closed. Security Hub → EventBridge → Lambda → Google Chat pipeline live. GuardDuty, AWS Config, and Access Analyzer active across all 11 CloudFormation stacks. HIPAA §164.312 technical safeguards in place. 6 remaining items gating IRB closeout.',
+    currentStep: '09 · IRB Audit Closeout',
+    freezeLabel: 'Audit Lock',
+  },
 ] as const;
 
 type Domain = typeof DOMAINS[number];
@@ -179,6 +205,7 @@ const INTEGRATIONS = [
   { from: 'Cloud Engineering', to: 'Mobile App', desc: 'FastAPI + Cognito JWT auth; SNS → APNS/FCM push; facility-scoped alert endpoints feed the app' },
   { from: 'Mechanical', to: 'EE Hardware', desc: 'PCB outline and mounting hole pattern locks enclosure form factor; ceiling bracket bolt pattern matches PCB stackup' },
   { from: 'Cloud Engineering', to: 'Web App', desc: 'Ella narrative API + REST alert endpoints; WorkOS JWT validated server-side; Parquet cold path feeds analytics charts' },
+  { from: 'Cloud Engineering', to: 'Cybersecurity', desc: 'Security Hub aggregates findings from all 11 CloudFormation stacks; EventBridge rule triggers Lambda → Google Chat for high-severity GuardDuty findings' },
 ];
 
 // ── Priority tasks per domain ──────────────────────────────────────────────────
@@ -225,6 +252,13 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Rotate VERCEL_TOKEN + GITHUB_TOKEN — both crossed a chat transcript on May 14 during the Edge Config wire-up; mint new ones, vercel env rm/add interactively, revoke old', owner: 'DevOps' },
     { task: 'Monitor /api/ambient proxy for 502s — keep AMBIENT_WEB_SVC_PASSWORD in sync with Cognito; assertNoPhi guard will 502 if cloud returns a forbidden field', owner: 'DevOps' },
   ],
+  cybersecurity: [
+    { task: 'Close 6 remaining pre-IRB audit items — focus on CloudTrail data event verification and IAM least-privilege review across all 11 stacks', owner: 'Security' },
+    { task: 'Validate Security Hub → EventBridge → Lambda → Google Chat alert pipeline end-to-end with a synthetic GuardDuty finding', owner: 'Security' },
+    { task: 'Complete AWS Config conformance pack review — confirm all HIPAA §164.312 technical safeguard rules evaluate COMPLIANT', owner: 'Security+Cloud' },
+    { task: 'Generate IRB-ready evidence bundle: Security Hub findings export, GuardDuty summary, Access Analyzer report, CloudTrail S3 encryption validation', owner: 'Security' },
+    { task: 'Schedule penetration test scope review with IRB security officer — agree on scope before closeout', owner: 'Security+Lead' },
+  ],
 };
 
 // ── Sprint focus (this week) ───────────────────────────────────────────────────
@@ -254,6 +288,10 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Get MOCAREV-NNNN → room mapping from coordinator; batch-PATCH via scripts/patch-devices.sh (helper shipped May 14)',
     'Execute docs/pilot-runbook.md end-to-end at MOH 301–312 — pre-flight smoke, nurse auth, keyring unlock, fall alert E2E, Ella narrative, push',
     'Rotate VERCEL_TOKEN + GITHUB_TOKEN exposed during May 14 wire-up before any external sharing of repos or screenshots',
+  ],
+  cybersecurity: [
+    'Close 6 remaining pre-IRB audit items — CloudTrail data event verification + IAM least-privilege sweep across all 11 stacks',
+    'Validate Security Hub → EventBridge → Lambda → Google Chat pipeline with synthetic GuardDuty finding; generate IRB evidence bundle',
   ],
 };
 
@@ -303,7 +341,7 @@ export default function EngDashboard() {
     setFrozen(f);
     // Overlay with server-side shared state
     const domainKeyMap: Record<string, string> = {
-      firmware: 'firmware', ee: 'ee', mobileapp: 'mobileapp', cloudengineering: 'cloud', mechanical: 'mechanical', webapp: 'webapp',
+      firmware: 'firmware', ee: 'ee', mobileapp: 'mobileapp', cloudengineering: 'cloud', mechanical: 'mechanical', webapp: 'webapp', cybersecurity: 'cyber',
     };
     fetch('/api/eng/state').then(r => r.json()).then((all) => {
       const sp: Record<string, number> = {};
@@ -341,12 +379,14 @@ export default function EngDashboard() {
               Platform <em style={{ color: '#6B7280' }}>Status</em>
             </h1>
             <p style={{ margin: 0, color: '#6B7280', fontSize: 13.5, lineHeight: 1.6, maxWidth: 480 }}>
-              Fall-detection platform across four engineering domains. Firmware · EE Hardware · Mobile · Cloud.
+              Fall-detection platform across seven engineering domains. Firmware · EE Hardware · Mobile · Cloud · Mechanical · Web App · Cybersecurity.
             </p>
           </div>
-          <Link href="/engineering" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 15px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#FFFFFF', fontSize: 12, fontFamily: 'var(--mono)', color: '#374151', textDecoration: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', flexShrink: 0 }}>
-            ← Engineering
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <Link href="/engineering" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 15px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#FFFFFF', fontSize: 12, fontFamily: 'var(--mono)', color: '#374151', textDecoration: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+              ← Engineering
+            </Link>
+          </div>
         </div>
 
         {/* ── Aggregate stats ── */}
@@ -354,7 +394,7 @@ export default function EngDashboard() {
           {[
             { label: 'Steps complete',   value: `${doneSteps} / ${totalSteps}`,   sub: `${Math.round((doneSteps/totalSteps)*100)}% across all domains`, color: '#059669' },
             { label: 'Checklist items',  value: `${doneItems} / ${totalItems}`,   sub: `${overallPct}% platform readiness`,                             color: '#2563EB' },
-            { label: 'Domains active',   value: '4 / 4',                          sub: 'Firmware · EE · Mobile · Cloud',                               color: '#7C3AED' },
+            { label: 'Domains active',   value: '7 / 7',                          sub: 'Firmware · EE · Mobile · Cloud · Security',                   color: '#7C3AED' },
             { label: 'IRB protocol',     value: 'HIPAA §164.514(c)',              sub: 'Coded data · no PII in any path',                              color: '#D97706' },
           ].map(stat => (
             <div key={stat.label} style={{ padding: '14px 16px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
@@ -576,9 +616,9 @@ export default function EngDashboard() {
             <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: overallPct >= 80 ? '#059669' : overallPct >= 50 ? '#D97706' : '#374151' }}>{overallPct}%</div>
           </div>
           <div style={{ height: 8, borderRadius: 4, background: '#E5E7EB', marginBottom: 14, overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: 4, background: 'linear-gradient(90deg, #2563EB 0%, #0D9488 33%, #C2410C 66%, #4338CA 100%)', width: `${overallPct}%`, transition: 'width 0.5s ease' }} />
+            <div style={{ height: '100%', borderRadius: 4, background: 'linear-gradient(90deg, #2563EB 0%, #0D9488 20%, #C2410C 40%, #4338CA 60%, #0891B2 75%, #7C3AED 88%, #DC2626 100%)', width: `${overallPct}%`, transition: 'width 0.5s ease' }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 10 }}>
             {DOMAINS.map(d => {
               const done = progress[d.id] ?? d.checklistDefault;
               const pct = Math.round((done / d.checklistTotal) * 100);
