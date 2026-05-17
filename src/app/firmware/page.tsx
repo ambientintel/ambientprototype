@@ -317,19 +317,36 @@ const STEPS: Step[] = [
         checklist: [
           'IWR6843AOP UART connected to AM62 and kernel driver working (Step 16)',
           'Radar boot mode locked (Step 17)',
-          'Python 3.11+ on rootfs — verify: python3.11 --version',
-          'ambientapp changes complete — see ambientintel/ambientapp before deploying',
+          'Python 3.11+ on rootfs with aws-iot-sdk-python-v2, pyarrow, requests, requests-aws4auth (~55 MB)',
+          'ambientapp events module complete — MQTT publisher, shadow client, IoT credential refresh, parquet writer, offline buffer, clock sync monitor',
+          'Device cert provisioned via ambientcloud-admin provision-batch and scp\'d to /etc/ambient/credentials/',
         ],
       },
       {
+        heading: 'Cloud transport',
+        body: 'Transport is AWS IoT Core MQTT with X.509 client cert auth — no boto3, no AWS access keys on device. The cert issued by IoT Core is the device identity. Wire format: ambientcloud/docs/device-cloud-contract.md v0.2.',
+        table: {
+          cols: ['Channel', 'Transport', 'QoS / notes'],
+          rows: [
+            ['Fall alerts', 'MQTT → ambient/v1/alerts/fall/{deviceId}', 'QoS 1 — at-least-once, deduped by eventId'],
+            ['Per-minute aggregates', 'MQTT → ambient/v1/telemetry/{deviceId}', 'QoS 0 — fire-and-forget'],
+            ['Heartbeat', 'MQTT → ambient/v1/heartbeat/{deviceId}', '60s interval, includes clockSkewMs'],
+            ['Device shadow', 'MQTT → $aws/things/{deviceId}/shadow/...', 'Read desired on boot, write reported'],
+            ['Raw parquet frames', 'HTTPS presigned S3 PUT', 'Every 256–512 MB, via Lambda URL + SigV4'],
+          ],
+        },
+      },
+      {
         heading: 'Install on device',
-        body: 'deploy/install.sh writes the systemd unit and installs the Python package. Requires networking or a local copy transferred to the board.',
+        body: 'Credentials must be in place before install. deploy/install.sh writes the systemd unit and installs the Python package.',
         commands: [
-          { label: 'clone and install (once networking is up)', code: 'git clone https://github.com/ambientintel/ambientapp\ncd ambientapp\nbash deploy/install.sh' },
-          { label: 'start service and watch logs', code: 'systemctl start ambient\njournalctl -u ambient -f\n# Expected: UART connected, radar configured, frames incoming' },
+          { label: '1. Transfer credentials (from provisioning machine)', code: 'scp -r /path/to/credentials/ root@<device-ip>:/etc/ambient/credentials/' },
+          { label: '2. Clone and install (once networking is up)', code: 'git clone https://github.com/ambientintel/ambientapp\ncd ambientapp\nbash deploy/install.sh' },
+          { label: '3. Start service and watch logs', code: 'systemctl start ambient\njournalctl -u ambient -f\n# Expected: radar configured, MQTT connected, frames publishing' },
         ],
         warnings: [
-          'Do not deploy to the board before ambientapp changes are complete. Check ambientintel/ambientapp for current status.',
+          'Do not deploy before ambientapp events module is complete — see ambientintel/ambientapp. The MQTT publisher, shadow client, and offline buffer are not yet implemented.',
+          'Private key lives on filesystem at /etc/ambient/credentials/private.key (chmod 600). Moving to OP-TEE TrustZone-backed storage is deferred to post-pilot per device-cloud-contract.md §11.',
         ],
       },
       {
@@ -552,7 +569,7 @@ const OPEN_DECISIONS = [
   'OP-TEE trusted app scope — key storage only, or also fall-event timestamp signing?',
   'CI self-hosted runner strategy for 14 GB SDK dependency',
   'Connectivity: wired Ethernet / Wi-Fi / BLE / cellular mix — drives schematic, antenna count, and certification scope',
-  'ambientapp: changes needed before board deployment — radar UART wiring, Python 3.11 rootfs, event publishing integration (ambientintel/ambientapp)',
+  'ambientapp events module not yet implemented: MQTT publisher (QoS 1 fall alerts, QoS 0 aggregates, heartbeats), shadow client, IoT credential refresh loop, parquet writer + S3 batch upload, offline buffer, clock sync monitor — see device-cloud-contract.md v0.2',
 ];
 
 // ── Page component ─────────────────────────────────────────────────────────────
