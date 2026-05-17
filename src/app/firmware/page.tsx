@@ -198,10 +198,20 @@ const STEPS: Step[] = [
     summary: 'XDS110 on SK-AM62-LP gives hardware breakpoints and CPU register access before the OS boots. OpenOCD 0.12.0 + ti_k3.cfg (SOC=am625) confirmed working with the onboard XDS110 on J18.',
     sections: [
       {
-        heading: 'Hardware connections',
-        body: 'J18 (XDS110 JTAG) is micro-USB-B — looks identical to J17 (UART). Connect BOTH: J17 for console, J18 for JTAG. Power the board first (USB-C into J13), then plug J18. The XDS110 will enumerate as a Texas Instruments USB device — no /dev/tty entry appears for J18.',
+        heading: 'Hardware connections — Stage 1: JTAG verification only',
+        body: 'To verify OpenOCD connects and detects all four A53 cores, you only need two cables. J17 (UART console) is not required for this stage.',
+        commands: [
+          { label: 'minimum cables for JTAG verification', code: '1. USB-C → J13  (power the board)\n2. micro-USB-B → J18  (XDS110 JTAG — enumerates as Texas Instruments USB device, no /dev/tty)\n\nJ17 (UART) is NOT needed for Steps 1–3 below.' },
+        ],
         warnings: [
-          'Power board first, THEN connect J18. Connecting J18 before power can confuse the XDS110 firmware and prevent it from enumerating correctly.',
+          'Power the board first (USB-C into J13), then plug J18. Both J17 and J18 are micro-USB-B and look identical — J18 has no /dev/tty entry on the Mac.',
+        ],
+      },
+      {
+        heading: 'Hardware connections — Stage 2: JTAG + console (kernel debug)',
+        body: 'Add J17 when you need serial console output alongside JTAG — for kernel panic traces, printk output, or interactive U-Boot while breakpoints are active.',
+        commands: [
+          { label: 'full cable set for simultaneous JTAG + console', code: '1. USB-C → J13  (power)\n2. micro-USB-B → J17  (FT4232 UART — enumerates as 4× /dev/tty.usbserial-*)\n3. micro-USB-B → J18  (XDS110 JTAG)\n\n# In terminal A:\ntio /dev/tty.usbserial-102612400940 -b 115200\n\n# In terminal B:\nopenocd -f workspace/jtag/am625-xds110.cfg' },
         ],
       },
       {
