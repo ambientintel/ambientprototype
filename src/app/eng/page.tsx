@@ -245,7 +245,7 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Finalize BOM — confirm IWR6843AOP, OSD62x-PM, and all critical passives are in stock', owner: 'Procurement' },
     { task: 'Complete SolidWorks enclosure assembly and print FDM prototype for ceiling-mount fit-check', owner: 'ME' },
     { task: 'Generate Gerber package and submit for DFM review with fab house', owner: 'Layout' },
-    { task: 'Resolve PoE+ vs barrel jack decision before Rev B — affects power routing and BOM cost', owner: 'Lead' },
+    { task: 'RESOLVED 2026-05-17: EVT power = Cincon TR15RAM-12 (12V barrel jack, IEC 60601-1 Ed 3.2). Update PowerTree.SchDoc input rail to 12V. PoE+ deferred to DVT if deployment is SNF/hospital.', owner: 'Lead' },
   ],
   webapp: [
     { task: 'Get the MOCAREV-NNNN → room number TSV from the pilot coordinator, then run ./scripts/patch-devices.sh with the ella-session cookie (30s for all 12 rooms)', owner: 'Product' },
@@ -271,8 +271,9 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Step 16B: GPIO DTS nodes — add NRESET/SOP[2:0]/NERROR_OUT to ambient DTS, rebuild DTB, verify with gpiodetect on dev board',
   ],
   ee: [
-    'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — this decision unlocks antenna BOM and certification scope',
-    'Confirm layer count (8 vs 10-layer HDI) and wait for firmware Step 17 (radar boot mode lock) before finalizing QSPI BOM and submitting Gerbers',
+    'Update PowerTree.SchDoc: change input rail to 12V (Cincon TR15RAM-12 barrel jack, IEC 60601-1 Ed 3.2 resolved). Add 5.5mm/2.1mm barrel jack footprint to schematic.',
+    'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — last remaining BOM blocker before Gerbers',
+    'Confirm layer count (8 vs 10-layer HDI) with fab house DFM review',
   ],
   mobileapp: [
     'Distribute iOS IPA to pilot nurses: send EAS OTA install link (13-day window) or submit to TestFlight',
@@ -300,8 +301,8 @@ const SPRINT_FOCUS: Record<string, string[]> = {
 // ── Open decisions ─────────────────────────────────────────────────────────────
 
 const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text: string }[] = [
-  { domain: 'EE Hardware',       urgency: 'high',   text: 'Physical connectivity: Wi-Fi / Ethernet / BLE / cellular mix — drives antenna count, schematic, and certification scope. Required before BOM finalization. Recommendation: Ethernet primary (reliable hospital IoT, enables PoE+) + BLE for local commissioning. Wi-Fi optional if module fits.' },
-  { domain: 'Mechanical',        urgency: 'high',   text: 'PoE+ vs barrel jack — conditional on connectivity decision. If Ethernet chosen: PoE+ (802.3at) strongly recommended for ceiling-mount hospital device — single Cat6 cable, hospital IT standard, no power outlet at ceiling required. Drives PCB power routing, BOM cost, and enclosure cutout geometry.' },
+  { domain: 'EE Hardware',       urgency: 'high',   text: 'Physical connectivity: Wi-Fi / Ethernet / BLE / cellular mix — drives antenna count, schematic, and certification scope. Required before BOM finalization. Recommendation: Ethernet primary + BLE for local commissioning. Wi-Fi optional if module fits.' },
+  { domain: 'EE Hardware',       urgency: 'low',    text: 'RESOLVED 2026-05-17 — EVT power supply: Cincon TR15RAM-12 (12V/1.1A, IEC/EN/UL 60601-1 Ed 3.2 certified). 5.5mm/2.1mm barrel jack on PCB, 12V nominal input to DC-DC rails. No PoE PD circuit on EVT. PoE+ (802.3at) deferred to DVT if deployment channel is SNF/hospital with ceiling Cat6 runs. Datasheet: workspace/docs/datasheets/Datasheet-TR15RAM-series.pdf' },
   { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk; blocked on connectivity + layer count decisions before Gerbers can be submitted.' },
   { domain: 'EE Hardware',       urgency: 'medium', text: 'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape — 10-layer likely required per Octavo layout guide. Decide before Gerber submission.' },
   { domain: 'Firmware',          urgency: 'medium', text: 'ambientapp events module: 6 components not yet implemented (MQTT publisher, shadow client, IoT credential refresh, parquet writer, offline buffer, clock sync monitor). Blocks first on-board pilot.' },

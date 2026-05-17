@@ -294,12 +294,13 @@ const STEPS: Step[] = [
   },
   {
     id: 'fab', phase: '07', title: 'Fab Order', status: 'blocked', tag: 'Build', time: '10–14 day lead',
-    summary: 'Fab order blocked pending two remaining decisions: (1) physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — affects antenna count and schematic; (2) layer count (8 vs 10-layer HDI) confirmation. Radar boot mode RESOLVED 2026-05-17: autonomous QSPI — QSPI flash confirmed present on radar island BOM.',
+    summary: 'Fab order blocked pending two remaining decisions: (1) physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — affects antenna count and schematic; (2) layer count (8 vs 10-layer HDI) confirmation. Radar boot mode and power supply RESOLVED 2026-05-17.',
     sections: [
       {
         heading: 'What is blocking this step',
         warnings: [
           'RESOLVED 2026-05-17 — Radar island QSPI flash: autonomous QSPI chosen. QSPI flash IS present on radar island BOM. Radar boots from own flash; AM62 sends UART config post-boot. EE fab order unblocked on this point.',
+          'RESOLVED 2026-05-17 — EVT power supply: Cincon TR15RAM-12 (12V/1.1A barrel jack, IEC/EN/UL 60601-1 Ed 3.2). Board input: 5.5mm/2.1mm barrel jack, 12V. No PoE PD circuit on EVT — PoE+ deferred to DVT if deployment channel is SNF/hospital. PowerTree.SchDoc input rail = 12V. Datasheet in workspace/docs/datasheets/.',
           'BLOCKED — Physical connectivity decision (Wi-Fi / Ethernet / BLE / cellular) not yet made. Antenna count and schematic cannot be finalized. Recommendation: Ethernet + BLE.',
           'DECISION NEEDED — Layer count (current spec: 8-layer; Octavo OSD62x-PM layout guide likely requires 10-layer HDI). Must be confirmed before Gerber submission.',
         ],
@@ -577,6 +578,7 @@ const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
 const OPEN_DECISIONS = [
   'RESOLVED 2026-05-17 — Radar island QSPI flash: autonomous QSPI boot mode locked. QSPI flash IS present on radar island BOM. Do not remove this line — it documents a cross-domain decision that informed the radar island schematic.',
+  'RESOLVED 2026-05-17 — EVT power supply: Cincon TR15RAM-12 (12V/1.1A, IEC/EN/UL 60601-1 Ed 3.2 certified medical adapter) selected. Board input: 5.5mm/2.1mm barrel jack, 12V nominal. No PoE PD circuit on EVT. PoE+ deferred to DVT-stage if deployment channel is SNF/hospital. Datasheet: workspace/docs/datasheets/Datasheet-TR15RAM-series.pdf',
   'Physical connectivity: wired Ethernet / Wi-Fi / BLE / cellular mix — drives antenna count, schematic additions, and regulatory/certification scope. Decide before BOM finalization.',
   'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM BGA escape — decide before DVT layout',
   'Surface finish: upgrade HASL-LF → ENIG for DVT fine-pitch pads and BGA reliability',
