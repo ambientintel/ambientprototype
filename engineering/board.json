@@ -251,7 +251,8 @@
   ],
   "weekStatus": {
     "Brian": {
-      "S": "yes"
+      "S": "yes",
+      "SU": "yes"
     }
   },
   "team": [
