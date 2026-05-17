@@ -252,7 +252,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'boot', phase: '10', title: 'First Boot', status: 'done', tag: 'Deploy', time: '~30 min',
-    summary: 'Boot chain: ROM → tiboot3 → tispl → u-boot → GRUB EFI → kernel → rootfs. Serial console 115200 8N1 on J17 (NOT J18). SDK 12.x WIC boot: 2026-05-15. SDK 11.x kernel (6.12.57-ti) boot: 2026-05-16.',
+    summary: 'Boot chain: ROM → tiboot3 → tispl → u-boot → GRUB EFI → kernel → rootfs. Serial console 115200 8N1 on J17 (NOT J18). SDK 12.x WIC boot: 2026-05-15. SDK 11.x kernel (6.12.57-ti) boot: 2026-05-16. Ambient DTB (k3-am62-lp-sk-ambient.dtb) confirmed: 2026-05-16.',
     sections: [
       {
         heading: 'Hardware connections and boot mode',
@@ -278,11 +278,11 @@ const STEPS: Step[] = [
       },
       {
         heading: 'First boot results',
-        body: 'Verified on SK-AM62-LP PROC124E2 (HS-FS). SDK 12.x WIC boot 2026-05-15. SDK 11.x kernel boot 2026-05-16. GRUB EFI loads kernel from /boot/Image on the ext4 rootfs — NOT from the FAT BOOT partition Image. To swap kernels: replace /boot/Image on the rootfs and reboot.',
+        body: 'Verified on SK-AM62-LP PROC124E2 (HS-FS). SDK 12.x WIC boot 2026-05-15. SDK 11.x kernel boot 2026-05-16. Ambient DTB boot 2026-05-16: model="Ambient Intel AM62x-LP", compatible="ambientintel,am62x-lp". GRUB EFI loads kernel from /boot/Image on the ext4 rootfs — NOT from the FAT BOOT partition Image. DTB is passed by GRUB via the devicetree directive in EFI/BOOT/grub.cfg — the DTB file must be present on the BOOT FAT partition root. fdtfile in uEnv.txt has no effect in this GRUB EFI boot path.',
         commands: [
           { label: 'capture boot log', code: 'tio /dev/tty.usbserial-102612400940 -b 115200 --log-file first-boot.log' },
           { label: 'SDK 12.x verification (2026-05-15)', code: 'uname -a\n# Linux am62xx-lp-evm 6.18.13-ti-00778-gc21449208550-dirty aarch64\n\ncat /proc/device-tree/model\n# Texas Instruments AM62x LP SK\n\nls /sys/class/net\n# eth0  eth1  lo  mcu_mcan0  mcu_mcan1\n\ndmesg | grep -i error\n# Only benign: RTC erratum i2327, PowerVR GPU firmware missing (irrelevant)' },
-          { label: 'SDK 11.x verification (2026-05-16)', code: 'uname -r\n# 6.12.57-ti-g31b07ab8dfbc\n\ncat /proc/device-tree/model\n# Texas Instruments AM62x LP SK\n\nls /sys/class/net\n# eth0  eth1  lo' },
+          { label: 'SDK 11.x + ambient DTB verification (2026-05-16)', code: 'uname -r\n# 6.12.57-ti-g31b07ab8dfbc\n\ncat /proc/device-tree/model\n# Ambient Intel AM62x-LP\n\ncat /proc/device-tree/compatible\n# ambientintel,am62x-lpti,am62-lp-skti,am625\n\nls /sys/class/net\n# eth0  eth1  lo' },
         ],
         warnings: [
           'The AM62x ROM produces zero UART output itself. First output is from tiboot3 (R5 SPL). Zero serial output means the ROM rejected tiboot3 — not that the board is dead.',
@@ -496,7 +496,7 @@ const CHECKLIST_ITEMS = [
   'CI pipeline building on every push',
 ];
 
-const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12]);
+const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13]);
 
 const OPEN_DECISIONS = [
   'Wi-Fi module: Murata 1YN vs CYW43xx — TI SDK driver maturity check pending',
@@ -504,7 +504,7 @@ const OPEN_DECISIONS = [
   'Fab stackup: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape routing',
   'OP-TEE trusted app scope — key storage only, or also fall-event timestamp signing?',
   'CI self-hosted runner strategy for 14 GB SDK dependency',
-  'Ambient DTB boot: GRUB EFI boot path confirmed — fdtfile uEnv.txt approach may not apply; verify devicetree directive in grub.cfg instead',
+  'Connectivity: wired Ethernet / Wi-Fi / BLE / cellular mix — drives schematic, antenna count, and certification scope',
 ];
 
 // ── Page component ─────────────────────────────────────────────────────────────
