@@ -661,7 +661,7 @@ const CHECKLIST_ITEMS = [
   'JTAG / XDS110 debug loop working',
   'TFTP/NFS dev loop set up',
   'IWR6843AOP interface prepared: UART node verified, GPIO DTS nodes (NRESET/SOP/NERROR), Python gpiod wrapper (radar/gpio.py), ambientapp deployment dry run passed',
-  'Radar boot mode locked (QSPI vs host-fed SPI)',
+  'Radar boot mode locked: autonomous QSPI (2026-05-17) — radar boots from own QSPI flash, AM62 sends UART config post-boot',
   'ambientapp deployed on target (fall detection + activity service running)',
   'Pin mux spreadsheet: OSD62x-PM ball map',
   'OSD62x-PM production DTB (Octavo DDR config)',
@@ -676,7 +676,8 @@ const CHECKLIST_DONE = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]);
 
 const OPEN_DECISIONS = [
   'Wi-Fi module: Murata 1YN vs CYW43xx — TI SDK driver maturity check pending',
-  'Radar boot mode — DECISION NEEDED, blocks EE fab order. Autonomous QSPI recommended for pilot: radar boots from own QSPI flash, AM62 sends UART config post-boot, Mender handles firmware updates, no radar/boot.py required. Host-fed alternative: no QSPI flash, AM62 pushes binary over SPI on reset — saves $0.50 BOM but requires radar/boot.py (not written) and makes AM62 a boot dependency for the radar. SPI traces should be routed on custom board regardless so the option is preserved.',
+  'Physical connectivity: Wi-Fi / Ethernet / BLE / cellular mix — drives antenna count, schematic additions, and regulatory/certification scope. Required before BOM finalization.',
+  'ambientapp UART device: AMBIENT_RADAR_DEVICE defaults to /dev/ttyS2 (the console UART on SK-AM62-LP). Must be set to the correct device for the custom board in /etc/ambient/ambient.env and DeviceAllow in ambient.service before deployment. Correct device TBD from Substep A of Step 16.',
   'Fab stackup: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape routing',
   'OP-TEE trusted app scope — key storage only, or also fall-event timestamp signing?',
   'CI self-hosted runner strategy for 14 GB SDK dependency',

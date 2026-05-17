@@ -34,8 +34,8 @@ const DOMAINS = [
       { k: 'SDK',     v: '11.02.08.02' },
       { k: 'OTA',     v: 'Mender' },
     ],
-    description: 'TI Processor SDK 11 · Yocto · U-Boot · custom DTB for IWR6843AOP integration. Build pipeline complete. SDK 12.x WIC first boot 2026-05-15. Custom kernel 6.12.57-ti booting 2026-05-16. Ambient DTB booting 2026-05-16 — model="Ambient Intel AM62x-LP". GRUB EFI devicetree directive controls DTB (not fdtfile). Next: JTAG debug loop (J18), TFTP/NFS dev loop, IWR6843AOP driver patch.',
-    currentStep: '14 · JTAG / Hardware Debug',
+    description: 'TI Processor SDK 11 · Yocto · U-Boot · custom DTB. JTAG verified 2026-05-17 — A53 core 0 halted at EL1H, pc=0xffff800080010a00. Radar boot mode DECIDED: autonomous QSPI (2026-05-17) — EE fab order unblocked on this point. Step 15 blocked pending Ethernet cable + USB-C adapter. Step 16: IWR6843AOP interface prep (UART node verify, GPIO DTS, gpiod wrapper, deployment dry run).',
+    currentStep: '15 · TFTP/NFS (blocked) → 16 · IWR6843AOP Interface',
     freezeLabel: 'Firmware Freeze',
   },
   {
@@ -212,11 +212,12 @@ const INTEGRATIONS = [
 
 const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
   firmware: [
-    { task: 'Set up JTAG / XDS110 debug loop (Step 14) — connect J18 micro-USB-B while J17 UART is active; attach OpenOCD or CCS to AM625 for hardware debug', owner: 'BSP' },
-    { task: 'Set up TFTP / NFS dev loop (Step 15) — macOS TFTP server + U-Boot netboot env vars; cuts SD reflash from ~10 min to <60 sec per iteration', owner: 'BSP' },
-    { task: 'Patch kernel for IWR6843AOP SPI/GPIO (Step 16) — add device node to ambient DTB, load mmWave driver, verify it binds on boot', owner: 'BSP' },
-    { task: 'Lock radar boot mode (Step 17) — host-fed SPI preferred; this decision gates EE fab order (QSPI flash present or absent on radar island BOM)', owner: 'BSP+HW' },
-    { task: 'Implement ambientapp events module — 6 components (MQTT publisher, shadow client, IoT cred refresh, parquet writer, offline buffer, clock sync monitor) before board deployment', owner: 'SW' },
+    { task: 'Order Ethernet cable (Cat5e/6) + USB-C Ethernet adapter — required to unblock Step 15 TFTP/NFS dev loop', owner: 'BSP' },
+    { task: 'Step 15: TFTP/NFS dev loop — macOS TFTP server + U-Boot netboot; currently blocked pending Ethernet hardware', owner: 'BSP' },
+    { task: 'Step 16A: UART node verify on dev board — ls /dev/ttyS*, stty -F /dev/ttyS1 921600, pip install pyserial; confirm correct device before custom board arrives', owner: 'BSP' },
+    { task: 'Step 16B–D: GPIO DTS nodes (NRESET/SOP[2:0]/NERROR_OUT), radar/gpio.py gpiod wrapper in ambientapp, deployment dry run on Arago rootfs', owner: 'BSP+SW' },
+    { task: 'Fix ambientapp UART default: AMBIENT_RADAR_DEVICE defaults to /dev/ttyS2 (console) — update DeviceAllow in ambient.service and set correct device in /etc/ambient/ambient.env after Step 16A identifies the radar UART', owner: 'SW' },
+    { task: 'ambientapp events module: 6 components (MQTT publisher, shadow client, IoT cred refresh, parquet writer, offline buffer, clock sync monitor) — blocks first on-board pilot', owner: 'SW' },
   ],
   ee: [
     { task: 'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — required before BOM finalization; drives antenna count and certification scope', owner: 'Lead+HW' },
@@ -265,8 +266,9 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
 
 const SPRINT_FOCUS: Record<string, string[]> = {
   firmware: [
-    'Step 14: connect J18 XDS110 JTAG while J17 UART is active; attach OpenOCD or CCS to AM625; verify halt/resume from debug host',
-    'Step 15: set up TFTP/NFS dev loop on Mac host — macOS TFTP server, U-Boot netboot env vars; confirm sub-60-sec iteration cycle',
+    'Step 16A (do now, no hardware needed): on dev board — ls /dev/ttyS*, stty -F /dev/ttyS1 921600, pip install pyserial; establish correct radar UART device before custom board arrives',
+    'Step 15 (blocked): order Ethernet cable + USB-C adapter; once received, set up macOS TFTP server and U-Boot netboot env vars',
+    'Step 16B: GPIO DTS nodes — add NRESET/SOP[2:0]/NERROR_OUT to ambient DTS, rebuild DTB, verify with gpiodetect on dev board',
   ],
   ee: [
     'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — this decision unlocks antenna BOM and certification scope',
@@ -298,12 +300,14 @@ const SPRINT_FOCUS: Record<string, string[]> = {
 // ── Open decisions ─────────────────────────────────────────────────────────────
 
 const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text: string }[] = [
-  { domain: 'Firmware',          urgency: 'high',   text: 'Radar boot mode: host-fed SPI vs autonomous QSPI (Step 17). Host-fed = no QSPI flash on radar island; autonomous = QSPI present. Blocks EE fab order — radar island BOM cannot be finalized until this is locked.' },
-  { domain: 'EE Hardware',       urgency: 'high',   text: 'Physical connectivity: Wi-Fi / Ethernet / BLE / cellular mix — drives antenna count, schematic additions, and regulatory/certification scope. Required before BOM finalization.' },
-  { domain: 'Mechanical',        urgency: 'high',   text: 'PoE+ vs barrel jack — affects power routing, BOM cost, and enclosure cutout geometry.' },
-  { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk; currently blocked on radar boot mode + connectivity decisions before Gerbers can be submitted.' },
-  { domain: 'EE Hardware',       urgency: 'medium', text: 'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape — decide before fab order. 10-layer likely required per Octavo layout guide.' },
+  { domain: 'EE Hardware',       urgency: 'high',   text: 'Physical connectivity: Wi-Fi / Ethernet / BLE / cellular mix — drives antenna count, schematic, and certification scope. Required before BOM finalization. Recommendation: Ethernet primary (reliable hospital IoT, enables PoE+) + BLE for local commissioning. Wi-Fi optional if module fits.' },
+  { domain: 'Mechanical',        urgency: 'high',   text: 'PoE+ vs barrel jack — conditional on connectivity decision. If Ethernet chosen: PoE+ (802.3at) strongly recommended for ceiling-mount hospital device — single Cat6 cable, hospital IT standard, no power outlet at ceiling required. Drives PCB power routing, BOM cost, and enclosure cutout geometry.' },
+  { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk; blocked on connectivity + layer count decisions before Gerbers can be submitted.' },
+  { domain: 'EE Hardware',       urgency: 'medium', text: 'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape — 10-layer likely required per Octavo layout guide. Decide before Gerber submission.' },
   { domain: 'Firmware',          urgency: 'medium', text: 'ambientapp events module: 6 components not yet implemented (MQTT publisher, shadow client, IoT credential refresh, parquet writer, offline buffer, clock sync monitor). Blocks first on-board pilot.' },
+  { domain: 'Mobile App',        urgency: 'high',   text: 'iOS IPA OTA install link expires May 25 (8 days from 2026-05-17) — EAS build 36dbf33f. Distribute to nurses via TestFlight or OTA link immediately or the build window closes.' },
+  { domain: 'Web App',           urgency: 'high',   text: 'VERCEL_TOKEN + GITHUB_TOKEN exposed in chat transcript May 14 — rotate immediately. Mint new tokens, run vercel env rm/add, revoke old before any external sharing.' },
+  { domain: 'Cloud Engineering', urgency: 'medium', text: 'CDK TelemetryStack IaC ≠ deployed state — reconciler env+IAM applied via direct AWS API (commits 3ac32f3 + a93dee3 updated source but CDK deploy never ran). Run cdk deploy TelemetryStack to restore IaC-as-deployed parity.' },
   { domain: 'Cloud Engineering', urgency: 'low',    text: 'Firehose retirement timeline — 90-day window after all facilities reach parquet_only; not yet contractually nailed down.' },
   { domain: 'Web App',           urgency: 'medium', text: 'Ella narrative poll interval — 30 s vs WebSocket for real-time nurse alert delivery.' },
   { domain: 'Mechanical',        urgency: 'low',    text: 'Enclosure finish: matte vs glossy ABS — cosmetic only, deferred to Rev B.' },
@@ -312,12 +316,13 @@ const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text
 // ── Cross-domain blockers ──────────────────────────────────────────────────────
 
 const BLOCKERS: { blocked: string; blocking: string; issue: string }[] = [
-  { blocked: 'EE Hardware',       blocking: 'Firmware',     issue: 'Radar island QSPI BOM (flash present or absent) cannot be finalized until firmware Step 17 (radar boot mode) is locked — fab order cannot be placed until this closes' },
-  { blocked: 'Firmware',          blocking: 'EE Hardware',  issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
-  { blocked: 'Mobile App',        blocking: 'Apple',        issue: 'Apple account -20209 lock still blocking direct Apple Developer Portal API — workaround (Admin ASC API key) in use; build queued' },
-  { blocked: 'Mechanical',        blocking: 'EE Hardware',  issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
-  { blocked: 'Cloud Engineering', blocking: 'Hardware',     issue: 'TelemetryDivergence metric can\'t accumulate 48h of zero until real device frames start landing in the raw Parquet path — gated on EE/Firmware bring-up' },
-  { blocked: 'Web App',           blocking: 'Pilot Coordinator', issue: 'Final MOCAREV-NNNN → MOH-NNN room mapping needed before scripts/patch-devices.sh can run; pilot validation runbook can\'t start without it' },
+  { blocked: 'EE Hardware',       blocking: 'Connectivity decision', issue: 'Antenna count, BOM finalization, and schematic additions blocked until Wi-Fi/Ethernet/BLE/cellular mix is decided — affects PCB layout and cert scope' },
+  { blocked: 'EE Hardware',       blocking: 'Layer count decision',  issue: 'Gerber submission blocked until 8 vs 10-layer HDI is confirmed per Octavo OSD62x-PM layout guide' },
+  { blocked: 'Firmware',          blocking: 'EE Hardware',           issue: 'Custom DTB pin assignments can\'t be locked until PCB Gerbers are finalized' },
+  { blocked: 'Mobile App',        blocking: 'Apple + time',          issue: 'Apple account -20209 lock + iOS IPA OTA install window expires May 25 — 8 days remaining; must distribute via TestFlight immediately' },
+  { blocked: 'Mechanical',        blocking: 'EE Hardware',           issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
+  { blocked: 'Cloud Engineering', blocking: 'Hardware',              issue: 'TelemetryDivergence can\'t accumulate 48h of zero until real device frames land in the raw Parquet path — gated on EE/Firmware bring-up' },
+  { blocked: 'Web App',           blocking: 'Pilot Coordinator',     issue: 'Final MOCAREV-NNNN → MOH-NNN room mapping needed before scripts/patch-devices.sh can run' },
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────────────

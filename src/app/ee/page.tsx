@@ -294,13 +294,13 @@ const STEPS: Step[] = [
   },
   {
     id: 'fab', phase: '07', title: 'Fab Order', status: 'blocked', tag: 'Build', time: '10–14 day lead',
-    summary: 'Fab order blocked pending three open decisions: (1) firmware Step 17 radar boot mode lock — determines whether QSPI flash is present on radar island BOM; (2) physical connectivity (Wi-Fi / Ethernet / cellular) — affects antenna count; (3) layer count (8 vs 10-layer HDI) confirmation. Once resolved, submit Gerbers per specification below.',
+    summary: 'Fab order blocked pending two remaining decisions: (1) physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — affects antenna count and schematic; (2) layer count (8 vs 10-layer HDI) confirmation. Radar boot mode RESOLVED 2026-05-17: autonomous QSPI — QSPI flash confirmed present on radar island BOM.',
     sections: [
       {
         heading: 'What is blocking this step',
         warnings: [
-          'BLOCKED — Radar island QSPI BOM depends on firmware Step 17 (radar boot mode lock). Host-fed SPI = no QSPI flash; autonomous QSPI = flash present. Do not finalize BOM or place order until this is decided.',
-          'BLOCKED — Physical connectivity decision (Wi-Fi / Ethernet / BLE / cellular) not yet made. Antenna count and schematic cannot be finalized.',
+          'RESOLVED 2026-05-17 — Radar island QSPI flash: autonomous QSPI chosen. QSPI flash IS present on radar island BOM. Radar boots from own flash; AM62 sends UART config post-boot. EE fab order unblocked on this point.',
+          'BLOCKED — Physical connectivity decision (Wi-Fi / Ethernet / BLE / cellular) not yet made. Antenna count and schematic cannot be finalized. Recommendation: Ethernet + BLE.',
           'DECISION NEEDED — Layer count (current spec: 8-layer; Octavo OSD62x-PM layout guide likely requires 10-layer HDI). Must be confirmed before Gerber submission.',
         ],
       },
@@ -576,7 +576,7 @@ const CHECKLIST_ITEMS = [
 const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
 const OPEN_DECISIONS = [
-  'Radar island QSPI flash: present or absent on radar island BOM — blocked on firmware radar boot mode decision (ambientfirm Step 17). Host-fed SPI = no QSPI; autonomous QSPI = flash present. Do not finalize radar island schematic or place fab order until boot mode is locked.',
+  'RESOLVED 2026-05-17 — Radar island QSPI flash: autonomous QSPI boot mode locked. QSPI flash IS present on radar island BOM. Do not remove this line — it documents a cross-domain decision that informed the radar island schematic.',
   'Physical connectivity: wired Ethernet / Wi-Fi / BLE / cellular mix — drives antenna count, schematic additions, and regulatory/certification scope. Decide before BOM finalization.',
   'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM BGA escape — decide before DVT layout',
   'Surface finish: upgrade HASL-LF → ENIG for DVT fine-pitch pads and BGA reliability',
