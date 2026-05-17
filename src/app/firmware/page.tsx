@@ -49,7 +49,7 @@ const TAG_STYLE: Record<string, { bg: string; color: string }> = {
 const PIPELINE_PHASES = [
   { label: 'Environment', ids: ['env', 'sdk', 'buildenv'] },
   { label: 'Build',       ids: ['uboot', 'kernel', 'dtb'] },
-  { label: 'Bring-Up',   ids: ['patches', 'jtag', 'sdcard', 'boot', 'devloop'] },
+  { label: 'Bring-Up',   ids: ['patches', 'jtag', 'sdcard', 'boot', 'devloop', 'app'] },
   { label: 'Production', ids: ['yocto', 'ota', 'security', 'ci'] },
 ];
 
@@ -309,7 +309,53 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'yocto', phase: '12', title: 'Yocto Production Image', status: 'pending', tag: 'Best Practice', time: '12–20 hrs (cloud VM)',
+    id: 'app', phase: '12', title: 'Sensor App Deployment', status: 'pending', tag: 'Deploy', time: '~1 hr setup',
+    summary: 'ambientapp (ambientintel/ambientapp): fall detection + activity service under systemd. Python 3.11 on AM62, reads IWR6843AOP over UART, detects events, publishes upstream. App changes still needed before board deployment.',
+    sections: [
+      {
+        heading: 'Prerequisites',
+        checklist: [
+          'IWR6843AOP UART connected to AM62 and kernel driver working (Step 16)',
+          'Radar boot mode locked (Step 17)',
+          'Python 3.11+ on rootfs — verify: python3.11 --version',
+          'ambientapp changes complete — see ambientintel/ambientapp before deploying',
+        ],
+      },
+      {
+        heading: 'Install on device',
+        body: 'deploy/install.sh writes the systemd unit and installs the Python package. Requires networking or a local copy transferred to the board.',
+        commands: [
+          { label: 'clone and install (once networking is up)', code: 'git clone https://github.com/ambientintel/ambientapp\ncd ambientapp\nbash deploy/install.sh' },
+          { label: 'start service and watch logs', code: 'systemctl start ambient\njournalctl -u ambient -f\n# Expected: UART connected, radar configured, frames incoming' },
+        ],
+        warnings: [
+          'Do not deploy to the board before ambientapp changes are complete. Check ambientintel/ambientapp for current status.',
+        ],
+      },
+      {
+        heading: 'Dev mode — replay without hardware',
+        body: 'Validate detection logic against labeled captures on any machine before touching the board.',
+        commands: [
+          { label: 'Mac or CI', code: 'python3.11 -m venv .venv && source .venv/bin/activate\npip install -e ".[dev]"\npython -m tools.replay tests/fixtures/fall_living_room_01.json\npytest && ruff check src tests tools && mypy src' },
+        ],
+      },
+      {
+        heading: 'Radar config files',
+        table: {
+          cols: ['Config', 'Mount', 'Range', 'Use'],
+          rows: [
+            ['wall_mount_6m.cfg', 'Wall', '6 m', 'Standard room deployment'],
+            ['roof_mount.cfg', 'Ceiling', 'TBD', 'Alternative mount geometry'],
+          ],
+        },
+        warnings: [
+          'frameCfg sets actual frame rate (55 ms periodicity = 18.18 Hz, not 55 Hz). Legacy code mis-read this, producing a 4.5s lookback instead of 1.5s. ambientapp reads frameCfg correctly — legacy threshold tuning may need adjustment at 1.5s window.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'yocto', phase: '13', title: 'Yocto Production Image', status: 'pending', tag: 'Best Practice', time: '12–20 hrs (cloud VM)',
     summary: 'tisdk default for bring-up. Production uses meta-ambient Yocto layer with Mender integration and Python 3.11.',
     sections: [
       {
@@ -341,7 +387,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'ota', phase: '13', title: 'OTA Updates (Mender)', status: 'pending', tag: 'Best Practice', time: 'reference',
+    id: 'ota', phase: '14', title: 'OTA Updates (Mender)', status: 'pending', tag: 'Best Practice', time: 'reference',
     summary: 'Mender hosted with A/B rootfs. Atomic, rollback-capable updates for OS/kernel, radar firmware, and app layer.',
     sections: [
       {
@@ -378,7 +424,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'security', phase: '14', title: 'Security & Device Identity', status: 'pending', tag: 'Best Practice', time: 'reference',
+    id: 'security', phase: '15', title: 'Security & Device Identity', status: 'pending', tag: 'Best Practice', time: 'reference',
     summary: 'X.509 device certs provisioned at factory. Secure boot chain locks firmware to known-good images.',
     sections: [
       {
@@ -409,7 +455,7 @@ const STEPS: Step[] = [
     ],
   },
   {
-    id: 'ci', phase: '15', title: 'CI / Automated Builds', status: 'pending', tag: 'Best Practice', time: '~2 hr setup',
+    id: 'ci', phase: '16', title: 'CI / Automated Builds', status: 'pending', tag: 'Best Practice', time: '~2 hr setup',
     summary: 'GitHub Actions triggers Docker-based kernel + U-Boot builds on every push. Artifacts stored with SHA-keyed filenames.',
     sections: [
       {
@@ -487,6 +533,7 @@ const CHECKLIST_ITEMS = [
   'TFTP/NFS dev loop set up',
   'IWR6843AOP SPI/GPIO kernel driver patch applied',
   'Radar boot mode locked (QSPI vs host-fed SPI)',
+  'ambientapp deployed on target (fall detection + activity service running)',
   'Pin mux spreadsheet: OSD62x-PM ball map',
   'OSD62x-PM production DTB (Octavo DDR config)',
   'meta-ambient Yocto layer scaffolded',
@@ -505,6 +552,7 @@ const OPEN_DECISIONS = [
   'OP-TEE trusted app scope — key storage only, or also fall-event timestamp signing?',
   'CI self-hosted runner strategy for 14 GB SDK dependency',
   'Connectivity: wired Ethernet / Wi-Fi / BLE / cellular mix — drives schematic, antenna count, and certification scope',
+  'ambientapp: changes needed before board deployment — radar UART wiring, Python 3.11 rootfs, event publishing integration (ambientintel/ambientapp)',
 ];
 
 // ── Page component ─────────────────────────────────────────────────────────────
