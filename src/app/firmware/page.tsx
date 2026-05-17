@@ -339,6 +339,13 @@ const STEPS: Step[] = [
     summary: 'Load kernel + DTB over TFTP, mount rootfs over NFS. Cuts iteration from 10 min to under 60 sec.',
     sections: [
       {
+        heading: 'Hardware connections',
+        body: 'JTAG is not needed for this step.',
+        commands: [
+          { label: 'cables required', code: '1. USB-C → J13  (power)\n2. micro-USB-B → J17  (UART console — needed to configure U-Boot)\n\nJ18 (JTAG) — not needed, leave unplugged.' },
+        ],
+      },
+      {
         heading: 'Mac host setup',
         commands: [
           { label: 'enable macOS TFTP server', code: 'sudo launchctl load -F /System/Library/LaunchDaemons/tftp.plist\n# TFTP root: /private/tftpboot/\ncp $KERNEL_SRC/arch/arm64/boot/Image /private/tftpboot/\ncp $KERNEL_SRC/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb /private/tftpboot/' },
