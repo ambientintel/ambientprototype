@@ -438,13 +438,26 @@ const STEPS: Step[] = [
         heading: 'Cloud transport',
         body: 'Transport is AWS IoT Core MQTT with X.509 client cert auth — no boto3, no AWS access keys on device. The cert issued by IoT Core is the device identity. Wire format: ambientcloud/docs/device-cloud-contract.md v0.2.',
         table: {
-          cols: ['Channel', 'Transport', 'QoS / notes'],
+          cols: ['Channel', 'Transport', 'Cadence / QoS'],
           rows: [
-            ['Fall alerts', 'MQTT → ambient/v1/alerts/fall/{deviceId}', 'QoS 1 — at-least-once, deduped by eventId'],
-            ['Per-minute aggregates', 'MQTT → ambient/v1/telemetry/{deviceId}', 'QoS 0 — fire-and-forget'],
-            ['Heartbeat', 'MQTT → ambient/v1/heartbeat/{deviceId}', '60s interval, includes clockSkewMs'],
-            ['Device shadow', 'MQTT → $aws/things/{deviceId}/shadow/...', 'Read desired on boot, write reported'],
-            ['Raw parquet frames', 'HTTPS presigned S3 PUT', 'Every 256–512 MB, via Lambda URL + SigV4'],
+            ['Fall alerts',          'MQTT → ambient/v1/alerts/fall/{deviceId}',     'QoS 1 — at-least-once, deduped by eventId'],
+            ['Per-minute aggregates','MQTT → ambient/v1/telemetry/{deviceId}',       'QoS 0 — fire-and-forget, 1 msg/min'],
+            ['Heartbeat',            'MQTT → ambient/v1/heartbeat/{deviceId}',       '60s interval, includes clockSkewMs'],
+            ['Device shadow',        'MQTT → $aws/things/{deviceId}/shadow/...',     'Read desired on boot, write reported'],
+            ['Raw parquet frames',   'HTTPS presigned S3 PUT (Lambda URL + SigV4)',  'Every 15 min — write /data/radar/... then upload; local copy retained as 30-day backup'],
+          ],
+        },
+      },
+      {
+        heading: 'Storage — where data lives on device',
+        body: 'All persistent data writes to the Mender data partition (/data, ~120 GB on 128 GB eMMC). Never write runtime state to rootfs — it gets wiped on every OTA update.',
+        table: {
+          cols: ['Path', 'Contents', 'Written by'],
+          rows: [
+            ['/data/radar/YYYY/MM/DD/HH/', 'Parquet files, zstd, 256–512 MB each', 'ambientapp parquet writer'],
+            ['/data/ambient/pending_alerts.jsonl', 'Fall alert offline queue, survives crashes', 'FallAlertPublisher'],
+            ['/data/ambient/mqtt_buffer/', 'MQTT offline buffer, 24h max, oldest-first drop', 'TelemetryPublisher'],
+            ['/etc/ambient/credentials/', 'X.509 cert, private key, config.json', 'ambientcloud-admin provision-batch'],
           ],
         },
       },
@@ -520,16 +533,35 @@ const STEPS: Step[] = [
     summary: 'Mender hosted with A/B rootfs. Atomic, rollback-capable updates for OS/kernel, radar firmware, and app layer.',
     sections: [
       {
-        heading: 'Partition layout (16 GB eMMC)',
+        heading: 'Partition layout (128 GB eMMC)',
+        body: '128 GB industrial pSLC eMMC (Kingston EMMC128G-IT3 or Micron MTFC128GAYABN). Sized for 30+ days of local radar data retention at full UART throughput, with headroom for future ML model weights. SD card slot is populated on EVT only (DNP at DVT, removed at PVT) — used for initial eMMC programming and recovery only.',
         table: {
-          cols: ['Partition', 'Size', 'Role'],
+          cols: ['Partition', 'Size', 'Filesystem', 'Role'],
           rows: [
-            ['boot', '~32 MB', 'FAT32 — tiboot3.bin + tispl.bin + u-boot.img + kernel + DTB'],
-            ['rootfs-A', '~2 GB', 'Active rootfs slot'],
-            ['rootfs-B', '~2 GB', 'Passive slot (OTA target)'],
-            ['data', '~12 GB', '/var/lib/ambient — app state, radar frames, device certs'],
+            ['boot',     '~512 MB', 'FAT32',  'tiboot3.bin + tispl.bin + u-boot.img + kernel Image + DTB'],
+            ['rootfs-A', '~4 GB',   'ext4',   'Active rootfs slot — OS + ambientapp package'],
+            ['rootfs-B', '~4 GB',   'ext4',   'Passive slot — Mender OTA write target; swapped on update'],
+            ['data',     '~120 GB', 'ext4',   'Mender data partition, mounted at /data — survives every OTA update. Contains radar parquet files, fall alert queue, device credentials, app config, and offline MQTT buffer.'],
           ],
         },
+      },
+      {
+        heading: 'Radar data storage strategy',
+        body: 'All radar-generated data writes to the Mender data partition (/data) — never to the rootfs. This ensures data survives OTA rootfs swaps.',
+        table: {
+          cols: ['Path', 'Contents', 'Retention'],
+          rows: [
+            ['/data/radar/YYYY/MM/DD/HH/', 'Parquet files (zstd compressed, ~256–512 MB per file)', '30+ days local backup — not deleted after S3 upload'],
+            ['/data/ambient/pending_alerts.jsonl', 'Fall alert offline queue (QoS 1, persisted across crashes)', 'Cleared after confirmed MQTT delivery'],
+            ['/data/ambient/mqtt_buffer/', 'Telemetry offline buffer — QoS 0 aggregates when disconnected', 'Max 24h, oldest-first drop when full'],
+            ['/etc/ambient/credentials/', 'X.509 cert, private key, config.json (written by provision-batch)', 'Permanent — survives OTA'],
+          ],
+        },
+        warnings: [
+          'Parquet files are RETAINED on device after S3 upload — local copy is the backup. A separate retention management job (not yet implemented) should purge files older than 30 days when /data usage exceeds 80%.',
+          'Upload cadence: every 15 minutes via presigned S3 PUT (Lambda URL + SigV4). File is finalized and uploaded when it reaches 256–512 MB or 15 minutes elapses, whichever comes first.',
+          'Data rate: IWR6843AOP at 921.6 kbaud produces ~50–100 KB/s raw radar frames. Compressed parquet: ~15–30 KB/s. Daily local storage: 1.3–2.6 GB/day. 120 GB data partition holds 46–92 days before rotation.',
+        ],
       },
       {
         heading: 'Update types',

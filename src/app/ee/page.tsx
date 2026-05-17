@@ -65,9 +65,9 @@ const STEPS: Step[] = [
         body: 'ambientelectrical.PrjPcb uses Altium sheet symbols to compose five source schematics into a single hierarchical design. All cross-sheet nets are resolved by net labels — no port-to-port wiring across sheets.',
         artifacts: [
           { file: 'hardware/altium/Source Documents/System.SchDoc',    role: 'Top-level sheet. AM62x module connections, IWR6843AOP host interface, power domains, connector map.' },
-          { file: 'hardware/altium/Source Documents/PowerTree.SchDoc', role: 'All power rails: 5V input, 3.3V LDO, 1.8V, 1.1V core. Sequencing FETs and enable logic.' },
+          { file: 'hardware/altium/Source Documents/PowerTree.SchDoc', role: '12V barrel jack input (Cincon TR15RAM-12, IEC 60601-1 Ed 3.2). On-board DC-DC: 12V → 5V → 3.3V → 1.8V rails. Sequencing FETs and enable logic.' },
           { file: 'hardware/altium/Source Documents/RadarFE.SchDoc',   role: 'IWR6843AOP SPI/UART/NRESET/GPIO interface to AM62x. RF decoupling and antenna keep-out annotation.' },
-          { file: 'hardware/altium/Source Documents/MCU.SchDoc',       role: 'OSD62x-PM AM6254 SoC: DDR4, eMMC, USB-C, UART, JTAG, boot config resistors.' },
+          { file: 'hardware/altium/Source Documents/MCU.SchDoc',       role: 'OSD62x-PM AM6254 SoC: DDR4, 128 GB eMMC (Kingston EMMC128G-IT3), micro SD card slot (EVT populated / DVT DNP), USB-C, UART, JTAG, SYSBOOT strap resistors.' },
           { file: 'hardware/altium/Source Documents/Comms.SchDoc',     role: 'Wi-Fi/BT module, Ethernet PHY, I2C sensors, expansion headers.' },
         ],
       },
@@ -82,8 +82,11 @@ const STEPS: Step[] = [
         heading: 'Schematic review checklist',
         checklist: [
           'All power rails decoupled within 1 mm of IC pins — 100 nF + 10 µF per supply pin',
+          'PowerTree.SchDoc input rail = 12V (Cincon TR15RAM-12 barrel jack, 5.5mm/2.1mm, IEC 60601-1 Ed 3.2)',
           'IWR6843AOP NRESET driven by AM62x GPIO with 10 kΩ pull-up to 1.8V',
-          'Boot config pins (AM62x SD/eMMC/UART boot) pinned to correct resistor dividers',
+          'Boot config pins (AM62x SD/eMMC/UART/DFU boot) pinned to correct SYSBOOT strap resistors — include DFU boot mode for factory eMMC programming',
+          'Micro SD card slot (Molex 503182-1853 or equiv) on MMC0 — EVT populated, DVT DNP footprint, PVT removed from layout',
+          '128 GB eMMC (Kingston EMMC128G-IT3 or Micron MTFC128GAYABN, industrial pSLC) on MMC1 — dedicated controller instance from OSD62x-PM',
           'USB-C CC resistors (5.1 kΩ to GND) present — device-mode only, no PD controller',
           'JTAG TCK/TMS/TDI/TDO/TRST connected to XDS110 debug header per TI layout guide',
           'Crystal load capacitors calculated for specified oscillator ESR',
@@ -132,13 +135,26 @@ const STEPS: Step[] = [
         },
       },
       {
+        heading: 'Critical storage BOM decisions (locked 2026-05-17)',
+        table: {
+          cols: ['Component', 'Spec', 'Part (recommended)', 'Stage', 'Notes'],
+          rows: [
+            ['eMMC', '128 GB, industrial pSLC, BGA', 'Kingston EMMC128G-IT3 or Micron MTFC128GAYABN', 'EVT → MP', '30+ days radar data retention at full UART throughput. pSLC endurance: 30k P/E cycles. On MMC1.'],
+            ['Micro SD slot', '4-pin push-pull, DNP footprint', 'Molex 503182-1853 or equiv', 'EVT populated / DVT DNP / PVT removed', 'EVT only: initial eMMC programming + recovery. Not user storage. Connects to MMC0.'],
+            ['Barrel jack', '5.5mm OD / 2.1mm ID, right-angle', 'CUI PJ-002A or equiv', 'EVT → MP', 'Mates with Cincon TR15RAM-12 cable plug. 12V input.'],
+          ],
+        },
+        body: 'eMMC partition layout (Mender): Boot 512 MB (FAT32) | Rootfs-A 4 GB (ext4) | Rootfs-B 4 GB (ext4) | Data 120 GB (ext4, mounted at /data). The data partition survives every OTA update. Radar parquet files write to /data/radar/YYYY/MM/DD/HH/ at 15-min upload cadence; local copy is retained as 30-day backup.',
+      },
+      {
         heading: 'Lifecycle and availability check',
         commands: [
-          { label: 'spot-check critical parts on Octopart', code: '# Key parts to verify every EVT build:\n# OSD62x-PM:   https://octopart.com/search?q=OSD62x-PM\n# IWR6843AOP:  https://octopart.com/search?q=IWR6843AOPRJKR\n# Wi-Fi module: check Murata 1YN or CYW43xx stock depth' },
+          { label: 'spot-check critical parts on Octopart', code: '# Key parts to verify every EVT build:\n# OSD62x-PM:        https://octopart.com/search?q=OSD62x-PM\n# IWR6843AOP:       https://octopart.com/search?q=IWR6843AOPRJKR\n# Kingston eMMC128: https://octopart.com/search?q=EMMC128G-IT3\n# Micron eMMC128:   https://octopart.com/search?q=MTFC128GAYABN\n# Wi-Fi module:     check Murata 1YN or CYW43xx stock depth' },
         ],
         warnings: [
           'IWR6843AOP is TI NRND (Not Recommended for New Designs) in some package variants. Confirm AOPRJKR (AOP, 6843) is the correct variant and has sufficient stock for DVT/PVT runs before design freeze.',
           'OSD62x-PM has a 12–14 week lead time at volume. Place a buffer order before DVT to avoid schedule risk.',
+          'Specify industrial temperature grade eMMC (-40°C to +85°C). Consumer grade (0°C to +70°C) is not suitable for a device that may be stored in uncontrolled environments.',
         ],
       },
     ],

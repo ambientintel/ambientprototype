@@ -220,8 +220,9 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'ambientapp events module: 6 components (MQTT publisher, shadow client, IoT cred refresh, parquet writer, offline buffer, clock sync monitor) — blocks first on-board pilot', owner: 'SW' },
   ],
   ee: [
-    { task: 'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — required before BOM finalization; drives antenna count and certification scope', owner: 'Lead+HW' },
-    { task: 'Wait for firmware Step 17 (radar boot mode lock) before finalizing radar island QSPI BOM — host-fed SPI = no QSPI, autonomous = QSPI present', owner: 'HW+BSP' },
+    { task: 'Update MCU.SchDoc: add 128 GB eMMC (Kingston EMMC128G-IT3 or Micron MTFC128GAYABN, industrial pSLC) on MMC1; add micro SD card slot (Molex 503182-1853) on MMC0 as EVT-only DNP footprint; add SYSBOOT DFU strap resistors for factory programming', owner: 'HW' },
+    { task: 'Update PowerTree.SchDoc: change input rail to 12V (Cincon TR15RAM-12 barrel jack, IEC 60601-1 Ed 3.2); add 5.5mm/2.1mm barrel jack connector footprint', owner: 'HW' },
+    { task: 'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — last remaining BOM blocker before Gerbers; drives antenna count and certification scope', owner: 'Lead+HW' },
     { task: 'Confirm layer count: 8-layer or upgrade to 10-layer HDI per Octavo OSD62x-PM layout guide — decide before Gerber submission', owner: 'Layout+Lead' },
     { task: 'Assemble EVT-0.1 boards and perform power rail sequencing bring-up (after fab order and lead time)', owner: 'HW' },
     { task: 'Open DHF and begin 21 CFR 820 design history documentation', owner: 'QA' },
@@ -271,9 +272,10 @@ const SPRINT_FOCUS: Record<string, string[]> = {
     'Step 16B: GPIO DTS nodes — add NRESET/SOP[2:0]/NERROR_OUT to ambient DTS, rebuild DTB, verify with gpiodetect on dev board',
   ],
   ee: [
-    'Update PowerTree.SchDoc: change input rail to 12V (Cincon TR15RAM-12 barrel jack, IEC 60601-1 Ed 3.2 resolved). Add 5.5mm/2.1mm barrel jack footprint to schematic.',
-    'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — last remaining BOM blocker before Gerbers',
-    'Confirm layer count (8 vs 10-layer HDI) with fab house DFM review',
+    'MCU.SchDoc: add 128 GB eMMC on MMC1 + micro SD slot (EVT-only DNP) on MMC0 + DFU SYSBOOT strap resistors',
+    'PowerTree.SchDoc: change input to 12V barrel jack (Cincon TR15RAM-12); add 12V → 5V → 3.3V → 1.8V DC-DC tree',
+    'Decide physical connectivity (Wi-Fi / Ethernet / BLE) — last remaining Gerber blocker',
+    'Confirm layer count (8 vs 10-layer HDI) with Octavo OSD62x-PM layout guide',
   ],
   mobileapp: [
     'Distribute iOS IPA to pilot nurses: send EAS OTA install link (13-day window) or submit to TestFlight',
@@ -303,6 +305,7 @@ const SPRINT_FOCUS: Record<string, string[]> = {
 const OPEN_DECISIONS: { domain: string; urgency: 'high' | 'medium' | 'low'; text: string }[] = [
   { domain: 'EE Hardware',       urgency: 'high',   text: 'Physical connectivity: Wi-Fi / Ethernet / BLE / cellular mix — drives antenna count, schematic, and certification scope. Required before BOM finalization. Recommendation: Ethernet primary + BLE for local commissioning. Wi-Fi optional if module fits.' },
   { domain: 'EE Hardware',       urgency: 'low',    text: 'RESOLVED 2026-05-17 — EVT power supply: Cincon TR15RAM-12 (12V/1.1A, IEC/EN/UL 60601-1 Ed 3.2 certified). 5.5mm/2.1mm barrel jack on PCB, 12V nominal input to DC-DC rails. No PoE PD circuit on EVT. PoE+ (802.3at) deferred to DVT if deployment channel is SNF/hospital with ceiling Cat6 runs. Datasheet: workspace/docs/datasheets/Datasheet-TR15RAM-series.pdf' },
+  { domain: 'EE Hardware',       urgency: 'low',    text: 'RESOLVED 2026-05-17 — Storage architecture locked: 128 GB industrial pSLC eMMC (Kingston EMMC128G-IT3 or Micron MTFC128GAYABN) on MMC1 as primary storage. Micro SD card slot (Molex 503182-1853) on MMC0: EVT populated / DVT DNP / PVT removed. Factory programming: USB DFU (DVT+). Mender layout: boot 512 MB | rootfs-A 4 GB | rootfs-B 4 GB | data 120 GB. Radar parquet files write to /data/radar/YYYY/MM/DD/HH/ at 15-min S3 upload cadence; local copy retained 30+ days.' },
   { domain: 'EE Hardware',       urgency: 'high',   text: 'Fab house selection — 4-week lead time risk; blocked on connectivity + layer count decisions before Gerbers can be submitted.' },
   { domain: 'EE Hardware',       urgency: 'medium', text: 'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM 500-ball BGA escape — 10-layer likely required per Octavo layout guide. Decide before Gerber submission.' },
   { domain: 'Firmware',          urgency: 'medium', text: 'ambientapp events module: 6 components not yet implemented (MQTT publisher, shadow client, IoT credential refresh, parquet writer, offline buffer, clock sync monitor). Blocks first on-board pilot.' },
