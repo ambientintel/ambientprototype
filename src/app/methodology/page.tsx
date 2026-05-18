@@ -896,6 +896,36 @@ export default function MethodologyPage() {
               ]}/>
             </AEntry>
 
+            <AEntry name="AmbientPosture (per frame)" note="Posture state derived from the maximum tracked height (track_max_z) across all active person tracks in the frame. Nullable — null when no tracks are detected. Stored as a string field in parquet alongside the raw track arrays so downstream queries can filter by posture without re-deriving thresholds.">
+              <EBlock label="posture classification">
+                <ELine>AmbientPosture(t) = {'{'}</ELine>
+                <ELine>{'  '}Standing{'  '}if max{sub('k')} track_max_z{sub('k')}(t) {'>'} 1.2 m</ELine>
+                <ELine>{'  '}Seated{'    '}if max{sub('k')} track_max_z{sub('k')}(t) ≥ 0.5 m</ELine>
+                <ELine>{'  '}On Floor{'  '}if max{sub('k')} track_max_z{sub('k')}(t) {'<'} 0.5 m</ELine>
+                <ELine>{'  '}null{'      '}if no active tracks</ELine>
+                <ELine>{'}'}</ELine>
+              </EBlock>
+              <Wh items={[
+                ['track_max_z_k(t)', 'head height of tracked person k at frame t (m above floor)'],
+                ['1.2 m threshold', 'empirical cutoff for standing vs. seated; calibrated for elderly population'],
+                ['0.5 m threshold', 'empirical cutoff for seated vs. on floor; On Floor is a fall candidate'],
+                ['Clinical use', 'posture timeline · fall risk component · overnight hypnogram derivation'],
+              ]}/>
+            </AEntry>
+
+            <AEntry name="AmbientOccupancy (per frame)" note="Count of distinct persons tracked by the radar in the frame. Derived from the tracker TLV output (TRACKERPROC_TARGET_HEIGHT). Zero means the monitored space is empty or the resident has left the zone covered by this device. Values ≥ 2 indicate a second person is present — a nurse check-in, family visit, or care activity.">
+              <EBlock label="occupancy">
+                <ELine>AmbientOccupancy(t) = |{'{'} active tracks at frame t {'}'}|</ELine>
+              </EBlock>
+              <Wh items={[
+                ['0', 'zone empty — resident absent or undetected'],
+                ['1', 'resident alone (baseline)'],
+                ['≥ 2', 'second person present — social contact event'],
+                ['Social contact time', 'Σ minutes with AmbientOccupancy ≥ 2 · isolation metric for memory care'],
+                ['Three devices per room', 'MAX(AmbientOccupancy) across zone devices gives room-level occupancy'],
+              ]}/>
+            </AEntry>
+
           </MathCard>
 
         </section>

@@ -430,7 +430,7 @@ const STEPS: Step[] = [
           'IWR6843AOP interface step complete: UART node verified, GPIO DTS built, gpiod wrapper in radar/gpio.py, deployment dry run passed',
           'Radar boot mode locked (Step 17)',
           'Python 3.11+ on rootfs with aws-iot-sdk-python-v2, pyarrow, requests, requests-aws4auth (~55 MB)',
-          'ambientapp events module — parquet writer + S3 uploader: DONE (src/ambient/storage/ on feat/telemetry-module, 11 tests). Still needed: MQTT publisher, shadow client, IoT credential refresh, offline buffer, clock sync monitor',
+          'ambientapp v2 on main — parquet writer + S3 uploader + 15-field schema (AmbientActivityCounts · AmbientOccupancy · AmbientPosture) DONE (v2/src/ambient/storage/, 11 tests). Still needed: MQTT publisher, shadow client, IoT credential refresh, offline buffer, clock sync monitor',
           'Device cert provisioned via ambientcloud-admin provision-batch and scp\'d to /etc/ambient/credentials/',
         ],
       },
@@ -454,7 +454,7 @@ const STEPS: Step[] = [
         table: {
           cols: ['Path', 'Contents', 'Written by'],
           rows: [
-            ['/data/radar/YYYY/MM/DD/HH/', 'Parquet files, zstd level 3, 256–512 MB each. Active file: .parquet.tmp. On rotation: rename → .parquet, .uploaded sidecar written after confirmed S3 PUT.', 'src/ambient/storage/parquet_writer.py + s3_uploader.py'],
+            ['/data/radar/YYYY/MM/DD/HH/', 'Parquet files, zstd level 3, 256–512 MB each. 15-field schema: point cloud · track heights · AmbientActivityCounts · AmbientOccupancy · AmbientPosture. Active file: .parquet.tmp. On rotation: rename → .parquet, .uploaded sidecar written after confirmed S3 PUT.', 'v2/src/ambient/storage/parquet_writer.py'],
             ['/data/ambient/pending_alerts.jsonl', 'Fall alert offline queue, survives crashes', 'FallAlertPublisher'],
             ['/data/ambient/mqtt_buffer/', 'MQTT offline buffer, 24h max, oldest-first drop', 'TelemetryPublisher'],
             ['/etc/ambient/credentials/', 'X.509 cert, private key, config.json', 'ambientcloud-admin provision-batch'],
@@ -463,7 +463,7 @@ const STEPS: Step[] = [
       },
       {
         heading: 'Storage module configuration',
-        body: 'The storage subpackage (src/ambient/storage/) is wired automatically in app.py when AMBIENT_UPLOAD_LAMBDA_URL is set. On startup: (1) renames any stale .parquet.tmp crash-recovery files, (2) queues all un-uploaded .parquet files for immediate upload, (3) starts the hourly RetentionManager. StorageManager.stop() on SIGTERM flushes the active parquet before exit.',
+        body: 'The storage subpackage (v2/src/ambient/storage/) is wired automatically in app.py when AMBIENT_UPLOAD_LAMBDA_URL is set. On startup: (1) renames any stale .parquet.tmp crash-recovery files, (2) queues all un-uploaded .parquet files for immediate upload, (3) starts the hourly RetentionManager. StorageManager.stop() on SIGTERM flushes the active parquet before exit.',
         table: {
           cols: ['Env var', 'Default', 'Description'],
           rows: [
@@ -487,7 +487,7 @@ const STEPS: Step[] = [
           { label: '4. Start service and watch logs', code: 'systemctl start ambient\njournalctl -u ambient -f\n# Expected: storage manager started, parquet .tmp file opens\n# Every 15 min: "rotated parquet: radar_...parquet (X.X MB)"\n# Then: "uploaded radar_...parquet"' },
         ],
         warnings: [
-          'Do not deploy before remaining events module components are complete — MQTT publisher, shadow client, and offline buffer are not yet implemented. Parquet writer + S3 uploader are DONE on feat/telemetry-module.',
+          'Do not deploy before remaining events module components are complete — MQTT publisher, shadow client, and offline buffer are not yet implemented. Parquet writer + S3 uploader are DONE in v2/ on main.',
           'Private key lives on filesystem at /etc/ambient/credentials/private.key (chmod 600). Moving to OP-TEE TrustZone-backed storage is deferred to post-pilot per device-cloud-contract.md §11.',
         ],
       },
