@@ -951,7 +951,6 @@ export default function MethodologyPage() {
               ]],
               ['Circadian / Activity', [
                 ['Witting et al. (1990)', 'Alterations in the circadian rest-activity rhythm in aging and Alzheimer&apos;s disease — Biol. Psychiatry 27(6)'],
-                ['Karas et al. (2019)', 'Accelerometry data in health research: challenges and opportunities — Stat. Biosci. 11(2): 210–237'],
                 ['Roenneberg et al. (2003)', 'Life between clocks: daily temporal patterns of human chronotypes — J. Biol. Rhythms 18(1)'],
               ]],
               ['Gait', [

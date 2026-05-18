@@ -463,7 +463,7 @@ function hurstExponent(data: number[]) {
   };
 }
 
-// ── Activity Analysis algorithms (Karas et al. 2019 · Urbanek/COAH) ──
+// ── Activity Analysis algorithms ──
 
 function activityBouts(data: number[], threshold: number) {
   const active = data.map(v => v > threshold);
@@ -577,10 +577,10 @@ function cusumAnalysis(data: number[], k = 0.5, h = 5) {
 // Clinical Risk Panel — weighted composite of all suite metrics
 function clinicalRisk(m: { astp: number; dfa: number; se: number; pe: number; hurst: number; iv: number; is_: number; ra: number; cc: number }) {
   const components = [
-    { name: 'Fragmentation (ASTP)',   value: +Math.min(100, m.astp * 320).toFixed(1),              weight: 0.22, citation: 'Karas 2019' },
-    { name: 'Circadian Stability (IS)', value: +Math.min(100, (1 - m.is_) * 160).toFixed(1),       weight: 0.15, citation: 'Urbanek / JHU-COAH' },
-    { name: 'Rhythm Fragmentation (IV)', value: +Math.min(100, m.iv * 75).toFixed(1),             weight: 0.12, citation: 'Urbanek / JHU-COAH' },
-    { name: 'Circadian Contrast (RA)', value: +Math.min(100, (1 - m.ra) * 130).toFixed(1),        weight: 0.10, citation: 'Urbanek / JHU-COAH' },
+    { name: 'Fragmentation (ASTP)',      value: +Math.min(100, m.astp * 320).toFixed(1),          weight: 0.22, citation: '' },
+    { name: 'Circadian Stability (IS)',  value: +Math.min(100, (1 - m.is_) * 160).toFixed(1),    weight: 0.15, citation: '' },
+    { name: 'Rhythm Fragmentation (IV)', value: +Math.min(100, m.iv * 75).toFixed(1),            weight: 0.12, citation: '' },
+    { name: 'Circadian Contrast (RA)',   value: +Math.min(100, (1 - m.ra) * 130).toFixed(1),     weight: 0.10, citation: '' },
     { name: 'DFA Deviation from 1/f', value: +Math.min(100, Math.abs(m.dfa - 1.0) * 110).toFixed(1), weight: 0.12, citation: 'Khan & Jacobs 2021' },
     { name: 'Signal Regularity (SampEn)', value: +Math.min(100, Math.max(0, (1.5 - m.se) * 85)).toFixed(1), weight: 0.10, citation: 'Khan & Jacobs 2021' },
     { name: 'Movement Complexity (CC)', value: +Math.min(100, Math.max(0, (m.cc - 2) * 11)).toFixed(1), weight: 0.10, citation: 'Khan & Jacobs 2021' },
