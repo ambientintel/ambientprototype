@@ -588,6 +588,7 @@ const CHECKLIST_ITEMS = [
   'IWR6843AOP radar self-test pass',
   'Fall detection algorithm validated',
   'EVT-0.1 DHF entries committed (§820.30)',
+  'PCB serial numbers collected and documented for all 36 pilot devices (12 rooms × 3 zones) — handed off to cloud team for provision-batch',
 ];
 
 const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
@@ -595,6 +596,7 @@ const CHECKLIST_DONE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 const OPEN_DECISIONS = [
   'RESOLVED 2026-05-17 — Radar island QSPI flash: autonomous QSPI boot mode locked. QSPI flash IS present on radar island BOM. Do not remove this line — it documents a cross-domain decision that informed the radar island schematic.',
   'RESOLVED 2026-05-17 — EVT power supply: Cincon TR15RAM-12 (12V/1.1A, IEC/EN/UL 60601-1 Ed 3.2 certified medical adapter) selected. Board input: 5.5mm/2.1mm barrel jack, 12V nominal. No PoE PD circuit on EVT. PoE+ deferred to DVT-stage if deployment channel is SNF/hospital. Datasheet: workspace/docs/datasheets/Datasheet-TR15RAM-series.pdf',
+  '⚠️ BLOCKING CLOUD PROVISIONING — Collect and document PCB serial numbers for all 36 devices (12 rooms × 3 zones: living_room/bathroom/entry). Serials are printed on each PCB sticker. Required before running ambientcloud-admin provision-batch for the FAC-MOCAREV-001 pilot. Without serials, Thing names (DEV-{serial}) cannot be registered in IoT Core, DynamoDB, or S3 device registry.',
   'Physical connectivity: wired Ethernet / Wi-Fi / BLE / cellular mix — drives antenna count, schematic additions, and regulatory/certification scope. Decide before BOM finalization.',
   'Layer count: 8-layer vs 10-layer HDI for OSD62x-PM BGA escape — decide before DVT layout',
   'Surface finish: upgrade HASL-LF → ENIG for DVT fine-pitch pads and BGA reliability',

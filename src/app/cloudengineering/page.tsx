@@ -351,15 +351,21 @@ const STEPS: Step[] = [
   },
   {
     id: 'iot-core', phase: '06', title: 'IoT Core & Provisioning', status: 'done', tag: 'Infra', time: '~2 hrs',
-    summary: 'Fleet provisioning with factory bootstrap cert → tenant X.509 cert lifecycle. Basic Ingest on fall alert topic. IoT Credentials Provider for device AWS API access. admin-cli for operator provisioning. ambient-device-policy deployed to us-east-1 (Ambient-dev-Iot stack, May 12 2026): Connect + Publish to fall/telemetry topics, scoped by ${iot:ClientId}.',
+    summary: 'Fleet provisioning with factory bootstrap cert → tenant X.509 cert lifecycle. Basic Ingest on fall alert topic. IoT Credentials Provider for device AWS API access. admin-cli for operator provisioning. ambient-device-policy deployed to us-east-1 (Ambient-dev-Iot stack, May 12 2026): Connect + Publish to fall/telemetry topics, scoped by ${iot:ClientId}. 3 devices per room (living_room / bathroom / entry), 36 devices total for 12-room pilot. ⚠️ BLOCKED: provision-batch cannot run until hardware team supplies 36 PCB serial numbers.',
     sections: [
       {
-        heading: 'Fleet provisioning flow',
-        body: 'Devices come off the line with a factory bootstrap cert signed by our root CA. At first boot: (1) device hits the control-plane fleet provisioning endpoint, (2) control plane assumes a cross-account role into the tenant account, (3) mints a tenant-specific X.509 cert via AWS IoT fleet provisioning, (4) device receives tenant cert and deletes bootstrap cert. From that point the device talks only to the tenant IoT endpoint.',
+        heading: 'Three-device-per-room architecture',
+        body: 'Each resident room has three IWR6843AOP radar devices, each covering one zone: living_room (wall_mount_6m — primary occupancy and activity), bathroom (roof_mount — ceiling-mounted fall detection), and entry (wall_mount_corner — room threshold entry/exit). Zone name "hallway" is accepted as a legacy alias for "entry" but all new provisioning should use "entry". Device Thing name = DEV-{PCB_SERIAL}, which is the single source of identity for MQTT, DynamoDB, S3, and SigV4 sessions.',
+        warnings: [
+          '⚠️ BLOCKED ON HARDWARE: provision-batch for the 12-room pilot requires 36 PCB serial numbers (12 rooms × 3 zones). Serial numbers are printed on the PCB sticker and must be supplied by the hardware team. Do NOT use placeholder serials — they will mismatch the physical device certs.',
+        ],
         commands: [
-          { label: 'provision a new device via admin-cli', code: '# Requires: AMBIENT_* env vars pointing to the tenant account\npip install -e services/admin-cli\n\nambientcloud-admin provision \\\n  --device-id DEV-0001 \\\n  --facility-id <facility-uuid> \\\n  --subject-id MOCAREV-0042\n\n# Verifies: MOCAREV-NNNN format, no PII fields, registers in DDB + IoT' },
-          { label: 'verify device Thing and certificate', code: 'aws iot describe-thing \\\n  --thing-name DEV-0001 \\\n  --region us-east-1\n\n# Should show: thingArn, thingName, attributes (facilityId, subjectId)\n\naws iot list-thing-principals \\\n  --thing-name DEV-0001\n# Should show: exactly one active certificate ARN' },
-          { label: 'decommission a device', code: 'ambientcloud-admin decommission \\\n  --device-id DEV-0001\n\n# Revokes cert in IoT Core + marks registry entry as retired\n# A decommissioned device cannot rejoin the fleet' },
+          { label: 'batch-provision all 12 rooms (pilot)', code: '# Requires all AMBIENT_* env vars including AMBIENT_PARQUET_BUCKET\nexport AMBIENT_PARQUET_BUCKET=ambient-dev-parquet-data\n\npip install -e services/admin-cli\n\n# Fill in real PCB serials in rooms.yaml first (see rooms.example.yaml)\nambientcloud-admin provision-batch \\\n  --facility-id FAC-MOCAREV-001 \\\n  --rooms rooms.yaml \\\n  --output ./bundles/\n\n# Produces bundles/DEV-{serial}/ per device:\n#   certificate.pem, private.key (0600), config.json, README.txt\n#   audit.jsonl in bundles/ for compliance log\n# Also writes registry/<device_id>.parquet to S3 for Athena device_registry table' },
+          { label: 'dry-run to validate rooms.yaml before provisioning', code: 'ambientcloud-admin provision-batch \\\n  --facility-id FAC-MOCAREV-001 \\\n  --rooms rooms.yaml \\\n  --output ./bundles/ \\\n  --dry-run\n\n# Validates all serial formats, subject IDs, zone names\n# No AWS calls, no files written' },
+          { label: 'verify a provisioned device Thing', code: 'aws iot describe-thing \\\n  --thing-name DEV-MOHDEV301A \\\n  --region us-east-1\n\n# Should show: thingArn, thingName, attributes (facilityId, subjectId, roomId, zone, mountConfig)\n\naws iot list-thing-principals \\\n  --thing-name DEV-MOHDEV301A\n# Should show: exactly one active certificate ARN' },
+          { label: 'watch devices come online after install', code: 'ambientcloud-admin install-status \\\n  --facility-id FAC-MOCAREV-001 \\\n  --watch\n# Refreshes every 5s; device shows "last reported" once it hits IoT Core' },
+          { label: 'activate a device after install confirmation', code: 'ambientcloud-admin activate DEV-MOHDEV301A\n# Flips DDB status: provisioning → active\n# URL Lambda gate: only active devices receive upload URLs' },
+          { label: 'retire a device (revokes cert, keeps audit row)', code: 'ambientcloud-admin retire DEV-MOHDEV301A\n# Revokes cert in IoT Core + marks registry entry as retired\n# A retired device cannot rejoin the fleet without re-provisioning' },
         ],
       },
       {
@@ -386,11 +392,13 @@ const STEPS: Step[] = [
           { label: 'verify credentials provider config', code: '# Devices use IoT Core Credentials Provider to get short-lived AWS creds\n# Used for: url-minter calls + S3 PUT for Parquet uploads\n\naws iot describe-role-alias \\\n  --role-alias ambient-device-role \\\n  --region us-east-1\n\n# credentialDurationSeconds: should be 3600 (1 hour max)\n# roleArn: should grant s3:PutObject on raw-device prefix + url-minter invoke' },
         ],
         artifacts: [
-          { file: 'services/admin-cli/src/ambientcloud_admin/provisioning.py', role: 'Provisioning logic: MOCAREV-NNNN enforcement, DDB registration, IoT cert lifecycle.' },
-          { file: 'services/admin-cli/rooms.example.yaml', role: 'Example facility+room config for batch provisioning via admin-cli.' },
+          { file: 'services/admin-cli/src/ambientcloud_admin/provisioning.py', role: 'Provisioning logic: MOCAREV-NNNN enforcement, DDB + S3 Parquet registry, IoT cert lifecycle.' },
+          { file: 'services/admin-cli/src/ambientcloud_admin/__main__.py', role: 'CLI entry point — wires AMBIENT_PARQUET_BUCKET env var to ProvisioningClient for S3 registry writes.' },
+          { file: 'services/admin-cli/rooms.example.yaml', role: '12-room × 3-device batch provisioning template (fill in PCB serials before running).' },
         ],
         warnings: [
-          'Never delete or revoke a device certificate without first running `ambientcloud-admin decommission`. Direct certificate revocation via the IoT console leaves the DDB registry in an inconsistent state and may cause orphan Things.',
+          'AMBIENT_PARQUET_BUCKET must be set before running provision-batch. Without it, the S3 device_registry Parquet files are silently skipped and Athena room_minutes JOINs will fail to match devices.',
+          'Never delete or revoke a device certificate without first running `ambientcloud-admin retire`. Direct certificate revocation via the IoT console leaves the DDB registry in an inconsistent state and may cause orphan Things.',
           'The control-plane cross-account role is scoped to IoT fleet provisioning only. If the role permissions are broadened (e.g., to allow DDB access), the blast radius of a compromised bootstrap cert expands significantly. Review any changes to the cross-account role policy.',
         ],
       },

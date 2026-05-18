@@ -1396,7 +1396,7 @@ export default function EngineeringPage() {
               { label:"X-Ray service map + dashboard",  start:"2026-05-14", end:"2026-05-25" },
               { label:"Security audit closeout ✓",      start:"2026-05-14", end:"2026-05-15" },
               { label:"Multi-tenant scaling",           start:"2026-05-14", end:"2026-06-20" },
-              { label:"Pilot tenant provisioning",      start:"2026-06-20", end:"2026-07-15" },
+              { label:"Pilot tenant provisioning (36 devices · blocked: PCB serials)", start:"2026-06-20", end:"2026-07-15" },
               { label:"Pilot ops monitoring",           start:"2026-08-01", end:"2026-10-31" },
               { label:"Data export pipeline",           start:"2026-09-15", end:"2026-10-25" },
               { label:"Data freeze",                    start:"2026-10-31", end:"2026-11-05", ms:"M4" },

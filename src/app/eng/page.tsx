@@ -220,6 +220,7 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'ambientapp v2 on main — parquet writer + S3 uploader + 15-field schema DONE (v2/src/ambient/storage/). Schema: AmbientActivityCounts · AmbientOccupancy (persons tracked) · AmbientPosture (Standing/Seated/On Floor). 5 remaining: MQTT publisher, shadow client, IoT cred refresh, offline buffer, clock sync monitor — blocks first on-board pilot', owner: 'SW' },
   ],
   ee: [
+    { task: '⚠️ BLOCKING CLOUD — Collect and document PCB serial numbers for all 36 pilot devices (12 rooms × 3 zones: A=living_room, B=bathroom, C=entry). Serial is printed on the PCB sticker. Fill into rooms.yaml before handoff to Cloud team for provision-batch. No provisioning can run without these.', owner: 'HW' },
     { task: 'Update MCU.SchDoc: add 128 GB eMMC (Kingston EMMC128G-IT3 or Micron MTFC128GAYABN, industrial pSLC) on MMC1; add micro SD card slot (Molex 503182-1853) on MMC0 as EVT-only DNP footprint; add SYSBOOT DFU strap resistors for factory programming', owner: 'HW' },
     { task: 'Update PowerTree.SchDoc: change input rail to 12V (Cincon TR15RAM-12 barrel jack, IEC 60601-1 Ed 3.2); add 5.5mm/2.1mm barrel jack connector footprint', owner: 'HW' },
     { task: 'Decide physical connectivity (Wi-Fi / Ethernet / BLE / cellular) — last remaining BOM blocker before Gerbers; drives antenna count and certification scope', owner: 'Lead+HW' },
@@ -235,6 +236,7 @@ const PRIORITY_TASKS: Record<string, { task: string; owner: string }[]> = {
     { task: 'Resolve Apple Developer account -20209 lock via Apple Support for future direct portal access', owner: 'Mobile' },
   ],
   cloudengineering: [
+    { task: '⚠️ BLOCKED — Run provision-batch for FAC-MOCAREV-001 pilot (36 devices: 12 rooms × 3 zones). Command ready; blocked until EE hardware team supplies all 36 PCB serial numbers. Once serials are in hand: fill rooms.yaml → set AMBIENT_PARQUET_BUCKET → ambientcloud-admin provision-batch --facility-id FAC-MOCAREV-001 --rooms rooms.yaml --output ./bundles/', owner: 'Cloud+Hardware' },
     { task: 'Wait for real device telemetry to start flowing — TelemetryDivergence metric needs ≥1 hour of data before the 48h-of-zero clock can start ticking toward dual-write retirement', owner: 'Cloud+Hardware' },
     { task: 'After 48h of TelemetryDivergence=0 in CloudWatch, promote FAC-MOCAREV-001 to parquet_only and retire the Firehose path', owner: 'Cloud' },
     { task: 'Run a CDK deploy of TelemetryStack to re-apply the reconciler IAM + env changes from source (currently live via direct AWS API patch; CDK source is updated in a93dee3 but not yet deployed)', owner: 'Cloud' },
@@ -327,6 +329,7 @@ const BLOCKERS: { blocked: string; blocking: string; issue: string }[] = [
   { blocked: 'Mobile App',        blocking: 'Apple + time',          issue: 'Apple account -20209 lock + iOS IPA OTA install window expires May 25 — 8 days remaining; must distribute via TestFlight immediately' },
   { blocked: 'Mechanical',        blocking: 'EE Hardware',           issue: 'PCB outline dimensions needed to finalize enclosure form factor in SolidWorks' },
   { blocked: 'Cloud Engineering', blocking: 'Hardware',              issue: 'TelemetryDivergence can\'t accumulate 48h of zero until real device frames land in the raw Parquet path — gated on EE/Firmware bring-up' },
+  { blocked: 'Cloud Engineering', blocking: 'Hardware',              issue: 'provision-batch for FAC-MOCAREV-001 pilot (36 devices: 12 rooms × 3 zones living_room/bathroom/entry) is blocked until hardware team supplies all 36 PCB serial numbers. Serials are on PCB sticker; Thing name = DEV-{serial}. Run: ambientcloud-admin provision-batch --facility-id FAC-MOCAREV-001 --rooms rooms.yaml --output ./bundles/' },
   { blocked: 'Web App',           blocking: 'Pilot Coordinator',     issue: 'Final MOCAREV-NNNN → MOH-NNN room mapping needed before scripts/patch-devices.sh can run' },
 ];
 
